@@ -15,7 +15,9 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [ ] vrais duels 1v1 jusqu'à 5v5, équipes, spectateur et matchmaking
 - [ ] tests réellement exécutés en Roblox Studio et sur Android
 - [x] personnages IA mobiles : recherche de cible, navigation PathfindingService, tir et réaction variable (test Studio à réaliser)
-- [ ] meshes originaux et textures PBR, son et VFX premium
+- [x] armures VANGUARD originales sur R6, animation procédurale marche/visée/recul, fusils 3D, muzzle flash et traînées colorées (validation runtime requise)
+- [x] décor industriel original, signalétique, correction colorimétrique / Bloom, LOD local décor et armure Android
+- [ ] vrais meshes originaux importés, textures PBR (normal, roughness, metallic), rig/skinning, animations professionnelles et mixage audio
 - [ ] anti-triche et latence validées sous charge
 - [ ] matchmaking, progression, sauvegardes et stabilité publication
 

@@ -39,6 +39,28 @@ local function updateModel(model)
     end
 end
 
+local artHideBeyond = isTouch and 110 or 195
+local artUnhideBefore = artHideBeyond - 16
+
+local function updateArt()
+    local arena = Workspace:FindFirstChild("NeonStrikeArena")
+    local decor = arena and arena:FindFirstChild("NeonStrikeDecor")
+    local camera = Workspace.CurrentCamera
+    if not decor or not camera then return end
+    local position = camera.CFrame.Position
+    for _, item in ipairs(decor:GetDescendants()) do
+        if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
+            local far = (item.Position - position).Magnitude
+            local hiddenBefore = rendered[item] or false
+            local hide = (hiddenBefore and far > artUnhideBefore) or far > artHideBeyond
+            if hide ~= hiddenBefore then
+                rendered[item] = hide
+                item.LocalTransparencyModifier = hide and 1 or 0
+            end
+        end
+    end
+end
+
 -- Never touch core parts or gameplay rig. 4 bots * ~60 parts at 1 Hz.
 while true do
     local folder = Workspace:FindFirstChild("NeonStrikeBots")
@@ -47,5 +69,6 @@ while true do
             updateModel(model)
         end
     end
+    updateArt()
     task.wait(1)
 end

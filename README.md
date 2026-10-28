@@ -11,7 +11,8 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - HUD, réticule, recul, impacts, sons Roblox internes, mannequins de tir.
 - Contrôles PC + boutons tactiles Android/iOS ajoutés.
 - Projet Rojo + CI Github Actions build Roblox.
-- **Arène originale procédurale de 356 × 356 studs**, avec couverture tactique, verticalité, néons et spawn d'entraînement. La modélisation PBR et les assets premium restent à produire.
+- **Arène originale de 356 × 356 studs**, couverture, verticalité, éclairage colorimétrique, structures industrielles 3D, signalétique et décors à LOD dynamique ; les vrais meshes PBR importés restent à produire.
+- **Combattants VANGUARD** : quatre silhouettes robotiques originales construites à partir d'armures modulaires (casques, visières lumineuses, protections, sac dorsal et fusils). Animations procédurales de marche, posture de visée, regard et recul. Leurs détails lointains sont masqués localement sur Android.
 
 ## Construire et jouer
 
@@ -23,7 +24,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 4. Ouvrir `neon-strike.rbxlx` dans Studio, puis **Play**.
 5. Édition en direct : `rojo plugin install` puis `rojo serve default.project.json`.
 
-Le dépôt inclut désormais une simulation FFA avec jusqu'à quatre bots mobiles, avec IA serveur, victoire par éliminations et scoreboard. Il reste **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI vérifiera seulement la génération du fichier, pas la qualité du gameplay.
+Le dépôt inclut désormais une simulation FFA avec jusqu'à quatre bots mobiles, avec IA serveur, victoire par éliminations et scoreboard. Il reste **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI compile tous les fichiers Luau et génère le fichier Roblox Studio ; elle ne valide pas la qualité du gameplay ni les performances sur téléphone.
 
 ## Télécharger le projet construit
 
