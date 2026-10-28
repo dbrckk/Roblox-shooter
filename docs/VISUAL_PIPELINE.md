@@ -8,6 +8,12 @@
 - `src/client/WeaponVisuals.luau`: bot muzzle flare and colored tracers; server is the authority for hits.
 - No imported third-party art, non-free assets or asset IDs.
 
+## Generated PBR mesh kit (verified)
+
+A complete [AssetForge job](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) generated seven rigid R6-compatible FBX components, eight GLB variants (four colorways, two geometry LOD), 32 PBR texture maps at 512×512 and a rendered contact sheet. The four LOD0 variants contain 3,636 polygons each. The source file is a packed editable Blender scene. Validation checked actual FBX headers, GLB2 headers/lengths, map sizes and presence of preview.
+
+The `BotVisuals.luau` template adapter clones seven imported Roblox MeshParts when present in `ServerStorage/VanguardTemplates/{cyan,amber,violet,emerald}`; it otherwise uses procedural Part armor. Those Roblox-imported assets **have not been uploaded or runtime-tested yet**. See `docs/VANGUARD_ASSETS.md`.
+
 ## Real PBR replacement path (not claimed finished)
 The current Roblox Parts are tangible 3D geometry **not** textured skinned meshes. Premium results still require creating/importing authored meshes and PBR textures, using e.g. Blender or provenance-checked CC0/CC-BY assets. Candidate third-party asset sources in `star-list` require license checks per asset.
 

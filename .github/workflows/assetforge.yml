@@ -8,7 +8,7 @@ on:
       - "tools/assetforge/**"
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -56,3 +56,18 @@ jobs:
           path: build/assets/
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish permanent original asset kit (not a game release)
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          zip -q -r vanguard-3d-pbr-kit.zip build/assets
+          tag="vanguard-assets-${GITHUB_SHA:0:12}"
+          gh release create "$tag" vanguard-3d-pbr-kit.zip \
+            --title "VANGUARD source assets ${GITHUB_SHA:0:7}" \
+            --notes "Original NEON STRIKE 3D source assets, FBX pieces, 4 PBR GLB palettes, 32 maps and Blender project. Asset kit only: NOT a published Roblox game. Import/permissions and Studio playtests still required." \
+            --prerelease
+          echo "### Permanent download: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}" >> "$GITHUB_STEP_SUMMARY"

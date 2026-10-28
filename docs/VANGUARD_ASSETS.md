@@ -11,6 +11,8 @@ Le workflow gratuit [Build original VANGUARD 3D/PBR kit](https://github.com/dbrc
 - `vanguard_source.blend` : scène source éditable, avec textures intégrées.
 - `manifest.json`, `validation_summary.md` : inventaire et contrôles.
 
+**Export vérifié le 28 octobre 2026 :** le run [40733818033](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a généré les 7 FBX, 8 GLB, 32 PNG PBR, la scène Blender et l'aperçu. Les 4 meshes LOD0 comptent chacun 3 636 polygones, selon Blender. Une publication dans [GitHub Releases](https://github.com/dbrckk/Roblox-shooter/releases) est automatisée pour conserver le ZIP durablement, sous l'étiquette *assets / prerelease*, et ne constitue pas une publication du jeu.
+
 Tout est **original**. Aucun contenu de RIVALS ni d'un FPS tiers n'a été extrait. REA reste utilisé pour l'analyse de l'architecture d'un FPS sous licence MIT (voir `REA_RESULTS.md`).
 
 ## Activation automatique après import Studio

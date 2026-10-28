@@ -17,7 +17,9 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] personnages IA mobiles : recherche de cible, navigation PathfindingService, tir et réaction variable (test Studio à réaliser)
 - [x] armures VANGUARD originales sur R6, animation procédurale marche/visée/recul, fusils 3D, muzzle flash et traînées colorées (validation runtime requise)
 - [x] décor industriel original, signalétique, correction colorimétrique / Bloom, LOD local décor et armure Android
-- [ ] vrais meshes originaux importés, textures PBR (normal, roughness, metallic), rig/skinning, animations professionnelles et mixage audio
+- [x] vrais meshes Blender originaux générés : 7 FBX, 8 GLB avec 2 LOD, 32 cartes PBR 512×512 et planche de contact validés en CI (upload Roblox encore à faire)
+- [ ] importer/publiquer les MeshParts et SurfaceAppearance dans Roblox Studio, calibrer positions, FX, animation rigide et Android
+- [ ] skinned meshes haut de gamme, animations professionnelles, mixage audio spatial, profils graphiques
 - [ ] anti-triche et latence validées sous charge
 - [ ] matchmaking, progression, sauvegardes et stabilité publication
 

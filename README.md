@@ -39,3 +39,9 @@ Voir [docs/ROADMAP.md](docs/ROADMAP.md) pour les éléments requis avant publica
 ## Blender : vrais modèles 3D et textures PBR
 
 Le workflow [AssetForge VANGUARD](https://github.com/dbrckk/Roblox-shooter/actions/workflows/assetforge.yml) produit les meshes externes FBX/GLB, cartes ColorMap/NormalMap/RoughnessMap/MetalnessMap et une prévisualisation. Le jeu utilise les `MeshParts` importés de `ServerStorage/VanguardTemplates` lorsqu'ils existent ; autrement, les armures procédurales restent actives. **Les assets ne sont pas encore publiés automatiquement sur Roblox**. [Guide d'intégration](docs/VANGUARD_ASSETS.md).
+
+### Résultat AssetForge vérifié (28 octobre 2026)
+
+La [première génération intégrale](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a réussi : **7 MeshParts rigides en FBX**, **8 modèles GLB (4 coloris × 2 LOD)**, **32 cartes PBR 512×512**, un `.blend` éditable et une planche d'aperçu. Le profil détaillé utilise **3 636 polygones** par coloris d'après le rapport Blender. Le lot fait 50,23 Mio non compressés et 46,47 Mo environ dans l'artifact ZIP. L'intégration en jeu dépend d'une importation Studio autorisée ; aucun mesh Roblox distant n'est prétendu publié.
+
+Le workflow produit aussi une [GitHub Release permanente](https://github.com/dbrckk/Roblox-shooter/releases) marquée **prerelease d'assets uniquement**, pour ne pas dépendre de l'expiration des artifacts. La présence effective de cette Release doit être validée par le workflow.
