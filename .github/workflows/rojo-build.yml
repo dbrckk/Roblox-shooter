@@ -46,6 +46,32 @@ jobs:
           python3 -m py_compile scripts/publish_private_roblox.py
           python3 scripts/publish_private_roblox.py --help > /dev/null
 
+      - name: Check private Roblox account publication prerequisites without exposing secrets
+        shell: bash
+        env:
+          ROBLOX_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
+          IRON_YARD_UNIVERSE_ID: ${{ vars.IRON_YARD_UNIVERSE_ID }}
+          IRON_YARD_PLACE_ID: ${{ vars.IRON_YARD_PLACE_ID }}
+        run: |
+          set -euo pipefail
+          echo '### Roblox publication access check (readiness only)' >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$ROBLOX_KEY" ]; then
+            echo '- Open Cloud authorization: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '- Open Cloud authorization: **configured** (secret value not exposed)' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -z "$IRON_YARD_UNIVERSE_ID" ]; then
+            echo '- IRON YARD universe destination: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '- IRON YARD universe destination: configured' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ -z "$IRON_YARD_PLACE_ID" ]; then
+            echo '- IRON YARD starting place: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '- IRON YARD starting place: configured' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo '- No request to Roblox was sent by this diagnostic.' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Parse asset production Python
         shell: bash
         run: |

@@ -57,6 +57,16 @@ def get_private_universe(universe_id: str, key: str):
             "Wrong target: the experience must be named IRON YARD. "
             "Refusing to overwrite another Roblox game."
         )
+    owner = info.get("user")
+    if isinstance(owner, dict):
+        owner = owner.get("path")
+    # The destination must be owned by the Roblox profile explicitly linked
+    # by this creator, never a similarly named game under another account.
+    if str(owner).strip("/") != "users/9774173158":
+        raise PublishError(
+            "Wrong owner or unverifiable ownership: refusing to publish "
+            "outside the intended Roblox user account."
+        )
     visibility = str(info.get("visibility", "")).upper()
     if visibility != "PRIVATE":
         raise PublishError(
@@ -107,6 +117,12 @@ def main():
             raise PublishError(f"Unexpected Roblox place size ({size} bytes)")
 
     before = get_private_universe(args.universe_id, key)
+    root = before.get("rootPlace")
+    if root and str(root).strip("/").split("/")[-1] != args.place_id:
+        raise PublishError(
+            "Place ID is not the universe starting place. Refusing to "
+            "overwrite a different place."
+        )
     verify_place(args.universe_id, args.place_id, key)
     print(f"Verified private IRON YARD: {before.get('displayName', 'IRON YARD')}.")
     print(f"Universe {args.universe_id}, Place {args.place_id}.")
