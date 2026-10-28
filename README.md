@@ -16,6 +16,10 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - **Arène originale de 356 × 356 studs**, couverture, verticalité, éclairage naturel, terminal de fret moderne avec conteneurs et grues industrielles, signalétique et décors à LOD dynamique ; les vrais meshes PBR importés restent à produire.
 - **Combattants VANGUARD** : quatre opérateurs tactiques stylisés construites à partir d'armures modulaires (casques tactiques, visières non émissives, protections balistiques, sac dorsal et fusils). Animations procédurales de marche, posture de visée, regard et recul. Leurs détails lointains sont masqués localement sur Android.
 
+## Publier comme expérience Roblox PRIVÉE
+
+Le dépôt dispose d'un [workflow GitHub Actions manuel](https://github.com/dbrckk/Roblox-shooter/actions/workflows/publish-roblox-private.yml) qui construit la dernière version et l'envoie dans une expérience **IRON YARD déjà créée et privée**. Il vérifie la visibilité avant et après la publication et refuse toute autre expérience. Il nécessite un `Universe ID`, un `Place ID` et le secret GitHub `ROBLOX_OPEN_CLOUD_API_KEY`. **La présence de ce workflow ne signifie pas que l'expérience a été publiée.** [Instructions Android et configuration des accès](docs/PRIVATE_ROBLOX_PUBLISHING.md).
+
 ## Construire et jouer
 
 **Roblox Studio sur Windows ou macOS est requis pour le playtest et la publication.**

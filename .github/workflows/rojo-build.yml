@@ -39,6 +39,13 @@ jobs:
             xargs -0 -r -n 1 ./luau-compile > /dev/null
           echo "All gameplay and Studio installer Lua sources compiled successfully."
 
+      - name: Parse private Roblox publish script
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/publish_private_roblox.py
+          python3 scripts/publish_private_roblox.py --help > /dev/null
+
       - name: Parse asset production Python
         shell: bash
         run: |

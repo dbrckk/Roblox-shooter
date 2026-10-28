@@ -130,14 +130,16 @@ def main():
     summary = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary:
         with open(summary, "a", encoding="utf-8") as stream:
-            stream.write(
-                f"## IRON YARD — private Roblox publish verified\\n\\n"
-                f"- Universe: \\u0060{args.universe_id}\\u0060\\n"
-                f"- Place: \\u0060{args.place_id}\\u0060\\n"
-                f"- Version: \\u0060{version}\\u0060\\n"
-                f"- Visibility checked before/after: **PRIVATE**\\n"
-                f"- Experience: {private_url}\\n"
-            )
+            stream.write(chr(10).join([
+                "## IRON YARD — private Roblox publication verified",
+                "",
+                f"- Universe: `{args.universe_id}`",
+                f"- Place: `{args.place_id}`",
+                f"- Place version: `{version}`",
+                "- Visibility checked before and after: **PRIVATE**",
+                f"- Experience: {private_url}",
+                "",
+            ]))
 
 
 if __name__ == "__main__":

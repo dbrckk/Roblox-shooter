@@ -47,6 +47,7 @@ jobs:
           }
 
       - name: Install official Rojo 7.7.1
+        if: ${{ !inputs.check_only }}
         shell: bash
         run: |
           set -euo pipefail
@@ -56,6 +57,7 @@ jobs:
           chmod +x rojo
 
       - name: Compile every Luau source with official compiler
+        if: ${{ !inputs.check_only }}
         shell: bash
         run: |
           set -euo pipefail
@@ -67,6 +69,7 @@ jobs:
             xargs -0 -r -n 1 ./luau-compile > /dev/null
 
       - name: Build current IRON YARD Roblox place
+        if: ${{ !inputs.check_only }}
         run: ./rojo build default.project.json -o iron-yard.rbxlx
 
       - name: Verify owner, place and PRIVATE visibility; then publish
