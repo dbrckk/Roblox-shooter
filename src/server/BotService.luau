@@ -50,7 +50,8 @@ local function motor(parent, name, part0, part1, c0, c1)
 end
 
 local function buildCharacter(slot, skill)
-    local spawn = config.Spawns[slot]
+    -- Dynamic spawning prevents fixed-corner camping and respects new freight cover.
+    local spawn = SpawnService.selectSafeSpawn(nil)
     local model = Instance.new("Model")
     model.Name = "[BOT] " .. config.BotNames[slot]
     model:SetAttribute("IsArenaBot", true)
@@ -131,6 +132,7 @@ local function buildCharacter(slot, skill)
         rightLeg = rightLeg,
     }, slot)
     model.Parent = folder
+    SpawnService.protectCharacter(model, 2.0)
     -- Keep NPC physics server-owned; cosmetics are massless, non-colliding parts.
     pcall(function() root:SetNetworkOwner(nil) end)
     return model, humanoid, root, head, {
@@ -304,6 +306,8 @@ local function shoot(bot, target, aimPoint, dt)
     local look = CFrame.lookAt(Vector3.zero, bot.aimDirection) * CFrame.Angles(errorPitch, errorYaw, 0)
     local rayDirection = look.LookVector
     bot.lastShotAt = now
+    -- Just like players, firing immediately forfeits spawn protection.
+    SpawnService.clearProtection(bot.model)
     -- Reuse the existing client audio channel; bots remain server-controlled.
     remotes.WeaponFx:FireAllClients({
         kind = "FireSound",
@@ -328,7 +332,7 @@ local function shoot(bot, target, aimPoint, dt)
     -- Only fighters participate: neither practice dummies nor arbitrary NPCs are targets.
     local targetPlayer = Players:GetPlayerFromCharacter(hitModel)
     if not targetPlayer and not hitModel:GetAttribute("IsArenaBot") then return end
-    if targetPlayer and SpawnService.isProtected(hitModel) then return end
+    if SpawnService.isProtected(hitModel) then return end
 
     if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     local before = humanoid.Health
@@ -450,15 +454,23 @@ function BotService.resetRound()
         roundKills[slot] = 0
     end
     for slot, bot in pairs(slots) do
-        bot.kills = 0
-        bot.deaths = 0
-        bot.target = nil
-        bot.aimDirection = bot.root.CFrame.LookVector
-        BotNavigation.invalidate(bot)
-        if bot.humanoid.Health > 0 then
+        if bot.humanoid.Health <= 0 then
+            -- Do not carry dead characters into the next round. The existing
+            -- delayed despawn callback checks identity before removing anything.
+            slots[slot] = nil
+            if bot.model.Parent then bot.model:Destroy() end
+            createBot(slot)
+        else
+            bot.kills = 0
+            bot.deaths = 0
+            bot.target = nil
+            bot.aimDirection = bot.root.CFrame.LookVector
+            BotNavigation.invalidate(bot)
             bot.humanoid.Health = bot.humanoid.MaxHealth
             bot.root.AssemblyLinearVelocity = Vector3.zero
-            bot.root.CFrame = CFrame.new(config.Spawns[slot])
+            bot.root.AssemblyAngularVelocity = Vector3.zero
+            bot.model:PivotTo(CFrame.new(SpawnService.selectSafeSpawn(bot.model)))
+            SpawnService.protectCharacter(bot.model, 2.0)
         end
     end
 end

@@ -94,6 +94,17 @@ local function safestPosition(character)
     return best or candidates[1]
 end
 
+function SpawnService.selectSafeSpawn(excludeCharacter)
+    return safestPosition(excludeCharacter)
+end
+
+function SpawnService.protectCharacter(character, seconds)
+    if character and character.Parent then
+        character:SetAttribute("NeonSpawnProtectedUntil",
+            Workspace:GetServerTimeNow() + math.max(0, seconds or SPAWN_SHIELD_SECONDS))
+    end
+end
+
 function SpawnService.isProtected(character)
     if not character then return false end
     local protectedUntil = character:GetAttribute("NeonSpawnProtectedUntil")
@@ -117,7 +128,7 @@ function SpawnService.place(player, character)
     root.AssemblyAngularVelocity = Vector3.zero
     character:PivotTo(CFrame.new(position) * CFrame.Angles(0, yaw, 0))
     humanoid.Health = humanoid.MaxHealth
-    character:SetAttribute("NeonSpawnProtectedUntil", Workspace:GetServerTimeNow() + SPAWN_SHIELD_SECONDS)
+    SpawnService.protectCharacter(character, SPAWN_SHIELD_SECONDS)
     return true
 end
 

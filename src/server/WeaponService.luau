@@ -137,7 +137,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 	end
 
 	-- Avoid spawn-camping. Server-only protection is removed when its owner fires.
-    if targetPlayer and SpawnService.isProtected(targetCharacter) then
+    if SpawnService.isProtected(targetCharacter) then
         sendFeedback(attacker, { kind = "Miss", weaponId = weaponId })
         return false
     end
