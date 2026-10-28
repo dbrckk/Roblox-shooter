@@ -81,7 +81,7 @@ function WeaponVisuals:_addPart(model, className, name, size, color, offset, mat
 end
 
 function WeaponVisuals:_addArms(model, leftHandOffset, rightHandOffset)
-	local sleeveColor = Color3.fromRGB(42, 49, 62)
+	local sleeveColor = Color3.fromRGB(95, 106, 90)
 	local handColor = Color3.fromRGB(224, 178, 132)
 
 	self:_addPart(model, "Part", "RightForearm", Vector3.new(0.24, 0.24, 0.72), sleeveColor, rightHandOffset * CFrame.new(0, 0.06, 0.28) * CFrame.Angles(math.rad(8), 0, 0), MATERIAL_SMOOTH)
@@ -112,7 +112,7 @@ function WeaponVisuals:_createPistol(model)
 	self:_addPart(model, "Part", "Barrel", Vector3.new(0.15, 0.15, 0.54), Color3.fromRGB(16, 19, 24), CFrame.new(0, 0.16, -0.77), MATERIAL_METAL)
 	self:_addPart(model, "Part", "Muzzle", Vector3.new(0.2, 0.2, 0.08), Color3.fromRGB(8, 10, 13), CFrame.new(0, 0.16, -1.06), MATERIAL_METAL)
 	self:_addPart(model, "Part", "TriggerGuard", Vector3.new(0.32, 0.05, 0.24), Color3.fromRGB(22, 25, 31), CFrame.new(0, -0.18, -0.2), MATERIAL_METAL)
-	self:_addPart(model, "Part", "FrontSight", Vector3.new(0.08, 0.08, 0.06), Color3.fromRGB(238, 248, 255), CFrame.new(0, 0.3, -0.7), MATERIAL_NEON)
+	self:_addPart(model, "Part", "FrontSight", Vector3.new(0.08, 0.08, 0.06), Color3.fromRGB(210, 204, 183), CFrame.new(0, 0.3, -0.7), MATERIAL_METAL)
 	self:_addPart(model, "Part", "RearSight", Vector3.new(0.16, 0.06, 0.05), Color3.fromRGB(220, 230, 242), CFrame.new(0, 0.3, 0.1), MATERIAL_SMOOTH)
 end
 
@@ -127,7 +127,7 @@ function WeaponVisuals:_createSniper(model)
 	self:_addPart(model, "Part", "Grip", Vector3.new(0.23, 0.54, 0.21), Color3.fromRGB(25, 29, 35), CFrame.new(0.02, -0.36, -0.02) * CFrame.Angles(math.rad(-10), 0, 0), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "ScopeBody", Vector3.new(0.3, 0.24, 0.78), Color3.fromRGB(18, 23, 30), CFrame.new(0, 0.32, -0.38), MATERIAL_METAL)
 	self:_addPart(model, "Part", "ScopeFront", Vector3.new(0.38, 0.3, 0.16), Color3.fromRGB(18, 23, 30), CFrame.new(0, 0.32, -0.83), MATERIAL_METAL)
-	self:_addPart(model, "Part", "ScopeLens", Vector3.new(0.28, 0.22, 0.04), Color3.fromRGB(80, 172, 226), CFrame.new(0, 0.32, -0.94), MATERIAL_NEON, 0.25)
+	self:_addPart(model, "Part", "ScopeLens", Vector3.new(0.28, 0.22, 0.04), Color3.fromRGB(81, 112, 127), CFrame.new(0, 0.32, -0.94), MATERIAL_SMOOTH, 0.25)
 	self:_addPart(model, "Part", "ForeRail", Vector3.new(0.42, 0.08, 0.78), Color3.fromRGB(36, 42, 50), CFrame.new(0, -0.12, -0.86), MATERIAL_METAL)
 end
 
@@ -137,7 +137,7 @@ function WeaponVisuals:_createKnife(model)
 	self:_addPart(model, "Part", "HandleWrapA", Vector3.new(0.23, 0.03, 0.12), Color3.fromRGB(88, 96, 110), CFrame.new(0, 0.11, 0.26), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "HandleWrapB", Vector3.new(0.23, 0.03, 0.12), Color3.fromRGB(88, 96, 110), CFrame.new(0, -0.13, 0.04), MATERIAL_SMOOTH)
 	self:_addPart(model, "WedgePart", "Blade", Vector3.new(0.34, 0.08, 0.92), Color3.fromRGB(218, 225, 235), CFrame.new(0, 0.02, -0.6) * CFrame.Angles(0, math.rad(180), 0), MATERIAL_METAL)
-	self:_addPart(model, "Part", "BladeSpine", Vector3.new(0.08, 0.04, 0.74), Color3.fromRGB(248, 252, 255), CFrame.new(0, 0.07, -0.58), MATERIAL_NEON, 0.25)
+	self:_addPart(model, "Part", "BladeSpine", Vector3.new(0.08, 0.04, 0.74), Color3.fromRGB(182, 189, 184), CFrame.new(0, 0.07, -0.58), MATERIAL_METAL, 0.25)
 	self:_addPart(model, "Part", "Guard", Vector3.new(0.5, 0.08, 0.1), Color3.fromRGB(76, 83, 94), CFrame.new(0, 0, -0.18), MATERIAL_METAL)
 end
 
@@ -260,7 +260,7 @@ function WeaponVisuals:drawMuzzleFlash(origin, accentColor)
     burst.Material = MATERIAL_NEON
     burst.Shape = Enum.PartType.Ball
     burst.Size = Vector3.new(0.27, 0.27, 0.27)
-    burst.Color = accentColor or Color3.fromRGB(49, 218, 244)
+    burst.Color = accentColor or Color3.fromRGB(244, 202, 132)
     burst.CFrame = CFrame.new(origin)
     burst.Parent = workspace
     local tween = TweenService:Create(burst, TweenInfo.new(0.11), {

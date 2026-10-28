@@ -1,9 +1,9 @@
--- NEON STRIKE / VANGUARD modular combat armor.
+-- IRON YARD / VANGUARD tactical armor.
 -- Procedurally authored Roblox 3D parts: no external IDs, copyrighted meshes or textures.
 -- Armor is welded to the R6 Humanoid skeleton and is non-colliding/non-queryable.
 local ServerStorage = game:GetService("ServerStorage")
 local BotVisuals = {}
-local importedPalette = { "cyan", "amber", "violet", "emerald" }
+local importedPalette = { "olive", "sand", "slate", "rust" }
 local importedParts = { "torso", "head", "left_arm", "right_arm", "left_leg", "right_leg", "rifle" }
 
 -- Studio-uploaded MeshParts are optional. This path activates only after a complete
@@ -68,16 +68,16 @@ local function tryImportedMeshKit(model, rig, index, accent)
     return { muzzle = muzzle, accent = accent }
 end
 
-local STEEL = Color3.fromRGB(32, 42, 56)
-local CARBON = Color3.fromRGB(18, 24, 34)
-local GUNMETAL = Color3.fromRGB(65, 78, 92)
-local PALE = Color3.fromRGB(166, 188, 198)
+local STEEL = Color3.fromRGB(102, 113, 106)
+local CARBON = Color3.fromRGB(55, 62, 58)
+local GUNMETAL = Color3.fromRGB(79, 84, 82)
+local PALE = Color3.fromRGB(201, 185, 154)
 
 local palettes = {
-    { accent = Color3.fromRGB(49, 218, 244), shade = Color3.fromRGB(16, 93, 137) },
-    { accent = Color3.fromRGB(255, 155, 63), shade = Color3.fromRGB(129, 67, 28) },
-    { accent = Color3.fromRGB(172, 125, 255), shade = Color3.fromRGB(78, 54, 139) },
-    { accent = Color3.fromRGB(108, 244, 152), shade = Color3.fromRGB(43, 109, 84) },
+    { accent = Color3.fromRGB(132, 147, 100), shade = Color3.fromRGB(88, 109, 78) },
+    { accent = Color3.fromRGB(214, 188, 138), shade = Color3.fromRGB(150, 132, 102) },
+    { accent = Color3.fromRGB(120, 141, 150), shade = Color3.fromRGB(84, 105, 115) },
+    { accent = Color3.fromRGB(171, 107, 75), shade = Color3.fromRGB(121, 83, 64) },
 }
 
 local function armor(model, anchor, name, size, offset, color, material, tier, shape)
@@ -138,7 +138,7 @@ function BotVisuals.decorate(model, rig, index)
     for _, side in ipairs({ -1, 1 }) do
         plate(model, torso, "Breastplate " .. side, Vector3.new(0.78, 0.70, 0.16), side * 0.47, 0.38, -0.75, STEEL, "Core")
         plate(model, torso, "Lower Torso " .. side, Vector3.new(0.72, 0.46, 0.17), side * 0.48, -0.41, -0.75, shade, "Detail")
-        plate(model, torso, "Breastplate Light " .. side, Vector3.new(0.60, 0.055, 0.06), side * 0.47, 0.17, -0.845, accent, "Detail")
+        plate(model, torso, "Breastplate Strap " .. side, Vector3.new(0.60, 0.055, 0.06), side * 0.47, 0.17, -0.845, accent, "Detail")
         plate(model, torso, "Harness " .. side, Vector3.new(0.20, 1.85, 0.21), side * 0.92, 0, -0.53, CARBON, "Core")
         plate(model, torso, "Ammo Pouch " .. side, Vector3.new(0.49, 0.44, 0.28), side * 0.65, -0.82, -0.57, GUNMETAL, "Detail")
     end
@@ -147,7 +147,7 @@ function BotVisuals.decorate(model, rig, index)
     plate(model, torso, "Backpack", Vector3.new(1.35, 1.65, 0.54), 0, -0.08, 0.86, STEEL, "Core")
     plate(model, torso, "Backpack Center", Vector3.new(0.44, 1.20, 0.12), 0, 0.02, 1.20, CARBON, "Detail")
     for _, side in ipairs({ -1, 1 }) do
-        plate(model, torso, "Cooling Fin " .. side, Vector3.new(0.32, 0.98, 0.12), side * 0.42, -0.04, 1.19, accent, "Detail")
+        plate(model, torso, "Utility Strap " .. side, Vector3.new(0.32, 0.98, 0.12), side * 0.42, -0.04, 1.19, accent, "Detail")
     end
 
     -- Helmet silhouette, forehead ridge and unlit glass visor; no extra hitbox.
@@ -155,11 +155,11 @@ function BotVisuals.decorate(model, rig, index)
         CFrame.new(0, 0.11, 0), GUNMETAL, Enum.Material.Metal, "Core")
     plate(model, head, "Forehead Armor", Vector3.new(1.68, 0.24, 0.19), 0, 0.43, -0.62, STEEL, "Core")
     plate(model, head, "Visor Shadow", Vector3.new(1.66, 0.34, 0.14), 0, 0.1, -0.66, CARBON, "Core")
-    plate(model, head, "Visor Band", Vector3.new(1.40, 0.14, 0.07), 0, 0.1, -0.76, accent, "Core")
+    plate(model, head, "Optical Visor", Vector3.new(1.40, 0.14, 0.07), 0, 0.1, -0.76, accent, "Core")
     plate(model, head, "Mouth Guard", Vector3.new(1.1, 0.23, 0.12), 0, -0.36, -0.65, STEEL, "Core")
     for _, side in ipairs({ -1, 1 }) do
         plate(model, head, "Helmet Ear " .. side, Vector3.new(0.22, 0.62, 0.65), side * 1.02, 0, 0.09, shade, "Core")
-        plate(model, head, "Helmet Antenna " .. side, Vector3.new(0.095, 0.46, 0.10), side * 0.81, 0.74, 0.17, accent, "Detail")
+        plate(model, head, "Helmet Clip " .. side, Vector3.new(0.095, 0.46, 0.10), side * 0.81, 0.74, 0.17, accent, "Detail")
     end
 
     -- Layered articulated limb armor, attached to the original hitbox geometry.
@@ -180,7 +180,7 @@ function BotVisuals.decorate(model, rig, index)
             0, 0.49, -0.51, STEEL, "Core")
         plate(model, leg, name .. " Knee Guard", Vector3.new(0.93, 0.36, 0.30),
             0, -0.11, -0.52, shade, "Core")
-        plate(model, leg, name .. " Knee Signal", Vector3.new(0.56, 0.08, 0.07),
+        plate(model, leg, name .. " Knee Stripe", Vector3.new(0.56, 0.08, 0.07),
             0, -0.08, -0.69, accent, "Detail")
         plate(model, leg, name .. " Shin Armor", Vector3.new(0.81, 0.59, 0.20),
             0, -0.55, -0.51, GUNMETAL, "Core")
@@ -200,7 +200,7 @@ function BotVisuals.decorate(model, rig, index)
         0.02, -0.83, -1.03, CARBON, "Core")
     plate(model, rightArm, "VX Top Rail", Vector3.new(0.21, 0.12, 0.94),
         0.02, -0.16, -1.31, shade, "Detail")
-    plate(model, rightArm, "VX Rail Signal", Vector3.new(0.12, 0.055, 0.69),
+    plate(model, rightArm, "VX Rail Mark", Vector3.new(0.12, 0.055, 0.69),
         0.02, -0.085, -1.49, accent, "Detail")
     armor(model, rightArm, "VX Muzzle Brake", Vector3.new(0.29, 0.29, 0.28),
         CFrame.new(0.02, -0.46, -2.72), STEEL, Enum.Material.Metal, "Core")

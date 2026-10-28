@@ -9,7 +9,7 @@ BotConfig.DespawnAfterDeath = 2.5
 BotConfig.MaximumSightDistance = 145
 BotConfig.MaximumAttackDistance = 115
 BotConfig.Damage = 14
-BotConfig.BotNames = { "Vega", "Nova", "Kestrel", "Cipher" }
+BotConfig.BotNames = { "Ranger", "Hawk", "Mason", "Rook" }
 
 -- All bots are deliberately imperfect: finite reaction, aim drift and fire cadence.
 BotConfig.Difficulties = {

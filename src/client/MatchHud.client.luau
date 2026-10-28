@@ -1,4 +1,4 @@
--- NEON STRIKE - original compact responsive round scoreboard.
+-- IRON YARD - competitive match scoreboard.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
@@ -13,8 +13,11 @@ local top = Instance.new("Frame")
 top.Name = "MatchPanel"
 top.AnchorPoint = Vector2.new(0.5, 0)
 top.Position = UDim2.new(0.5, 0, 0, 8)
-top.Size = UDim2.fromOffset(330, 70)
-top.BackgroundColor3 = Color3.fromRGB(12, 20, 34)
+top.Size = UDim2.new(0.9, 0, 0, 70)
+local sizeConstraint = Instance.new("UISizeConstraint")
+sizeConstraint.MaxSize = Vector2.new(340, 70)
+sizeConstraint.Parent = top
+top.BackgroundColor3 = Color3.fromRGB(37, 43, 43)
 top.BackgroundTransparency = 0.15
 top.Parent = gui
 
@@ -23,7 +26,7 @@ corner.CornerRadius = UDim.new(0, 12)
 corner.Parent = top
 
 local stroke = Instance.new("UIStroke")
-stroke.Color = Color3.fromRGB(35, 194, 227)
+stroke.Color = Color3.fromRGB(214, 164, 82)
 stroke.Thickness = 1.4
 stroke.Transparency = 0.25
 stroke.Parent = top
@@ -43,8 +46,8 @@ local function label(name, textSize, size, pos, color)
     return t
 end
 
-local header = label("Status", 16, UDim2.new(1, -12, 0, 28), UDim2.fromOffset(6, 5), Color3.fromRGB(67, 219, 246))
-local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(237, 245, 255))
+local header = label("Status", 16, UDim2.new(1, -12, 0, 28), UDim2.fromOffset(6, 5), Color3.fromRGB(244, 217, 170))
+local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(248, 248, 241))
 
 local eliminations = nil
 local function update()
@@ -57,11 +60,11 @@ local function update()
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
     if phase == "WAITING" then
-        header.Text = "NEON STRIKE  |  ARENA"
-        detail.Text = "Awaiting players"
+        header.Text = "IRON YARD  |  FREIGHT TERMINAL"
+        detail.Text = "WAITING FOR OPERATORS"
     elseif phase == "COUNTDOWN" then
         header.Text = string.format("ROUND %d  |  STARTING", count + 1)
-        detail.Text = string.format("ELIMINATE RIVALS  /  FIRST TO %d  /  %ds", target, seconds)
+        detail.Text = string.format("FIRST TO %d ELIMINATIONS   /   %ds", target, seconds)
     elseif phase == "LIVE" then
         header.Text = string.format("ROUND %d  |  %s", count, clock)
         local character = player.Character

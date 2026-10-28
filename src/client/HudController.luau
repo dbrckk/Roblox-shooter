@@ -32,7 +32,7 @@ local function makeText(parent, name, text, position, size, fontSize)
 	label.Position = position
 	label.Size = size
 	label.Text = text
-	label.TextColor3 = Color3.fromRGB(235, 244, 255)
+	label.TextColor3 = Color3.fromRGB(247, 244, 235)
 	label.TextSize = fontSize
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = parent
@@ -49,7 +49,7 @@ local function makeButton(parent, name, text, position, size)
 	button.Position = position
 	button.Size = size
 	button.Text = text
-	button.TextColor3 = Color3.fromRGB(235, 244, 255)
+	button.TextColor3 = Color3.fromRGB(247, 244, 235)
 	button.TextSize = 14
 	button.Parent = parent
 	makeCorner(button, 4)
@@ -108,7 +108,7 @@ function HudController:_buildCrosshair()
 		local line = Instance.new("Frame")
 		line.Name = name
 		line.AnchorPoint = Vector2.new(0.5, 0.5)
-		line.BackgroundColor3 = Color3.fromRGB(235, 244, 255)
+		line.BackgroundColor3 = Color3.fromRGB(247, 244, 235)
 		line.BorderSizePixel = 0
 		line.Position = position
 		line.Size = size
@@ -143,7 +143,7 @@ function HudController:_buildHealthBar()
 	local shell = Instance.new("Frame")
 	shell.Name = "HealthBar"
 	shell.AnchorPoint = Vector2.new(0, 1)
-	shell.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
+	shell.BackgroundColor3 = Color3.fromRGB(35, 41, 41)
 	shell.BorderSizePixel = 0
 	shell.Position = UDim2.new(0, 24, 1, -32)
 	shell.Size = UDim2.fromOffset(250, 24)
@@ -182,7 +182,7 @@ function HudController:_buildBoostMeter()
 	label.Position = UDim2.new(0, 24, 1, -63)
 	label.Size = UDim2.fromOffset(74, 16)
 	label.Text = "BOOST"
-	label.TextColor3 = Color3.fromRGB(162, 212, 255)
+	label.TextColor3 = Color3.fromRGB(235, 198, 135)
 	label.TextSize = 11
 	label.TextXAlignment = Enum.TextXAlignment.Left
 	label.Parent = self.gui
@@ -190,7 +190,7 @@ function HudController:_buildBoostMeter()
 	local shell = Instance.new("Frame")
 	shell.Name = "BoostMeter"
 	shell.AnchorPoint = Vector2.new(0, 1)
-	shell.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
+	shell.BackgroundColor3 = Color3.fromRGB(35, 41, 41)
 	shell.BorderSizePixel = 0
 	shell.Position = UDim2.new(0, 84, 1, -66)
 	shell.Size = UDim2.fromOffset(190, 10)
@@ -200,7 +200,7 @@ function HudController:_buildBoostMeter()
 
 	local fill = Instance.new("Frame")
 	fill.Name = "Fill"
-	fill.BackgroundColor3 = Color3.fromRGB(88, 186, 255)
+	fill.BackgroundColor3 = Color3.fromRGB(207, 160, 89)
 	fill.BorderSizePixel = 0
 	fill.Size = UDim2.fromScale(1, 1)
 	fill.Parent = shell
@@ -217,7 +217,7 @@ function HudController:_buildWeaponLabel()
 	weaponLabel.Font = Enum.Font.GothamMedium
 	weaponLabel.Position = UDim2.new(0.5, 0, 1, -42)
 	weaponLabel.Size = UDim2.fromOffset(280, 34)
-	weaponLabel.TextColor3 = Color3.fromRGB(235, 244, 255)
+	weaponLabel.TextColor3 = Color3.fromRGB(247, 244, 235)
 	weaponLabel.TextScaled = true
 	weaponLabel.Parent = self.gui
 	self.weaponLabel = weaponLabel
@@ -244,7 +244,7 @@ function HudController:_buildScopeOverlay()
 	scopeRing.Visible = false
 	scopeRing.ZIndex = 2
 	scopeRing.Parent = self.gui
-	makeStroke(scopeRing, Color3.fromRGB(235, 244, 255), 0.2, 2)
+	makeStroke(scopeRing, Color3.fromRGB(247, 244, 235), 0.2, 2)
 	makeCorner(scopeRing, 999)
 
 	self.scopeOverlay = scopeOverlay
@@ -418,7 +418,7 @@ function HudController:setBoostFuel(ratio)
 	elseif ratio <= 0.25 then
 		self.boostFill.BackgroundColor3 = Color3.fromRGB(245, 192, 82)
 	else
-		self.boostFill.BackgroundColor3 = Color3.fromRGB(88, 186, 255)
+		self.boostFill.BackgroundColor3 = Color3.fromRGB(207, 160, 89)
 	end
 
 	TweenService:Create(self.boostFill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
@@ -448,9 +448,9 @@ function HudController:setWeapon(weaponId)
 	local config = self.WeaponConfig.get(weaponId)
 	self.weaponLabel.Text = config and config.displayName or weaponId
 
-	local color = Color3.fromRGB(235, 244, 255)
+	local color = Color3.fromRGB(247, 244, 235)
 	if weaponId == "Sniper" then
-		color = Color3.fromRGB(145, 205, 255)
+		color = Color3.fromRGB(201, 191, 162)
 	elseif weaponId == "Knife" then
 		color = Color3.fromRGB(255, 226, 153)
 	end

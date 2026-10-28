@@ -1,4 +1,4 @@
--- NEON STRIKE: authoritative elimination ticker.
+-- IRON YARD: authoritative elimination ticker.
 -- Entries arrive from the server only; clients cannot forge another player's kill.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -41,7 +41,7 @@ local function addEntry(info)
     row.Name = "Elimination"
     row.LayoutOrder = -serial
     row.Size = UDim2.fromOffset(270, 31)
-    row.BackgroundColor3 = Color3.fromRGB(13, 22, 35)
+    row.BackgroundColor3 = Color3.fromRGB(43, 48, 47)
     row.BackgroundTransparency = 0.15
     row.BorderSizePixel = 0
     row.Parent = frame
@@ -50,7 +50,7 @@ local function addEntry(info)
     corner.CornerRadius = UDim.new(0, 7)
     corner.Parent = row
     local stroke = Instance.new("UIStroke")
-    stroke.Color = info.headshot and Color3.fromRGB(255, 178, 92) or Color3.fromRGB(68, 196, 240)
+    stroke.Color = info.headshot and Color3.fromRGB(255, 178, 92) or Color3.fromRGB(185, 181, 156)
     stroke.Thickness = 1
     stroke.Transparency = 0.35
     stroke.Parent = row
@@ -60,7 +60,7 @@ local function addEntry(info)
     text.Size = UDim2.new(1, -14, 1, 0)
     text.Position = UDim2.fromOffset(7, 0)
     text.Font = Enum.Font.GothamBold
-    text.TextColor3 = Color3.fromRGB(241, 249, 255)
+    text.TextColor3 = Color3.fromRGB(255, 251, 236)
     text.TextSize = 11
     text.TextXAlignment = Enum.TextXAlignment.Left
     text.TextTruncate = Enum.TextTruncate.AtEnd

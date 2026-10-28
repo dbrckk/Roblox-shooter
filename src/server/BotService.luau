@@ -58,12 +58,12 @@ local function buildCharacter(slot, skill)
     local base = spawn
     local root = createPart(model, "HumanoidRootPart", Vector3.new(2, 2, 1), base, Color3.new(0, 0, 0), false)
     root.Transparency = 1
-    local torso = createPart(model, "Torso", Vector3.new(2, 2, 1), base, Color3.fromRGB(48, 72, 98), true)
-    local head = createPart(model, "Head", Vector3.new(2, 1, 1), base + Vector3.new(0, 1.5, 0), Color3.fromRGB(36, 49, 68), false)
-    local leftArm = createPart(model, "Left Arm", Vector3.new(1, 2, 1), base + Vector3.new(-1.5, 0, 0), Color3.fromRGB(42, 174, 211), false)
-    local rightArm = createPart(model, "Right Arm", Vector3.new(1, 2, 1), base + Vector3.new(1.5, 0, 0), Color3.fromRGB(42, 174, 211), false)
-    local leftLeg = createPart(model, "Left Leg", Vector3.new(1, 2, 1), base + Vector3.new(-0.5, -2, 0), Color3.fromRGB(30, 39, 56), false)
-    local rightLeg = createPart(model, "Right Leg", Vector3.new(1, 2, 1), base + Vector3.new(0.5, -2, 0), Color3.fromRGB(30, 39, 56), false)
+    local torso = createPart(model, "Torso", Vector3.new(2, 2, 1), base, Color3.fromRGB(96, 112, 100), true)
+    local head = createPart(model, "Head", Vector3.new(2, 1, 1), base + Vector3.new(0, 1.5, 0), Color3.fromRGB(75, 84, 81), false)
+    local leftArm = createPart(model, "Left Arm", Vector3.new(1, 2, 1), base + Vector3.new(-1.5, 0, 0), Color3.fromRGB(126, 135, 120), false)
+    local rightArm = createPart(model, "Right Arm", Vector3.new(1, 2, 1), base + Vector3.new(1.5, 0, 0), Color3.fromRGB(126, 135, 120), false)
+    local leftLeg = createPart(model, "Left Leg", Vector3.new(1, 2, 1), base + Vector3.new(-0.5, -2, 0), Color3.fromRGB(72, 80, 74), false)
+    local rightLeg = createPart(model, "Right Leg", Vector3.new(1, 2, 1), base + Vector3.new(0.5, -2, 0), Color3.fromRGB(72, 80, 74), false)
 
     local rootJoint = motor(root, "RootJoint", root, torso, CFrame.new(), CFrame.new())
     local neck = motor(torso, "Neck", torso, head, CFrame.new(0, 1, 0), CFrame.new(0, -0.5, 0))
@@ -101,7 +101,7 @@ local function buildCharacter(slot, skill)
     title.Size = UDim2.new(1, 0, 0, 24)
     title.Font = Enum.Font.GothamBold
     title.Text = model.Name
-    title.TextColor3 = Color3.fromRGB(94, 226, 255)
+    title.TextColor3 = Color3.fromRGB(255, 224, 174)
     title.TextSize = 14
     title.TextStrokeTransparency = 0.45
     title.Parent = marker
@@ -113,7 +113,7 @@ local function buildCharacter(slot, skill)
     backing.Parent = marker
     local fill = Instance.new("Frame")
     fill.Size = UDim2.fromScale(1, 1)
-    fill.BackgroundColor3 = Color3.fromRGB(40, 218, 166)
+    fill.BackgroundColor3 = Color3.fromRGB(114, 185, 124)
     fill.BorderSizePixel = 0
     fill.Parent = backing
     humanoid.HealthChanged:Connect(function(value)
@@ -358,7 +358,7 @@ local function shoot(bot, target, aimPoint, dt)
         kind = "BotTracer",
         origin = origin,
         direction = rayDirection,
-        color = bot.accent,
+        color = Color3.fromRGB(244, 202, 132),
         length = ray and (ray.Position - origin).Magnitude or config.MaximumAttackDistance,
     })
     if not ray then return end
