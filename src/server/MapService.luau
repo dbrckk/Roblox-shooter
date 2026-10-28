@@ -3,6 +3,7 @@
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ArenaArt = require(script.Parent:WaitForChild("ArenaArt"))
+local IndustrialProps = require(script.Parent:WaitForChild("IndustrialProps"))
 local MapService = {}
 local started = false
 
@@ -136,6 +137,30 @@ local function buildArena(folder)
 
     highground(folder)
 
+    -- Coarse solid silhouettes for freight props, never visual-only ghosts.
+    -- The IndustrialProps module draws non-queryable detail around these bodies.
+    for _, forklift in ipairs({
+        { x = -72, z = -115, paint = P.yellow },
+        { x = 72, z = 115, paint = P.olive },
+    }) do
+        local collision = part(folder, "INDUSTRIAL / forklift body",
+            Vector3.new(8, 3.1, 11), Vector3.new(forklift.x, 1.55, forklift.z),
+            forklift.paint, Enum.Material.Metal)
+        collision:SetAttribute("MantleTarget", true)
+    end
+    for i, point in ipairs({
+        Vector2.new(0, -128),
+        Vector2.new(-100, 52),
+        Vector2.new(100, 52),
+        Vector2.new(-100, -55),
+        Vector2.new(100, -55),
+    }) do
+        local crate = part(folder, "INDUSTRIAL / pallet stack " .. i,
+            Vector3.new(9, 3.7, 9), Vector3.new(point.X, 1.85, point.Y),
+            P.rust, Enum.Material.WoodPlanks)
+        crate:SetAttribute("MantleTarget", true)
+    end
+
     -- Short obstacles break long sightlines while keeping side-to-side navigation open.
     for i = 1, 16 do
         local angle = i * math.pi / 8
@@ -200,6 +225,7 @@ function MapService.start()
     Workspace:SetAttribute("ArenaTheme", "IRON_YARD_DAYLIGHT")
     buildArena(folder)
     ArenaArt.build(folder)
+    IndustrialProps.build(folder)
     ArenaArt.applyLighting()
 end
 
