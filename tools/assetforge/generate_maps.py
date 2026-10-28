@@ -89,7 +89,7 @@ def main():
         "channel_maps": ["ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"],
         "sets": list(BASES) + ["accent_" + x for x in PALETTES],
     }, indent=2), encoding="utf-8")
-    print("Wrote", len(BASES + dict.fromkeys(PALETTES)), "PBR sets to", out)
+    print("Wrote", len(BASES) + len(PALETTES), "PBR sets to", out)
 
 if __name__ == "__main__":
     main()

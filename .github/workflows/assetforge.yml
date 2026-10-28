@@ -1,0 +1,58 @@
+name: Build original VANGUARD 3D/PBR kit
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/assetforge.yml"
+      - "tools/assetforge/**"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+
+      - name: Install free Blender
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender
+          blender --version | head -n 2
+
+      - name: Generate original 512px PBR maps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/assetforge/generate_maps.py --out build/assets/textures --size 512
+
+      - name: Model 4 combatant variants and render presentation
+        shell: bash
+        run: |
+          set -euo pipefail
+          blender --background --threads 2 --python tools/assetforge/build_vanguard.py -- \
+            --out build/assets --textures build/assets/textures
+
+      - name: Validate exported geometry and PBR channels
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/assetforge/validate_exports.py build/assets
+          find build/assets -type f | sort > build/assets/FILE_INDEX.txt
+          echo '### VANGUARD: generated 3D/PBR kit' >> "$GITHUB_STEP_SUMMARY"
+          echo '7 rigid R6 components as FBX, 4 complete skins with LOD0/LOD1 GLB, 8 PBR texture sets, editable Blender file and contact sheet.' >> "$GITHUB_STEP_SUMMARY"
+          cat build/assets/validation_summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload model kit and previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: vanguard-3d-pbr-kit
+          path: build/assets/
+          if-no-files-found: error
+          retention-days: 14
