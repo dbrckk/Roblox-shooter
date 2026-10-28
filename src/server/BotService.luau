@@ -7,7 +7,9 @@ local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local config = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotConfig"))
+local shared = ReplicatedStorage:WaitForChild("Shared")
+local config = require(shared:WaitForChild("BotConfig"))
+local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(true)
 local BotService = {}
 local folder = nil
 local slots = {}
@@ -305,6 +307,9 @@ local function shoot(bot, target, aimPoint, dt)
     local direction = aimPoint - bot.head.Position
     if direction.Magnitude < 0.01 then return end
     bot.aimDirection = bot.aimDirection:Lerp(direction.Unit, math.clamp(bot.skill.aimSpeed * dt, 0, 1))
+    if bot.aimDirection.Magnitude < 0.001 then
+        bot.aimDirection = direction.Unit
+    end
     if now < bot.reactionReadyAt or now < bot.nextFireAt then return end
     if direction.Magnitude > config.MaximumAttackDistance then return end
     bot.nextFireAt = now + bot.skill.cooldown * rng:NextNumber(0.86, 1.18)
@@ -314,6 +319,13 @@ local function shoot(bot, target, aimPoint, dt)
     local look = CFrame.lookAt(Vector3.zero, bot.aimDirection) * CFrame.Angles(errorPitch, errorYaw, 0)
     local rayDirection = look.LookVector
     local origin = bot.head.Position
+    -- Reuse the existing client audio channel; bots remain server-controlled.
+    remotes.WeaponFx:FireAllClients({
+        kind = "FireSound",
+        shooterUserId = 0,
+        weaponId = "Pistol",
+        origin = origin,
+    })
     local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, rayParams(bot.model))
     if not ray then return end
     local hitModel = ray.Instance:FindFirstAncestorOfClass("Model")

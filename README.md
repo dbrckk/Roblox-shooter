@@ -23,7 +23,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 4. Ouvrir `neon-strike.rbxlx` dans Studio, puis **Play**.
 5. Édition en direct : `rojo plugin install` puis `rojo serve default.project.json`.
 
-Le dépôt contient un prototype jouable **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI vérifiera seulement la génération du fichier, pas la qualité du gameplay.
+Le dépôt inclut désormais une simulation FFA avec jusqu'à quatre bots mobiles, avec IA serveur, victoire par éliminations et scoreboard. Il reste **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI vérifiera seulement la génération du fichier, pas la qualité du gameplay.
 
 ## Télécharger le projet construit
 

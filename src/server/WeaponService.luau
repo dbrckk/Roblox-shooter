@@ -150,7 +150,9 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 		distance = origin and (raycastResult.Position - origin).Magnitude or 0,
 	})
 
-	if healthBefore > 0 and targetHumanoid.Health <= 0 then
+	-- Training targets still provide impact feedback, but cannot win PvP rounds.
+    if healthBefore > 0 and targetHumanoid.Health <= 0
+        and (targetPlayer ~= nil or targetCharacter:GetAttribute("IsArenaBot") == true) then
         local stats = attacker:FindFirstChild("leaderstats")
         local kills = stats and stats:FindFirstChild("Eliminations")
         if kills then kills.Value += 1 end

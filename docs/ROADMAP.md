@@ -14,7 +14,7 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] Arena FFA : gestion serveur des phases countdown/live/résultats, objectif 15 éliminations et HUD (tests Studio requis)
 - [ ] vrais duels 1v1 jusqu'à 5v5, équipes, spectateur et matchmaking
 - [ ] tests réellement exécutés en Roblox Studio et sur Android
-- [ ] personnages IA mobiles, couverture et navigation
+- [x] personnages IA mobiles : recherche de cible, navigation PathfindingService, tir et réaction variable (test Studio à réaliser)
 - [ ] meshes originaux et textures PBR, son et VFX premium
 - [ ] anti-triche et latence validées sous charge
 - [ ] matchmaking, progression, sauvegardes et stabilité publication

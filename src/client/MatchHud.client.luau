@@ -52,6 +52,7 @@ local function update()
     local count = Workspace:GetAttribute("NeonMatchRound") or 0
     local seconds = Workspace:GetAttribute("NeonMatchTimeLeft") or 0
     local target = Workspace:GetAttribute("NeonMatchScoreLimit") or 15
+    local botCount = Workspace:GetAttribute("NeonBotCount") or 0
     local kills = eliminations and eliminations.Value or 0
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
@@ -63,7 +64,7 @@ local function update()
         detail.Text = string.format("Combat starts in %d", seconds)
     elseif phase == "LIVE" then
         header.Text = string.format("ROUND %d  |  %s", count, clock)
-        detail.Text = string.format("ELIMINATIONS  %d / %d", kills, target)
+        detail.Text = string.format("KILLS %d/%d   |   %d BOTS", kills, target, botCount)
     else
         header.Text = "ROUND FINISHED"
         local who = Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
@@ -88,7 +89,7 @@ player.ChildAdded:Connect(function(child)
     end
 end)
 
-for _, name in ipairs({ "NeonMatchPhase", "NeonMatchRound", "NeonMatchTimeLeft", "NeonMatchWinner", "NeonMatchScoreLimit" }) do
+for _, name in ipairs({ "NeonMatchPhase", "NeonMatchRound", "NeonMatchTimeLeft", "NeonMatchWinner", "NeonMatchScoreLimit", "NeonBotCount" }) do
     Workspace:GetAttributeChangedSignal(name):Connect(update)
 end
 update()
