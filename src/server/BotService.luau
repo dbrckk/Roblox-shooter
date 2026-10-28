@@ -122,6 +122,19 @@ local function buildCharacter(slot, skill)
     title.TextSize = 14
     title.TextStrokeTransparency = 0.45
     title.Parent = marker
+    local function updateProtectionLabel()
+        if SpawnService.isProtected(model) then
+            title.Text = model.Name .. " | SAFE"
+            title.TextColor3 = Color3.fromRGB(255, 222, 166)
+        else
+            title.Text = model.Name
+            title.TextColor3 = Color3.fromRGB(236, 238, 226)
+        end
+    end
+    model:GetAttributeChangedSignal("NeonSpawnProtectedUntil"):Connect(updateProtectionLabel)
+    task.delay(2.05, function()
+        if model.Parent then updateProtectionLabel() end
+    end)
     local backing = Instance.new("Frame")
     backing.Position = UDim2.fromOffset(18, 27)
     backing.Size = UDim2.fromOffset(106, 6)
@@ -148,6 +161,7 @@ local function buildCharacter(slot, skill)
     }, slot)
     model.Parent = folder
     SpawnService.protectCharacter(model, 2.0)
+    updateProtectionLabel()
     -- Keep NPC physics server-owned; cosmetics are massless, non-colliding parts.
     pcall(function() root:SetNetworkOwner(nil) end)
     return model, humanoid, root, head, {
