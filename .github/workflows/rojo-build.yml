@@ -21,6 +21,24 @@ jobs:
           unzip -q rojo.zip
           chmod +x rojo
 
+      - name: Install official Luau compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output luau-ubuntu.zip \
+            https://github.com/luau-lang/luau/releases/download/0.744/luau-ubuntu.zip
+          unzip -q luau-ubuntu.zip
+          chmod +x ./luau-compile
+          ./luau-compile --help > /dev/null || true
+
+      - name: Parse and compile every Luau source
+        shell: bash
+        run: |
+          set -euo pipefail
+          find src -type f -name '*.luau' -print0 | \
+            xargs -0 -r -n 1 ./luau-compile > /dev/null
+          echo "All Luau sources compiled successfully."
+
       - name: Build place
         run: ./rojo build default.project.json -o neon-strike.rbxlx
 
