@@ -1,0 +1,9 @@
+local DummyService = require(script:WaitForChild("DummyService"))
+local MapService = require(script:WaitForChild("MapService"))
+local MovementService = require(script:WaitForChild("MovementService"))
+local WeaponService = require(script:WaitForChild("WeaponService"))
+
+MapService.start()
+DummyService.start()
+MovementService.start()
+WeaponService.start()
