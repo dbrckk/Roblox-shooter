@@ -57,18 +57,24 @@ jobs:
           echo '### Roblox publication access check (readiness only)' >> "$GITHUB_STEP_SUMMARY"
           if [ -z "$ROBLOX_KEY" ]; then
             echo '- Open Cloud authorization: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Open Cloud authorization: NOT CONFIGURED"
           else
             echo '- Open Cloud authorization: **configured** (secret value not exposed)' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Open Cloud authorization: CONFIGURED"
           fi
           if [ -z "$IRON_YARD_UNIVERSE_ID" ]; then
             echo '- IRON YARD universe destination: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::IRON YARD universe destination: NOT CONFIGURED"
           else
             echo '- IRON YARD universe destination: configured' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::IRON YARD universe destination: CONFIGURED"
           fi
           if [ -z "$IRON_YARD_PLACE_ID" ]; then
             echo '- IRON YARD starting place: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::IRON YARD starting place: NOT CONFIGURED"
           else
             echo '- IRON YARD starting place: configured' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::IRON YARD starting place: CONFIGURED"
           fi
           echo '- No request to Roblox was sent by this diagnostic.' >> "$GITHUB_STEP_SUMMARY"
 
