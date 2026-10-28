@@ -12,7 +12,7 @@ Jeu Roblox FPS compétitif **original**, inspiré par les qualités de RIVALS, H
 
 ## Exigence graphique
 
-Direction: science-fiction compétitive, peinture métal PBR stylisée, cartes de normal/rugosité/métal, modèles originaux, rigging/animation soignés et optimisation mobile. Pas de récupération de meshes propriétaires.
+Direction retenue: terminal de fret industriel contemporain, combat arcade tactique, personnages stylisés crédibles, couleurs olive/sable/ardoise/rouille, matériaux PBR mats et lumière naturelle. Préserver silhouette, contraste et fluidité sur smartphone. Pas d'esthétique néon ni de science-fiction lumineuse. Pas de récupération de meshes propriétaires.
 
 ## Non négociable
 

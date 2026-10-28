@@ -16,8 +16,9 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [ ] tests réellement exécutés en Roblox Studio et sur Android
 - [x] personnages IA mobiles : recherche de cible, navigation PathfindingService, tir et réaction variable (test Studio à réaliser)
 - [x] armures tactiques VANGUARD originales sur R6, animation procédurale marche/visée/recul, fusils 3D, muzzle flash et traînées colorées (validation runtime requise)
-- [x] décor industriel original, signalétique, colorimétrie diurne sans Bloom, LOD local décor et armure Android
-- [x] vrais meshes Blender originaux générés : 7 FBX, 8 GLB avec 2 LOD, 32 cartes PBR 512×512 et planche de contact validés en CI (upload Roblox encore à faire)
+- [x] thème IRON YARD : terminal industriel de jour, grues, containers, marquages routiers, signalétique, sans Bloom, LOD local Android
+- [x] nouveaux meshes Blender PBR mats olive/sable/ardoise/rouille : 7 FBX, 8 GLB en 2 LOD, 32 cartes PBR 512×512 validés et archivés sur GitHub (upload Roblox encore à faire)
+- [x] briefing de début de manche et réticule contrasté sur fond clair (validation en jeu requise)
 - [ ] importer/publiquer les MeshParts et SurfaceAppearance dans Roblox Studio, calibrer positions, FX, animation rigide et Android
 - [ ] skinned meshes haut de gamme, animations professionnelles, mixage audio spatial, profils graphiques
 - [ ] anti-triche et latence validées sous charge
