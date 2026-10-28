@@ -1,0 +1,84 @@
+name: Publish IRON YARD to private Roblox experience
+
+on:
+  workflow_dispatch:
+    inputs:
+      universe_id:
+        description: 'IRON YARD Universe ID (NOT Chaos Survival)'
+        required: true
+        type: string
+      place_id:
+        description: 'Starting Place ID inside that Universe'
+        required: true
+        type: string
+      check_only:
+        description: 'Only verify access and PRIVATE status; do not upload'
+        required: true
+        default: false
+        type: boolean
+      confirm_private:
+        description: 'I confirm the selected IRON YARD experience is intended to remain PRIVATE'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iron-yard-private-${{ inputs.universe_id }}-${{ inputs.place_id }}
+  cancel-in-progress: false
+
+jobs:
+  private-upload:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+
+      - name: Require explicit private target confirmation
+        env:
+          CONFIRMED: ${{ inputs.confirm_private }}
+        run: |
+          test "$CONFIRMED" = "true" || {
+            echo "::error::You must confirm a PRIVATE IRON YARD target."; exit 1;
+          }
+
+      - name: Install official Rojo 7.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 -o rojo.zip \
+            https://github.com/rojo-rbx/rojo/releases/download/v7.7.1/rojo-7.7.1-linux-x86_64.zip
+          unzip -q rojo.zip
+          chmod +x rojo
+
+      - name: Compile every Luau source with official compiler
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --output luau-ubuntu.zip \
+            https://github.com/luau-lang/luau/releases/download/0.744/luau-ubuntu.zip
+          unzip -q luau-ubuntu.zip
+          chmod +x ./luau-compile
+          find src tools/studio -type f \( -name '*.luau' -o -name '*.lua' \) -print0 | \
+            xargs -0 -r -n 1 ./luau-compile > /dev/null
+
+      - name: Build current IRON YARD Roblox place
+        run: ./rojo build default.project.json -o iron-yard.rbxlx
+
+      - name: Verify owner, place and PRIVATE visibility; then publish
+        shell: bash
+        env:
+          ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
+          UNIVERSE_ID: ${{ inputs.universe_id }}
+          PLACE_ID: ${{ inputs.place_id }}
+          CHECK_ONLY: ${{ inputs.check_only }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/publish_private_roblox.py
+          args=(--universe-id "$UNIVERSE_ID" --place-id "$PLACE_ID" --place-file iron-yard.rbxlx)
+          if [ "$CHECK_ONLY" = "true" ]; then args+=(--dry-run); fi
+          python3 scripts/publish_private_roblox.py "${args[@]}"
