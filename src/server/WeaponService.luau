@@ -141,6 +141,11 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 		distance = origin and (raycastResult.Position - origin).Magnitude or 0,
 	})
 
+	if healthBefore > 0 and targetHumanoid.Health <= 0 then
+        local stats = attacker:FindFirstChild("leaderstats")
+        local kills = stats and stats:FindFirstChild("Eliminations")
+        if kills then kills.Value += 1 end
+    end
 	return true
 end
 

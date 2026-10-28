@@ -1,3 +1,5 @@
+local ScoreService = require(script:WaitForChild("ScoreService"))
+ScoreService.start()
 local DummyService = require(script:WaitForChild("DummyService"))
 local MapService = require(script:WaitForChild("MapService"))
 local MovementService = require(script:WaitForChild("MovementService"))
