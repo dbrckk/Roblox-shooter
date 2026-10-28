@@ -21,6 +21,11 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] briefing de début de manche et réticule contrasté sur fond clair (validation en jeu requise)
 - [x] classement des trois meilleurs combattants, secteur et direction en temps réel (tests en jeu nécessaires)
 - [x] silhouettes industrielles, couvertures physiques et détails LOD optimisés sur mobile (tests Android nécessaires)
+- [x] navigation bots asynchrone sans immobilisation : trajectoire directe sur terrain libre, vérification des obstacles bas, replanification, invalidation des chemins périmés
+- [x] sécurité du round : bot éliminé non bloquant, score des bots retirés purgé, respawn adapté aux couvertures, protection temporaire commune aux joueurs et IA
+- [x] orientation physique des bots face aux cibles visibles et animation de visée existante (à confirmer en Studio)
+- [x] couteau : contrôle serveur du segment d'apparition pour éviter de traverser une couverture proche
+- [x] LOD : prise en compte des modèles chargés après l'arrivée du client, cache de détails mis à jour à la réplication
 - [ ] importer/publiquer les MeshParts et SurfaceAppearance dans Roblox Studio, calibrer positions, FX, animation rigide et Android
 - [ ] skinned meshes haut de gamme, animations professionnelles, mixage audio spatial, profils graphiques
 - [ ] anti-triche et latence validées sous charge

@@ -26,6 +26,8 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 4. Ouvrir `iron-yard.rbxlx` dans Studio, puis **Play**.
 5. Édition en direct : `rojo plugin install` puis `rojo serve default.project.json`.
 
+**Robustesse des combats :** les bots continuent à marcher pendant le calcul d'itinéraires, recalculent leur trajet à proximité des obstacles bas et plateformes, tournent physiquement vers leurs cibles avec `AlignOrientation` et cessent de bloquer les tirs lorsqu'ils sont éliminés. Leur spawn est sélectionné loin des combattants, avec deux secondes de protection annoncées au-dessus du personnage. Les protections sont annulées lorsqu'un combattant tire. Le score des bots retirés (lorsqu'un joueur rejoint) ne peut plus remporter une manche ; les bots morts sont réinitialisés au début de la suivante. La vérification de navigation et de physique dans Studio reste nécessaire.
+
 Le dépôt inclut un mode FFA avec jusqu'à quatre bots mobiles, IA serveur, victoire par éliminations, scoreboard et fil de tirs. Les joueurs disposent de réapparitions sélectionnées parmi des positions dégagées et éloignées des autres combattants, avec protection temporaire de 2,5 secondes annulée au premier tir. Il reste **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI compile tous les fichiers Luau et génère le fichier Roblox Studio ; elle ne valide pas la qualité du gameplay ni les performances sur téléphone.
 
 ## Télécharger le projet construit
