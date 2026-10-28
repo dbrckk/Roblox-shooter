@@ -39,23 +39,43 @@ local function updateModel(model)
     end
 end
 
+
 local artHideBeyond = isTouch and 110 or 195
 local artUnhideBefore = artHideBeyond - 16
+local artCache = setmetatable({}, { __mode = "k" })
+local artFolders = { "NeonStrikeDecor", "FreightLandmarks" }
+
+local function getDetailParts(folder)
+    local cached = artCache[folder]
+    if cached then return cached end
+    cached = {}
+    for _, item in ipairs(folder:GetDescendants()) do
+        if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
+            table.insert(cached, item)
+        end
+    end
+    artCache[folder] = cached
+    return cached
+end
 
 local function updateArt()
     local arena = Workspace:FindFirstChild("NeonStrikeArena")
-    local decor = arena and arena:FindFirstChild("NeonStrikeDecor")
     local camera = Workspace.CurrentCamera
-    if not decor or not camera then return end
+    if not arena or not camera then return end
     local position = camera.CFrame.Position
-    for _, item in ipairs(decor:GetDescendants()) do
-        if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
-            local far = (item.Position - position).Magnitude
-            local hiddenBefore = rendered[item] or false
-            local hide = (hiddenBefore and far > artUnhideBefore) or far > artHideBeyond
-            if hide ~= hiddenBefore then
-                rendered[item] = hide
-                item.LocalTransparencyModifier = hide and 1 or 0
+    for _, name in ipairs(artFolders) do
+        local folder = arena:FindFirstChild(name)
+        if folder then
+            for _, item in ipairs(getDetailParts(folder)) do
+                if item.Parent then
+                    local distance = (item.Position - position).Magnitude
+                    local wasHidden = rendered[item] or false
+                    local hidden = (wasHidden and distance > artUnhideBefore) or distance > artHideBeyond
+                    if hidden ~= wasHidden then
+                        rendered[item] = hidden
+                        item.LocalTransparencyModifier = hidden and 1 or 0
+                    end
+                end
             end
         end
     end
