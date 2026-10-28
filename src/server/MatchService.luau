@@ -4,6 +4,7 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
+local BotService = require(script.Parent:WaitForChild("BotService"))
 local MatchService = {}
 local started = false
 
@@ -45,19 +46,27 @@ end
 
 local function leader()
     local best = -1
-    local selected = nil
+    local selectedName = nil
     local tied = false
     for _, player in ipairs(Players:GetPlayers()) do
         local score = scoreFor(player)
         if score > best then
             best = score
-            selected = player
+            selectedName = player.DisplayName
             tied = false
         elseif score == best then
             tied = true
         end
     end
-    return selected, best, tied
+    local botName, botScore, botsTied = BotService.getLeader()
+    if botName and botScore > best then
+        best = botScore
+        selectedName = botName
+        tied = botsTied
+    elseif botName and botScore == best then
+        tied = true
+    end
+    return selectedName, best, tied
 end
 
 local function resetRoundScores()
@@ -105,16 +114,17 @@ local function startRound()
         return
     end
     resetRoundScores()
+    BotService.resetRound()
     positionPlayers()
     round += 1
     transition("LIVE", ROUND_SECONDS)
 end
 
 local function endRound()
-    local player, topScore, tied = leader()
+    local name, topScore, tied = leader()
     local result = "DRAW"
-    if player and not tied and topScore > 0 then
-        result = player.DisplayName
+    if name and not tied and topScore > 0 then
+        result = name
     end
     transition("RESULTS", RESULTS_SECONDS, result)
 end
