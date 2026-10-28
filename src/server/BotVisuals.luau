@@ -42,6 +42,9 @@ local function tryImportedMeshKit(model, rig, index, accent)
         part.CanQuery = false
         part.CastShadow = true
         part:SetAttribute("NeonCosmeticTier", "Core")
+        -- FBX components are authored around a common world origin.
+        -- Align each part's imported pivot with the corresponding R6 limb,
+        -- preserving the authored relative geometry without affecting hitboxes.
         local offset = partName == "rifle" and CFrame.new(0, -0.39, -1.12) or CFrame.new()
         part.CFrame = target.CFrame * offset
         part.Parent = model
