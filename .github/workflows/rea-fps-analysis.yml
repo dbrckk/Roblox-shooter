@@ -1,0 +1,66 @@
+name: REA FPS reference analysis
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/rea-fps-analysis.yml"
+      - "scripts/summarize-rea.mjs"
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-open-fps:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out NEON STRIKE
+        uses: actions/checkout@v4
+
+      - name: Check out legal open-source FPS reference
+        uses: actions/checkout@v4
+        with:
+          repository: Hazzad123/fully-ai-arena-fps
+          ref: 920b123d67015d5e8151a4ebd6742d8015d538be
+          path: fps-reference
+          persist-credentials: false
+
+      - name: Verify reference license and pin
+        shell: bash
+        run: |
+          test "$(git -C fps-reference rev-parse HEAD)" = "920b123d67015d5e8151a4ebd6742d8015d538be"
+          grep -q "MIT License" fps-reference/LICENSE
+          echo "Inspected MIT FPS reference at pinned revision."
+          find fps-reference/shared fps-reference/server fps-reference/client -name '*.js' | wc -l
+
+      - name: Install supported Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+
+      - name: Analyze the actual FPS with REA (static, no game execution)
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p rea-output
+          node --version
+          npx -y rea-agents@6.8.0 analyze-javascript-application "$PWD/fps-reference" --json > rea-output/fps-rea-evidence.json
+          test -s rea-output/fps-rea-evidence.json
+
+      - name: Generate traceable bounded report from REA evidence
+        run: node scripts/summarize-rea.mjs rea-output/fps-rea-evidence.json rea-output/rea-summary.md
+
+      - name: Publish summary
+        shell: bash
+        run: |
+          cat rea-output/rea-summary.md
+          cat rea-output/rea-summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload original REA Evidence and summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: rea-open-source-fps-analysis
+          path: rea-output/
+          retention-days: 7
+          if-no-files-found: error
