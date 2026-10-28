@@ -18,8 +18,12 @@ est **distincte** de la compilation et nécessite une connexion Roblox Open Clou
    - `universe:read` (vérifier nom et statut privé)
    - `universe.place:read` (vérifier l'existence de la place)
    - `universe-places:write` (publier le fichier RBXLX).
-   Autoriser l'adresse IP du runner GitHub selon les options proposées par
-   Roblox ; une restriction IP incompatible provoque un échec sûr.
+   Les adresses IP des runners GitHub hébergés varient : pour cette
+   automatisation, laisser **Restrict IP addresses** désactivé (optionnel
+   chez Roblox), mais **restreindre absolument la clé à IRON YARD**
+   et limiter sa durée de validité. Une restriction IP incompatible
+   provoquera un refus d'authentification. Révoquer la clé dès qu'elle
+   ne sert plus.
 4. Dans [GitHub → Actions secrets](https://github.com/dbrckk/Roblox-shooter/settings/secrets/actions),
    ajouter **Repository secret** nommé exactement
    `ROBLOX_OPEN_CLOUD_API_KEY`, avec la valeur de la clé. **Ne jamais coller
