@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NEON STRIKE VANGUARD — original, deterministic 2D PBR texture bake.
+"""IRON YARD VANGUARD — original, deterministic 2D PBR texture bake.
 
 Generates physically consistent tangent-space normal gradients from procedural
 height samples, panel joins, chamfer wear, brushed metal and localized scuffs.
@@ -13,17 +13,17 @@ import struct
 import zlib
 
 PALETTES = {
-    "cyan": (46, 209, 239),
-    "amber": (247, 151, 61),
-    "violet": (175, 120, 250),
-    "emerald": (93, 235, 146),
+    "olive": (124, 145, 91),
+    "sand": (205, 180, 135),
+    "slate": (105, 128, 142),
+    "rust": (168, 99, 74),
 }
 # RGBA base + metallic / roughness scalar, 0-255.
 BASES = {
-    "armor": (56, 73, 91, 212, 78),
-    "carbon": (22, 31, 43, 15, 186),
-    "gunmetal": (88, 103, 115, 220, 93),
-    "visor": (16, 36, 52, 8, 48),
+    "armor": (109, 115, 104, 152, 143),
+    "carbon": (44, 50, 45, 12, 203),
+    "gunmetal": (88, 97, 97, 211, 107),
+    "visor": (58, 78, 85, 7, 72),
 }
 
 def clamp(number):
@@ -162,9 +162,9 @@ def main():
     for name, base in BASES.items():
         generate(name, base, out, args.size)
     for name, color in PALETTES.items():
-        generate("accent_" + name, (*color, 24, 55), out, args.size, accent=True)
+        generate("accent_" + name, (*color, 24, 145), out, args.size, accent=True)
     (out / "texture_manifest.json").write_text(json.dumps({
-        "license": "Original textures authored for NEON STRIKE",
+        "license": "Original textures authored for IRON YARD",
         "resolution": [args.size, args.size],
         "palettes": PALETTES,
         "channel_maps": ["ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"],

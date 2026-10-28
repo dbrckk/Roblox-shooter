@@ -17,7 +17,7 @@ def size(path, minimum=64):
 def main(root):
     root = Path(root)
     manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
-    names = ["cyan", "amber", "violet", "emerald"]
+    names = ["olive", "sand", "slate", "rust"]
     pieces = ["torso", "head", "left_arm", "right_arm", "left_leg", "right_leg", "rifle"]
     check(manifest["palette"] == names, "palette mismatch")
     check(manifest["format"]["components"] == pieces, "component manifest mismatch")

@@ -4,14 +4,14 @@ Le workflow gratuit [Build original VANGUARD 3D/PBR kit](https://github.com/dbrc
 
 ## Archive livrée
 
-- `meshes/vanguard_{cyan,amber,violet,emerald}_{LOD0,LOD1}.glb` : huit vraies scènes GLB texturées, chaque combattant séparé en sept éléments rigides.
+- `meshes/vanguard_{olive,sand,slate,rust}_{LOD0,LOD1}.glb` : huit vraies scènes GLB texturées, chaque combattant séparé en sept éléments rigides.
 - `parts/vanguard_{torso,head,left_arm,right_arm,left_leg,right_leg,rifle}.fbx` : sept pièces individuelles au format FBX, UV et matériaux, destinées à l'import Roblox.
-- `textures/` : huit matériaux de texture distincts, 512 × 512 pixels ; pour chacun, `ColorMap`, `NormalMap`, `RoughnessMap` et `MetalnessMap`. Matériaux des palettes cyan, amber, violet et emerald.
+- `textures/` : huit matériaux de texture distincts, 512 × 512 pixels ; pour chacun, `ColorMap`, `NormalMap`, `RoughnessMap` et `MetalnessMap`. Matériaux des palettes olive, sand, slate et rust.
 - `preview/vanguard_contact_sheet.png` : rendu Blender des quatre coloris.
 - `vanguard_source.blend` : scène source éditable, avec textures intégrées.
 - `manifest.json`, `validation_summary.md` : inventaire et contrôles.
 
-**Export initial vérifié le 28 octobre 2026 :** le run [40733818033](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a généré les 7 FBX, 8 GLB, 32 PNG PBR, la scène Blender et l'aperçu. Les 4 meshes LOD0 comptent chacun 3 636 polygones, selon Blender. Une publication dans [GitHub Releases](https://github.com/dbrckk/Roblox-shooter/releases) est automatisée pour conserver le ZIP durablement, sous l'étiquette *assets / prerelease*, et ne constitue pas une publication du jeu.
+**Export historique (ancienne palette) vérifié le 28 octobre 2026 :** le run [40733818033](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a généré les 7 FBX, 8 GLB, 32 PNG PBR, la scène Blender et l'aperçu. Les 4 meshes LOD0 comptent chacun 3 636 polygones, selon Blender. Une publication dans [GitHub Releases](https://github.com/dbrckk/Roblox-shooter/releases) est automatisée pour conserver le ZIP durablement, sous l'étiquette *assets / prerelease*, et ne constitue pas une publication du jeu.
 
 Tout est **original**. Aucun contenu de RIVALS ni d'un FPS tiers n'a été extrait. REA reste utilisé pour l'analyse de l'architecture d'un FPS sous licence MIT (voir `REA_RESULTS.md`).
 
@@ -24,7 +24,7 @@ Le script de jeu `BotVisuals.luau` recherche les modèles dans la hiérarchie su
 ```text
 ServerStorage
 └─ VanguardTemplates
-   ├─ cyan
+   ├─ olive
    │  ├─ torso        (MeshPart, SurfaceAppearance si PBR importé)
    │  ├─ head         (MeshPart)
    │  ├─ left_arm     (MeshPart)
@@ -32,9 +32,9 @@ ServerStorage
    │  ├─ left_leg     (MeshPart)
    │  ├─ right_leg    (MeshPart)
    │  └─ rifle        (MeshPart)
-   ├─ amber           (mêmes sept pièces)
-   ├─ violet          (mêmes sept pièces)
-   └─ emerald         (mêmes sept pièces)
+   ├─ sand           (mêmes sept pièces)
+   ├─ slate          (mêmes sept pièces)
+   └─ rust         (mêmes sept pièces)
 ```
 
 1. Télécharger l'archive via le workflow réussi, la décompresser sur un ordinateur avec Roblox Studio.
@@ -51,7 +51,7 @@ Il n'y a **aucun ID de mesh inventé** dans le code. Le montage demeure **rigide
 
 Un script de **barre de commandes Studio** évite de renommer/déplacer les 28 pièces à la main :
 
-1. Importer les **quatre GLB LOD0** (cyan, amber, violet, emerald) via **Studio 3D Importer** ; les ressources doivent être importées et autorisées par Roblox.
+1. Importer les **quatre GLB LOD0** (olive, sand, slate, rust) via **Studio 3D Importer** ; les ressources doivent être importées et autorisées par Roblox.
 2. Vérifier que chaque modèle contient sept MeshParts nommés `VANGUARD_torso`, `VANGUARD_head`, `VANGUARD_left_arm`, etc. Renommer les **quatre modèles racines** pour inclure leur palette respective.
 3. Sélectionner simultanément ces **quatre modèles racines** dans l'Explorer, puis exécuter `tools/studio/install_vanguard.lua` dans **View → Command Bar** (copier-coller son contenu).
 4. Le script vérifie l'existence et l'ID de chaque mesh et construit automatiquement les **28 MeshParts** de `ServerStorage/VanguardTemplates` ; il prévient si les SurfaceAppearance PBR manquent. Il ne modifie pas les modèles sources sélectionnés.

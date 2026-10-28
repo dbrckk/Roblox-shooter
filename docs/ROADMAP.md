@@ -1,4 +1,4 @@
-# NEON STRIKE — production
+# IRON YARD — production
 
 ## Référence
 RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal pour la variété d'armes. Recréation indépendante, pas de copie d'expérience Roblox.
@@ -15,8 +15,8 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [ ] vrais duels 1v1 jusqu'à 5v5, équipes, spectateur et matchmaking
 - [ ] tests réellement exécutés en Roblox Studio et sur Android
 - [x] personnages IA mobiles : recherche de cible, navigation PathfindingService, tir et réaction variable (test Studio à réaliser)
-- [x] armures VANGUARD originales sur R6, animation procédurale marche/visée/recul, fusils 3D, muzzle flash et traînées colorées (validation runtime requise)
-- [x] décor industriel original, signalétique, correction colorimétrique / Bloom, LOD local décor et armure Android
+- [x] armures tactiques VANGUARD originales sur R6, animation procédurale marche/visée/recul, fusils 3D, muzzle flash et traînées colorées (validation runtime requise)
+- [x] décor industriel original, signalétique, colorimétrie diurne sans Bloom, LOD local décor et armure Android
 - [x] vrais meshes Blender originaux générés : 7 FBX, 8 GLB avec 2 LOD, 32 cartes PBR 512×512 et planche de contact validés en CI (upload Roblox encore à faire)
 - [ ] importer/publiquer les MeshParts et SurfaceAppearance dans Roblox Studio, calibrer positions, FX, animation rigide et Android
 - [ ] skinned meshes haut de gamme, animations professionnelles, mixage audio spatial, profils graphiques

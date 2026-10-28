@@ -1,4 +1,4 @@
-name: Build original VANGUARD 3D/PBR kit
+name: Build original IRON YARD VANGUARD 3D/PBR kit
 
 on:
   workflow_dispatch:
@@ -65,9 +65,9 @@ jobs:
         run: |
           set -euo pipefail
           zip -q -r vanguard-3d-pbr-kit.zip build/assets
-          tag="vanguard-assets-${GITHUB_SHA:0:12}"
+          tag="iron-yard-assets-${GITHUB_SHA:0:12}"
           gh release create "$tag" vanguard-3d-pbr-kit.zip \
             --title "VANGUARD source assets ${GITHUB_SHA:0:7}" \
-            --notes "Original NEON STRIKE 3D source assets, FBX pieces, 4 PBR GLB palettes, 32 maps and Blender project. Asset kit only: NOT a published Roblox game. Import/permissions and Studio playtests still required." \
+            --notes "Original IRON YARD 3D source assets, FBX pieces, 4 PBR GLB palettes, 32 maps and Blender project. Asset kit only: NOT a published Roblox game. Import/permissions and Studio playtests still required." \
             --prerelease
           echo "### Permanent download: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}" >> "$GITHUB_STEP_SUMMARY"

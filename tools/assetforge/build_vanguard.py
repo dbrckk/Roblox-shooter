@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""NEON STRIKE VANGUARD modular 3D asset forge. Run via Blender in background.
+"""IRON YARD VANGUARD modular 3D asset forge. Run via Blender in background.
 All geometry is original; the R6-sized pieces are independent rigid MeshParts, not a skin-weighted mesh.
 FBX intended as Roblox Studio import input; GLB and packed .blend for inspection and edits.
 """
@@ -12,12 +12,12 @@ from pathlib import Path
 import bpy
 from mathutils import Vector
 
-COLORS = ["cyan", "amber", "violet", "emerald"]
+COLORS = ["olive", "sand", "slate", "rust"]
 ACCENTS = {
-    "cyan": (0.18, 0.80, 0.94),
-    "amber": (0.98, 0.56, 0.21),
-    "violet": (0.71, 0.40, 0.99),
-    "emerald": (0.31, 0.92, 0.51),
+    "olive": (0.48, 0.55, 0.34),
+    "sand": (0.78, 0.69, 0.53),
+    "slate": (0.42, 0.51, 0.56),
+    "rust": (0.66, 0.39, 0.29),
 }
 # Dimensions are in approximate Roblox studs, Blender uses Z-up.
 ANCHORS = {
@@ -66,7 +66,7 @@ def shader(label, directory, tint=None):
     nt.links.new(normal.outputs["Normal"], bsdf.inputs["Normal"])
     if tint is not None:
         bsdf.inputs["Emission Color"].default_value = (tint[0], tint[1], tint[2], 1)
-        bsdf.inputs["Emission Strength"].default_value = 1.6
+        bsdf.inputs["Emission Strength"].default_value = 0.0
     return mat
 
 def box(objects, name, center, scale, material, bevel=0.045, segs=2):
@@ -215,10 +215,10 @@ def render_gallery(output, gallery):
     scene.render.resolution_percentage = 100
     scene.render.image_settings.file_format = "PNG"
     scene.render.film_transparent = False
-    world = bpy.data.worlds.new("Neon Showcase Space")
+    world = bpy.data.worlds.new("Daylight Equipment Studio")
     scene.world = world
     world.use_nodes = True
-    world.node_tree.nodes.get("Background").inputs["Color"].default_value = (0.025, 0.035, 0.055, 1)
+    world.node_tree.nodes.get("Background").inputs["Color"].default_value = (0.57, 0.60, 0.61, 1)
     world.node_tree.nodes.get("Background").inputs["Strength"].default_value = 0.55
 
     def light(name, loc, energy, color, size):
@@ -231,12 +231,12 @@ def render_gallery(output, gallery):
         l.data.size = size
         direction = Vector((0, 0, 2.2)) - l.location
         l.rotation_euler = direction.to_track_quat("-Z", "Y").to_euler()
-    light("Front cyan studio softbox", (0, -8, 10), 2900, (0.62, 0.89, 1.0), 8)
+    light("Large daylight softbox", (0, -8, 10), 2900, (0.96, 0.94, 0.84), 8)
     light("Amber rim softbox", (-8, 4, 9), 1800, (1.0, 0.61, 0.27), 7)
-    light("Right rim softbox", (7, 5, 7), 1450, (0.44, 0.77, 1.0), 6)
+    light("Fill softbox", (7, 5, 7), 1450, (0.85, 0.91, 1.0), 6)
 
     mat = bpy.data.materials.new("GalleryFloor")
-    mat.diffuse_color = (0.035, 0.046, 0.063, 1)
+    mat.diffuse_color = (0.24, 0.26, 0.25, 1)
     bpy.ops.mesh.primitive_plane_add(size=2, location=(0, 0, -0.06))
     floor = bpy.context.object
     floor.name = "PhotoStudio floor (not part of exports)"
@@ -272,7 +272,7 @@ def main():
         for component in ANCHORS:
             obj = part(component, mats, slim=False)
             assembled[component] = obj
-            if color == "cyan":
+            if color == "olive":
                 export_fbx(output / "parts" / ("vanguard_" + component + ".fbx"), obj)
             obj.location = ANCHORS[component]
         export_gltf(output / "meshes" / ("vanguard_" + color + "_LOD0.glb"), list(assembled.values()))
@@ -298,7 +298,7 @@ def main():
     bpy.ops.file.pack_all()
     bpy.ops.wm.save_as_mainfile(filepath=str(output / "vanguard_source.blend"))
     manifest = {
-        "project": "NEON STRIKE / VANGUARD",
+        "project": "IRON YARD / VANGUARD",
         "source": "Original programmatically generated mesh and PBR texture maps",
         "license": "Original assets authored for this project",
         "source_files": ["tools/assetforge/build_vanguard.py", "tools/assetforge/generate_maps.py"],

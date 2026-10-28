@@ -1,11 +1,11 @@
--- NEON STRIKE / Studio Command Bar importer.
+-- IRON YARD / Studio Command Bar importer.
 -- Run in Studio Edit mode AFTER importing the four VANGUARD_*_LOD0.glb files.
--- Select exactly four imported root models, named cyan, amber, violet, emerald.
+-- Select exactly four imported root models, named olive, sand, slate, rust.
 -- Source meshes remain untouched; a complete, validated ServerStorage kit is staged.
 local Selection = game:GetService("Selection")
 local ServerStorage = game:GetService("ServerStorage")
 
-local palettes = {"cyan", "amber", "violet", "emerald"}
+local palettes = {"olive", "sand", "slate", "rust"}
 local pieces = {"torso", "head", "left_arm", "right_arm", "left_leg", "right_leg", "rifle"}
 local selected = Selection:Get()
 assert(#selected == 4, "Select the FOUR imported color-model roots before running this command.")
@@ -89,14 +89,14 @@ staging.Parent = ServerStorage
 local previous = ServerStorage:FindFirstChild("VanguardTemplates")
 if previous then previous:Destroy() end
 staging.Name = "VanguardTemplates"
-print("[NEON STRIKE] Installed " .. count .. " original MeshParts in ServerStorage/VanguardTemplates.")
-print("[NEON STRIKE] All four bot palettes now have seven complete rigid components.")
+print("[IRON YARD] Installed " .. count .. " original MeshParts in ServerStorage/VanguardTemplates.")
+print("[IRON YARD] All four bot palettes now have seven complete rigid components.")
 if #untextured > 0 then
-    warn("[NEON STRIKE] PBR SurfaceAppearance not found for " .. #untextured ..
+    warn("[IRON YARD] PBR SurfaceAppearance not found for " .. #untextured ..
         " pieces. Mesh geometry will work, but import and assign PBR maps before publication.")
     for _, name in ipairs(untextured) do
-        warn("[NEON STRIKE] Missing SurfaceAppearance: " .. name)
+        warn("[IRON YARD] Missing SurfaceAppearance: " .. name)
     end
 else
-    print("[NEON STRIKE] All 28 components have SurfaceAppearance. Check actual map IDs in Studio.")
+    print("[IRON YARD] All 28 components have SurfaceAppearance. Check actual map IDs in Studio.")
 end

@@ -1,4 +1,4 @@
-# NEON STRIKE — asset production and quality gate
+# IRON YARD — asset production and quality gate
 
 ## Implemented as actual in-game Roblox instances
 - `src/server/BotVisuals.luau`: original segmented combat armor with 4 colorways and cosmetic rifle, welded to R6 Humanoid hitboxes. Fine cosmetic parts use `CanQuery=false` and `CanCollide=false`, preventing them from interfering with hit detection or navmesh.
@@ -12,7 +12,7 @@
 
 A complete [AssetForge job](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) generated seven rigid R6-compatible FBX components, eight GLB variants (four colorways, two geometry LOD), 32 PBR texture maps at 512×512 and a rendered contact sheet. The four LOD0 variants contain 3,636 polygons each. The source file is a packed editable Blender scene. Validation checked actual FBX headers, GLB2 headers/lengths, map sizes and presence of preview.
 
-The `BotVisuals.luau` template adapter clones seven imported Roblox MeshParts when present in `ServerStorage/VanguardTemplates/{cyan,amber,violet,emerald}`; it otherwise uses procedural Part armor. Those Roblox-imported assets **have not been uploaded or runtime-tested yet**. See `docs/VANGUARD_ASSETS.md`.
+The `BotVisuals.luau` template adapter clones seven imported Roblox MeshParts when present in `ServerStorage/VanguardTemplates/{olive,sand,slate,rust}`; it otherwise uses procedural Part armor. Those Roblox-imported assets **have not been uploaded or runtime-tested yet**. See `docs/VANGUARD_ASSETS.md`.
 
 ## Real PBR replacement path (not claimed finished)
 The current Roblox Parts are tangible 3D geometry **not** textured skinned meshes. Premium results still require creating/importing authored meshes and PBR textures, using e.g. Blender or provenance-checked CC0/CC-BY assets. Candidate third-party asset sources in `star-list` require license checks per asset.

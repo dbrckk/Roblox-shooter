@@ -1,4 +1,4 @@
-# NEON STRIKE — imported mesh QA
+# IRON YARD — imported mesh QA
 
 **Important:** generated FBX/GLB assets are not automatically installed in Roblox.
 The imported model path is enabled only when `ServerStorage/VanguardTemplates`
