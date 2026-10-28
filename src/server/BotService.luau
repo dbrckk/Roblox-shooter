@@ -13,6 +13,7 @@ local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(true)
 local BotService = {}
 local BotVisuals = require(script.Parent:WaitForChild("BotVisuals"))
 local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
+local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local folder = nil
 local slots = {}
@@ -219,6 +220,7 @@ local function createBot(slot)
         nextFireAt = 0,
         nextThinkAt = 0,
         nextPathAt = 0,
+        pathRevision = 0,
         pathing = false,
         waypoints = nil,
         waypointIndex = 1,
@@ -238,7 +240,7 @@ local function createBot(slot)
     slots[slot] = bot
     humanoid.Died:Connect(function()
         bot.deaths += 1
-        bot.waypoints = nil
+        BotNavigation.invalidate(bot)
         task.delay(config.DespawnAfterDeath, function()
             if slots[slot] ~= bot then return end
             slots[slot] = nil
@@ -249,52 +251,9 @@ local function createBot(slot)
 end
 
 local function steerToward(bot, desired)
-    local now = os.clock()
-    if bot.pathing then return end
-    if bot.waypoints and #bot.waypoints > 1 then
-        local waypoint = bot.waypoints[bot.waypointIndex]
-        if waypoint and (bot.root.Position - waypoint.Position).Magnitude < 5 then
-            bot.waypointIndex += 1
-            waypoint = bot.waypoints[bot.waypointIndex]
-        end
-        if waypoint then
-            bot.humanoid:MoveTo(waypoint.Position)
-            if waypoint.Action == Enum.PathWaypointAction.Jump then bot.humanoid.Jump = true end
-            if now < bot.nextPathAt then return end
-        end
-    end
-
-    if now >= bot.nextPathAt then
-        bot.nextPathAt = now + config.NavigationRefresh + rng:NextNumber(0, 0.3)
-        bot.pathing = true
-        local chosenGoal = desired
-        local owner = bot
-        task.spawn(function()
-            local path = PathfindingService:CreatePath({
-                AgentRadius = 2,
-                AgentHeight = 5,
-                AgentCanJump = true,
-                AgentJumpHeight = 8,
-                WaypointSpacing = 7,
-            })
-            local ok = pcall(function() path:ComputeAsync(owner.root.Position, chosenGoal) end)
-            if slots[owner.slot] == owner and owner.model.Parent and owner.humanoid.Health > 0 then
-                if ok and path.Status == Enum.PathStatus.Success then
-                    owner.waypoints = path:GetWaypoints()
-                    owner.waypointIndex = math.min(2, #owner.waypoints)
-                    owner.pathGoal = chosenGoal
-                else
-                    owner.waypoints = nil
-                    owner.pathGoal = nil
-                end
-                owner.pathing = false
-            end
-        end)
-    end
-    -- No teleport fallback; let Humanoid use physically valid navigation.
-    if not bot.waypoints then
-        bot.humanoid:MoveTo(desired)
-    end
+    BotNavigation.steer(bot, desired, function()
+        return slots[bot.slot] == bot and bot.model.Parent ~= nil and bot.humanoid.Health > 0
+    end)
 end
 
 local function patrolGoal(bot)
@@ -398,8 +357,7 @@ local function updateBot(bot, dt)
         bot.target = target
         bot.reactionReadyAt = now + bot.skill.reaction
         bot.aimDirection = bot.root.CFrame.LookVector
-        bot.waypoints = nil
-        bot.nextPathAt = 0
+        BotNavigation.invalidate(bot)
     end
 
     if phase == "LIVE" or phase == "COUNTDOWN" then
@@ -416,8 +374,7 @@ local function updateBot(bot, dt)
         if bot.stuckSince == 0 then
             bot.stuckSince = now
         elseif now - bot.stuckSince > 2.3 then
-            bot.waypoints = nil
-            bot.nextPathAt = 0
+            BotNavigation.invalidate(bot)
             bot.humanoid.Jump = true
             bot.stuckSince = now
         end
@@ -497,8 +454,7 @@ function BotService.resetRound()
         bot.deaths = 0
         bot.target = nil
         bot.aimDirection = bot.root.CFrame.LookVector
-        bot.waypoints = nil
-        bot.nextPathAt = 0
+        BotNavigation.invalidate(bot)
         if bot.humanoid.Health > 0 then
             bot.humanoid.Health = bot.humanoid.MaxHealth
             bot.root.AssemblyLinearVelocity = Vector3.zero
