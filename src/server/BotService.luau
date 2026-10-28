@@ -88,6 +88,21 @@ local function buildCharacter(slot, skill)
     humanoid.AutoRotate = true
     humanoid.Parent = model
 
+    -- Rotate the full rig towards its opponent without teleporting the root.
+    local facingAttachment = Instance.new("Attachment")
+    facingAttachment.Name = "CombatFacing"
+    facingAttachment.Parent = root
+    local facing = Instance.new("AlignOrientation")
+    facing.Name = "CombatOrientation"
+    facing.Attachment0 = facingAttachment
+    facing.Mode = Enum.OrientationAlignmentMode.OneAttachment
+    facing.RigidityEnabled = false
+    facing.Responsiveness = 13
+    facing.MaxTorque = 26000
+    facing.MaxAngularVelocity = 8
+    facing.Enabled = false
+    facing.Parent = root
+
     model.PrimaryPart = root
 
     -- Clear labeling is essential: AI should be visually readable, not impersonate users.
@@ -142,6 +157,7 @@ local function buildCharacter(slot, skill)
         rightShoulder = rightShoulder,
         leftHip = leftHip,
         rightHip = rightHip,
+        facing = facing,
     }, appearance
 end
 
@@ -243,6 +259,16 @@ local function createBot(slot)
     humanoid.Died:Connect(function()
         bot.deaths += 1
         BotNavigation.invalidate(bot)
+        bot.joints.facing.Enabled = false
+        -- A defeated bot must not become invisible bullet-blocking cover.
+        -- Keep its visible body briefly for a readable elimination.
+        for _, component in ipairs(model:GetDescendants()) do
+            if component:IsA("BasePart") then
+                component.CanCollide = false
+                component.CanQuery = false
+                component.CanTouch = false
+            end
+        end
         task.delay(config.DespawnAfterDeath, function()
             if slots[slot] ~= bot then return end
             slots[slot] = nil
@@ -373,6 +399,28 @@ local function updateBot(bot, dt)
     local currentPosition = bot.root.Position
     local moved = (currentPosition - bot.lastPosition).Magnitude
     local aimPoint = target and visibleAimPoint(bot, target) or nil
+    local targetRoot = nil
+    if target then
+        local _, root = targetInfo(target)
+        targetRoot = root
+    end
+    local facing = bot.joints.facing
+    local shouldFace = phase == "LIVE" and aimPoint ~= nil and targetRoot ~= nil
+    if shouldFace then
+        local offset = targetRoot.Position - bot.root.Position
+        local horizontal = Vector3.new(offset.X, 0, offset.Z)
+        if horizontal.Magnitude > 2 then
+            facing.CFrame = CFrame.lookAt(Vector3.zero, horizontal.Unit)
+            facing.Enabled = true
+            bot.humanoid.AutoRotate = false
+        else
+            shouldFace = false
+        end
+    end
+    if not shouldFace then
+        facing.Enabled = false
+        bot.humanoid.AutoRotate = true
+    end
     BotAnimation.step(bot, now, moved > 0.3, aimPoint ~= nil)
     if moved < 0.3 then
         if bot.stuckSince == 0 then
@@ -467,6 +515,8 @@ function BotService.resetRound()
             bot.aimDirection = bot.root.CFrame.LookVector
             BotNavigation.invalidate(bot)
             bot.humanoid.Health = bot.humanoid.MaxHealth
+            bot.joints.facing.Enabled = false
+            bot.humanoid.AutoRotate = true
             bot.root.AssemblyLinearVelocity = Vector3.zero
             bot.root.AssemblyAngularVelocity = Vector3.zero
             bot.model:PivotTo(CFrame.new(SpawnService.selectSafeSpawn(bot.model)))
