@@ -113,6 +113,12 @@ function HudController:_buildCrosshair()
 		line.Position = position
 		line.Size = size
 		line.Parent = crosshair
+        -- Bright daylight and white sand can wash out plain white crosshairs.
+        local outline = Instance.new("UIStroke")
+        outline.Color = Color3.fromRGB(31, 37, 36)
+        outline.Thickness = 1.2
+        outline.Transparency = 0.15
+        outline.Parent = line
 		return line
 	end
 

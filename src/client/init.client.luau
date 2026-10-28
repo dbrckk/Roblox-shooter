@@ -1033,7 +1033,7 @@ enforceFirstPerson()
 hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)
 equipWeapon(currentWeaponId)
 
--- NEON STRIKE: mobile touch fire/aim/weapon controls; Roblox provides left thumbstick and camera drag.
+-- IRON YARD: mobile touch fire/aim/weapon controls; Roblox provides left thumbstick and camera drag.
 if UserInputService.TouchEnabled then
     local touchGui = Instance.new("ScreenGui")
     touchGui.Name = "NeonStrikeTouchControls"
