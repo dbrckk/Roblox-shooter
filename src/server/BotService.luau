@@ -11,8 +11,11 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local config = require(shared:WaitForChild("BotConfig"))
 local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(true)
 local BotService = {}
+local BotVisuals = require(script.Parent:WaitForChild("BotVisuals"))
+local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
 local folder = nil
 local slots = {}
+local roundKills = {}
 local started = false
 local rng = Random.new()
 
@@ -61,14 +64,14 @@ local function buildCharacter(slot, skill)
     local leftLeg = createPart(model, "Left Leg", Vector3.new(1, 2, 1), base + Vector3.new(-0.5, -2, 0), Color3.fromRGB(30, 39, 56), false)
     local rightLeg = createPart(model, "Right Leg", Vector3.new(1, 2, 1), base + Vector3.new(0.5, -2, 0), Color3.fromRGB(30, 39, 56), false)
 
-    motor(root, "RootJoint", root, torso, CFrame.new(), CFrame.new())
-    motor(torso, "Neck", torso, head, CFrame.new(0, 1, 0), CFrame.new(0, -0.5, 0))
+    local rootJoint = motor(root, "RootJoint", root, torso, CFrame.new(), CFrame.new())
+    local neck = motor(torso, "Neck", torso, head, CFrame.new(0, 1, 0), CFrame.new(0, -0.5, 0))
     local leftShoulder = motor(torso, "Left Shoulder", torso, leftArm,
         CFrame.new(-1, 0.5, 0), CFrame.new(0.5, 0.5, 0))
     local rightShoulder = motor(torso, "Right Shoulder", torso, rightArm,
         CFrame.new(1, 0.5, 0), CFrame.new(-0.5, 0.5, 0))
-    motor(torso, "Left Hip", torso, leftLeg, CFrame.new(-0.5, -1, 0), CFrame.new(0, 1, 0))
-    motor(torso, "Right Hip", torso, rightLeg, CFrame.new(0.5, -1, 0), CFrame.new(0, 1, 0))
+    local leftHip = motor(torso, "Left Hip", torso, leftLeg, CFrame.new(-0.5, -1, 0), CFrame.new(0, 1, 0))
+    local rightHip = motor(torso, "Right Hip", torso, rightLeg, CFrame.new(0.5, -1, 0), CFrame.new(0, 1, 0))
 
     local humanoid = Instance.new("Humanoid")
     humanoid.Name = "Humanoid"
@@ -116,10 +119,26 @@ local function buildCharacter(slot, skill)
         fill.Size = UDim2.fromScale(math.clamp(value / humanoid.MaxHealth, 0, 1), 1)
     end)
 
+    -- The complete armor is assembled before parenting to Workspace.
+    local appearance = BotVisuals.decorate(model, {
+        torso = torso,
+        head = head,
+        leftArm = leftArm,
+        rightArm = rightArm,
+        leftLeg = leftLeg,
+        rightLeg = rightLeg,
+    }, slot)
     model.Parent = folder
-    -- Set server network ownership so nearby clients cannot authoritatively steer bots.
+    -- Keep NPC physics server-owned; cosmetics are massless, non-colliding parts.
     pcall(function() root:SetNetworkOwner(nil) end)
-    return model, humanoid, root, head, leftShoulder, rightShoulder
+    return model, humanoid, root, head, {
+        root = rootJoint,
+        neck = neck,
+        leftShoulder = leftShoulder,
+        rightShoulder = rightShoulder,
+        leftHip = leftHip,
+        rightHip = rightHip,
+    }, appearance
 end
 
 local function targetInfo(model)
@@ -182,7 +201,7 @@ end
 
 local function createBot(slot)
     local skill = config.Difficulties[slot]
-    local model, humanoid, root, head, leftShoulder, rightShoulder = buildCharacter(slot, skill)
+    local model, humanoid, root, head, joints, appearance = buildCharacter(slot, skill)
     local bot = {
         slot = slot,
         name = model.Name,
@@ -190,8 +209,9 @@ local function createBot(slot)
         humanoid = humanoid,
         root = root,
         head = head,
-        leftShoulder = leftShoulder,
-        rightShoulder = rightShoulder,
+        joints = joints,
+        muzzle = appearance.muzzle,
+        accent = appearance.accent,
         skill = skill,
         target = nil,
         reactionReadyAt = 0,
@@ -205,8 +225,12 @@ local function createBot(slot)
         strafeSign = rng:NextInteger(0, 1) == 0 and -1 or 1,
         nextStrafeAt = 0,
         aimDirection = root.CFrame.LookVector,
-        kills = 0,
+        kills = roundKills[slot] or 0,
         deaths = 0,
+        lastShotAt = -math.huge,
+        walkBlend = 0,
+        aimBlend = 0,
+        animationAt = os.clock(),
         lastPosition = root.Position,
         stuckSince = 0,
     }
@@ -304,7 +328,8 @@ end
 local function shoot(bot, target, aimPoint, dt)
     local now = os.clock()
     if not aimPoint or not target then return end
-    local direction = aimPoint - bot.head.Position
+    local origin = bot.muzzle.WorldPosition
+    local direction = aimPoint - origin
     if direction.Magnitude < 0.01 then return end
     bot.aimDirection = bot.aimDirection:Lerp(direction.Unit, math.clamp(bot.skill.aimSpeed * dt, 0, 1))
     if bot.aimDirection.Magnitude < 0.001 then
@@ -318,7 +343,7 @@ local function shoot(bot, target, aimPoint, dt)
     local errorPitch = math.rad(rng:NextNumber(-bot.skill.aimErrorDegrees, bot.skill.aimErrorDegrees))
     local look = CFrame.lookAt(Vector3.zero, bot.aimDirection) * CFrame.Angles(errorPitch, errorYaw, 0)
     local rayDirection = look.LookVector
-    local origin = bot.head.Position
+    bot.lastShotAt = now
     -- Reuse the existing client audio channel; bots remain server-controlled.
     remotes.WeaponFx:FireAllClients({
         kind = "FireSound",
@@ -332,6 +357,7 @@ local function shoot(bot, target, aimPoint, dt)
         kind = "BotTracer",
         origin = origin,
         direction = rayDirection,
+        color = bot.accent,
         length = ray and (ray.Position - origin).Magnitude or config.MaximumAttackDistance,
     })
     if not ray then return end
@@ -348,14 +374,8 @@ local function shoot(bot, target, aimPoint, dt)
     humanoid:TakeDamage(config.Damage)
     if before > 0 and humanoid.Health <= 0 then
         bot.kills += 1
+        roundKills[bot.slot] = bot.kills
     end
-end
-
-local function animate(bot, moving, now)
-    -- Motor C0s replicate to clients; simple arm swing before custom 3D animation assets.
-    local swing = moving and math.sin(now * 7 + bot.slot) * 0.18 or 0
-    bot.leftShoulder.C0 = CFrame.new(-1, 0.5, 0) * CFrame.Angles(swing, 0, 0)
-    bot.rightShoulder.C0 = CFrame.new(1, 0.5, 0) * CFrame.Angles(-swing, 0, 0)
 end
 
 local function updateBot(bot, dt)
@@ -382,7 +402,8 @@ local function updateBot(bot, dt)
 
     local currentPosition = bot.root.Position
     local moved = (currentPosition - bot.lastPosition).Magnitude
-    animate(bot, moved > 0.3, now)
+    local aimPoint = target and visibleAimPoint(bot, target) or nil
+    BotAnimation.step(bot, now, moved > 0.3, aimPoint ~= nil)
     if moved < 0.3 then
         if bot.stuckSince == 0 then
             bot.stuckSince = now
@@ -397,8 +418,8 @@ local function updateBot(bot, dt)
     end
     bot.lastPosition = currentPosition
 
-    if phase == "LIVE" and target then
-        shoot(bot, target, visibleAimPoint(bot, target), math.max(dt, config.ThinkInterval))
+    if phase == "LIVE" and target and aimPoint then
+        shoot(bot, target, aimPoint, math.max(dt, config.ThinkInterval))
     end
 end
 
@@ -416,17 +437,24 @@ local function reconcile()
             createBot(slot)
         end
     end
-    Workspace:SetAttribute("NeonBotCount", targetCount)
+    local alive = 0
+    for _, bot in pairs(slots) do
+        if bot.model.Parent and bot.humanoid.Health > 0 then
+            alive += 1
+        end
+    end
+    Workspace:SetAttribute("NeonBotCount", alive)
 end
 
 function BotService.getLeader()
     local selected, best, tied = nil, -1, false
-    for _, bot in pairs(slots) do
-        if bot.kills > best then
-            best = bot.kills
-            selected = bot.name
+    -- Use per-slot scores so bot deaths/respawns cannot erase a match leader.
+    for slot, total in pairs(roundKills) do
+        if total > best then
+            best = total
+            selected = "[BOT] " .. config.BotNames[slot]
             tied = false
-        elseif bot.kills == best then
+        elseif total == best then
             tied = true
         end
     end
@@ -434,6 +462,10 @@ function BotService.getLeader()
 end
 
 function BotService.resetRound()
+    table.clear(roundKills)
+    for slot = 1, config.MaxBots do
+        roundKills[slot] = 0
+    end
     for slot, bot in pairs(slots) do
         bot.kills = 0
         bot.deaths = 0
@@ -452,6 +484,9 @@ end
 function BotService.start()
     if started then return end
     started = true
+    for slot = 1, config.MaxBots do
+        roundKills[slot] = 0
+    end
     folder = Instance.new("Folder")
     folder.Name = "NeonStrikeBots"
     folder.Parent = Workspace

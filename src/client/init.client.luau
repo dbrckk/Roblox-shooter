@@ -952,7 +952,9 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         and typeof(message.length) == "number" then
         local distance = math.clamp(message.length, 0, 140)
         if message.direction.Magnitude > 0.01 and distance > 1 then
-            visuals:drawTracer(message.origin, message.direction.Unit, distance)
+            local accent = typeof(message.color) == "Color3" and message.color or nil
+            visuals:drawTracer(message.origin, message.direction.Unit, distance, accent)
+            visuals:drawMuzzleFlash(message.origin, accent)
         end
 	end
 end)

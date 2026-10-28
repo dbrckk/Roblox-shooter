@@ -229,7 +229,7 @@ function WeaponVisuals:_render(deltaTime)
 	end
 end
 
-function WeaponVisuals:drawTracer(origin, direction, range)
+function WeaponVisuals:drawTracer(origin, direction, range, accentColor)
 	local length = math.min(range, 420)
 	local tracer = Instance.new("Part")
 	tracer.Name = "LocalTracer"
@@ -237,7 +237,7 @@ function WeaponVisuals:drawTracer(origin, direction, range)
 	tracer.CanCollide = false
 	tracer.CanQuery = false
 	tracer.CanTouch = false
-	tracer.Color = Color3.fromRGB(245, 248, 255)
+	tracer.Color = accentColor or Color3.fromRGB(245, 248, 255)
 	tracer.Material = MATERIAL_NEON
 	tracer.Size = Vector3.new(0.035, 0.035, length)
 	tracer.Transparency = 0.2
@@ -247,6 +247,28 @@ function WeaponVisuals:drawTracer(origin, direction, range)
 	local tween = TweenService:Create(tracer, TweenInfo.new(0.08), { Transparency = 1 })
 	tween:Play()
 	Debris:AddItem(tracer, 0.12)
+end
+
+function WeaponVisuals:drawMuzzleFlash(origin, accentColor)
+    local burst = Instance.new("Part")
+    burst.Name = "LocalBotMuzzle"
+    burst.Anchored = true
+    burst.CanCollide = false
+    burst.CanQuery = false
+    burst.CanTouch = false
+    burst.CastShadow = false
+    burst.Material = MATERIAL_NEON
+    burst.Shape = Enum.PartType.Ball
+    burst.Size = Vector3.new(0.27, 0.27, 0.27)
+    burst.Color = accentColor or Color3.fromRGB(49, 218, 244)
+    burst.CFrame = CFrame.new(origin)
+    burst.Parent = workspace
+    local tween = TweenService:Create(burst, TweenInfo.new(0.11), {
+        Size = Vector3.new(0.06, 0.06, 0.06),
+        Transparency = 1,
+    })
+    tween:Play()
+    Debris:AddItem(burst, 0.16)
 end
 
 function WeaponVisuals:_playSoundLayer(parent, layer)
