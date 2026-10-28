@@ -24,7 +24,10 @@ local function raycastEnvironment(bot, origin, destination)
 end
 
 local function directRouteClear(bot, goal)
-    local start = bot.root.Position + Vector3.new(0, 0.8, 0)
+    -- Probe waist/leg height, not above short crate walls.
+    -- Elevated targets still require pathfinding to locate stairs and platforms.
+    if math.abs(goal.Y - bot.root.Position.Y) > 2.5 then return false end
+    local start = bot.root.Position + Vector3.new(0, -1.25, 0)
     local finish = Vector3.new(goal.X, start.Y, goal.Z)
     if (finish - start).Magnitude <= 2 then return true end
     return raycastEnvironment(bot, start, finish) == nil
