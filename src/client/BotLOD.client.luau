@@ -30,8 +30,9 @@ local function updateModel(model)
 
     local wasHidden = rendered[model] or false
     local hidden = wasHidden and distance > unhideDetailBefore or distance > hideDetailBeyond
-    if hidden == wasHidden then return end
     rendered[model] = hidden
+    -- Revisit streamed-in body cosmetics even if the hide state is unchanged.
+    -- Without this, late network replication can make distant detail reappear.
     for _, item in ipairs(model:GetDescendants()) do
         if item:IsA("BasePart") and item:GetAttribute("NeonCosmeticTier") == "Detail" then
             item.LocalTransparencyModifier = hidden and 1 or 0
@@ -46,16 +47,31 @@ local artCache = setmetatable({}, { __mode = "k" })
 local artFolders = { "NeonStrikeDecor", "FreightLandmarks" }
 
 local function getDetailParts(folder)
-    local cached = artCache[folder]
-    if cached then return cached end
-    cached = {}
-    for _, item in ipairs(folder:GetDescendants()) do
-        if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
-            table.insert(cached, item)
-        end
+    local entry = artCache[folder]
+    if not entry then
+        entry = { parts = {}, dirty = true }
+        artCache[folder] = entry
+        folder.DescendantAdded:Connect(function(item)
+            if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
+                entry.dirty = true
+            end
+        end)
+        folder.DescendantRemoving:Connect(function(item)
+            if item:IsA("BasePart") then
+                entry.dirty = true
+            end
+        end)
     end
-    artCache[folder] = cached
-    return cached
+    if entry.dirty then
+        entry.parts = {}
+        for _, item in ipairs(folder:GetDescendants()) do
+            if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
+                table.insert(entry.parts, item)
+            end
+        end
+        entry.dirty = false
+    end
+    return entry.parts
 end
 
 local function updateArt()
