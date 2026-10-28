@@ -11,6 +11,7 @@ local REMOTES = {
 	SetSprinting = "RemoteEvent",
 	WeaponFeedback = "RemoteEvent",
 	WeaponFx = "RemoteEvent",
+    KillFeed = "RemoteEvent",
 }
 
 local function getOrCreateRemote(folder, remoteName, className, shouldCreate)

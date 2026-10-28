@@ -7,6 +7,7 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 
+local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = {}
 
 local remotes = nil
@@ -135,7 +136,12 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 		return false
 	end
 
-	local headshot = raycastResult.Instance.Name == "Head"
+	-- Avoid spawn-camping. Server-only protection is removed when its owner fires.
+    if targetPlayer and SpawnService.isProtected(targetCharacter) then
+        sendFeedback(attacker, { kind = "Miss", weaponId = weaponId })
+        return false
+    end
+    local headshot = raycastResult.Instance.Name == "Head"
 	local damage = headshot and config.headshotDamage or config.damage
 	local healthBefore = targetHumanoid.Health
 	targetHumanoid:TakeDamage(damage)
@@ -156,6 +162,12 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         local stats = attacker:FindFirstChild("leaderstats")
         local kills = stats and stats:FindFirstChild("Eliminations")
         if kills then kills.Value += 1 end
+        remotes.KillFeed:FireAllClients({
+            attacker = attacker.DisplayName,
+            target = targetPlayer and targetPlayer.DisplayName or targetCharacter.Name,
+            weapon = weaponId,
+            headshot = headshot,
+        })
     end
 	return true
 end
@@ -285,6 +297,8 @@ local function onFireWeapon(player, payload)
 		return
 	end
 
+    -- Shooting forfeits the temporary defensive shield; no invincible attackers.
+    SpawnService.clearProtection(player.Character)
 	if config.kind == "Raycast" then
 		fireRaycastWeapon(player, weaponId, config, direction)
 	elseif config.kind == "Projectile" then

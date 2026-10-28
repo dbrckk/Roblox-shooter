@@ -13,6 +13,7 @@ local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(true)
 local BotService = {}
 local BotVisuals = require(script.Parent:WaitForChild("BotVisuals"))
 local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
+local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local folder = nil
 local slots = {}
 local roundKills = {}
@@ -163,7 +164,7 @@ local function getTargetModel(bot, limit)
     end
     for _, model in ipairs(candidates) do
         local humanoid, root = targetInfo(model)
-        if humanoid and root then
+        if humanoid and root and not SpawnService.isProtected(model) then
             local distance = (root.Position - bot.root.Position).Magnitude
             if distance < bestDistance then
                 best = model
@@ -368,6 +369,7 @@ local function shoot(bot, target, aimPoint, dt)
     -- Only fighters participate: neither practice dummies nor arbitrary NPCs are targets.
     local targetPlayer = Players:GetPlayerFromCharacter(hitModel)
     if not targetPlayer and not hitModel:GetAttribute("IsArenaBot") then return end
+    if targetPlayer and SpawnService.isProtected(hitModel) then return end
 
     if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     local before = humanoid.Health
@@ -375,6 +377,12 @@ local function shoot(bot, target, aimPoint, dt)
     if before > 0 and humanoid.Health <= 0 then
         bot.kills += 1
         roundKills[bot.slot] = bot.kills
+        remotes.KillFeed:FireAllClients({
+            attacker = bot.name,
+            target = targetPlayer and targetPlayer.DisplayName or hitModel.Name,
+            weapon = "VX",
+            headshot = ray.Instance.Name == "Head",
+        })
     end
 end
 

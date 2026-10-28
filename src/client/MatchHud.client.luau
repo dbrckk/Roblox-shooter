@@ -44,7 +44,7 @@ local function label(name, textSize, size, pos, color)
 end
 
 local header = label("Status", 16, UDim2.new(1, -12, 0, 28), UDim2.fromOffset(6, 5), Color3.fromRGB(67, 219, 246))
-local detail = label("Score", 14, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(237, 245, 255))
+local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(237, 245, 255))
 
 local eliminations = nil
 local function update()
@@ -61,10 +61,14 @@ local function update()
         detail.Text = "Awaiting players"
     elseif phase == "COUNTDOWN" then
         header.Text = string.format("ROUND %d  |  STARTING", count + 1)
-        detail.Text = string.format("Combat starts in %d", seconds)
+        detail.Text = string.format("ELIMINATE RIVALS  /  FIRST TO %d  /  %ds", target, seconds)
     elseif phase == "LIVE" then
         header.Text = string.format("ROUND %d  |  %s", count, clock)
-        detail.Text = string.format("KILLS %d/%d   |   %d BOTS", kills, target, botCount)
+        local character = player.Character
+        local shieldEnd = character and character:GetAttribute("NeonSpawnProtectedUntil") or 0
+        local secondsOfShield = math.max(0, math.ceil(shieldEnd - Workspace:GetServerTimeNow()))
+        local suffix = secondsOfShield > 0 and ("  |  SHIELD " .. secondsOfShield .. "s") or ""
+        detail.Text = string.format("KILLS %d/%d   |   %d BOTS", kills, target, botCount) .. suffix
     else
         header.Text = "ROUND FINISHED"
         local who = Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
