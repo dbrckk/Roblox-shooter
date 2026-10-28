@@ -9,8 +9,9 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] armes, caméra, animations procédurales, HUD
 - [x] entrées tactiles Android/iOS ajoutées
 - [x] build CI Rojo
-- [ ] carte arène originale de grande taille
-- [ ] statistiques, rounds, duel 1v1 jusqu'à 5v5 et spectateur
+- [x] carte arène originale de 356 x 356 studs, couvertures et plateformes
+- [x] statistiques de session (éliminations et morts, sans persistance)
+- [ ] rounds, duels 1v1 jusqu'à 5v5 et spectateur
 - [ ] tests réellement exécutés en Roblox Studio et sur Android
 - [ ] personnages IA mobiles, couverture et navigation
 - [ ] meshes originaux et textures PBR, son et VFX premium

@@ -23,3 +23,11 @@ jobs:
 
       - name: Build place
         run: ./rojo build default.project.json -o neon-strike.rbxlx
+
+      - name: Upload playable Roblox Studio place
+        uses: actions/upload-artifact@v4
+        with:
+          name: neon-strike-roblox-place
+          path: neon-strike.rbxlx
+          if-no-files-found: error
+          retention-days: 14

@@ -11,7 +11,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - HUD, réticule, recul, impacts, sons Roblox internes, mannequins de tir.
 - Contrôles PC + boutons tactiles Android/iOS ajoutés.
 - Projet Rojo + CI Github Actions build Roblox.
-- Arène de test initiale issue de la base MIT ; remplacement en cours par une carte originale de plus grande taille.
+- **Arène originale procédurale de 356 × 356 studs**, avec couverture tactique, verticalité, néons et spawn d'entraînement. La modélisation PBR et les assets premium restent à produire.
 
 ## Construire et jouer
 
@@ -24,6 +24,10 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 5. Édition en direct : `rojo plugin install` puis `rojo serve default.project.json`.
 
 Le dépôt contient un prototype jouable **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI vérifiera seulement la génération du fichier, pas la qualité du gameplay.
+
+## Télécharger le projet construit
+
+Ouvrir [GitHub Actions → Rojo build](https://github.com/dbrckk/Roblox-shooter/actions/workflows/rojo-build.yml), choisir le dernier workflow vert, et télécharger l'archive `neon-strike-roblox-place`. Extraire `neon-strike.rbxlx` puis l'ouvrir dans Roblox Studio (PC). Le fichier n'est **pas** un jeu mobile autonome.
 
 ## Ressources
 
