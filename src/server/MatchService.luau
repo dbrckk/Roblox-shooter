@@ -3,6 +3,7 @@
 -- No proprietary Roblox game code, no external remotes, no persistence.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local HttpService = game:GetService("HttpService")
 
 local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
@@ -20,12 +21,66 @@ local round = 0
 local winner = ""
 local lastPublishedSecond = nil
 
+local function scoreFor(player)
+    local stats = player:FindFirstChild("leaderstats")
+    local eliminations = stats and stats:FindFirstChild("Eliminations")
+    if eliminations and eliminations:IsA("IntValue") then
+        return eliminations.Value
+    end
+    return 0
+end
+
+local lastStandingsPayload = nil
+
+local function rankedStandings()
+    local entries = {}
+    for _, player in ipairs(Players:GetPlayers()) do
+        table.insert(entries, {
+            name = player.DisplayName,
+            eliminations = scoreFor(player),
+            bot = false,
+            userId = player.UserId,
+            sortKey = player.UserId,
+        })
+    end
+    for _, bot in ipairs(BotService.getScores()) do
+        table.insert(entries, bot)
+    end
+    table.sort(entries, function(a, b)
+        if a.eliminations ~= b.eliminations then
+            return a.eliminations > b.eliminations
+        end
+        if a.bot ~= b.bot then return not a.bot end
+        return a.sortKey < b.sortKey
+    end)
+    local standings = {}
+    for i = 1, math.min(3, #entries) do
+        local candidate = entries[i]
+        standings[i] = {
+            name = candidate.name,
+            eliminations = candidate.eliminations,
+            bot = candidate.bot,
+            userId = candidate.userId,
+        }
+    end
+    return HttpService:JSONEncode(standings)
+end
+
+local function publishStandings()
+    local payload = rankedStandings()
+    if payload ~= lastStandingsPayload then
+        lastStandingsPayload = payload
+        Workspace:SetAttribute("IronYardStandings", payload)
+    end
+end
+
 local function publish(remaining)
     Workspace:SetAttribute("NeonMatchPhase", phase)
     Workspace:SetAttribute("NeonMatchRound", round)
     Workspace:SetAttribute("NeonMatchWinner", winner)
     Workspace:SetAttribute("NeonMatchTimeLeft", remaining)
     Workspace:SetAttribute("NeonMatchScoreLimit", ELIMINATIONS_TO_WIN)
+    publishStandings()
 end
 
 local function transition(nextPhase, seconds, result)
@@ -34,15 +89,6 @@ local function transition(nextPhase, seconds, result)
     deadline = os.clock() + seconds
     lastPublishedSecond = nil
     publish(math.ceil(seconds))
-end
-
-local function scoreFor(player)
-    local stats = player:FindFirstChild("leaderstats")
-    local eliminations = stats and stats:FindFirstChild("Eliminations")
-    if eliminations and eliminations:IsA("IntValue") then
-        return eliminations.Value
-    end
-    return 0
 end
 
 local function leader()

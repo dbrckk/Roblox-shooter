@@ -454,6 +454,24 @@ local function reconcile()
     Workspace:SetAttribute("NeonBotCount", alive)
 end
 
+-- Ranked score snapshot includes bots that are temporarily waiting to respawn.
+-- This is read by MatchService only; no client can author scoring.
+function BotService.getScores()
+    local rows = {}
+    for slot = 1, config.MaxBots do
+        if slots[slot] or (roundKills[slot] or 0) > 0 then
+            table.insert(rows, {
+                name = "[BOT] " .. config.BotNames[slot],
+                eliminations = roundKills[slot] or 0,
+                bot = true,
+                userId = 0,
+                sortKey = slot,
+            })
+        end
+    end
+    return rows
+end
+
 function BotService.getLeader()
     local selected, best, tied = nil, -1, false
     -- Use per-slot scores so bot deaths/respawns cannot erase a match leader.
