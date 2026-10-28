@@ -131,9 +131,19 @@ local function buildCharacter(slot, skill)
             title.TextColor3 = Color3.fromRGB(236, 238, 226)
         end
     end
-    model:GetAttributeChangedSignal("NeonSpawnProtectedUntil"):Connect(updateProtectionLabel)
-    task.delay(2.05, function()
-        if model.Parent then updateProtectionLabel() end
+    local protectionRevision = 0
+    model:GetAttributeChangedSignal("NeonSpawnProtectedUntil"):Connect(function()
+        protectionRevision += 1
+        local revision = protectionRevision
+        updateProtectionLabel()
+        if SpawnService.isProtected(model) then
+            local deadline = model:GetAttribute("NeonSpawnProtectedUntil") or 0
+            task.delay(math.max(0, deadline - Workspace:GetServerTimeNow()) + 0.07, function()
+                if model.Parent and revision == protectionRevision then
+                    updateProtectionLabel()
+                end
+            end)
+        end
     end)
     local backing = Instance.new("Frame")
     backing.Position = UDim2.fromOffset(18, 27)
@@ -464,6 +474,8 @@ local function reconcile()
                 slots[slot] = nil
                 if bot.model.Parent then bot.model:Destroy() end
             end
+            -- Retired AI must not remain a ghost leader after a human joins.
+            roundKills[slot] = 0
         elseif not bot and humans > 0 then
             createBot(slot)
         end
@@ -515,13 +527,14 @@ function BotService.resetRound()
     for slot = 1, config.MaxBots do
         roundKills[slot] = 0
     end
+    local rebuild = {}
     for slot, bot in pairs(slots) do
         if bot.humanoid.Health <= 0 then
             -- Do not carry dead characters into the next round. The existing
             -- delayed despawn callback checks identity before removing anything.
             slots[slot] = nil
             if bot.model.Parent then bot.model:Destroy() end
-            createBot(slot)
+            table.insert(rebuild, slot)
         else
             bot.kills = 0
             bot.deaths = 0
@@ -536,6 +549,9 @@ function BotService.resetRound()
             bot.model:PivotTo(CFrame.new(SpawnService.selectSafeSpawn(bot.model)))
             SpawnService.protectCharacter(bot.model, 2.0)
         end
+    end
+    for _, slot in ipairs(rebuild) do
+        createBot(slot)
     end
 end
 
