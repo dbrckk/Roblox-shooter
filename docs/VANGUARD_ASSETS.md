@@ -46,3 +46,15 @@ ServerStorage
 Il n'y a **aucun ID de mesh inventé** dans le code. Le montage demeure **rigide en sept éléments** (animations Motor6D R6), pas un rig skinné. Il faut inspecter l'échelle, le sens de l'arme, le muzzle et les positions en Studio ; le script pose la pièce rifle sur le bras droit avec un décalage provisoire de calibrage.
 
 **Important** : réussir la compilation Luau, exporter les FBX ou créer le fichier `.rbxlx` ne signifie pas que les meshes ont été vus en fonctionnement sur Android. Des tests en Studio puis sur téléphone restent nécessaires.
+
+## Installation groupée en Studio (nouveau)
+
+Un script de **barre de commandes Studio** évite de renommer/déplacer les 28 pièces à la main :
+
+1. Importer les **quatre GLB LOD0** (cyan, amber, violet, emerald) via **Studio 3D Importer** ; les ressources doivent être importées et autorisées par Roblox.
+2. Vérifier que chaque modèle contient sept MeshParts nommés `VANGUARD_torso`, `VANGUARD_head`, `VANGUARD_left_arm`, etc. Renommer les **quatre modèles racines** pour inclure leur palette respective.
+3. Sélectionner simultanément ces **quatre modèles racines** dans l'Explorer, puis exécuter `tools/studio/install_vanguard.lua` dans **View → Command Bar** (copier-coller son contenu).
+4. Le script vérifie l'existence et l'ID de chaque mesh et construit automatiquement les **28 MeshParts** de `ServerStorage/VanguardTemplates` ; il prévient si les SurfaceAppearance PBR manquent. Il ne modifie pas les modèles sources sélectionnés.
+5. Enregistrer l'expérience dans Studio. Lors du Play, inspecter l'attribut `NeonVisualSource` des bots : `PBR_MESH` signifie que le pack est activé, `PROCEDURAL_PARTS` indique le fallback.
+
+Le script n'est **pas exécuté depuis GitHub Actions** : Studio/Creator et les permissions d'upload restent nécessaires. Aucun ID ni résultat de test mobile n'est inventé.
