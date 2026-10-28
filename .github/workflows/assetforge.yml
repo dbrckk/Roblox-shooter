@@ -23,7 +23,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender python3-numpy
           blender --version | head -n 2
 
       - name: Generate original 512px PBR maps
@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          blender --background --threads 2 --python tools/assetforge/build_vanguard.py -- \
+          blender --background --python-exit-code 7 --threads 2 --python tools/assetforge/build_vanguard.py -- \
             --out build/assets --textures build/assets/textures
 
       - name: Validate exported geometry and PBR channels

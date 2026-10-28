@@ -80,8 +80,8 @@ def box(objects, name, center, scale, material, bevel=0.045, segs=2):
         modifier.width = min(bevel, min(scale) * 0.35)
         modifier.segments = segs
         bpy.ops.object.modifier_apply(modifier=modifier.name)
-        mod = obj.modifiers.new("Face-weighted normals", "WEIGHTED_NORMAL")
-        bpy.ops.object.modifier_apply(modifier=mod.name)
+        # Maintain broadly compatible meshes; weighted normals on this Blender build
+        # require Auto Smooth and otherwise warn for every generated plate.
     obj.data.materials.append(material)
     objects.append(obj)
     return obj
