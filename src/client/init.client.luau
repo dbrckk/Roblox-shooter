@@ -946,6 +946,14 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
 
 	if message.kind == "FireSound" and message.shooterUserId ~= player.UserId and typeof(message.origin) == "Vector3" then
 		visuals:playFireSound(message.weaponId, message.origin)
+    elseif message.kind == "BotTracer"
+        and typeof(message.origin) == "Vector3"
+        and typeof(message.direction) == "Vector3"
+        and typeof(message.length) == "number" then
+        local distance = math.clamp(message.length, 0, 140)
+        if message.direction.Magnitude > 0.01 and distance > 1 then
+            visuals:drawTracer(message.origin, message.direction.Unit, distance)
+        end
 	end
 end)
 

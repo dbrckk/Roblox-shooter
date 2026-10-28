@@ -327,6 +327,13 @@ local function shoot(bot, target, aimPoint, dt)
         origin = origin,
     })
     local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, rayParams(bot.model))
+    -- Visual-only effects; never trusted for hit registration.
+    remotes.WeaponFx:FireAllClients({
+        kind = "BotTracer",
+        origin = origin,
+        direction = rayDirection,
+        length = ray and (ray.Position - origin).Magnitude or config.MaximumAttackDistance,
+    })
     if not ray then return end
     local hitModel = ray.Instance:FindFirstAncestorOfClass("Model")
     local humanoid = hitModel and hitModel:FindFirstChildOfClass("Humanoid")
