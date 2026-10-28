@@ -65,6 +65,12 @@ local function getAimDirection(payload)
 	end
 
 	local direction = payload.direction
+    -- Reject non-finite client vectors before multiplying them into a server Raycast.
+    for _, coordinate in ipairs({ direction.X, direction.Y, direction.Z }) do
+        if coordinate ~= coordinate or math.abs(coordinate) > 1e6 then
+            return nil
+        end
+    end
 	if direction.Magnitude < 0.001 then
 		return nil
 	end
@@ -100,6 +106,9 @@ local function broadcastFireFx(player, weaponId, origin)
 end
 
 local function damageHit(attacker, weaponId, config, raycastResult, origin)
+    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+        return false
+    end
 	if not raycastResult then
 		sendFeedback(attacker, {
 			kind = "Miss",
@@ -151,6 +160,10 @@ end
 
 local function canFire(player, weaponId, config)
 	local state = getState(player)
+    -- Firing a weapon must follow the equip event; the fire payload cannot equip on its own.
+    if state.equippedWeaponId ~= weaponId then
+        return false
+    end
 	local now = os.clock()
 	local lastFireAt = state.lastFireAt[weaponId] or -math.huge
 
@@ -159,7 +172,6 @@ local function canFire(player, weaponId, config)
 	end
 
 	state.lastFireAt[weaponId] = now
-	state.equippedWeaponId = weaponId
 	return true
 end
 
@@ -253,6 +265,9 @@ local function onEquipWeapon(player, weaponId)
 end
 
 local function onFireWeapon(player, payload)
+    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+        return
+    end
 	if typeof(payload) ~= "table" or typeof(payload.weaponId) ~= "string" then
 		return
 	end
