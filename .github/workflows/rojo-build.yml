@@ -46,6 +46,12 @@ jobs:
           python3 -m py_compile tools/assetforge/*.py
           echo "All asset production Python modules are syntactically valid."
 
+      - name: Verify visual identity and PBR palette consistency
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check_visual_identity.py
+
 
       - name: Build place
         run: ./rojo build default.project.json -o iron-yard.rbxlx
