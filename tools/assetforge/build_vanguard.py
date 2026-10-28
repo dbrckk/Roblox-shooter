@@ -203,6 +203,13 @@ def render_gallery(output, gallery):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.samples = 12
+    # Ubuntu's free Blender build may be compiled without OpenImageDenoiser.
+    # Disable denoising explicitly instead of aborting a valid mesh/PBR export.
+    if hasattr(scene.cycles, "use_denoising"):
+        scene.cycles.use_denoising = False
+    for layer in scene.view_layers:
+        if hasattr(layer, "cycles") and hasattr(layer.cycles, "use_denoising"):
+            layer.cycles.use_denoising = False
     scene.render.resolution_x = 1440
     scene.render.resolution_y = 720
     scene.render.resolution_percentage = 100
