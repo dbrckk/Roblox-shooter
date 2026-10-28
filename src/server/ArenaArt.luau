@@ -1,203 +1,245 @@
--- NEON STRIKE / INDUSTRIAL ARENA ART
--- Original, deterministic environment art. Strictly non-colliding so paths and gunplay
--- never depend on visual-only props. Asset IDs / marketplace downloads not required.
+-- IRON YARD / sunlit freight terminal environment art.
+-- Core collision geometry is owned by MapService. These details cannot block
+-- raycasts, movement, or PathfindingService and are locally culled on mobile.
 local Lighting = game:GetService("Lighting")
 local ArenaArt = {}
-local CYAN = Color3.fromRGB(42, 208, 244)
-local GOLD = Color3.fromRGB(255, 158, 68)
-local IRON = Color3.fromRGB(54, 67, 84)
-local DARK = Color3.fromRGB(20, 29, 43)
-local CLOUD = Color3.fromRGB(111, 129, 148)
+local COLOR = {
+    wall = Color3.fromRGB(136, 135, 125),
+    steel = Color3.fromRGB(83, 96, 100),
+    slate = Color3.fromRGB(62, 73, 76),
+    sand = Color3.fromRGB(209, 197, 170),
+    rust = Color3.fromRGB(164, 102, 72),
+    orange = Color3.fromRGB(225, 168, 65),
+    olive = Color3.fromRGB(108, 121, 98),
+    ink = Color3.fromRGB(35, 42, 44),
+    paper = Color3.fromRGB(245, 236, 217),
+}
 
-local function prop(parent, name, size, cf, color, material, tier, shape)
+local function prop(parent, name, size, cf, color, material, tier)
     local p = Instance.new("Part")
     p.Name = name
     p.Anchored = true
     p.CanCollide = false
     p.CanQuery = false
     p.CanTouch = false
-    p.CastShadow = false
+    p.CastShadow = tier == "Core"
     p.TopSurface = Enum.SurfaceType.Smooth
     p.BottomSurface = Enum.SurfaceType.Smooth
     p.Size = size
     p.CFrame = cf
-    p.Shape = shape or Enum.PartType.Block
-    p.Color = color or IRON
+    p.Color = color or COLOR.steel
     p.Material = material or Enum.Material.Metal
     p:SetAttribute("NeonArtTier", tier or "Detail")
     p.Parent = parent
     return p
 end
 
-local function beam(parent, name, a, b, thickness, color, material, tier)
-    local dir = b - a
-    local size = Vector3.new(thickness, thickness, dir.Magnitude)
-    local cf = CFrame.lookAt((a + b) * 0.5, b)
-    return prop(parent, name, size, cf, color, material, tier)
+local function span(parent, name, a, b, thickness, color, tier)
+    local segment = b - a
+    return prop(parent, name, Vector3.new(thickness, thickness, segment.Magnitude),
+        CFrame.lookAt((a + b) * 0.5, b), color, Enum.Material.Metal, tier)
 end
 
-local function display(parent, name, position, facing, message, tint)
-    local anchor = prop(parent, name, Vector3.new(14, 5, 0.25),
-        CFrame.lookAt(position, position + facing), DARK, Enum.Material.Metal, "Core")
+local function poster(parent, name, position, facing, message, color)
+    local board = prop(parent, name, Vector3.new(16, 5.2, 0.25),
+        CFrame.lookAt(position, position + facing), COLOR.ink, Enum.Material.Metal, "Core")
     local surface = Instance.new("SurfaceGui")
-    surface.Name = "ArenaBillboard"
+    surface.Name = "FreightSign"
     surface.Face = Enum.NormalId.Front
-    surface.CanvasSize = Vector2.new(640, 230)
+    surface.CanvasSize = Vector2.new(800, 260)
     surface.LightInfluence = 0.2
-    surface.Parent = anchor
+    surface.Parent = board
 
-    local background = Instance.new("Frame")
-    background.Size = UDim2.fromScale(1, 1)
-    background.BackgroundColor3 = DARK
-    background.BackgroundTransparency = 0.03
-    background.Parent = surface
-
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.fromScale(1, 1)
+    frame.BackgroundColor3 = COLOR.paper
+    frame.BorderSizePixel = 0
+    frame.Parent = surface
     local stroke = Instance.new("UIStroke")
-    stroke.Color = tint
-    stroke.Thickness = 6
-    stroke.Parent = background
-
-    local text = Instance.new("TextLabel")
-    text.Name = "Copy"
-    text.Size = UDim2.new(1, -34, 1, -25)
-    text.Position = UDim2.fromOffset(17, 12)
-    text.BackgroundTransparency = 1
-    text.Text = message
-    text.TextColor3 = tint
-    text.Font = Enum.Font.GothamBlack
-    text.TextScaled = true
-    text.TextWrapped = true
-    text.Parent = background
+    stroke.Color = color
+    stroke.Thickness = 9
+    stroke.Parent = frame
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, -40, 1, -30)
+    title.Position = UDim2.fromOffset(20, 15)
+    title.BackgroundTransparency = 1
+    title.TextColor3 = COLOR.ink
+    title.Font = Enum.Font.GothamBlack
+    title.TextScaled = true
+    title.TextWrapped = true
+    title.Text = message
+    title.Parent = frame
 end
 
-local function addLane(parent, axis, at, n)
-    for segment = -3, 3 do
-        local cross = segment * 33
-        if axis == "X" then
-            prop(parent, "FLOOR / guide " .. n .. "." .. segment,
-                Vector3.new(14, 0.04, 0.23), CFrame.new(cross, 0.04, at),
-                CYAN, Enum.Material.Neon, "Detail")
-        else
-            prop(parent, "FLOOR / guide " .. n .. "." .. segment,
-                Vector3.new(0.23, 0.04, 14), CFrame.new(at, 0.04, cross),
-                GOLD, Enum.Material.Neon, "Detail")
+local function cornerCranes(parent)
+    -- Silhouettes above the battle space: no added collision or cover.
+    for i, v in ipairs({
+        Vector3.new(-146, 0, -145), Vector3.new(146, 0, -145),
+        Vector3.new(-146, 0, 145), Vector3.new(146, 0, 145),
+    }) do
+        local hue = i % 2 == 0 and COLOR.orange or COLOR.steel
+        local y = 27
+        prop(parent, "GANTRY / tower " .. i, Vector3.new(4.5, 54, 4.5),
+            CFrame.new(v.X, y, v.Z), hue, Enum.Material.Metal, "Core")
+        prop(parent, "GANTRY / safety base " .. i, Vector3.new(8.5, 2.4, 8.5),
+            CFrame.new(v.X, 1.2, v.Z), COLOR.slate, Enum.Material.Metal, "Core")
+        span(parent, "GANTRY / crossbeam " .. i,
+            Vector3.new(v.X - 16, 54, v.Z),
+            Vector3.new(v.X + 17, 54, v.Z), 2.4, hue, "Core")
+        span(parent, "GANTRY / diagonal " .. i,
+            Vector3.new(v.X, 38, v.Z),
+            Vector3.new(v.X + (i % 2 == 0 and -15 or 15), 54, v.Z), 0.85,
+            COLOR.sand, "Detail")
+        prop(parent, "GANTRY / machinery pod " .. i, Vector3.new(8, 5, 7),
+            CFrame.new(v.X, 57, v.Z), COLOR.slate, Enum.Material.Metal, "Core")
+    end
+end
+
+local function containerDetails(parent)
+    for row = -1, 1 do
+        for column = -1, 1 do
+            if row ~= 0 or column ~= 0 then
+                local x, z = column * 100, row * 103
+                local h = 15 + ((row + column + 6) % 3) * 6
+                -- Container doors/ribs visually explain cover and add scale.
+                local edge = h / 2
+                for i = -2, 2 do
+                    local localX = i * 4.2
+                    for _, face in ipairs({ -1, 1 }) do
+                        prop(parent, "FREIGHT / corrugation " .. row .. ":" .. column .. ":" .. i .. ":" .. face,
+                            Vector3.new(0.28, h - 1, 0.28),
+                            CFrame.new(x + localX, edge, z + face * 11.08),
+                            COLOR.slate, Enum.Material.Metal, "Detail")
+                    end
+                end
+                local plateColor = (column + row) % 2 == 0 and COLOR.paper or COLOR.orange
+                prop(parent, "FREIGHT / serial plate " .. row .. ":" .. column,
+                    Vector3.new(5, 1.3, 0.18),
+                    CFrame.new(x, h - 2.3, z - 11.22),
+                    plateColor, Enum.Material.SmoothPlastic, "Core")
+            end
         end
     end
 end
 
+local function laneMarkings(parent)
+    for _, side in ipairs({ -1, 1 }) do
+        for index = -3, 3 do
+            -- Broken yellow loading-lane lines, visible at ground level.
+            prop(parent, "ROAD / dashed marking " .. side .. ":" .. index,
+                Vector3.new(0.35, 0.045, 13),
+                CFrame.new(side * 66, 0.047, index * 36),
+                COLOR.orange, Enum.Material.SmoothPlastic, "Detail")
+            prop(parent, "ROAD / loading bay marking " .. side .. ":" .. index,
+                Vector3.new(11, 0.045, 0.30),
+                CFrame.new(index * 37, 0.047, side * 141),
+                COLOR.paper, Enum.Material.SmoothPlastic, "Detail")
+        end
+    end
+
+    for i = 1, 10 do
+        local x = -125 + (i - 1) * 27
+        prop(parent, "WAREHOUSE / hazard stripe " .. i,
+            Vector3.new(1.1, 0.045, 3.2),
+            CFrame.new(x, 0.045, 66) * CFrame.Angles(0, math.rad(35), 0),
+            i % 2 == 0 and COLOR.orange or COLOR.ink,
+            Enum.Material.SmoothPlastic, "Detail")
+    end
+end
+
+local function silhouettes(parent)
+    -- Sparse static off-map buildings create depth without importing textures.
+    -- These parts stay outside the 356x356 playfield.
+    for index = 1, 20 do
+        local direction = index % 2 == 0 and 1 or -1
+        local x = direction * (209 + index % 3 * 20)
+        local z = ((index * 43) % 370) - 185
+        local height = 24 + (index * 17) % 43
+        prop(parent, "SKYLINE / warehouse " .. index,
+            Vector3.new(32, height, 38),
+            CFrame.new(x, height / 2 - 0.2, z),
+            index % 3 == 0 and COLOR.sand or COLOR.wall, Enum.Material.Concrete, "Detail")
+    end
+end
+
 function ArenaArt.build(arena)
+    -- Internal folder identifier retained for the existing client LOD script.
     local previous = arena:FindFirstChild("NeonStrikeDecor")
     if previous then previous:Destroy() end
     local decor = Instance.new("Folder")
     decor.Name = "NeonStrikeDecor"
     decor.Parent = arena
 
-    -- Industrial silhouette: inset wall ribs, edge signals, maintenance ducting.
+    -- Repeated perimeter bracing gives walls material scale rather than glowing grids.
     for _, side in ipairs({ -1, 1 }) do
         for i = -3, 3 do
-            local coordinate = i * 43
-            prop(decor, "WALL / rib EW " .. side .. ":" .. i,
-                Vector3.new(1.25, 28, 2.5), CFrame.new(side * 173.7, 14, coordinate),
-                IRON, Enum.Material.Metal, "Core")
-            prop(decor, "WALL / signal EW " .. side .. ":" .. i,
-                Vector3.new(0.3, 24, 0.22), CFrame.new(side * 172.9, 13, coordinate),
-                i % 2 == 0 and CYAN or GOLD, Enum.Material.Neon, "Detail")
-            prop(decor, "WALL / rib NS " .. side .. ":" .. i,
-                Vector3.new(2.5, 28, 1.25), CFrame.new(coordinate, 14, side * 173.7),
-                IRON, Enum.Material.Metal, "Core")
-            prop(decor, "WALL / signal NS " .. side .. ":" .. i,
-                Vector3.new(0.22, 24, 0.3), CFrame.new(coordinate, 13, side * 172.9),
-                i % 2 == 0 and GOLD or CYAN, Enum.Material.Neon, "Detail")
+            local n = i * 43
+            prop(decor, "BOUNDARY / upright EW " .. side .. ":" .. i,
+                Vector3.new(1.2, 25, 2.8), CFrame.new(side * 173.9, 12.5, n),
+                COLOR.slate, Enum.Material.Metal, "Core")
+            prop(decor, "BOUNDARY / upright NS " .. side .. ":" .. i,
+                Vector3.new(2.8, 25, 1.2), CFrame.new(n, 12.5, side * 173.9),
+                COLOR.slate, Enum.Material.Metal, "Core")
         end
-        -- Long overhead service pipe and parallel emissive conduits.
-        beam(decor, "POWER / main conduit " .. side,
-            Vector3.new(side * 167, 32, -154), Vector3.new(side * 167, 32, 154),
-            1.6, CLOUD, Enum.Material.Metal, "Core")
-        beam(decor, "POWER / energized core " .. side,
-            Vector3.new(side * 167, 33, -155), Vector3.new(side * 167, 33, 155),
-            0.27, side == 1 and CYAN or GOLD, Enum.Material.Neon, "Detail")
+        span(decor, "BOUNDARY / cable service " .. side,
+            Vector3.new(side * 170, 29, -153), Vector3.new(side * 170, 29, 153),
+            1.25, COLOR.steel, "Core")
     end
 
-    -- Stage floor is physically unchanged: thin, visual-only flight markings.
-    addLane(decor, "X", -128, 1)
-    addLane(decor, "X", 128, 2)
-    addLane(decor, "Z", -128, 3)
-    addLane(decor, "Z", 128, 4)
+    laneMarkings(decor)
+    containerDetails(decor)
+    cornerCranes(decor)
+    silhouettes(decor)
 
-    -- Four landmark towers with neon crown, kinetic-looking rings, and safe silhouettes.
-    for i, location in ipairs({
-        Vector3.new(-148, 21, -145),
-        Vector3.new(148, 21, -145),
-        Vector3.new(-148, 21, 145),
-        Vector3.new(148, 21, 145),
-    }) do
-        local c = i % 2 == 0 and GOLD or CYAN
-        prop(decor, "REACTOR / body " .. i, Vector3.new(5, 22, 5),
-            CFrame.new(location), IRON, Enum.Material.Metal, "Core")
-        prop(decor, "REACTOR / glass " .. i, Vector3.new(2.2, 18, 2.2),
-            CFrame.new(location), c, Enum.Material.Neon, "Detail")
-        for ring = 1, 3 do
-            prop(decor, "REACTOR / collar " .. i .. ":" .. ring,
-                Vector3.new(7.3, 0.6, 7.3),
-                CFrame.new(location + Vector3.new(0, (ring - 2) * 6, 0)),
-                DARK, Enum.Material.Metal, "Core")
-            prop(decor, "REACTOR / halo " .. i .. ":" .. ring,
-                Vector3.new(7.4, 0.14, 7.4),
-                CFrame.new(location + Vector3.new(0, (ring - 2) * 6 + 0.35, 0)),
-                c, Enum.Material.Neon, "Detail")
-        end
-        local point = Instance.new("PointLight")
-        point.Name = "ReactorGlow"
-        point.Color = c
-        point.Brightness = 0.85
-        point.Range = 25
-        point.Shadows = false
-        point.Parent = decor:FindFirstChild("REACTOR / glass " .. i)
-    end
-
-    for _, side in ipairs({ -1, 1 }) do
-        display(decor, "SCOREBOARD / " .. side,
-            Vector3.new(side * 140, 16, side * 132),
-            Vector3.new(0, 0, -side),
-            "N E O N\nS T R I K E",
-            side == -1 and CYAN or GOLD)
-        for i = 1, 4 do
-            local x = side * (74 + i * 17)
-            local z = 150 - i * 18
-            prop(decor, "SUPPORT / plating " .. side .. ":" .. i,
-                Vector3.new(12, 0.07, 2.2), CFrame.new(x, 0.045, z),
-                side == 1 and GOLD or CYAN, Enum.Material.Neon, "Detail")
-        end
-    end
+    poster(decor, "SIGN / west logistics", Vector3.new(-142, 17, 134),
+        Vector3.new(0, 0, -1), "IRON YARD\nWEST FREIGHT", COLOR.olive)
+    poster(decor, "SIGN / east logistics", Vector3.new(142, 17, 134),
+        Vector3.new(0, 0, -1), "IRON YARD\nEAST FREIGHT", COLOR.rust)
+    poster(decor, "SIGN / safety", Vector3.new(0, 15, -169),
+        Vector3.new(0, 0, 1), "LOADING ZONE\nAUTHORIZED PERSONNEL", COLOR.orange)
 end
 
-local function replaceEffect(name, className)
-    local effect = Lighting:FindFirstChild(name)
-    if effect and not effect:IsA(className) then
-        effect:Destroy()
-        effect = nil
+local function effect(name, className)
+    local previous = Lighting:FindFirstChild(name)
+    if previous and not previous:IsA(className) then
+        previous:Destroy()
+        previous = nil
     end
-    if not effect then
-        effect = Instance.new(className)
-        effect.Name = name
-        effect.Parent = Lighting
+    if not previous then
+        previous = Instance.new(className)
+        previous.Name = name
+        previous.Parent = Lighting
     end
-    return effect
+    return previous
 end
 
 function ArenaArt.applyLighting()
-    local correction = replaceEffect("NeonStrikeGrade", "ColorCorrectionEffect")
-    correction.Brightness = 0.01
-    correction.Contrast = 0.13
-    correction.Saturation = 0.07
-    correction.TintColor = Color3.fromRGB(228, 237, 255)
-    correction.Enabled = true
+    local grade = effect("IronYardGrade", "ColorCorrectionEffect")
+    grade.Brightness = 0.01
+    grade.Contrast = 0.07
+    grade.Saturation = -0.025
+    grade.TintColor = Color3.fromRGB(255, 250, 241)
+    grade.Enabled = true
 
-    local bloom = replaceEffect("NeonStrikeBloom", "BloomEffect")
-    bloom.Intensity = 0.19
-    bloom.Size = 17
-    bloom.Threshold = 1.42
-    bloom.Enabled = true
+    -- Remove the previous neon-era glow instead of stacking post-processing.
+    for _, name in ipairs({ "NeonStrikeBloom", "NeonStrikeGrade" }) do
+        local previous = Lighting:FindFirstChild(name)
+        if previous then previous:Destroy() end
+    end
+    local bloom = Lighting:FindFirstChildOfClass("BloomEffect")
+    if bloom then bloom.Enabled = false end
+
+    local atmosphere = Lighting:FindFirstChild("IronYardAtmosphere")
+    if not atmosphere then
+        atmosphere = Instance.new("Atmosphere")
+        atmosphere.Name = "IronYardAtmosphere"
+        atmosphere.Parent = Lighting
+    end
+    atmosphere.Density = 0.13
+    atmosphere.Haze = 0.45
+    atmosphere.Glare = 0
+    atmosphere.Color = Color3.fromRGB(219, 223, 215)
+    atmosphere.Decay = Color3.fromRGB(182, 190, 196)
 end
 
 return ArenaArt
