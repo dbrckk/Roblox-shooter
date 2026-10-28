@@ -224,9 +224,19 @@ local function fireKnife(player, weaponId, config, direction)
 		return
 	end
 
-	local origin = head.Position + direction * 2
+	local start = head.Position
+	local origin = start + direction * 2
+	-- Prevent a projectile spawning beyond a wall or hitting through cover
+	-- during the 2-stud muzzle offset. Close-range fighters are handled here.
+	local params = makeRaycastParams({ character })
+	local initialHit = workspace:Raycast(start, origin - start, params)
+	if initialHit then
+		broadcastFireFx(player, weaponId, start)
+		damageHit(player, weaponId, config, initialHit, start)
+		return
+	end
 	local knife = createKnifeVisual(origin, direction)
-	local params = makeRaycastParams({ character, knife })
+	params.FilterDescendantsInstances = { character, knife }
 	local speed = config.projectileSpeed
 	local maxRange = config.range
 	local lifetime = config.projectileLifetime
