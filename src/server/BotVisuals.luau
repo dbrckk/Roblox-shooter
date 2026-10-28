@@ -1,7 +1,69 @@
 -- NEON STRIKE / VANGUARD modular combat armor.
 -- Procedurally authored Roblox 3D parts: no external IDs, copyrighted meshes or textures.
 -- Armor is welded to the R6 Humanoid skeleton and is non-colliding/non-queryable.
+local ServerStorage = game:GetService("ServerStorage")
 local BotVisuals = {}
+local importedPalette = { "cyan", "amber", "violet", "emerald" }
+local importedParts = { "torso", "head", "left_arm", "right_arm", "left_leg", "right_leg", "rifle" }
+
+-- Studio-uploaded MeshParts are optional. This path activates only after a complete
+-- asset pack is actually imported into ServerStorage/VanguardTemplates/<palette>.
+-- No MeshId is fabricated and no script attempts to set protected MeshPart.MeshId.
+local function tryImportedMeshKit(model, rig, index, accent)
+    local root = ServerStorage:FindFirstChild("VanguardTemplates")
+    local name = importedPalette[(index - 1) % #importedPalette + 1]
+    local variant = root and root:FindFirstChild(name)
+    if not variant then return nil end
+
+    local source = {}
+    for _, partName in ipairs(importedParts) do
+        local mesh = variant:FindFirstChild(partName)
+        if not mesh or not mesh:IsA("MeshPart") then return nil end
+        source[partName] = mesh
+    end
+
+    local anchors = {
+        torso = rig.torso,
+        head = rig.head,
+        left_arm = rig.leftArm,
+        right_arm = rig.rightArm,
+        left_leg = rig.leftLeg,
+        right_leg = rig.rightLeg,
+        rifle = rig.rightArm,
+    }
+    for _, partName in ipairs(importedParts) do
+        local target = anchors[partName]
+        local part = source[partName]:Clone()
+        part.Name = "VANGUARD Mesh " .. partName
+        part.Anchored = false
+        part.Massless = true
+        part.CanCollide = false
+        part.CanTouch = false
+        part.CanQuery = false
+        part.CastShadow = true
+        part:SetAttribute("NeonCosmeticTier", "Core")
+        local offset = partName == "rifle" and CFrame.new(0, -0.39, -1.12) or CFrame.new()
+        part.CFrame = target.CFrame * offset
+        part.Parent = model
+        local weld = Instance.new("WeldConstraint")
+        weld.Name = "ImportedVisualWeld"
+        weld.Part0 = target
+        weld.Part1 = part
+        weld.Parent = part
+    end
+
+    -- Invisible base R6 parts remain the server's raycast hitboxes and skeleton.
+    -- Do NOT switch CanQuery off: players must still hit these Humanoid parts.
+    for _, bodyPart in ipairs({ rig.torso, rig.head, rig.leftArm, rig.rightArm, rig.leftLeg, rig.rightLeg }) do
+        bodyPart.Transparency = 1
+    end
+    local muzzle = Instance.new("Attachment")
+    muzzle.Name = "VX_Muzzle"
+    muzzle.CFrame = CFrame.new(0.02, -0.46, -2.91)
+    muzzle.Parent = rig.rightArm
+    model:SetAttribute("NeonVisualSource", "PBR_MESH")
+    return { muzzle = muzzle, accent = accent }
+end
 
 local STEEL = Color3.fromRGB(32, 42, 56)
 local CARBON = Color3.fromRGB(18, 24, 34)
@@ -63,6 +125,10 @@ function BotVisuals.decorate(model, rig, index)
     rightArm.Color = STEEL
     leftLeg.Color = CARBON
     rightLeg.Color = CARBON
+
+    local imported = tryImportedMeshKit(model, rig, index, accent)
+    if imported then return imported end
+    model:SetAttribute("NeonVisualSource", "PROCEDURAL_PARTS")
 
     -- Segmented central chest plating and under-armor.
     plate(model, torso, "VANGUARD Chest Core", Vector3.new(1.85, 1.65, 0.24), 0, 0.12, -0.57, GUNMETAL, "Core")
