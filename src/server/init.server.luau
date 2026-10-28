@@ -6,7 +6,10 @@ local MovementService = require(script:WaitForChild("MovementService"))
 local WeaponService = require(script:WaitForChild("WeaponService"))
 
 MapService.start()
-DummyService.start()
+local SpawnService = require(script:WaitForChild("SpawnService"))
+SpawnService.start()
+-- Training dummies are available as a separate module, not spawned in PvP FFA.
+-- They otherwise block AI line-of-sight and distort combat feedback.
 MovementService.start()
 WeaponService.start()
 local BotService = require(script:WaitForChild("BotService"))

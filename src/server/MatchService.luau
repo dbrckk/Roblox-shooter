@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 
 local BotService = require(script.Parent:WaitForChild("BotService"))
+local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local MatchService = {}
 local started = false
 
@@ -83,31 +84,6 @@ local function resetRoundScores()
     end
 end
 
-local startPositions = {
-    Vector3.new(-132, 5, 139),
-    Vector3.new(132, 5, 139),
-    Vector3.new(-132, 5, -139),
-    Vector3.new(132, 5, -139),
-    Vector3.new(0, 5, 128),
-    Vector3.new(0, 5, -135),
-    Vector3.new(-80, 5, 144),
-    Vector3.new(80, 5, -144),
-}
-
-local function positionPlayers()
-    for index, player in ipairs(Players:GetPlayers()) do
-        local character = player.Character
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-        if humanoid and humanoid.Health > 0 and root then
-            humanoid.Health = humanoid.MaxHealth
-            local spot = startPositions[(index - 1) % #startPositions + 1]
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.CFrame = CFrame.new(spot)
-        end
-    end
-end
-
 local function startRound()
     if #Players:GetPlayers() == 0 then
         transition("WAITING", 0)
@@ -115,7 +91,7 @@ local function startRound()
     end
     resetRoundScores()
     BotService.resetRound()
-    positionPlayers()
+    SpawnService.placePlayers()
     round += 1
     transition("LIVE", ROUND_SECONDS)
 end

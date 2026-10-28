@@ -20,10 +20,10 @@ BotConfig.Difficulties = {
 }
 
 BotConfig.Spawns = {
-    Vector3.new(-112, 4, 105),
-    Vector3.new(112, 4, 105),
-    Vector3.new(-108, 4, -106),
-    Vector3.new(108, 4, -106),
+    Vector3.new(-146, 3.4, 100),
+    Vector3.new(146, 3.4, 100),
+    Vector3.new(-146, 3.4, -110),
+    Vector3.new(146, 3.4, -110),
 }
 
 BotConfig.PatrolPoints = {
