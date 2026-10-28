@@ -11,7 +11,7 @@ Le workflow gratuit [Build original VANGUARD 3D/PBR kit](https://github.com/dbrc
 - `vanguard_source.blend` : scène source éditable, avec textures intégrées.
 - `manifest.json`, `validation_summary.md` : inventaire et contrôles.
 
-**Export vérifié le 28 octobre 2026 :** le run [40733818033](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a généré les 7 FBX, 8 GLB, 32 PNG PBR, la scène Blender et l'aperçu. Les 4 meshes LOD0 comptent chacun 3 636 polygones, selon Blender. Une publication dans [GitHub Releases](https://github.com/dbrckk/Roblox-shooter/releases) est automatisée pour conserver le ZIP durablement, sous l'étiquette *assets / prerelease*, et ne constitue pas une publication du jeu.
+**Export initial vérifié le 28 octobre 2026 :** le run [40733818033](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a généré les 7 FBX, 8 GLB, 32 PNG PBR, la scène Blender et l'aperçu. Les 4 meshes LOD0 comptent chacun 3 636 polygones, selon Blender. Une publication dans [GitHub Releases](https://github.com/dbrckk/Roblox-shooter/releases) est automatisée pour conserver le ZIP durablement, sous l'étiquette *assets / prerelease*, et ne constitue pas une publication du jeu.
 
 Tout est **original**. Aucun contenu de RIVALS ni d'un FPS tiers n'a été extrait. REA reste utilisé pour l'analyse de l'architecture d'un FPS sous licence MIT (voir `REA_RESULTS.md`).
 
@@ -58,3 +58,7 @@ Un script de **barre de commandes Studio** évite de renommer/déplacer les 28 p
 5. Enregistrer l'expérience dans Studio. Lors du Play, inspecter l'attribut `NeonVisualSource` des bots : `PBR_MESH` signifie que le pack est activé, `PROCEDURAL_PARTS` indique le fallback.
 
 Le script n'est **pas exécuté depuis GitHub Actions** : Studio/Creator et les permissions d'upload restent nécessaires. Aucun ID ni résultat de test mobile n'est inventé.
+
+## Mise à jour haute fidélité du matériau (28 octobre 2026)
+
+L'export [GitHub Actions 40740282547](https://github.com/dbrckk/Roblox-shooter/actions/runs/40740282547) a réussi et produit la release **[vanguard-assets-f072ddadf892](https://github.com/dbrckk/Roblox-shooter/releases/tag/vanguard-assets-f072ddadf892)**. Les 32 cartes PNG conservent la résolution mobile maîtrisée de 512×512, mais les normales sont maintenant **calculées à partir des gradients d'une hauteur de surface**. Les couleurs et la rugosité réagissent aux joints de plaques, biseaux, micro-rayures et petites zones d'usure, différenciés selon les matériaux. Cette release remplace la précédente pour les futurs imports ; elle n'est pas automatiquement synchronisée dans la place Roblox sans passage par Studio.

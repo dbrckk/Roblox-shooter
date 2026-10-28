@@ -22,5 +22,5 @@ Le fichier `server/modes.js` isole les règles de mode, d'affectation d'équipe,
 - `src/client/MatchHud.client.luau` : annonce du round, chrono et objectif d'éliminations, gagnant.
 - `src/server/WeaponService.luau` : le serveur accepte les tirs pendant LIVE uniquement, rejette les vecteurs non finis, et refuse un tir d'arme non équipée.
 - Les scripts sont une **nouvelle implémentation Luau originale**, pas une traduction/copier-coller du code d'Arena FPS.
-- Mode FFA entraînement et PvP libre; **aucun matchmaking, IA mobile ou duel équipe 5v5** n'est annoncé comme achevé.
+- Mode FFA original avec **IA mobile à navigation PathfindingService**, recherche de cible, réaction et visée imparfaite, scores bots persistants pendant les manches, réapparitions plus sûres et protection temporaire. Le code s'inspire des principes d'architecture observés grâce à REA, sans recopier le FPS source. **Aucun matchmaking ou duel équipe 5v5** n'est achevé.
 - Compilation Rojo requise et comportement Roblox Studio / Android encore à tester.

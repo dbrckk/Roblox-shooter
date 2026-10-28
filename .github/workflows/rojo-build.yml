@@ -35,9 +35,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          find src -type f -name '*.luau' -print0 | \
+          find src tools/studio -type f \( -name '*.luau' -o -name '*.lua' \) -print0 | \
             xargs -0 -r -n 1 ./luau-compile > /dev/null
-          echo "All Luau sources compiled successfully."
+          echo "All gameplay and Studio installer Lua sources compiled successfully."
+
+      - name: Parse asset production Python
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile tools/assetforge/*.py
+          echo "All asset production Python modules are syntactically valid."
+
 
       - name: Build place
         run: ./rojo build default.project.json -o neon-strike.rbxlx

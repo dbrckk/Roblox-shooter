@@ -8,7 +8,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 
 - Armes : pistolet, sniper et couteau à lancer ; tir et dégâts calculés côté serveur.
 - Déplacements : sprint, slide, saut, boost, wallrun et mantle.
-- HUD, réticule, recul, impacts, sons Roblox internes, mannequins de tir.
+- HUD, réticule, recul, impacts, sons Roblox internes et fil d'éliminations serveur (les mannequins d'entraînement sont désactivés dans l'arène compétitive).
 - Contrôles PC + boutons tactiles Android/iOS ajoutés.
 - Projet Rojo + CI Github Actions build Roblox.
 - **Arène originale de 356 × 356 studs**, couverture, verticalité, éclairage colorimétrique, structures industrielles 3D, signalétique et décors à LOD dynamique ; les vrais meshes PBR importés restent à produire.
@@ -24,7 +24,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 4. Ouvrir `neon-strike.rbxlx` dans Studio, puis **Play**.
 5. Édition en direct : `rojo plugin install` puis `rojo serve default.project.json`.
 
-Le dépôt inclut désormais une simulation FFA avec jusqu'à quatre bots mobiles, avec IA serveur, victoire par éliminations et scoreboard. Il reste **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI compile tous les fichiers Luau et génère le fichier Roblox Studio ; elle ne valide pas la qualité du gameplay ni les performances sur téléphone.
+Le dépôt inclut un mode FFA avec jusqu'à quatre bots mobiles, IA serveur, victoire par éliminations, scoreboard et fil de tirs. Les joueurs disposent de réapparitions sélectionnées parmi des positions dégagées et éloignées des autres combattants, avec protection temporaire de 2,5 secondes annulée au premier tir. Il reste **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI compile tous les fichiers Luau et génère le fichier Roblox Studio ; elle ne valide pas la qualité du gameplay ni les performances sur téléphone.
 
 ## Télécharger le projet construit
 
@@ -45,3 +45,7 @@ Le workflow [AssetForge VANGUARD](https://github.com/dbrckk/Roblox-shooter/actio
 La [première génération intégrale](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a réussi : **7 MeshParts rigides en FBX**, **8 modèles GLB (4 coloris × 2 LOD)**, **32 cartes PBR 512×512**, un `.blend` éditable et une planche d'aperçu. Le profil détaillé utilise **3 636 polygones** par coloris d'après le rapport Blender. Le lot fait 50,23 Mio non compressés et 46,47 Mo environ dans l'artifact ZIP. L'intégration en jeu dépend d'une importation Studio autorisée ; aucun mesh Roblox distant n'est prétendu publié.
 
 Le workflow produit aussi une [GitHub Release permanente](https://github.com/dbrckk/Roblox-shooter/releases) marquée **prerelease d'assets uniquement**, pour ne pas dépendre de l'expiration des artifacts. La présence effective de cette Release doit être validée par le workflow.
+
+## Assets VANGUARD et textures PBR
+
+Le kit original de 7 pièces FBX, 4 palettes GLB LOD0/LOD1 et 32 cartes Color/Normal/Roughness/Metallic a été **généré et exporté** via [AssetForge GitHub Actions](https://github.com/dbrckk/Roblox-shooter/actions/workflows/assetforge.yml). La version [vanguard-assets-f072ddadf892](https://github.com/dbrckk/Roblox-shooter/releases/tag/vanguard-assets-f072ddadf892) comporte désormais des normals dérivées d'une hauteur procédurale, des rainures et de l'usure. Un script `tools/studio/install_vanguard.lua` prépare 28 MeshParts une fois l'import effectué en Studio. **Les meshes ne sont pas encore présents dans la place Rojo et leur rendu Studio / Android reste non vérifié.**
