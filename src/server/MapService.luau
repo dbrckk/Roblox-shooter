@@ -2,6 +2,7 @@
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local MapService = {}
+local ArenaArt = require(script.Parent:WaitForChild("ArenaArt"))
 local started = false
 local MAIN = Color3.fromRGB(32, 43, 59)
 local MID = Color3.fromRGB(61, 76, 92)
@@ -159,6 +160,8 @@ function MapService.start()
     Lighting.FogColor = Color3.fromRGB(33, 44, 65)
     Lighting.FogEnd = 550
     buildArena(folder)
+    ArenaArt.build(folder)
+    ArenaArt.applyLighting()
 end
 
 return MapService
