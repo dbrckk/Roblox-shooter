@@ -10,6 +10,8 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - Déplacements : sprint, slide, saut, boost, wallrun et mantle.
 - HUD, réticule, recul, impacts, sons Roblox internes et fil d'éliminations serveur (les mannequins d'entraînement sont désactivés dans l'arène compétitive).
 - Contrôles PC + boutons tactiles Android/iOS ajoutés.
+- Classement FFA top 3 actualisé par le serveur : vrais joueurs et IA, orientation et secteur dans un HUD compact pour Android.
+- Nouveaux repères de terrain : chariots élévateurs, palettes et couvertures industrielles avec collisions de jeu distinctes des détails graphiques.
 - Projet Rojo + CI Github Actions build Roblox.
 - **Arène originale de 356 × 356 studs**, couverture, verticalité, éclairage naturel, terminal de fret moderne avec conteneurs et grues industrielles, signalétique et décors à LOD dynamique ; les vrais meshes PBR importés restent à produire.
 - **Combattants VANGUARD** : quatre opérateurs tactiques stylisés construites à partir d'armures modulaires (casques tactiques, visières non émissives, protections balistiques, sac dorsal et fusils). Animations procédurales de marche, posture de visée, regard et recul. Leurs détails lointains sont masqués localement sur Android.

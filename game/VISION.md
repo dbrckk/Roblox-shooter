@@ -5,6 +5,7 @@ Jeu Roblox FPS compétitif **original**, inspiré par les qualités de RIVALS, H
 ## Sensation attendue
 
 - Combat immédiat, lisible, précis, récompensant la compétence sans paiement nécessaire.
+- Classement et indications de zones sobres, lisibles sans occuper l'espace central de visée.
 - 1v1–5v5 avec rounds courts, matchmaking juste, rematch simple et entraînement solo.
 - Première personne stable, contrôle tactile réellement ergonomique sur Android, feedback de tir percutant et sons agréables.
 - Grands environnements 3D stylisés mais crédibles, verticalité utile et couvertures tactiques.
