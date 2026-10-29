@@ -101,6 +101,19 @@ def main():
     for key in ("bot.wasAirborne", "bot.landedAt", "bot.lastDamageAt",
                 "bot.defensiveBlend", "strafeLean"):
         has(botAnimation, key, "Bot reactions and combat locomotion")
+    awards = source("src/server/CombatAwards.luau")
+    awards_ui = source("src/client/CombatAwards.client.luau")
+    score = source("src/server/ScoreService.luau")
+    for needle in ("function CombatAwards.recordElimination", "function CombatAwards.recordDeath",
+                   "function CombatAwards.resetRound", 'kind = "CombatAward"'):
+        has(awards, needle, "Server-owned combat medal")
+    require(server.count("CombatAwards.recordElimination(") == 2,
+            "Both server-verified firearm elimination paths must award XP")
+    has(score, "CombatAwards.recordDeath(player)", "Death resets kill streak")
+    has(match, "CombatAwards.resetRound()", "Round transition resets combat streak")
+    has(awards_ui, "remotes.WeaponFeedback.OnClientEvent:Connect(notify)",
+        "Client-only medal presentation")
+
     print("IRON YARD weapon, ammo, ADS and control source contracts: OK")
     print("NOTE: Studio/Android playtests are still required.")
 

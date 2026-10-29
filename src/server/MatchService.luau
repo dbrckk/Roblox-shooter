@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
+local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local MatchService = {}
 local started = false
 
@@ -137,6 +138,7 @@ local function startRound()
         return
     end
     resetRoundScores()
+    CombatAwards.resetRound()
     WeaponService.resetRound()
     BotService.resetRound()
     SpawnService.placePlayers()

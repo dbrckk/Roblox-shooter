@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local ScoreService = {}
 local started = false
 
@@ -22,6 +23,7 @@ local function attachPlayer(player)
             humanoid.Died:Connect(function()
                 local deaths = stats:FindFirstChild("Deaths")
                 if deaths then deaths.Value += 1 end
+                CombatAwards.recordDeath(player)
             end)
         end
     end

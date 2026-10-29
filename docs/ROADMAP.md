@@ -46,3 +46,9 @@ Sources pertinentes: TabooHarmony/roblox-brain, Chrrxs/robloxstudio-mcp, Scenari
 
 ## Livraison
 Pas de publication sans Rojo build vert, playtest deux joueurs, contrôle tactile Android, mesure de performances et conformité licences.
+
+## Combat feedback (29 October 2026)
+
+Server-owned `CombatAwards` grants **session-only** XP (100 elimination + precision/multi-kill bonuses) and short-lived medals including DOUBLE KILL / TRIPLE KILL / RAMPAGE. The XP is visible locally but **is not persisted** between joins. Streaks reset on death and on new rounds, and never affect weapon damage, matchmaking or winner decisions. No virtual currency, purchases or reward claims are implemented. A reliable DataStore progression system would need save/retry/duplicate-session protection and actual published Roblox runtime tests before being called persistent.
+
+The new industrial trusses, catwalk rails and gantry rigging are cosmetic only. Their physical fidelity and Android frame pacing still require Studio/device validation.

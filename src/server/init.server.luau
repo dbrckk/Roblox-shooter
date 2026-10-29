@@ -1,3 +1,5 @@
+local CombatAwards = require(script:WaitForChild("CombatAwards"))
+CombatAwards.start()
 local ScoreService = require(script:WaitForChild("ScoreService"))
 ScoreService.start()
 local DummyService = require(script:WaitForChild("DummyService"))

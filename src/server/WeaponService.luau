@@ -8,6 +8,7 @@ local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
+local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local WeaponService = {}
 
 local remotes = nil
@@ -195,6 +196,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         local stats = attacker:FindFirstChild("leaderstats")
         local kills = stats and stats:FindFirstChild("Eliminations")
         if kills then kills.Value += 1 end
+        CombatAwards.recordElimination(attacker, headshot)
         remotes.KillFeed:FireAllClients({
             attacker = attacker.DisplayName,
             target = targetPlayer and targetPlayer.DisplayName or targetCharacter.Name,
@@ -379,6 +381,7 @@ local function firePelletWeapon(player, weaponId, config, direction)
                 local stats = player:FindFirstChild("leaderstats")
                 local score = stats and stats:FindFirstChild("Eliminations")
                 if score then score.Value += 1 end
+                CombatAwards.recordElimination(player, entry.headshots > 0)
                 remotes.KillFeed:FireAllClients({
                     attacker = player.DisplayName,
                     target = entry.player and entry.player.DisplayName or entry.model.Name,
