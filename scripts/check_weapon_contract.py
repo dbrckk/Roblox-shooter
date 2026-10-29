@@ -85,6 +85,21 @@ def main():
     has(bot, "config.MagazineSize", "Bot finite ammunition")
     has(bot, "config.ReloadSeconds", "Bot reloading")
     has(client, "visibleRigParts", "Cached first-person rig visibility")
+    # Confirm a reload effect is driven by authoritative server ammo state,
+    # and weapon bob uses character ground/velocity rather than a ticking clock.
+    has(viewmodel, "function WeaponVisuals:setReloading(weaponId, active)", "Reload animation API")
+    has(client, "visuals:setReloading(message.weaponId, message.reloading == true)",
+        "Server-confirmed reload animation")
+    has(client, "visuals:setReloading(weaponId, ammunition.reloading)",
+        "Weapon switch restores reload state")
+    for key in ("humanoid.FloorMaterial ~= Enum.Material.Air",
+                "rootPart.AssemblyLinearVelocity", "self.stepPhase",
+                'partName == "LeftHand"', 'partName == "Magazine"'):
+        has(viewmodel, key, "Grounded movement and animated reload visual")
+    botAnimation = source("src/server/BotAnimation.luau")
+    for key in ("bot.wasAirborne", "bot.landedAt", "bot.lastDamageAt",
+                "bot.defensiveBlend", "strafeLean"):
+        has(botAnimation, key, "Bot reactions and combat locomotion")
     print("IRON YARD weapon, ammo, ADS and control source contracts: OK")
     print("NOTE: Studio/Android playtests are still required.")
 

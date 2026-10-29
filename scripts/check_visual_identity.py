@@ -50,6 +50,13 @@ def main():
     check("Lighting.ClockTime = 13.8" in map_source,
           "Sunlight changed unexpectedly")
 
+    art = source("src/server/ArenaArt.luau")
+    for part in ("side flute", "locking rod", "door seam", "FreightSerial"):
+        check(part in art, "Container modeling missing: " + part)
+    check('Enum.Material.Neon' not in art, "Container art must remain industrial daylight")
+    check("p.CanCollide = false" in art and "p.CanQuery = false" in art,
+          "Decorative art must not change collision or raycasts")
+
     bot = find_lua_palette(source("src/server/BotVisuals.luau"), "importedPalette")
     studio = find_lua_palette(source("tools/studio/install_vanguard.lua"), "palettes")
     blender = find_py_palette(source("tools/assetforge/build_vanguard.py"), "COLORS")

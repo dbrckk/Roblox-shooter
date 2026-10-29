@@ -24,3 +24,20 @@ Les éléments purement cosmétiques (`NeonArtTier` / `NeonCosmeticTier`, clés 
 5. Mesurer CPU, GPU, mémoire, cadence et chauffe sur Android. Ne pas annoncer de qualité AAA vérifiée avant ces tests.
 
 Le workflow REA précédent (référence FPS sous licence MIT) demeure conservé dans `docs/REA_RESULTS.md`. Aucun asset tiers propriétaire n'a été repris.
+
+
+## Enrichissement 3D procédural (29 octobre 2026)
+
+Les huit containers de l'arène possèdent désormais des nervures latérales, des
+encadrements, des doubles portes, des tiges de verrouillage, des charnières et des
+plaques d'identification. Les pièces de détail sont **non-collisionnelles et
+non-interrogeables** : les volumes de gameplay de MapService restent identiques.
+Les détails éloignés suivent le système de culling local mobile existant.
+
+L'animation de l'arme en première personne suit désormais la vélocité au sol ;
+le rechargement visuel reçoit son état des événements `Ammo` du serveur.
+Les bots disposent de réactions de recul aux impacts et d'amortissement à
+l'atterrissage, sans nouvel asset ni animation payante.
+
+Il s'agit de géométrie **procédurale**, pas d'un remplacement des vraies surfaces
+PBR de VANGUARD ; l'import Studio des MeshParts reste nécessaire.
