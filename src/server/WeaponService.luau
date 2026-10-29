@@ -190,6 +190,15 @@ local function canFire(player, weaponId, config)
 	return true
 end
 
+-- Server-side cone sampling: the client never selects individual pellets.
+local function randomSpread(direction, spreadDegrees)
+    if not spreadDegrees or spreadDegrees <= 0 then return direction end
+    local theta = weaponRandom:NextNumber(0, 2 * math.pi)
+    local radius = math.sqrt(weaponRandom:NextNumber()) * math.rad(spreadDegrees)
+    return (CFrame.lookAt(Vector3.zero, direction)
+        * CFrame.Angles(math.cos(theta) * radius, math.sin(theta) * radius, 0)).LookVector
+end
+
 local function fireRaycastWeapon(player, weaponId, config, direction)
 	local character, _, head = getLiveCharacter(player)
 	if not character then
@@ -202,15 +211,6 @@ local function fireRaycastWeapon(player, weaponId, config, direction)
 
 	local result = workspace:Raycast(origin, randomSpread(direction, config.spreadDegrees) * config.range, params)
 	damageHit(player, weaponId, config, result, origin)
-end
-
--- Server-side cone sampling: the client never selects individual pellets.
-local function randomSpread(direction, spreadDegrees)
-    if not spreadDegrees or spreadDegrees <= 0 then return direction end
-    local theta = weaponRandom:NextNumber(0, 2 * math.pi)
-    local radius = math.sqrt(weaponRandom:NextNumber()) * math.rad(spreadDegrees)
-    return (CFrame.lookAt(Vector3.zero, direction)
-        * CFrame.Angles(math.cos(theta) * radius, math.sin(theta) * radius, 0)).LookVector
 end
 
 local function firePelletWeapon(player, weaponId, config, direction)
