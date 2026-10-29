@@ -6,10 +6,11 @@ FPS Roblox indépendant, utilisant **RIVALS** (duels et progression), **Hypersho
 
 Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas-mikalainis/roblox-precision-framework) par Lukas Mikalainis, sous **MIT**. La licence et attribution sont conservées dans [LICENSE](LICENSE). Code serveur/client et jeu de tirs intégrés, pas seulement des fichiers de documentation.
 
-- Armes : pistolet, sniper et couteau à lancer ; tir et dégâts calculés côté serveur.
+- **Arsenal de cinq armes originales :** AR-24 automatique, B-8 à huit plombs, pistolet, sniper et couteau à lancer. Dégâts, dispersion, chargeurs, rechargements et cadence sont contrôlés par le serveur. Les armes disposent de modèles originaux à la première personne ; lunette sniper et visée à l'épaule/hausse pour les autres armes.
+- **Munitions et confort de tir :** 30 balles AR-24, 14 pistolet, 6 pompe, 5 sniper ; couteaux sans chargeur. Rechargement par `R` sur PC ou bouton `RLD` sur Android ; nouvelles munitions en début de manche. Le HUD affiche la quantité réelle répliquée par le serveur.
 - Déplacements : sprint, slide, saut, boost, wallrun et mantle.
 - HUD, réticule, recul, impacts, sons Roblox internes et fil d'éliminations serveur (les mannequins d'entraînement sont désactivés dans l'arène compétitive).
-- Contrôles PC + boutons tactiles Android/iOS ajoutés.
+- **Contrôles PC + Android/iOS :** tir automatique par maintien, touches 1 à 5 pour l'arsenal, clic droit ou bouton AIM pour viser, choix d'arme mobile avec sélection visible et retour tactile de santé (flash discret).
 - Classement FFA top 3 actualisé par le serveur : vrais joueurs et IA, orientation et secteur dans un HUD compact pour Android.
 - Nouveaux repères de terrain : chariots élévateurs, palettes et couvertures industrielles avec collisions de jeu distinctes des détails graphiques.
 - Projet Rojo + CI Github Actions build Roblox.

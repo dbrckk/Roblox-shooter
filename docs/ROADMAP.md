@@ -7,6 +7,10 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] moteur Roblox FPS Luau licencié MIT
 - [x] serveur : dégâts et cadence de tir
 - [x] armes, caméra, animations procédurales, HUD
+- [x] arsenal étendu : AR automatique, shotgun à 8 pellets avec raycasts serveur, 5 viewmodels, sélection PC/tactile, ADS avec animation de visée
+- [x] chargeurs et rechargement contrôlés côté serveur, confirmation des munitions vers le HUD, rechargement PC/tactile, réinitialisation par manche
+- [x] IA : chargeur limité et rechargement, son de fusil synchronisé, aucune victime NPC extérieure au combat
+- [x] feedback : arme choisie signalée sur mobile, flash léger aux dégâts, cache des parties du corps pour éviter les traversées répétées de l'arbre de scène
 - [x] entrées tactiles Android/iOS ajoutées
 - [x] build CI Rojo
 - [x] carte arène originale de 356 x 356 studs, couvertures et plateformes

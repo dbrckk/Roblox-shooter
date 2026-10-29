@@ -92,6 +92,12 @@ jobs:
           python3 scripts/check_visual_identity.py
 
 
+      - name: Verify weapon, reload and input wiring
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check_weapon_contract.py
+
       - name: Build place
         run: ./rojo build default.project.json -o iron-yard.rbxlx
 
