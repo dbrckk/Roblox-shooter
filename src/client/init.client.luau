@@ -21,6 +21,7 @@ local baseFieldOfView = 70
 local mouseSensitivity = 1
 local lastLocalFire = {}
 local ammoByWeapon = {}
+local touchWeaponButtons = {}
 local lastReloadRequestAt = -math.huge
 local lastLocalSlideAt = -math.huge
 local lastLocalSlideJumpAt = -math.huge
@@ -710,12 +711,28 @@ local function setScoped(enabled)
 	visuals:setScoped(scoped)
 end
 
+local function refreshTouchSelection()
+    for id, button in pairs(touchWeaponButtons) do
+        if button.Parent then
+            local selected = id == currentWeaponId
+            button.BackgroundColor3 = selected and Color3.fromRGB(106, 117, 90)
+                or Color3.fromRGB(38, 45, 43)
+            local outline = button:FindFirstChildOfClass("UIStroke")
+            if outline then
+                outline.Color = selected and Color3.fromRGB(245, 216, 157)
+                    or Color3.fromRGB(155, 145, 123)
+            end
+        end
+    end
+end
+
 local function equipWeapon(weaponId)
 	if not WeaponConfig.get(weaponId) then
 		return
 	end
 
 	currentWeaponId = weaponId
+    refreshTouchSelection()
 	if currentWeaponId ~= "Sniper" then
 		setScoped(false)
 	end
@@ -1173,6 +1190,11 @@ if UserInputService.TouchEnabled then
     local shotgun = button("Shotgun", "SG", -138, -348, 50, 48)
     local sniper = button("Sniper", "S", -196, -348, 50, 48)
     local knife = button("Knife", "K", -254, -348, 50, 48)
+    touchWeaponButtons = {
+        AssaultRifle = rifle, Pistol = pistol, Shotgun = shotgun,
+        Sniper = sniper, Knife = knife,
+    }
+    refreshTouchSelection()
     local heldFireInput = nil
     fire.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end

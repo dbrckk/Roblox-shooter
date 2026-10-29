@@ -74,6 +74,7 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.baseFov = self.options.baseFov or DEFAULT_FOV
 	self.mouseSensitivity = self.options.mouseSensitivity or DEFAULT_SENSITIVITY
 	self.healthConnections = {}
+    self.previousHealth = nil
 
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Health, false)
@@ -82,6 +83,7 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self:_buildCrosshair()
 	self:_buildBoostMeter()
 	self:_buildHealthBar()
+    self:_buildDamagePulse()
 	self:_buildWeaponLabel()
     self:_buildAmmoLabel()
 	self:_buildScopeOverlay()
@@ -178,6 +180,34 @@ function HudController:_buildHealthBar()
 
 	self.healthFill = fill
 	self.healthText = text
+end
+
+function HudController:_buildDamagePulse()
+    local flash = Instance.new("Frame")
+    flash.Name = "DamagePulse"
+    flash.Size = UDim2.fromScale(1, 1)
+    flash.BackgroundColor3 = Color3.fromRGB(177, 60, 50)
+    flash.BackgroundTransparency = 1
+    flash.BorderSizePixel = 0
+    flash.ZIndex = 2
+    flash.Active = false
+    flash.Parent = self.gui
+    self.damagePulse = flash
+    self.damagePulseToken = 0
+end
+
+function HudController:_pulseDamage(loss)
+    if not self.damagePulse then return end
+    self.damagePulseToken += 1
+    local token = self.damagePulseToken
+    self.damagePulse.BackgroundTransparency = 1 - math.clamp(loss / 350, 0.05, 0.20)
+    local fade = TweenService:Create(self.damagePulse, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
+        BackgroundTransparency = 1,
+    })
+    fade:Play()
+    fade.Completed:Connect(function()
+        if self.damagePulseToken == token then self.damagePulse.BackgroundTransparency = 1 end
+    end)
 end
 
 function HudController:_buildBoostMeter()
@@ -407,6 +437,7 @@ end
 
 function HudController:_bindHealth(character)
 	self:_disconnectHealth()
+    self.previousHealth = nil
 
 	if not character then
 		self:_updateHealth(nil)
@@ -430,6 +461,10 @@ end
 
 function HudController:_updateHealth(humanoid)
 	local health = humanoid and humanoid.Health or 0
+    if self.previousHealth and health < self.previousHealth then
+        self:_pulseDamage(self.previousHealth - health)
+    end
+    self.previousHealth = health
 	local maxHealth = humanoid and humanoid.MaxHealth or 100
 	local ratio = 0
 
