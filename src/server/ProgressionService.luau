@@ -6,81 +6,28 @@ local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
 
 local ProgressionService = {}
 local STORE_NAME = "IronYard_Progression_v1"
 local AUTOSAVE_SECONDS = 45
 local LEASE_SECONDS = 180
 local RETRY_LIMIT = 3
-local STATS = { "xp", "eliminations", "headshots", "victories" }
+local STATS = Ledger.STATS
 local records = {}
 local started = false
 local store
 
-local function zero()
-    return { xp = 0, eliminations = 0, headshots = 0, victories = 0 }
-end
-
-local function safeInt(value)
-    return type(value) == "number" and value == value and value >= 0
-        and value < 9007199254740991 and value % 1 == 0
-end
-
-local function copyStats(value)
-    local result = {}
-    for _, field in ipairs(STATS) do
-        local amount = value and value[field] or 0
-        assert(safeInt(amount), "Unexpected progression counter: " .. field)
-        result[field] = amount
-    end
-    return result
-end
-
--- Reject unknown/corrupt records instead of quietly replacing earned progress.
--- Return a NEW table, because UpdateAsync may invoke the callback repeatedly.
-local function normalize(raw)
-    if raw == nil then
-        return { schema = 1, xp = 0, eliminations = 0, headshots = 0,
-            victories = 0, lock = nil, lastSession = nil }
-    end
-    assert(type(raw) == "table" and raw.schema == 1, "Unsupported progression schema")
-    local counters = copyStats(raw)
-    local record = { schema = 1, lock = nil, lastSession = nil }
-    for _, field in ipairs(STATS) do record[field] = counters[field] end
-
-    if raw.lock ~= nil then
-        assert(type(raw.lock) == "table", "Damaged progression lock")
-        assert(type(raw.lock.owner) == "string" and #raw.lock.owner > 4,
-            "Damaged progression lock owner")
-        assert(safeInt(raw.lock.expiresAt), "Damaged progression lock expiry")
-        record.lock = {
-            owner = raw.lock.owner,
-            expiresAt = raw.lock.expiresAt,
-            committed = copyStats(raw.lock.committed),
-        }
-    end
-    if raw.lastSession ~= nil then
-        assert(type(raw.lastSession) == "table"
-            and type(raw.lastSession.owner) == "string", "Damaged session marker")
-        record.lastSession = {
-            owner = raw.lastSession.owner,
-            committed = copyStats(raw.lastSession.committed),
-        }
-    end
-    return record
-end
-
-local function cloneSnapshot(stats)
-    return copyStats(stats)
-end
+local zero = Ledger.zero
+local safeInt = Ledger.safeInt
+local copyStats = Ledger.copyStats
+local cloneSnapshot = Ledger.copyStats
 
 local function keyFor(player)
     return "player_" .. tostring(player.UserId)
 end
 
-local function levelForXP(xp)
-    return math.clamp(1 + math.floor(math.sqrt(math.max(0, xp) / 250)), 1, 1000)
-end
+local levelForXP = Ledger.levelForXP
 
 local function setStatus(player, record, status)
     record.status = status
@@ -145,24 +92,7 @@ local function acquire(player, record)
     local success, result = retry(function()
         local timestamp = os.time()
         return store:UpdateAsync(keyFor(player), function(previous)
-            local data = normalize(previous)
-            local lock = data.lock
-            if lock and lock.owner ~= record.token and lock.expiresAt > timestamp then
-                return nil -- The other server owns this key. Fail closed.
-            end
-            -- An UpdateAsync request may commit even when its response fails.
-            -- Never clear our own committed counters on a repeated acquire:
-            -- doing so would award the same earned XP a second time.
-            if lock and lock.owner == record.token then
-                lock.expiresAt = timestamp + LEASE_SECONDS
-            else
-                data.lock = {
-                    owner = record.token,
-                    expiresAt = timestamp + LEASE_SECONDS,
-                    committed = zero(),
-                }
-            end
-            return data
+            return Ledger.acquire(previous, record.token, timestamp, LEASE_SECONDS)
         end)
     end)
     record.saving = false
@@ -203,37 +133,8 @@ local function flush(player, record, release)
     local success, result = retry(function()
         local timestamp = os.time()
         return store:UpdateAsync(keyFor(player), function(previous)
-            local data = normalize(previous)
-            if not data.lock or data.lock.owner ~= record.token then
-                -- A timed-out lock may now belong to another server.
-                -- An acknowledged release can be retried safely.
-                if release and not data.lock and data.lastSession
-                    and data.lastSession.owner == record.token then
-                    for _, field in ipairs(STATS) do
-                        if data.lastSession.committed[field] < snapshot[field] then
-                            return nil
-                        end
-                    end
-                    return data
-                end
-                return nil
-            end
-            for _, field in ipairs(STATS) do
-                local committed = data.lock.committed[field]
-                local increment = math.max(0, snapshot[field] - committed)
-                data[field] += increment
-                data.lock.committed[field] = math.max(committed, snapshot[field])
-            end
-            if release then
-                data.lastSession = {
-                    owner = record.token,
-                    committed = copyStats(data.lock.committed),
-                }
-                data.lock = nil
-            else
-                data.lock.expiresAt = timestamp + LEASE_SECONDS
-            end
-            return data
+            return Ledger.commit(previous, record.token, snapshot, timestamp,
+                LEASE_SECONDS, release)
         end)
     end)
     record.saving = false

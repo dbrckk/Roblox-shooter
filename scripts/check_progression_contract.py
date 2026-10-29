@@ -25,6 +25,7 @@ def contains(text: str, items, scope: str):
 
 def main():
     data = read("src/server/ProgressionService.luau")
+    ledger = read("src/server/ProgressionLedger.luau")
     awards = read("src/server/CombatAwards.luau")
     weapon = read("src/server/WeaponService.luau")
     match = read("src/server/MatchService.luau")
@@ -36,22 +37,14 @@ def main():
     contains(data, (
         'STORE_NAME = "IronYard_Progression_v1"',
         'return "player_" .. tostring(player.UserId)',
-        "local function normalize(raw)",
-        'raw.schema == 1',
-        "local function copyStats(value)",
-        "local function safeInt(value)",
+        'Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))',
+        'return Ledger.acquire(previous, record.token, timestamp, LEASE_SECONDS)',
+        'return Ledger.commit(previous, record.token, snapshot, timestamp,',
         "local function acquire(player, record)",
         "local function flush(player, record, release)",
         "store:UpdateAsync(keyFor(player), function(previous)",
-        "lock.owner ~= record.token",
-        "lock.expiresAt > timestamp",
-        "lock.owner == record.token",
-        "committed = copyStats(data.lock.committed)",
-        "snapshot[field] - committed",
-        "math.max(committed, snapshot[field])",
-        "data.lastSession.owner == record.token",
-        "data.lastSession.committed[field] < snapshot[field]",
-        "data.lock = nil",
+        "local snapshot = cloneSnapshot(record.earned)",
+        "record.triedAcquire = true",
         "function ProgressionService.recordElimination(player, points, headshot)",
         "function ProgressionService.recordVictory(player)",
         "function ProgressionService.start()",
@@ -63,6 +56,20 @@ def main():
         "player:SetAttribute(\"IronYardProgressStatus\", status)",
         '"IronYardLifetimeXP"',
     ), "DataStore lease/recovery")
+
+    contains(ledger, (
+        "function Ledger.normalize(raw)",
+        "function Ledger.copyStats(value)",
+        "raw.schema == 1",
+        "function Ledger.acquire(previous, token, timestamp, leaseSeconds)",
+        "function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release)",
+        "lock.owner ~= token", "lock.expiresAt > timestamp",
+        "lock.owner == token", "snapshot[field] - committed",
+        "math.max(committed, snapshot[field])",
+        "data.lastSession.owner == token",
+        "data.lastSession.committed[field] < snapshot[field]",
+        "data.lock = nil",
+    ), "Pure idempotent DataStore ledger")
 
     require(data.count("store:UpdateAsync(") == 2,
             "Acquisition and every save must use UpdateAsync")

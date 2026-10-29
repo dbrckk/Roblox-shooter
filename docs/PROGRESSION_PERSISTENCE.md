@@ -48,3 +48,14 @@ Documentation reference: https://create.roblox.com/docs/cloud-services/data-stor
 ## Victory experience
 
 A non-tied FFA win by an actual human Player awards **250 XP and one lifetime victory**, in addition to elimination XP. The match service sends exactly one server-controlled victory event before transitioning to RESULTS; the player's round/session XP counter and medal notification are updated alongside the persistent totals. A bot winner, draw or duplicated display name cannot award this bonus by matching text.
+
+## Executable transaction tests (October 2026)
+
+The DataStore merge and lease rules were moved to the dependency-free
+`src/server/ProgressionLedger.luau`. It is called **inside both real
+UpdateAsync callbacks**, not merely reimplemented in a test mock. CI runs
+`scripts/test_progression_ledger.luau` with the official Luau interpreter
+and exercises first-time records, exact-once replays, reconnect after release,
+out-of-order saves, stale writers, lock expiry, corrupted schemas and
+nonnegative XP limits. This verifies the state-machine calculations; it is
+**not** a substitute for published Roblox DataStore throttling tests.

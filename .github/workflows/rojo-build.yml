@@ -28,7 +28,7 @@ jobs:
           curl --fail --location --retry 3 --output luau-ubuntu.zip \
             https://github.com/luau-lang/luau/releases/download/0.744/luau-ubuntu.zip
           unzip -q luau-ubuntu.zip
-          chmod +x ./luau-compile
+          chmod +x ./luau-compile ./luau
           ./luau-compile --help > /dev/null || true
 
       - name: Parse and compile every Luau source
@@ -38,6 +38,12 @@ jobs:
           find src tools/studio -type f \( -name '*.luau' -o -name '*.lua' \) -print0 | \
             xargs -0 -r -n 1 ./luau-compile > /dev/null
           echo "All gameplay and Studio installer Lua sources compiled successfully."
+
+      - name: Run executable Luau progression ledger regression suites
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./luau scripts/test_progression_ledger.luau
 
       - name: Parse private Roblox publish script
         shell: bash
