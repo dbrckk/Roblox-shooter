@@ -74,8 +74,16 @@ def main():
     hud = source("src/client/HudController.luau")
     effects = source("src/client/WeaponVisuals.luau")
     for preset in ("ECO", "BALANCED", "QUALITY"):
-        check('"' + preset + '"' in hud and '"' + preset + '"' in lod,
-              "Graphics option missing in client HUD/LOD: " + preset)
+        check('"' + preset + '"' in hud,
+              "Graphics option missing in client HUD: " + preset)
+    # BALANCED is intentionally the fallback branch of the LOD selector;
+    # only ECO and QUALITY need explicit comparisons.
+    for preset in ("ECO", "QUALITY"):
+        check('"' + preset + '"' in lod,
+              "Graphics option missing in client LOD: " + preset)
+    check("else:" not in lod, "Luau LOD selector must use Lua syntax")
+    check("artHideBeyond = isTouch and 110 or 195" in lod,
+          "Missing default balanced LOD distance")
     for name in ("IronYardGraphicsPreset", "NeonArtTier"):
         check(name in lod, "Visual detail budget mismatch: " + name)
     check("function WeaponVisuals:drawImpact(" in effects,
