@@ -419,14 +419,8 @@ local function shoot(bot, target, aimPoint, dt)
     -- Do not spend ammo firing through the cover between head and muzzle.
     local muzzleBlock = Workspace:Raycast(origin, direction, rayParams(bot.model))
     if not muzzleBlock or not muzzleBlock.Instance:IsDescendantOf(target) then return end
-    if bot.ammoRemaining <= 0 then
-        if bot.reloadUntil == 0 then
-            bot.reloadUntil = now + config.ReloadSeconds
-        end
-        if now < bot.reloadUntil then return end
-        bot.ammoRemaining = config.MagazineSize
-        bot.reloadUntil = 0
-    end
+    -- Reloading is serviced in updateBot even while the opponent is hidden.
+    if bot.ammoRemaining <= 0 or bot.reloadUntil > now then return end
     bot.ammoRemaining -= 1
     bot.nextFireAt = now + bot.skill.cooldown * rng:NextNumber(0.86, 1.18)
 
@@ -478,11 +472,24 @@ local function shoot(bot, target, aimPoint, dt)
     end
 end
 
+local function serviceReload(bot, now)
+    -- Reload state is independent of visibility and firing. Otherwise a
+    -- retreating bot with an empty magazine can never finish reloading.
+    if bot.ammoRemaining > 0 then return end
+    if bot.reloadUntil == 0 then
+        bot.reloadUntil = now + config.ReloadSeconds
+    elseif now >= bot.reloadUntil then
+        bot.ammoRemaining = config.MagazineSize
+        bot.reloadUntil = 0
+    end
+end
+
 local function updateBot(bot, dt)
     if not bot.model.Parent or bot.humanoid.Health <= 0 then return end
     local now = os.clock()
     if now < bot.nextThinkAt then return end
     bot.nextThinkAt = now + config.ThinkInterval
+    serviceReload(bot, now)
 
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local target = phase == "LIVE" and getTargetModel(bot, config.MaximumSightDistance) or nil
