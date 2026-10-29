@@ -136,6 +136,11 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 	end
 
 	local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
+    -- Only the match's combatants can be hurt by public fire requests.
+    if not targetPlayer and targetCharacter:GetAttribute("IsArenaBot") ~= true then
+        sendFeedback(attacker, { kind = "Miss", weaponId = weaponId })
+        return false
+    end
 	if targetPlayer == attacker then
 		return false
 	end
@@ -465,6 +470,17 @@ local function onFireWeapon(player, payload)
 	elseif config.kind == "Projectile" then
 		fireKnife(player, weaponId, config, direction)
 	end
+end
+
+function WeaponService.resetRound()
+    -- All combatants start the next round with full magazines and no
+    -- lingering reload or rate-limit state from the prior match.
+    for player, state in pairs(playerState) do
+        for id in pairs(state.reloadUntil) do cancelReload(state, id) end
+        state.magazines = {}
+        state.lastFireAt = {}
+        if player.Parent then sendAmmo(player, state.equippedWeaponId) end
+    end
 end
 
 function WeaponService.start()

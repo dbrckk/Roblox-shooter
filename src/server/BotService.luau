@@ -260,6 +260,8 @@ local function createBot(slot)
         target = nil,
         reactionReadyAt = 0,
         nextFireAt = 0,
+        ammoRemaining = config.MagazineSize,
+        reloadUntil = 0,
         nextThinkAt = 0,
         nextPathAt = 0,
         pathRevision = 0,
@@ -349,6 +351,15 @@ local function shoot(bot, target, aimPoint, dt)
     end
     if now < bot.reactionReadyAt or now < bot.nextFireAt then return end
     if direction.Magnitude > config.MaximumAttackDistance then return end
+    if bot.ammoRemaining <= 0 then
+        if bot.reloadUntil == 0 then
+            bot.reloadUntil = now + config.ReloadSeconds
+        end
+        if now < bot.reloadUntil then return end
+        bot.ammoRemaining = config.MagazineSize
+        bot.reloadUntil = 0
+    end
+    bot.ammoRemaining -= 1
     bot.nextFireAt = now + bot.skill.cooldown * rng:NextNumber(0.86, 1.18)
 
     local errorYaw = math.rad(rng:NextNumber(-bot.skill.aimErrorDegrees, bot.skill.aimErrorDegrees))
@@ -362,7 +373,7 @@ local function shoot(bot, target, aimPoint, dt)
     remotes.WeaponFx:FireAllClients({
         kind = "FireSound",
         shooterUserId = 0,
-        weaponId = "Pistol",
+        weaponId = "AssaultRifle",
         origin = origin,
     })
     local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, rayParams(bot.model))
@@ -538,6 +549,8 @@ function BotService.resetRound()
         else
             bot.kills = 0
             bot.deaths = 0
+            bot.ammoRemaining = config.MagazineSize
+            bot.reloadUntil = 0
             bot.target = nil
             bot.aimDirection = bot.root.CFrame.LookVector
             BotNavigation.invalidate(bot)
