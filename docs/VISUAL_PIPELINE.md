@@ -40,3 +40,7 @@ All five native procedural weapons now show reinforced tactical gloves, matte fa
 ## 1K PBR source upgrade
 
 AssetForge now produces original 1024×1024 albedo/normal/roughness/metalness textures (32 PNG maps, eight materials). The validator decompresses and checks actual PNG payloads as well as map dimensions; rigid LOD0/LOD1 geometry stays available. This is a Blender source and export upgrade only, not a claim of Roblox-hosted material IDs or runtime Android FPS.
+
+## Owner-controlled runtime asset activation (not yet published)
+
+`src/shared/VanguardAssetIds.luau` keeps every uploaded model ID at zero by default. `src/server/VanguardAssetLoader.luau` only calls `InsertService:LoadAsset` after all four IDs have been verified and the running experience's creator user ID equals the registry owner. It selects only the known seven MeshParts per palette, confirms embedded SurfaceAppearance, disables cosmetic collision/query/touch and stages the complete kit atomically. On any partial/missing/unapproved import, the source's procedural avatar remains active. No owner credentials or arbitrary client asset IDs are used by the game.

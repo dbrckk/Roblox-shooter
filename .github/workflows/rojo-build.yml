@@ -78,12 +78,13 @@ jobs:
           fi
           echo '- No request to Roblox was sent by this diagnostic.' >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Parse asset production Python
+      - name: Parse asset production and optional Roblox upload Python
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile tools/assetforge/*.py
-          echo "All asset production Python modules are syntactically valid."
+          python3 -m py_compile tools/assetforge/*.py scripts/upload_vanguard_models.py
+          python3 scripts/upload_vanguard_models.py --help > /dev/null
+          echo "Asset generation and owner-controlled Open Cloud uploader are syntactically valid."
 
       - name: Verify visual identity and PBR palette consistency
         shell: bash

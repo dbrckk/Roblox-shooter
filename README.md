@@ -69,3 +69,7 @@ Le kit 3D original a été généré une première fois avant le passage à la d
 ## Direction artistique IRON YARD
 
 La direction néon est abandonnée : carte industrielle **de jour**, lumière solaire, béton clair, tôles peintes, grues et containers. Quatre tenues militaires peintes (olive, sable, ardoise, rouille) remplacent les accents lumineux. Le système de tir et les mouvements rapides sont conservés. Les noms internes commençant par `Neon` sont maintenus uniquement par compatibilité avec les scripts déjà liés ; ils ne sont plus une identité publique. Les modèles Blender doivent être réimportés dans Studio après chaque génération de palette.
+
+## Publication automatisée des quatre modèles PBR — prêt, accès Roblox requis
+
+La génération haute résolution **1024 × 1024** a été validée le 29 octobre 2026 : [Release VANGUARD 1K](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-a94f1989267c). Le workflow [upload vers Roblox Open Cloud](https://github.com/dbrckk/Roblox-shooter/actions/workflows/upload-vanguard-opencloud.yml) prépare quatre modèles GLB LOD0, vérifie le propriétaire et les statuts de traitement, puis peut pousser leurs identifiants sur `main`. Sans secret `ROBLOX_OPEN_CLOUD_ASSETS_KEY`, les valeurs restent à zéro et les armures procédurales servent de fallback. Ce pipeline n'est **pas une preuve d'upload ou de rendu en jeu**. Voir [docs/VANGUARD_ASSETS.md](docs/VANGUARD_ASSETS.md).

@@ -70,3 +70,17 @@ L'export [GitHub Actions 40740282547](https://github.com/dbrckk/Roblox-shooter/a
 Le pipeline gratuit AssetForge produit désormais **32 cartes PBR de 1 024 × 1 024 pixels** : huit matériaux combinant ColorMap, NormalMap, RoughnessMap et MetalnessMap. Le contrôle qualité vérifie les dimensions, tous les CRC des chunks PNG, leur décompression et la non-uniformité des textures. Les deux LOD géométriques sont conservés pour les contraintes Android.
 
 Les kits historiques listés plus haut restent en résolution 512 px ; utiliser la **nouvelle release `iron-yard-assets-*` créée par un workflow réussi** pour les textures 1K. Un ensemble 1K doit être profilé sur téléphone : la résolution ne dispense pas de limiter le nombre de matériaux chargés. L'import des MeshParts et des SurfaceAppearance dans Studio est toujours nécessaire. **Le nouveau kit d'export n'est pas automatiquement actif dans le jeu Roblox.**
+
+## Import Roblox sans importer chaque modèle à la main — option Open Cloud (29 octobre 2026)
+
+Le kit **1K réellement exporté et validé** est disponible dans la release [iron-yard-assets-a94f1989267c](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-a94f1989267c) et le [workflow réussi](https://github.com/dbrckk/Roblox-shooter/actions/runs/40884993381). L'archive de sources (Blender, huit GLB et PNG) pèse environ **215 Mo compressés** ; cela ne signifie pas qu'un appareil charge toute l'archive en jeu.
+
+Roblox permet d'envoyer des fichiers `.glb` comme assets **Model** via son API officielle Open Cloud (modèles uniques limités à **20 Mo** par requête). L'outil `scripts/upload_vanguard_models.py` prépare quatre imports LOD0, contrôle l'identité du propriétaire, vérifie les entêtes GLB et attend la confirmation de Roblox. Il ne prétend pas importer les MeshParts sans clé et lève une erreur si un GLB dépasse les limites d'upload.
+
+**Workflow :** [Upload VANGUARD PBR models to Roblox](https://github.com/dbrckk/Roblox-shooter/actions/workflows/upload-vanguard-opencloud.yml). Sans coche `publish_assets`, il effectue uniquement une validation locale, sans requête Roblox. Pour le vrai upload, ajouter un secret GitHub `ROBLOX_OPEN_CLOUD_ASSETS_KEY` limité aux permissions Asset Read/Write du compte créateur. Le workflow confirme les quatre assets, puis enregistre leurs IDs numériques dans `src/shared/VanguardAssetIds.luau`. Les IDs restent zéro tant qu'aucun import n'est autorisé et terminé.
+
+À l'ouverture d'un serveur Roblox appartenant au bon créateur, `VanguardAssetLoader` tente de charger uniquement ces **quatre packages modèle possédés** et d'en extraire les 28 `MeshPart` nommés. Aucun script contenu dans un asset importé n'est exécuté. L'adaptateur exige des `SurfaceAppearance` PBR avant de remplacer le fallback procédural ; si les modèles ou les permissions sont incorrects, le jeu conserve les anciennes armures jouables.
+
+**Vérifications indispensables :** (a) la taille de chaque GLB doit être inférieure à 20 Mo, (b) les modèles doivent être autorisés et approuvés par Roblox, (c) ils doivent inclure sept MeshParts identifiables et leurs textures PBR, (d) les permissions InsertService doivent autoriser le propriétaire de l'expérience, (e) leur rendu/impact Android doit être mesuré. La CI GitHub ne valide pas (b) à (e). Aucun upload Roblox n'a été effectué sans cette clé.
+
+Documentation officielle : https://create.roblox.com/docs/cloud/guides/usage-assets

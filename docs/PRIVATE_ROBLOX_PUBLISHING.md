@@ -69,3 +69,7 @@ Sources officielles :
 - https://create.roblox.com/docs/cloud/guides/usage-place-publishing
 - https://create.roblox.com/docs/cloud/auth/api-keys
 - https://create.roblox.com/docs/production/publishing/publish-games-and-places
+
+## Asset PBR Open Cloud optionnel
+
+Le workflow GitHub [upload-vanguard-opencloud.yml](https://github.com/dbrckk/Roblox-shooter/actions/workflows/upload-vanguard-opencloud.yml) a **une clé différente** de celle nécessaire à la publication d'une place : `ROBLOX_OPEN_CLOUD_ASSETS_KEY` (permissions Assets Read et Write). Cette clé ne donne pas automatiquement la permission de publier des places privées. Réciproquement, la clé de publication privée d'IRON YARD ne donne pas automatiquement la permission d'importer des assets. Le nouvel import peut rester en validation locale en l'absence de cette clé.

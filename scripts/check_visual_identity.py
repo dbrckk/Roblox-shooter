@@ -108,6 +108,18 @@ def main():
         check('"' + name + '"' in source("tools/assetforge/generate_maps.py"),
               "Missing PBR texture palette: " + name)
 
+    asset_registry = source("src/shared/VanguardAssetIds.luau")
+    loader = source("src/server/VanguardAssetLoader.luau")
+    init_server = source("src/server/init.server.luau")
+    for color in PALETTES:
+        check(color + " = " in asset_registry, "Missing owner-controlled PBR palette ID: " + color)
+    for key in ("game.CreatorType", "game.CreatorId", "InsertService:LoadAsset",
+                "SurfaceAppearance", "CanQuery = false", "CanCollide = false",
+                "staging.Parent = ServerStorage"):
+        check(key in loader, "Owner-controlled asset loader missing: " + key)
+    check("VanguardAssetLoader.start()" in init_server,
+          "Server must initialize optional imported PBR kit before spawning bots")
+
     print("IRON YARD visual identity / four PBR palettes / public UI: OK")
 
 if __name__ == "__main__":
