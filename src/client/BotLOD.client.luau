@@ -8,6 +8,26 @@ local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
 local hideDetailBeyond = isTouch and 65 or 120
 local unhideDetailBefore = hideDetailBeyond - 12
+local artHideBeyond = isTouch and 110 or 195
+local artUnhideBefore = artHideBeyond - 16
+
+local function updateGraphicsLimits()
+    local preset = player:GetAttribute("IronYardGraphicsPreset")
+    if preset == "ECO" then
+        hideDetailBeyond = 38
+        artHideBeyond = 70
+    elseif preset == "QUALITY" then
+        hideDetailBeyond = isTouch and 112 or 170
+        artHideBeyond = isTouch and 165 or 245
+    else
+        hideDetailBeyond = isTouch and 65 or 120
+        artHideBeyond = isTouch and 110 or 195
+    end
+    unhideDetailBefore = hideDetailBeyond - 12
+    artUnhideBefore = artHideBeyond - 16
+end
+player:GetAttributeChangedSignal("IronYardGraphicsPreset"):Connect(updateGraphicsLimits)
+updateGraphicsLimits()
 local rendered = setmetatable({}, { __mode = "k" })
 
 local function getDistance(model)
@@ -41,8 +61,6 @@ local function updateModel(model)
 end
 
 
-local artHideBeyond = isTouch and 110 or 195
-local artUnhideBefore = artHideBeyond - 16
 local artCache = setmetatable({}, { __mode = "k" })
 local artFolders = { "NeonStrikeDecor", "FreightLandmarks" }
 

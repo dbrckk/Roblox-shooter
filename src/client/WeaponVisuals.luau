@@ -359,7 +359,8 @@ function WeaponVisuals:_render(deltaTime)
 end
 
 function WeaponVisuals:drawTracer(origin, direction, range, accentColor)
-	local length = math.min(range, 420)
+    local length = math.clamp(range, 0, 420)
+    if length < 0.10 or direction.Magnitude < 0.01 then return end
 	local tracer = Instance.new("Part")
 	tracer.Name = "LocalTracer"
 	tracer.Anchored = true
@@ -385,9 +386,13 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
     if normal.Magnitude < 0.9 then return end
     local camera = workspace.CurrentCamera
     local touch = UserInputService.TouchEnabled
-    if not camera or (camera.CFrame.Position - position).Magnitude > (touch and 100 or 185) then return end
+    local preset = game:GetService("Players").LocalPlayer:GetAttribute("IronYardGraphicsPreset")
+    local maxDistance = preset == "ECO" and 65
+        or (preset == "QUALITY" and (touch and 140 or 185) or (touch and 100 or 155))
+    if not camera or (camera.CFrame.Position - position).Magnitude > maxDistance then return end
     local now = os.clock()
-    if now - (self.lastImpactAt or -math.huge) < (touch and 0.105 or 0.065) then return end
+    if now - (self.lastImpactAt or -math.huge) < (preset == "ECO" and 0.19
+        or (touch and 0.105 or 0.065)) then return end
     self.lastImpactAt = now
 
     local metallic = materialName == "Metal" or materialName == "DiamondPlate"
@@ -399,7 +404,8 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
     local reference = math.abs(n.Y) > 0.88 and Vector3.xAxis or Vector3.yAxis
     local tangent = n:Cross(reference).Unit
     local bitangent = n:Cross(tangent).Unit
-    local count = touch and 2 or 4
+    local count = preset == "ECO" and 1
+        or (preset == "QUALITY" and (touch and 3 or 4) or (touch and 2 or 3))
     for i = 1, count do
         local angle = i / count * math.pi * 2 + self.random:NextNumber(-0.25, 0.25)
         local spread = tangent * math.cos(angle) + bitangent * math.sin(angle)

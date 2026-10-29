@@ -7,6 +7,8 @@ HudController.__index = HudController
 
 local DEFAULT_FOV = 70
 local DEFAULT_SENSITIVITY = 1
+local GRAPHICS_PRESETS = { "ECO", "BALANCED", "QUALITY" }
+local GRAPHICS_LABELS = { "ECO", "BAL", "HIGH" }
 
 local function makeCorner(parent, radius)
 	local corner = Instance.new("UICorner")
@@ -73,6 +75,8 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.settingsOpen = false
 	self.baseFov = self.options.baseFov or DEFAULT_FOV
 	self.mouseSensitivity = self.options.mouseSensitivity or DEFAULT_SENSITIVITY
+    self.graphicsIndex = UserInputService.TouchEnabled and 2 or 3
+    self.player:SetAttribute("IronYardGraphicsPreset", GRAPHICS_PRESETS[self.graphicsIndex])
 	self.healthConnections = {}
     self.previousHealth = nil
 
@@ -335,7 +339,27 @@ function HudController:_buildSettingsMenu()
 	panel.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
 	panel.BorderSizePixel = 0
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(340, 232)
+	panel.Size = UDim2.fromOffset(340, 290)
+    -- Adapt to small landscape Android viewports, including notched phones.
+    local responsiveScale = Instance.new("UIScale")
+    responsiveScale.Parent = panel
+    local function fitPanel()
+        local camera = workspace.CurrentCamera
+        if not camera then return end
+        local viewport = camera.ViewportSize
+        responsiveScale.Scale = math.clamp(math.min(viewport.X / 366, viewport.Y / 318), 0.60, 1)
+    end
+    local viewportConnection
+    local function attachCamera()
+        if viewportConnection then viewportConnection:Disconnect() end
+        local camera = workspace.CurrentCamera
+        if camera then
+            viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(fitPanel)
+        end
+        fitPanel()
+    end
+    workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(attachCamera)
+    attachCamera()
 	panel.Visible = false
 	panel.ZIndex = 10
 	panel.Parent = self.gui
@@ -370,7 +394,18 @@ function HudController:_buildSettingsMenu()
 		end
 	end)
 
-	local hint = makeText(panel, "Hint", "Press M to close", UDim2.fromOffset(22, 192), UDim2.fromOffset(220, 22), 12)
+    self.graphicsValueLabel = self:_makeStepper(panel, "GRAPHICS",
+        UDim2.fromOffset(22, 192), 1, 3, 1, function()
+            return GRAPHICS_LABELS[self.graphicsIndex]
+        end, function(delta)
+            self.graphicsIndex = math.clamp(self.graphicsIndex + delta, 1, #GRAPHICS_PRESETS)
+            self.player:SetAttribute("IronYardGraphicsPreset", GRAPHICS_PRESETS[self.graphicsIndex])
+            self:_refreshSettingsText()
+        end)
+
+    local hint = makeText(panel, "Hint",
+        UserInputService.TouchEnabled and "Tap X to close" or "Press M to close",
+        UDim2.fromOffset(22, 253), UDim2.fromOffset(230, 22), 12)
 	hint.TextColor3 = Color3.fromRGB(162, 173, 190)
 	hint.ZIndex = 11
 
@@ -422,9 +457,12 @@ function HudController:_refreshSettingsText()
 		self.fovValueLabel.Text = tostring(self.baseFov)
 	end
 
-	if self.sensitivityValueLabel then
-		self.sensitivityValueLabel.Text = string.format("%.1f", self.mouseSensitivity)
-	end
+    if self.sensitivityValueLabel then
+        self.sensitivityValueLabel.Text = string.format("%.1f", self.mouseSensitivity)
+    end
+    if self.graphicsValueLabel then
+        self.graphicsValueLabel.Text = GRAPHICS_LABELS[self.graphicsIndex]
+    end
 end
 
 function HudController:_disconnectHealth()
