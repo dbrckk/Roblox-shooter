@@ -9,7 +9,6 @@ local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
-local ProgressionService = require(script.Parent:WaitForChild("ProgressionService"))
 local MatchService = {}
 local started = false
 
@@ -160,7 +159,7 @@ local function endRound()
         -- Award victory to the actual Player reference, never to a matching
         -- display name (which is not unique and can be changed).
         if winningPlayer and winningPlayer.Parent then
-            ProgressionService.recordVictory(winningPlayer)
+            CombatAwards.recordVictory(winningPlayer)
         end
     end
     transition("RESULTS", RESULTS_SECONDS, result)

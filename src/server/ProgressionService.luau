@@ -290,7 +290,7 @@ function ProgressionService.recordElimination(player, points, headshot)
 end
 
 function ProgressionService.recordVictory(player)
-    add(player, { victories = 1 })
+    add(player, { xp = 250, victories = 1 })
 end
 
 function ProgressionService.start()

@@ -44,3 +44,7 @@ GitHub Actions can compile Lua and check source contracts, but **cannot validate
 Do **not** enable Studio API access on the same production experience for testing. The game is not published via GitHub Actions until the required destination IDs and Open Cloud authorization are actually set.
 
 Documentation reference: https://create.roblox.com/docs/cloud-services/data-stores
+
+## Victory experience
+
+A non-tied FFA win by an actual human Player awards **250 XP and one lifetime victory**, in addition to elimination XP. The match service sends exactly one server-controlled victory event before transitioning to RESULTS; the player's round/session XP counter and medal notification are updated alongside the persistent totals. A bot winner, draw or duplicated display name cannot award this bonus by matching text.

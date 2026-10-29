@@ -74,6 +74,8 @@ def main():
 
     require(startup.index("ProgressionService.start()") < startup.index("CombatAwards.start()"),
             "Persistence must initialize before combat rewards")
+    require(awards.count("ProgressionService.recordVictory(") == 1,
+            "Round win XP must originate in server-verified combat awards")
     require(awards.count("ProgressionService.recordElimination(") == 1,
             "Exactly one persistent grant per server-verified kill")
     require(weapon.count("CombatAwards.recordElimination(") == 2,
@@ -85,7 +87,7 @@ def main():
         "return selectedName, best, tied, selectedPlayer",
         "local name, topScore, tied, winningPlayer = leader()",
         "if winningPlayer and winningPlayer.Parent then",
-        "ProgressionService.recordVictory(winningPlayer)",
+        "CombatAwards.recordVictory(winningPlayer)",
     ), "Winner identity")
 
     require("DataStoreService" not in ui, "HUD may not access Roblox DataStore")

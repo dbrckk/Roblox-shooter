@@ -80,6 +80,30 @@ function CombatAwards.recordElimination(player, headshot)
     end
 end
 
+-- Distinct victory grant: the match service calls this exactly once for
+-- the verified human winner. No bot or tied round ever sends this event.
+function CombatAwards.recordVictory(player)
+    if not player or not player:IsA("Player") or not player.Parent then return end
+    if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    local state = stateFor(player)
+    local bonus = 250
+    state.roundXP += bonus
+    state.sessionXP += bonus
+    ProgressionService.recordVictory(player)
+    player:SetAttribute("IronYardRoundXP", state.roundXP)
+    player:SetAttribute("IronYardSessionXP", state.sessionXP)
+    if remotes then
+        remotes.WeaponFeedback:FireClient(player, {
+            kind = "CombatAward",
+            medal = "ROUND VICTORY",
+            points = bonus,
+            roundXP = state.roundXP,
+            sessionXP = state.sessionXP,
+            streak = state.streak,
+        })
+    end
+end
+
 function CombatAwards.recordDeath(player)
     local state = states[player]
     if not state then return end
