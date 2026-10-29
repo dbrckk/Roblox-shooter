@@ -41,3 +41,19 @@ l'atterrissage, sans nouvel asset ni animation payante.
 
 Il s'agit de géométrie **procédurale**, pas d'un remplacement des vraies surfaces
 PBR de VANGUARD ; l'import Studio des MeshParts reste nécessaire.
+
+## Géométrie industrielle secondaire — octobre 2026
+
+Le serveur construit désormais des charpentes et poutres au-dessus du hall central,
+trois façades de portes industrielles **sur le mur réellement plein**,
+des conduits/jonctions de surface, des grilles et rambardes visuelles sur les deux
+passerelles, et des câbles/chariots de levage pour les grues périphériques.
+Le module `ArenaArt` classe les détails `Detail` et conserve `CanCollide=false`,
+`CanQuery=false` et `CanTouch=false`; `MapService` reste le seul propriétaire
+des volumes de gameplay. Il s'agit de vraie géométrie Roblox assemblée à
+l'exécution, pas de maillages PBR importés.
+
+Les gants et le mécanisme des armes en première personne ont été enrichis,
+mais leur silhouette reste une construction locale de `Part` Roblox.
+Les textures de métal/armure PBR importées exigent toujours des MeshParts/SurfaceAppearance
+valides dans Studio avant toute revendication de rendu texturé final.

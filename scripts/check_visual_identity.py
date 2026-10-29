@@ -57,6 +57,33 @@ def main():
     check("p.CanCollide = false" in art and "p.CanQuery = false" in art,
           "Decorative art must not change collision or raycasts")
 
+    # These build-time checks prevent attractive world detailing from silently
+    # becoming extra collision or bullet-blocking geometry on Android.
+    for name in ("warehouseArchitecture", "catwalkSafety", "gantryRigging"):
+        check("local function " + name + "(parent)" in art,
+              "Missing industrial architecture: " + name)
+        check(art.count(name + "(decor)") == 1,
+              "Decorative architecture must be built once: " + name)
+    for name in ("p.CanCollide = false", "p.CanQuery = false",
+                 "p.CanTouch = false", 'p:SetAttribute("NeonArtTier"'):
+        check(name in art, "Missing art physics / LOD contract: " + name)
+    check("p.CanCollide = true" not in art and "p.CanQuery = true" not in art,
+          "The decorative module must never take over authoritative gameplay geometry")
+
+    lod = source("src/client/BotLOD.client.luau")
+    hud = source("src/client/HudController.luau")
+    effects = source("src/client/WeaponVisuals.luau")
+    for preset in ("ECO", "BALANCED", "QUALITY"):
+        check('"' + preset + '"' in hud and '"' + preset + '"' in lod,
+              "Graphics option missing in client HUD/LOD: " + preset)
+    for name in ("IronYardGraphicsPreset", "NeonArtTier"):
+        check(name in lod, "Visual detail budget mismatch: " + name)
+    check("function WeaponVisuals:drawImpact(" in effects,
+          "Surface-specific visual impacts must remain client-only")
+    check("drawImpact" not in source("src/server/WeaponService.luau"),
+          "Server should not own short-lived cosmetic impact objects")
+
+
     bot = find_lua_palette(source("src/server/BotVisuals.luau"), "importedPalette")
     studio = find_lua_palette(source("tools/studio/install_vanguard.lua"), "palettes")
     blender = find_py_palette(source("tools/assetforge/build_vanguard.py"), "COLORS")

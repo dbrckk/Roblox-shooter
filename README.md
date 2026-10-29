@@ -18,6 +18,10 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - **Combattants VANGUARD** : quatre opérateurs tactiques stylisés construits à partir d'armures modulaires (casques tactiques, visières non émissives, protections balistiques, sac dorsal et fusils). Animations procédurales synchronisées avec la distance parcourue : marche, saut, rechargement, visée et recul. Les détails lointains sont masqués localement sur Android.
 - **IA tactique serveur** : recherche de cibles avec lignes de vue vérifiées, dernière position observée, contournement, repli vers les couvertures lorsqu'un bot est blessé ou recharge, déplacements avec contrôle de largeur de passage. La recharge fonctionne même si la cible disparaît.
 - **Lisibilité du combat** : indicateur bref de direction des tirs entrants après dégâts validés côté serveur. Le classement mobile se masque temporairement pendant le briefing initial pour ne pas le recouvrir.
+- **Récompenses de combat** : médailles de précision, enchaînements DOUBLE KILL / TRIPLE KILL et bonus de série, attribués par le serveur. Les XP sont **limités à la session**, sans sauvegarde persistante ni économie payante.
+- **Architecture enrichie** : structure de l'entrepôt, portes de quai, conduits, garde-corps de passerelle et grues détaillées. Ces parties restent purement décoratives, sans nouvelles collisions.
+- **Animations d'armes** : gants tactiques complets, mouvements cohérents pendant le rechargement, glissière du pistolet, pompe du fusil et verrou du sniper.
+
 
 ## Publier comme expérience Roblox PRIVÉE
 
