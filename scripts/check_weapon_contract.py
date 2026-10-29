@@ -97,6 +97,15 @@ def main():
                 'string.sub(partName, 1, 4) == "Left"', 'partName == "Magazine"',
                 'partName == "Slide"', 'partName == "PumpAction"', 'partName == "Bolt"'):
         has(viewmodel, key, "Grounded movement and animated reload visual")
+    finishes = source("src/shared/OperatorFinishes.luau")
+    for needle in ('level = 1, name = "FIELD ISSUE"',
+                   'level = 3, name = "DESERT PATROL"',
+                   'level = 6, name = "COLD STEEL"',
+                   'level = 10, name = "FOUNDRY"',
+                   'level = 15, name = "BLACK GRADE"'):
+        has(finishes, needle, "Earned career weapon finish")
+    has(viewmodel, "function WeaponVisuals:_applyCareerFinish()", "Career cosmetics")
+    has(viewmodel, "self:_applyCareerFinish()", "Career cosmetic activation")
     botTactics = source("src/server/BotTactics.luau")
     for needle in ("SEARCH_MEMORY_SECONDS = 9",
                    "BotTactics.investigateGoal(bot, bot.lastKnownTargetPosition",

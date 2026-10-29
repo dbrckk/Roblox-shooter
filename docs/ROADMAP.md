@@ -58,3 +58,7 @@ The new industrial trusses, catwalk rails and gantry rigging are cosmetic only. 
 ## 29 October 2026 — bot last-sighting investigations
 
 Bots now **search a verified last-seen position for up to nine seconds** after target line-of-sight disappears, rather than immediately abandoning an opponent after a 2.2-second targeting timeout. The search pattern visits the last observation and then alternates two short lateral sweeps, testing for walkable ground and the same platform height. Dead enemies and stale sightings are discarded. Target position is never read through walls. Pathfinding and stuck recovery remain bounded. **Roblox Studio tactical playtest still required.**
+
+## Five rank-based weapon finishes
+
+The player unlocks matte, cosmetic-only finishes automatically at career ranks **1, 3, 6, 10 and 15**: FIELD ISSUE, DESERT PATROL, COLD STEEL, FOUNDRY and BLACK GRADE. The locally rendered weapon receiver, slide, grips, gloves and sleeves change as the authoritative server rank updates, while the career panel shows the current finish and next unlock. No real-money purchase, weapon buff, imported PBR claim or network hit authority is attached to this feature. Visual inspection on Studio and Android is still required.

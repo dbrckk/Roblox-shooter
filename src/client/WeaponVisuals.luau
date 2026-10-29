@@ -2,6 +2,9 @@ local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -9,6 +12,10 @@ WeaponVisuals.__index = WeaponVisuals
 local MATERIAL_METAL = Enum.Material.Metal
 local MATERIAL_SMOOTH = Enum.Material.SmoothPlastic
 local MATERIAL_NEON = Enum.Material.Neon
+
+local function rgb(channels)
+    return Color3.fromRGB(channels[1], channels[2], channels[3])
+end
 
 local WEAPON_OFFSETS = {
 	AssaultRifle = CFrame.new(0.51, -0.59, -1.37) * CFrame.Angles(math.rad(-2), math.rad(5), 0),
@@ -61,6 +68,11 @@ function WeaponVisuals.new(WeaponConfig)
     self.lastCameraPosition = nil
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
+    -- Server-authored rank only affects the cosmetic local viewmodel.
+    self.finishConnection = Players.LocalPlayer:GetAttributeChangedSignal(
+        "IronYardProgressLevel"):Connect(function()
+            self:_applyCareerFinish()
+        end)
 	self.renderConnection = RunService.RenderStepped:Connect(function(deltaTime)
 		self:_render(deltaTime)
 	end)
@@ -86,9 +98,49 @@ function WeaponVisuals:_addPart(model, className, name, size, color, offset, mat
 		part = part,
 		offset = offset,
 		baseTransparency = part.Transparency,
+        baseColor = color,
 	})
 
 	return part
+end
+
+-- Rank-gated finishes recolor only first-person visual Parts, not weapons
+-- or armor collision. Applying on level change does not rebuild an active gun.
+function WeaponVisuals:_applyCareerFinish()
+    if not self.model then return end
+    local level = Players.LocalPlayer:GetAttribute("IronYardProgressLevel")
+    local finish = OperatorFinishes.forLevel(level)
+    local accent, metal = rgb(finish.accent), rgb(finish.metal)
+    local fabric, glove = rgb(finish.fabric), rgb(finish.glove)
+    local accents = {
+        Handguard=true, StockPad=true, RecoilPad=true, PumpAction=true,
+        PumpGrooveA=true, PumpGrooveB=true, ScopeFront=true, ForeRail=true,
+        ChargingHandle=true, MuzzleRing=true, Guard=true, ShellCarrier=true,
+        GripPanelLeft=true,
+    }
+    local panels = {
+        Receiver=true, Slide=true, Frame=true, Bolt=true, UpperRail=true,
+        Barrel=true, TubeMagazine=true, BladeSpine=true, ScopeBody=true,
+        MuzzleBrake=true,
+    }
+    for _, entry in ipairs(self.parts) do
+        local name = entry.part.Name
+        local color = entry.baseColor
+        if string.find(name, "Forearm", 1, true)
+            or string.find(name, "Sleeve", 1, true) then
+            color = fabric
+        elseif string.find(name, "Glove", 1, true)
+            or string.find(name, "Knuckle", 1, true) then
+            color = glove
+        elseif string.find(name, "WristStrap", 1, true)
+            or accents[name] then
+            color = accent
+        elseif panels[name] then
+            color = entry.baseColor:Lerp(metal, 0.78)
+        end
+        entry.part.Color = color
+    end
+    self.model:SetAttribute("IronYardCareerFinish", finish.name)
 end
 
 -- Tactical first-person arms: matte fabric sleeves, reinforced gloves and
@@ -248,6 +300,7 @@ function WeaponVisuals:setWeapon(weaponId)
 	else
 		self:_createPistol(model)
 	end
+    self:_applyCareerFinish()
 end
 
 function WeaponVisuals:setSprinting(isSprinting)

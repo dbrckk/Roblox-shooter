@@ -2,6 +2,8 @@
 -- Only replicated server attributes are read; no client stat mutations.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -16,7 +18,7 @@ gui.Parent = playerGui
 
 local panel = Instance.new("Frame")
 panel.Name = "Career"
-panel.Size = UDim2.fromOffset(205, 78)
+panel.Size = UDim2.fromOffset(205, 96)
 panel.Position = UDim2.fromOffset(12, 291)
 panel.BackgroundColor3 = Color3.fromRGB(37, 43, 43)
 panel.BackgroundTransparency = 0.10
@@ -57,9 +59,12 @@ local details = label("Stats", UDim2.fromOffset(10, 27), UDim2.fromOffset(185, 1
 local statusLabel = label("Status", UDim2.fromOffset(10, 48), UDim2.fromOffset(185, 13),
     9, Color3.fromRGB(173, 182, 170))
 
+local finishLabel = label("CareerFinish", UDim2.fromOffset(10, 63),
+    UDim2.fromOffset(185, 15), 10, Color3.fromRGB(230, 199, 144))
+
 local track = Instance.new("Frame")
 track.Name = "RankXPTrack"
-track.Position = UDim2.fromOffset(10, 64)
+track.Position = UDim2.fromOffset(10, 83)
 track.Size = UDim2.fromOffset(185, 6)
 track.BorderSizePixel = 0
 track.BackgroundColor3 = Color3.fromRGB(68, 75, 69)
@@ -89,6 +94,13 @@ local function update()
     local level = math.max(1, safeCount("IronYardProgressLevel"))
     local kills = safeCount("IronYardLifetimeEliminations")
     local wins = safeCount("IronYardLifetimeVictories")
+    local finish = OperatorFinishes.forLevel(level)
+    local nextFinish = OperatorFinishes.nextUnlock(level)
+    finishLabel.Text = nextFinish
+        and (finish.name .. "  /  NEXT LV " .. tostring(nextFinish.level))
+        or (finish.name .. "  /  MAX FINISH")
+    finishLabel.TextColor3 = Color3.fromRGB(
+        finish.accent[1], finish.accent[2], finish.accent[3])
     local nextLevel = 250 * level * level
     local currentLevelXP = 250 * (level - 1) * (level - 1)
     fill.Size = UDim2.fromScale(level >= 1000 and 1
