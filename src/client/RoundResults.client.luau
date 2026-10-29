@@ -4,7 +4,6 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
-local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -156,7 +155,8 @@ local function render()
         scoreValue("Eliminations"), scoreValue("Deaths"))
     xpLabel.Text = string.format("+%d ROUND XP     /     %d CAREER XP",
         safeCount("IronYardRoundXP"), xp)
-    progressLabel.Text = string.format("RANK %d  |  NEXT %d XP", level, nextXP)
+    progressLabel.Text = level >= 1000 and "RANK 1000  |  MAX RANK"
+        or string.format("RANK %d  |  NEXT %d XP", level, nextXP)
     fill.Size = UDim2.fromScale(level >= 1000 and 1
         or math.clamp((xp - baseXP) / math.max(1, nextXP - baseXP), 0, 1), 1)
 

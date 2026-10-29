@@ -62,3 +62,7 @@ Bots now **search a verified last-seen position for up to nine seconds** after t
 ## Five rank-based weapon finishes
 
 The player unlocks matte, cosmetic-only finishes automatically at career ranks **1, 3, 6, 10 and 15**: FIELD ISSUE, DESERT PATROL, COLD STEEL, FOUNDRY and BLACK GRADE. The locally rendered weapon receiver, slide, grips, gloves and sleeves change as the authoritative server rank updates, while the career panel shows the current finish and next unlock. No real-money purchase, weapon buff, imported PBR claim or network hit authority is attached to this feature. Visual inspection on Studio and Android is still required.
+
+## End-of-round retention and mobile presentation — 29 October 2026
+
+A central, responsive **12-second results card** now displays the server-verified winner, personal eliminations/deaths, round XP, total career XP, next-rank progress and top-three leaderboard. The player receives a VICTORY headline only when `IronYardWinnerUserId` equals their immutable Roblox UserId; matching display names cannot spoof wins. It is display-only and automatically hides outside the RESULTS phase. Runtime screen-overlap/playtest remains to be completed in Studio and Android.

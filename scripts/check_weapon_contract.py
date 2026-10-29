@@ -131,6 +131,16 @@ def main():
     has(awards_ui, "remotes.WeaponFeedback.OnClientEvent:Connect(notify)",
         "Client-only medal presentation")
 
+    roundResults = source("src/client/RoundResults.client.luau")
+    for needle in ("IronYardWinnerUserId", 'winnerUserId = winningUserId or 0',
+                   'resultUserId = winningPlayer.UserId'):
+        has(match, needle, "Immutable results winner ID")
+    for needle in ('NeonMatchPhase") ~= "RESULTS"',
+                   'owner == player.UserId', 'IronYardStandings',
+                   'IronYardRoundXP', 'IronYardProgressLevel',
+                   'leaderboard[i].Text'):
+        has(roundResults, needle, "Server-authored end-round recap")
+
     print("IRON YARD weapon, ammo, ADS and control source contracts: OK")
     print("NOTE: Studio/Android playtests are still required.")
 
