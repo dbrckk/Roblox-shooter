@@ -148,11 +148,18 @@ local function acquire(player, record)
             if lock and lock.owner ~= record.token and lock.expiresAt > timestamp then
                 return nil -- The other server owns this key. Fail closed.
             end
-            data.lock = {
-                owner = record.token,
-                expiresAt = timestamp + LEASE_SECONDS,
-                committed = zero(),
-            }
+            -- An UpdateAsync request may commit even when its response fails.
+            -- Never clear our own committed counters on a repeated acquire:
+            -- doing so would award the same earned XP a second time.
+            if lock and lock.owner == record.token then
+                lock.expiresAt = timestamp + LEASE_SECONDS
+            else
+                data.lock = {
+                    owner = record.token,
+                    expiresAt = timestamp + LEASE_SECONDS,
+                    committed = zero(),
+                }
+            end
             return data
         end)
     end)
