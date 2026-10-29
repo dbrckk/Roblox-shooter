@@ -10,7 +10,7 @@ WeaponConfig.Order = {
 
 WeaponConfig.Definitions = {
     AssaultRifle = {
-        displayName = "AR-24 | Assault Rifle", kind = "Raycast", automatic = true,
+        displayName = "AR-24 | Assault Rifle", kind = "Raycast", automatic = true, magazineSize = 30, reloadSeconds = 2.15,
         fireCooldown = 0.115, damage = 24, headshotDamage = 38,
         range = 440, spreadDegrees = 1.1,
         fireSoundId = "rbxasset://sounds/snap.wav", fireVolume = 0.44,
@@ -21,7 +21,7 @@ WeaponConfig.Definitions = {
         recoilKick = 0.085,
     },
     Shotgun = {
-        displayName = "B-8 | Tactical Shotgun", kind = "Pellet", automatic = false,
+        displayName = "B-8 | Tactical Shotgun", kind = "Pellet", automatic = false, magazineSize = 6, reloadSeconds = 2.55,
         fireCooldown = 0.84, damage = 13, headshotDamage = 16,
         pellets = 8, spreadDegrees = 5.1, range = 115,
         fireSoundId = "rbxasset://sounds/snap.wav", fireVolume = 0.85,
@@ -33,6 +33,8 @@ WeaponConfig.Definitions = {
     },
 	Pistol = {
 		displayName = "Pistol",
+        magazineSize = 14,
+        reloadSeconds = 1.45,
 		kind = "Raycast",
 		fireCooldown = 0.22,
 		damage = 36,
@@ -50,6 +52,8 @@ WeaponConfig.Definitions = {
 
 	Sniper = {
 		displayName = "Sniper",
+        magazineSize = 5,
+        reloadSeconds = 2.7,
 		kind = "Raycast",
 		fireCooldown = 1.15,
 		damage = 82,

@@ -21,6 +21,9 @@ local function getState(player)
 		state = {
 			equippedWeaponId = "AssaultRifle",
 			lastFireAt = {},
+            magazines = {},
+            reloadUntil = {},
+            reloadTokens = {},
 		}
 		playerState[player] = state
 	end
@@ -173,21 +176,88 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 	return true
 end
 
+-- Client ammo is display-only: magazine counts and reload timings live here.
+local function getLoaded(state, weaponId, config)
+    if not config.magazineSize then return nil end
+    local current = state.magazines[weaponId]
+    if current == nil then
+        current = config.magazineSize
+        state.magazines[weaponId] = current
+    end
+    return current
+end
+
+local function sendAmmo(player, weaponId)
+    local config = WeaponConfig.get(weaponId)
+    if not config or not remotes then return end
+    local state = getState(player)
+    remotes.WeaponFeedback:FireClient(player, {
+        kind = "Ammo", weaponId = weaponId,
+        loaded = getLoaded(state, weaponId, config) or -1,
+        capacity = config.magazineSize or -1,
+        reloading = (state.reloadUntil[weaponId] or 0) > os.clock(),
+        reloadSeconds = config.reloadSeconds or 0,
+    })
+end
+
+local function cancelReload(state, weaponId)
+    state.reloadTokens[weaponId] = (state.reloadTokens[weaponId] or 0) + 1
+    state.reloadUntil[weaponId] = nil
+end
+
+local function reloadWeapon(player, weaponId)
+    if typeof(weaponId) ~= "string" then return end
+    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    local state = getState(player)
+    local config = WeaponConfig.get(weaponId)
+    if not config or not config.magazineSize or state.equippedWeaponId ~= weaponId then return end
+    local character = getLiveCharacter(player)
+    if not character then return end
+    local loaded = getLoaded(state, weaponId, config)
+    if loaded >= config.magazineSize or (state.reloadUntil[weaponId] or 0) > os.clock() then return end
+
+    cancelReload(state, weaponId)
+    local token = state.reloadTokens[weaponId]
+    state.reloadUntil[weaponId] = os.clock() + config.reloadSeconds
+    sendAmmo(player, weaponId)
+
+    task.delay(config.reloadSeconds, function()
+        if player.Character ~= character or state ~= playerState[player]
+            or state.reloadTokens[weaponId] ~= token
+            or state.equippedWeaponId ~= weaponId then return end
+        local _, humanoid = getLiveCharacter(player)
+        if not humanoid or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+            cancelReload(state, weaponId)
+            sendAmmo(player, weaponId)
+            return
+        end
+        state.magazines[weaponId] = config.magazineSize
+        state.reloadUntil[weaponId] = nil
+        sendAmmo(player, weaponId)
+    end)
+end
+
 local function canFire(player, weaponId, config)
-	local state = getState(player)
-    -- Firing a weapon must follow the equip event; the fire payload cannot equip on its own.
-    if state.equippedWeaponId ~= weaponId then
+    local state = getState(player)
+    if state.equippedWeaponId ~= weaponId then return false end
+    local now = os.clock()
+    if now - (state.lastFireAt[weaponId] or -math.huge) < config.fireCooldown then
         return false
     end
-	local now = os.clock()
-	local lastFireAt = state.lastFireAt[weaponId] or -math.huge
+    if (state.reloadUntil[weaponId] or 0) > now then return false end
 
-	if now - lastFireAt < config.fireCooldown then
-		return false
-	end
-
-	state.lastFireAt[weaponId] = now
-	return true
+    local loaded = getLoaded(state, weaponId, config)
+    if loaded ~= nil then
+        if loaded <= 0 then
+            remotes.WeaponFeedback:FireClient(player, { kind = "OutOfAmmo", weaponId = weaponId })
+            sendAmmo(player, weaponId)
+            return false
+        end
+        state.magazines[weaponId] = loaded - 1
+        sendAmmo(player, weaponId)
+    end
+    state.lastFireAt[weaponId] = now
+    return true
 end
 
 -- Server-side cone sampling: the client never selects individual pellets.
@@ -356,7 +426,12 @@ local function onEquipWeapon(player, weaponId)
 		return
 	end
 
-	getState(player).equippedWeaponId = weaponId
+	local state = getState(player)
+    if state.equippedWeaponId ~= weaponId then
+        cancelReload(state, state.equippedWeaponId)
+    end
+    state.equippedWeaponId = weaponId
+    sendAmmo(player, weaponId)
 end
 
 local function onFireWeapon(player, payload)
@@ -402,10 +477,25 @@ function WeaponService.start()
 
 	remotes.EquipWeapon.OnServerEvent:Connect(onEquipWeapon)
 	remotes.FireWeapon.OnServerEvent:Connect(onFireWeapon)
+    remotes.ReloadWeapon.OnServerEvent:Connect(reloadWeapon)
 
-	Players.PlayerRemoving:Connect(function(player)
-		playerState[player] = nil
-	end)
+	local function watchPlayer(player)
+        player.CharacterAdded:Connect(function()
+            local state = getState(player)
+            for id in pairs(state.reloadUntil) do cancelReload(state, id) end
+            state.magazines = {}
+            state.lastFireAt = {}
+            task.defer(function()
+                if player.Parent then sendAmmo(player, state.equippedWeaponId) end
+            end)
+        end)
+    end
+    Players.PlayerAdded:Connect(watchPlayer)
+    for _, player in ipairs(Players:GetPlayers()) do watchPlayer(player) end
+
+    Players.PlayerRemoving:Connect(function(player)
+        playerState[player] = nil
+    end)
 end
 
 return WeaponService
