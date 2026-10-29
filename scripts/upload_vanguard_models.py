@@ -19,6 +19,8 @@ import urllib.error
 import urllib.request
 import uuid
 
+from audit_vanguard_glb import inspect as inspect_glb
+
 API = "https://apis.roblox.com/assets/v1"
 PALETTES = ("olive", "sand", "slate", "rust")
 MAX_MODEL_BYTES = 20_000_000
@@ -38,6 +40,9 @@ def model_info(folder, palette):
     magic, version, length = struct.unpack_from("<4sII", raw)
     require(magic == b"glTF" and version == 2 and length == len(raw),
             f"Corrupted or non-GLB2 model: {path}")
+    # Check the ACTUAL GLB mesh parts and all physically based material maps
+    # before spending any owner-authorized Roblox upload budget.
+    inspect_glb(path)
     return path, raw, hashlib.sha256(raw).hexdigest()
 
 

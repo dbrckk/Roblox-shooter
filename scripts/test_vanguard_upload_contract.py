@@ -31,9 +31,37 @@ def main():
             json.dumps({"palette": ["olive", "sand", "slate", "rust"]}))
         (root / "textures" / "texture_manifest.json").write_text(
             json.dumps({"resolution": [1024, 1024]}))
+        # A tiny but structurally correct seven-part GLB/PBR fixture; the
+        # uploader now requires actual JSON geometry and PBR texture channels.
+        from audit_vanguard_glb import PIECES
+        metadata = {
+            "asset": {"version": "2.0"},
+            "nodes": [{"name": "VANGUARD_" + name, "mesh": i}
+                      for i, name in enumerate(PIECES)],
+            "meshes": [{"primitives": [{"attributes": {"POSITION": 0}}]}
+                       for _ in PIECES],
+            "accessors": [{"componentType": 5126, "count": 3, "type": "VEC3"}],
+            "materials": [{
+                "pbrMetallicRoughness": {
+                    "baseColorTexture": {"index": 0},
+                    "metallicRoughnessTexture": {"index": 1},
+                },
+                "normalTexture": {"index": 2},
+            }] * 4,
+            "textures": [{"source": i} for i in range(4)],
+            "images": [{"bufferView": i, "mimeType": "image/png"}
+                       for i in range(4)],
+            "bufferViews": [{"byteOffset": 1024*i, "byteLength": 1024}
+                            for i in range(4)],
+            "buffers": [{"byteLength": 4096}],
+        }
+        json_bytes = json.dumps(metadata, separators=(",", ":")).encode("utf-8")
+        json_bytes += b" " * (-len(json_bytes) % 4)
+        binary = bytes(4096)
+        chunks = (struct.pack("<I4s", len(json_bytes), b"JSON") + json_bytes
+                  + struct.pack("<I4s", len(binary), b"BIN\\x00") + binary)
+        content = struct.pack("<4sII", b"glTF", 2, 12 + len(chunks)) + chunks
         for palette in uploader.PALETTES:
-            # Fake 2K GLB with valid header only; dry-run inspects size/header.
-            content = struct.pack("<4sII", b"glTF", 2, 2048) + bytes(2036)
             (root / "meshes" / f"vanguard_{palette}_LOD0.glb").write_bytes(content)
 
         module = root / "VanguardAssetIds.luau"
@@ -54,6 +82,15 @@ def main():
               "Dry-run must never claim asset registration")
         check("sourceCommit" not in module.read_text(),
               "Dry-run must not change the live Roblox model registry")
+        # Deliberately break the first GLB. Upload validation must fail
+        # without an API key before any Roblox network call or registry edit.
+        first = root / "meshes" / "vanguard_olive_LOD0.glb"
+        first.write_bytes(b"fake" * 1200)
+        damaged = subprocess.run(options + ["--dry-run"],
+                                 text=True, capture_output=True, check=False)
+        check(damaged.returncode != 0,
+              "Corrupt or textureless GLB must fail import preflight")
+        first.write_bytes(content)
 
         invalid = subprocess.run(options[:options.index("--owner-user-id") + 1] +
                                  ["0"] + options[options.index("--owner-user-id") + 2:] +
