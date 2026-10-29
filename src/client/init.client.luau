@@ -13,7 +13,7 @@ local HudController = require(script:WaitForChild("HudController"))
 local WeaponVisuals = require(script:WaitForChild("WeaponVisuals"))
 
 local remotes = PrecisionNet.getRemotes(false)
-local currentWeaponId = "Pistol"
+local currentWeaponId = "AssaultRifle"
 local scoped = false
 local sprinting = false
 local localBoostFuel = MovementConfig.boostFuelMax
@@ -720,7 +720,7 @@ local function fireWeapon(weaponId)
 
 	local now = os.clock()
 	local lastShot = lastLocalFire[weaponId] or -math.huge
-	if now - lastShot < config.fireCooldown * 0.82 then
+	if now - lastShot < config.fireCooldown * 1.015 then
 		return
 	end
 
@@ -733,8 +733,8 @@ local function fireWeapon(weaponId)
 	visuals:kick(weaponId)
 	visuals:playFireSound(weaponId, ray.Origin)
 
-	if config.kind == "Raycast" then
-		visuals:drawTracer(ray.Origin, ray.Direction.Unit, config.range)
+	if config.kind == "Raycast" or config.kind == "Pellet" then
+        visuals:drawTracer(ray.Origin, ray.Direction.Unit, config.kind == "Pellet" and 100 or config.range)
 	end
 
 	remotes.FireWeapon:FireServer({
@@ -751,7 +751,9 @@ local function quickThrowKnife()
 
 	if previousWeaponId ~= "Knife" then
 		task.delay(0.18, function()
-			equipWeapon(previousWeaponId)
+            if currentWeaponId == "Knife" then
+                equipWeapon(previousWeaponId)
+            end
 		end)
 	end
 end
@@ -876,6 +878,29 @@ local function updateCameraFeel(deltaTime)
 	camera.FieldOfView += (targetFov - camera.FieldOfView) * math.clamp(deltaTime * 8, 0, 1)
 end
 
+-- Desktop automatic weapons fire while the button is held, but semi-automatic
+-- guns still need one distinct press. The server enforces all shot cooldowns.
+local mouseFireHeld = false
+local function beginMouseFire()
+    if mouseFireHeld then return end
+    mouseFireHeld = true
+    fireWeapon(currentWeaponId)
+    task.spawn(function()
+        while mouseFireHeld do
+            local weapon = WeaponConfig.get(currentWeaponId)
+            if not weapon or not weapon.automatic then break end
+            task.wait(math.max(0.04, weapon.fireCooldown * 0.40))
+            if mouseFireHeld and not hud:isSettingsOpen() then
+                fireWeapon(currentWeaponId)
+            end
+        end
+    end)
+end
+
+UserInputService.WindowFocusReleased:Connect(function()
+    mouseFireHeld = false
+end)
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	if gameProcessed then
 		return
@@ -891,7 +916,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-		fireWeapon(currentWeaponId)
+        beginMouseFire()
 	elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 		setScoped(true)
 	elseif input.KeyCode == Enum.KeyCode.Space then
@@ -901,18 +926,24 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	elseif input.KeyCode == Enum.KeyCode.C or input.KeyCode == Enum.KeyCode.LeftControl or input.KeyCode == Enum.KeyCode.RightControl then
 		requestSlide()
 	elseif input.KeyCode == Enum.KeyCode.One then
-		equipWeapon("Pistol")
-	elseif input.KeyCode == Enum.KeyCode.Two then
-		equipWeapon("Sniper")
-	elseif input.KeyCode == Enum.KeyCode.Three then
-		equipWeapon("Knife")
+		equipWeapon("AssaultRifle")
+    elseif input.KeyCode == Enum.KeyCode.Two then
+        equipWeapon("Pistol")
+    elseif input.KeyCode == Enum.KeyCode.Three then
+        equipWeapon("Shotgun")
+    elseif input.KeyCode == Enum.KeyCode.Four then
+        equipWeapon("Sniper")
+    elseif input.KeyCode == Enum.KeyCode.Five then
+        equipWeapon("Knife")
 	elseif input.KeyCode == Enum.KeyCode.Q then
 		quickThrowKnife()
 	end
 end)
 
 UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton2 then
+	if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        mouseFireHeld = false
+    elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 		setScoped(false)
 	elseif input.KeyCode == Enum.KeyCode.Space then
 		stopBoosting()
@@ -1051,16 +1082,16 @@ if UserInputService.TouchEnabled then
         b.Font = Enum.Font.GothamBold
         b.Text = label
         b.TextScaled = true
-        b.BackgroundColor3 = Color3.fromRGB(22, 35, 51)
+        b.BackgroundColor3 = Color3.fromRGB(38, 45, 43)
         b.BackgroundTransparency = 0.17
-        b.TextColor3 = Color3.fromRGB(228, 246, 255)
+        b.TextColor3 = Color3.fromRGB(250, 239, 213)
         b.Parent = touchGui
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 12)
         corner.Parent = b
         local stroke = Instance.new("UIStroke")
         stroke.Thickness = 2
-        stroke.Color = Color3.fromRGB(39, 203, 236)
+        stroke.Color = Color3.fromRGB(204, 165, 94)
         stroke.Parent = b
         return b
     end
@@ -1069,24 +1100,31 @@ if UserInputService.TouchEnabled then
     local aim = button("Aim", "AIM", -135, -163, 70, 65)
     local sprint = button("Sprint", "RUN", -22, -276, 78, 55)
     local slide = button("Slide", "SLIDE", -112, -276, 78, 55)
-    local pistol = button("Pistol", "P", -22, -348, 52, 48)
-    local sniper = button("Sniper", "S", -82, -348, 52, 48)
-    local knife = button("Knife", "K", -142, -348, 52, 48)
-    local holdingFire = false
+    local rifle = button("AssaultRifle", "AR", -22, -348, 50, 48)
+    local pistol = button("Pistol", "P", -80, -348, 50, 48)
+    local shotgun = button("Shotgun", "SG", -138, -348, 50, 48)
+    local sniper = button("Sniper", "S", -196, -348, 50, 48)
+    local knife = button("Knife", "K", -254, -348, 50, 48)
+    local heldFireInput = nil
     fire.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        if holdingFire then return end
-        holdingFire = true
+        if heldFireInput then return end
+        heldFireInput = input
+        fireWeapon(currentWeaponId)
         task.spawn(function()
-            while holdingFire and fire.Parent do
-                if not hud:isSettingsOpen() then fireWeapon(currentWeaponId) end
-                task.wait(0.06)
+            while heldFireInput == input and fire.Parent do
+                local selected = WeaponConfig.get(currentWeaponId)
+                if not selected or not selected.automatic then break end
+                task.wait(math.max(0.04, selected.fireCooldown * 0.40))
+                if heldFireInput == input and not hud:isSettingsOpen() then
+                    fireWeapon(currentWeaponId)
+                end
             end
         end)
     end)
     fire.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
-            holdingFire = false
+        if input == heldFireInput then
+            heldFireInput = nil
         end
     end)
     aim.Activated:Connect(function()
@@ -1098,6 +1136,8 @@ if UserInputService.TouchEnabled then
     slide.Activated:Connect(function()
         if not hud:isSettingsOpen() then requestSlide() end
     end)
+    rifle.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("AssaultRifle") end end)
+    shotgun.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Shotgun") end end)
     pistol.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Pistol") end end)
     sniper.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Sniper") end end)
     knife.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Knife") end end)

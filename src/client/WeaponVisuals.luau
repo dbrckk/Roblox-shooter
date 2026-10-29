@@ -11,12 +11,16 @@ local MATERIAL_SMOOTH = Enum.Material.SmoothPlastic
 local MATERIAL_NEON = Enum.Material.Neon
 
 local WEAPON_OFFSETS = {
+	AssaultRifle = CFrame.new(0.51, -0.59, -1.37) * CFrame.Angles(math.rad(-2), math.rad(5), 0),
+	Shotgun = CFrame.new(0.54, -0.62, -1.41) * CFrame.Angles(math.rad(-3), math.rad(6), 0),
 	Pistol = CFrame.new(0.72, -0.58, -1.2) * CFrame.Angles(math.rad(-2), math.rad(7), math.rad(-1)),
 	Sniper = CFrame.new(0.5, -0.5, -1.46) * CFrame.Angles(math.rad(-1), math.rad(4), 0),
 	Knife = CFrame.new(0.7, -0.58, -1.08) * CFrame.Angles(math.rad(-18), math.rad(16), math.rad(-12)),
 }
 
 local SPRINT_OFFSETS = {
+	AssaultRifle = CFrame.new(0.14, -0.12, 0.17) * CFrame.Angles(math.rad(-12), math.rad(19), math.rad(6)),
+	Shotgun = CFrame.new(0.14, -0.12, 0.17) * CFrame.Angles(math.rad(-12), math.rad(19), math.rad(6)),
 	Pistol = CFrame.new(0.12, -0.1, 0.14) * CFrame.Angles(math.rad(-11), math.rad(16), math.rad(9)),
 	Sniper = CFrame.new(0.18, -0.16, 0.16) * CFrame.Angles(math.rad(-13), math.rad(20), math.rad(7)),
 	Knife = CFrame.new(0.08, -0.08, 0.06) * CFrame.Angles(math.rad(-22), math.rad(18), math.rad(18)),
@@ -40,7 +44,7 @@ function WeaponVisuals.new(WeaponConfig)
 	local self = setmetatable({}, WeaponVisuals)
 
 	self.WeaponConfig = WeaponConfig
-	self.currentWeaponId = "Pistol"
+	self.currentWeaponId = "AssaultRifle"
 	self.model = nil
 	self.parts = {}
 	self.recoil = 0
@@ -131,6 +135,54 @@ function WeaponVisuals:_createSniper(model)
 	self:_addPart(model, "Part", "ForeRail", Vector3.new(0.42, 0.08, 0.78), Color3.fromRGB(36, 42, 50), CFrame.new(0, -0.12, -0.86), MATERIAL_METAL)
 end
 
+-- Original procedural firearm meshes; no third-party asset IDs or imported weapons.
+function WeaponVisuals:_createAssaultRifle(model)
+    local charcoal = Color3.fromRGB(38, 44, 42)
+    local graphite = Color3.fromRGB(65, 74, 71)
+    local olive = Color3.fromRGB(111, 121, 88)
+    local steel = Color3.fromRGB(126, 132, 119)
+    self:_addArms(model,
+        CFrame.new(-0.32, -0.31, -0.66) * CFrame.Angles(math.rad(-8), 0, 0),
+        CFrame.new(0.07, -0.36, 0.09) * CFrame.Angles(math.rad(-10), 0, 0))
+    self:_addPart(model, "Part", "Receiver", Vector3.new(0.42, 0.31, 1.25), graphite, CFrame.new(0, 0, -0.36), MATERIAL_METAL)
+    self:_addPart(model, "Part", "UpperRail", Vector3.new(0.28, 0.08, 1.20), charcoal, CFrame.new(0, 0.20, -0.44), MATERIAL_METAL)
+    self:_addPart(model, "Part", "EjectionPort", Vector3.new(0.025, 0.09, 0.34), charcoal, CFrame.new(0.222, 0.09, -0.27), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "Stock", Vector3.new(0.32, 0.24, 0.78), charcoal, CFrame.new(0, -0.03, 0.64), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "StockPad", Vector3.new(0.38, 0.40, 0.10), olive, CFrame.new(0, -0.06, 1.03), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "PistolGrip", Vector3.new(0.26, 0.58, 0.28), charcoal,
+        CFrame.new(0, -0.41, 0.05) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "Magazine", Vector3.new(0.28, 0.61, 0.29), charcoal,
+        CFrame.new(0, -0.46, -0.48) * CFrame.Angles(math.rad(-11), 0, 0), MATERIAL_METAL)
+    self:_addPart(model, "Part", "Handguard", Vector3.new(0.49, 0.33, 0.93), olive, CFrame.new(0, -0.015, -1.32), MATERIAL_METAL)
+    self:_addPart(model, "Part", "HandguardInset", Vector3.new(0.50, 0.14, 0.42), charcoal, CFrame.new(0, -0.02, -1.39), MATERIAL_METAL)
+    self:_addPart(model, "Part", "Barrel", Vector3.new(0.17, 0.17, 0.89), steel, CFrame.new(0, 0.03, -2.06), MATERIAL_METAL)
+    self:_addPart(model, "Part", "FlashHider", Vector3.new(0.22, 0.20, 0.24), charcoal, CFrame.new(0, 0.03, -2.61), MATERIAL_METAL)
+    self:_addPart(model, "Part", "FrontSight", Vector3.new(0.13, 0.23, 0.11), charcoal, CFrame.new(0, 0.30, -1.91), MATERIAL_METAL)
+    self:_addPart(model, "Part", "RearSight", Vector3.new(0.13, 0.19, 0.14), charcoal, CFrame.new(0, 0.32, -0.05), MATERIAL_METAL)
+    self:_addPart(model, "Part", "ChargingHandle", Vector3.new(0.25, 0.09, 0.18), steel, CFrame.new(0, 0.20, 0.18), MATERIAL_METAL)
+end
+
+function WeaponVisuals:_createShotgun(model)
+    local sand = Color3.fromRGB(178, 161, 128)
+    local charcoal = Color3.fromRGB(38, 42, 40)
+    local steel = Color3.fromRGB(89, 99, 97)
+    self:_addArms(model,
+        CFrame.new(-0.29, -0.35, -0.83) * CFrame.Angles(math.rad(-8), 0, 0),
+        CFrame.new(0.08, -0.40, 0.13) * CFrame.Angles(math.rad(-11), 0, 0))
+    self:_addPart(model, "Part", "Receiver", Vector3.new(0.50, 0.33, 1.05), steel, CFrame.new(0, 0, -0.17), MATERIAL_METAL)
+    self:_addPart(model, "Part", "Stock", Vector3.new(0.36, 0.33, 1.00), charcoal, CFrame.new(0, -0.11, 0.83), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "RecoilPad", Vector3.new(0.38, 0.46, 0.12), sand, CFrame.new(0, -0.14, 1.34), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "Grip", Vector3.new(0.26, 0.48, 0.26), charcoal, CFrame.new(0, -0.38, 0.23) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "PumpAction", Vector3.new(0.55, 0.32, 0.79), sand, CFrame.new(0, -0.10, -1.11), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "PumpGrooveA", Vector3.new(0.56, 0.06, 0.12), charcoal, CFrame.new(0, -0.09, -1.02), MATERIAL_METAL)
+    self:_addPart(model, "Part", "PumpGrooveB", Vector3.new(0.56, 0.06, 0.12), charcoal, CFrame.new(0, -0.09, -1.28), MATERIAL_METAL)
+    self:_addPart(model, "Part", "Barrel", Vector3.new(0.23, 0.23, 1.52), charcoal, CFrame.new(0, 0.10, -1.52), MATERIAL_METAL)
+    self:_addPart(model, "Part", "TubeMagazine", Vector3.new(0.19, 0.19, 1.41), steel, CFrame.new(0, -0.18, -1.43), MATERIAL_METAL)
+    self:_addPart(model, "Part", "MuzzleRing", Vector3.new(0.31, 0.31, 0.12), charcoal, CFrame.new(0, 0.10, -2.31), MATERIAL_METAL)
+    self:_addPart(model, "Part", "ShellCarrier", Vector3.new(0.08, 0.21, 0.43), sand, CFrame.new(-0.30, 0.02, -0.10), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "Sight", Vector3.new(0.09, 0.13, 0.10), sand, CFrame.new(0, 0.25, -2.12), MATERIAL_METAL)
+end
+
 function WeaponVisuals:_createKnife(model)
 	self:_addArms(model, nil, CFrame.new(0.02, -0.32, 0.22) * CFrame.Angles(math.rad(-21), math.rad(7), math.rad(-8)))
 	self:_addPart(model, "Part", "Handle", Vector3.new(0.2, 0.2, 0.7), Color3.fromRGB(28, 32, 39), CFrame.new(0, -0.04, 0.16), MATERIAL_SMOOTH)
@@ -152,7 +204,11 @@ function WeaponVisuals:setWeapon(weaponId)
 	model.Parent = workspace.CurrentCamera or workspace
 	self.model = model
 
-	if weaponId == "Sniper" then
+	if weaponId == "AssaultRifle" then
+        self:_createAssaultRifle(model)
+    elseif weaponId == "Shotgun" then
+        self:_createShotgun(model)
+    elseif weaponId == "Sniper" then
 		self:_createSniper(model)
 	elseif weaponId == "Knife" then
 		self:_createKnife(model)

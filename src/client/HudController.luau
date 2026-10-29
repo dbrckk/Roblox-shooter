@@ -68,7 +68,7 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.gui = gui
 	self.WeaponConfig = WeaponConfig
 	self.options = options or {}
-	self.currentWeaponId = "Pistol"
+	self.currentWeaponId = "AssaultRifle"
 	self.hitToken = 0
 	self.settingsOpen = false
 	self.baseFov = self.options.baseFov or DEFAULT_FOV
@@ -455,7 +455,11 @@ function HudController:setWeapon(weaponId)
 	self.weaponLabel.Text = config and config.displayName or weaponId
 
 	local color = Color3.fromRGB(247, 244, 235)
-	if weaponId == "Sniper" then
+	if weaponId == "AssaultRifle" then
+        color = Color3.fromRGB(218, 231, 205)
+    elseif weaponId == "Shotgun" then
+        color = Color3.fromRGB(232, 197, 132)
+    elseif weaponId == "Sniper" then
 		color = Color3.fromRGB(201, 191, 162)
 	elseif weaponId == "Knife" then
 		color = Color3.fromRGB(255, 226, 153)

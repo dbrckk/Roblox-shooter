@@ -19,7 +19,7 @@ local function getState(player)
 	local state = playerState[player]
 	if not state then
 		state = {
-			equippedWeaponId = "Pistol",
+			equippedWeaponId = "AssaultRifle",
 			lastFireAt = {},
 		}
 		playerState[player] = state
