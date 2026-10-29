@@ -214,9 +214,19 @@ local function getTargetModel(bot, limit)
         local distance = (root.Position - bot.root.Position).Magnitude
         if distance > limit then return end
 
+        -- Test the head first and the torso if crouching/cover hides it.
+        -- The same physical map raycast controls actual firing.
         local direction = head.Position - origin
         local ray = Workspace:Raycast(origin, direction, params)
         local visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
+        if not visible then
+            local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
+            if torso then
+                direction = torso.Position - origin
+                ray = Workspace:Raycast(origin, direction, params)
+                visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
+            end
+        end
         -- If the player ducked behind cover, remember them only briefly.
         -- Otherwise switch to a visible fighter rather than wall-staring.
         local recent = model == bot.target and (now - (bot.lastTargetSeenAt or 0)) < 2.2
@@ -460,6 +470,11 @@ local function shoot(bot, target, aimPoint, dt)
     if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     local before = humanoid.Health
     humanoid:TakeDamage(config.Damage)
+    if targetPlayer and humanoid.Health < before then
+        -- Replicated server-owned combat direction for mobile/desktop HUD.
+        hitModel:SetAttribute("IronYardLastHitPosition", origin)
+        hitModel:SetAttribute("IronYardLastHitTime", Workspace:GetServerTimeNow())
+    end
     if before > 0 and humanoid.Health <= 0 then
         bot.kills += 1
         roundKills[bot.slot] = bot.kills
