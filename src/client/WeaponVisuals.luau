@@ -364,21 +364,36 @@ function WeaponVisuals:_render(deltaTime)
         * self:_getAnimationCFrame(deltaTime, camera, self.stepBlend, reloadPose)
 	local hideForScope = self.currentWeaponId == "Sniper" and self.scoped
 
-	for _, entry in ipairs(self.parts) do
+    -- Short, mechanically coherent motions for actual moving weapon parts.
+    -- No physics, sounds or network calls: these offsets are client-only.
+    local shotAge = now - self.fireStartedAt
+    local slideRecoil = math.max(0, 1 - shotAge / 0.13)
+    local pumpTravel = math.max(0, 1 - math.abs(shotAge - 0.39) / 0.25)
+    local boltTravel = math.max(0, 1 - math.abs(shotAge - 0.43) / 0.23)
+    local workingHand = CFrame.new(0.13 * magazineDip,
+        -0.22 * magazineDip, -0.11 * magazineDip)
+
+    for _, entry in ipairs(self.parts) do
         local localOffset = entry.offset
         local partName = entry.part.Name
-        if partName == "LeftHand" or partName == "LeftForearm" then
-            -- The support hand works the magazine while the weapon is dipped.
-            localOffset = localOffset * CFrame.new(0.13 * magazineDip,
-                -0.22 * magazineDip, -0.11 * magazineDip)
+        if string.sub(partName, 1, 4) == "Left" then
+            -- All glove, strap and sleeve elements move as ONE support hand;
+            -- otherwise the previous left glove remained behind during reloads.
+            localOffset = localOffset * workingHand
         elseif partName == "Magazine" and self.currentWeaponId ~= "Shotgun" then
-            -- A detachable magazine drops and seats before the reload completes.
             localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip,
                 0.04 * magazineDip)
+        elseif partName == "Slide" and self.currentWeaponId == "Pistol" then
+            localOffset = localOffset * CFrame.new(0, 0, slideRecoil * 0.16)
+        elseif (partName == "PumpAction" or partName == "PumpGrooveA"
+            or partName == "PumpGrooveB") and self.currentWeaponId == "Shotgun" then
+            localOffset = localOffset * CFrame.new(0, 0, pumpTravel * 0.32)
+        elseif partName == "Bolt" and self.currentWeaponId == "Sniper" then
+            localOffset = localOffset * CFrame.new(0.12 * boltTravel, 0, 0.15 * boltTravel)
         end
-		entry.part.CFrame = root * localOffset
-		entry.part.Transparency = hideForScope and 1 or entry.baseTransparency
-	end
+        entry.part.CFrame = root * localOffset
+        entry.part.Transparency = hideForScope and 1 or entry.baseTransparency
+    end
 end
 
 function WeaponVisuals:drawTracer(origin, direction, range, accentColor)
