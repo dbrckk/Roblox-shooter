@@ -643,6 +643,11 @@ function BotService.resetRound()
             bot.root.AssemblyLinearVelocity = Vector3.zero
             bot.root.AssemblyAngularVelocity = Vector3.zero
             bot.model:PivotTo(CFrame.new(SpawnService.selectSafeSpawn(bot.model)))
+            bot.lastAnimationPosition = bot.root.Position
+            bot.gaitPhase = 0
+            bot.walkBlend = 0
+            bot.airBlend = 0
+            bot.reloadBlend = 0
             SpawnService.protectCharacter(bot.model, 2.0)
         end
     end

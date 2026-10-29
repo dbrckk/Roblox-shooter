@@ -115,7 +115,10 @@ local function showStandings()
             row.score.Text = "0"
         end
     end
+    -- The onboarding mission card occupies this area on narrow phones.
+    -- Show standings again immediately after the briefing fades.
     board.Visible = Workspace:GetAttribute("NeonMatchPhase") ~= "WAITING"
+        and gui.Parent:GetAttribute("IronYardBriefingOpen") ~= true
 end
 
 local sectors = {
@@ -153,6 +156,7 @@ local function updatePosition()
     end
 end
 
+gui.Parent:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(showStandings)
 Workspace:GetAttributeChangedSignal("IronYardStandings"):Connect(showStandings)
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(showStandings)
 showStandings()

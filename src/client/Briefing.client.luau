@@ -10,7 +10,9 @@ gui.Name = "IronYardBriefing"
 gui.ResetOnSpawn = false
 gui.DisplayOrder = 14
 gui.IgnoreGuiInset = false
-gui.Parent = player:WaitForChild("PlayerGui")
+local playerGui = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
+playerGui:SetAttribute("IronYardBriefingOpen", false)
 
 local panel = Instance.new("Frame")
 panel.Name = "MissionCard"
@@ -56,12 +58,17 @@ local subtitle = makeText("ObjectiveDetails", 30, 12, Color3.fromRGB(214, 212, 1
 local token = 0
 local playedIntro = false
 
+local function setCardVisible(visible)
+    panel.Visible = visible
+    playerGui:SetAttribute("IronYardBriefingOpen", visible)
+end
+
 local function display(a, b, timeout)
     token += 1
     local current = token
     title.Text = a
     subtitle.Text = b
-    panel.Visible = true
+    setCardVisible(true)
     panel.BackgroundTransparency = 0.10
     title.TextTransparency = 0
     subtitle.TextTransparency = 0
@@ -75,7 +82,7 @@ local function display(a, b, timeout)
             fade1:Play()
             fade2:Play()
             fade.Completed:Wait()
-            if token == current then panel.Visible = false end
+            if token == current then setCardVisible(false) end
         end)
     end
 end
@@ -91,11 +98,11 @@ local function onPhaseChanged()
             display("MISSION   /   FREE FOR ALL", "FIRST TO 15 ELIMINATIONS", 8)
         else
             token += 1
-            panel.Visible = false
+            setCardVisible(false)
         end
     else
         token += 1
-        panel.Visible = false
+        setCardVisible(false)
     end
 end
 
