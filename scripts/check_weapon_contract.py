@@ -97,6 +97,14 @@ def main():
                 'string.sub(partName, 1, 4) == "Left"', 'partName == "Magazine"',
                 'partName == "Slide"', 'partName == "PumpAction"', 'partName == "Bolt"'):
         has(viewmodel, key, "Grounded movement and animated reload visual")
+    botTactics = source("src/server/BotTactics.luau")
+    for needle in ("SEARCH_MEMORY_SECONDS = 9",
+                   "BotTactics.investigateGoal(bot, bot.lastKnownTargetPosition",
+                   "bot.lastKnownTargetPosition = nil"):
+        has(bot, needle, "Last-sighting investigation")
+    for needle in ("function BotTactics.investigateGoal(",
+                   "groundedGoal(bot, lastSeen, params)", "elapsed >= 9"):
+        has(botTactics, needle, "Grounded, finite-duration search")
     botAnimation = source("src/server/BotAnimation.luau")
     for key in ("bot.wasAirborne", "bot.landedAt", "bot.lastDamageAt",
                 "bot.defensiveBlend", "strafeLean"):

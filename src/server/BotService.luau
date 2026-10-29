@@ -303,6 +303,7 @@ local function createBot(slot)
         target = nil,
         lastTargetSeenAt = 0,
         lastKnownTargetPosition = nil,
+        investigationTurn = 0,
         lastDamageAt = -math.huge,
         coverGoal = nil,
         coverGoalUntil = 0,
@@ -375,10 +376,21 @@ local function patrolGoal(bot)
     return points[(bot.slot * 3 + math.floor(os.clock() / 7)) % #points + 1]
 end
 
+-- A short, bounded search of a VERIFIED earlier sighting prevents instant
+-- patrol resets without granting bots knowledge of invisible enemies.
+local SEARCH_MEMORY_SECONDS = 9
+
 local function navigationGoal(bot, target, canSee)
     local now = os.clock()
     if not target then
         BotTactics.reset(bot)
+        if bot.lastKnownTargetPosition
+            and (now - bot.lastTargetSeenAt) < SEARCH_MEMORY_SECONDS then
+            return BotTactics.investigateGoal(bot, bot.lastKnownTargetPosition,
+                now - bot.lastTargetSeenAt, now)
+                or patrolGoal(bot)
+        end
+        bot.lastKnownTargetPosition = nil
         return patrolGoal(bot)
     end
     local _, targetRoot = targetInfo(target)
@@ -520,9 +532,15 @@ local function updateBot(bot, dt)
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local target = phase == "LIVE" and getTargetModel(bot, config.MaximumSightDistance) or nil
     if target ~= bot.target then
+        local previousTarget = bot.target
         bot.target = target
-        if not target then
-            bot.lastKnownTargetPosition = nil
+        -- Preserve only verified old sightings. Forget dead opponents instead
+        -- of investigating an already-confirmed elimination.
+        if not target and previousTarget then
+            local previousHumanoid = previousTarget:FindFirstChildOfClass("Humanoid")
+            if not previousHumanoid or previousHumanoid.Health <= 0 then
+                bot.lastKnownTargetPosition = nil
+            end
         end
         bot.reactionReadyAt = now + bot.skill.reaction
         bot.aimDirection = bot.root.CFrame.LookVector
@@ -674,6 +692,7 @@ function BotService.resetRound()
             bot.stuckRecoveries = 0
             bot.lastTargetSeenAt = 0
             bot.lastKnownTargetPosition = nil
+            bot.investigationTurn = 0
             bot.lastDamageAt = -math.huge
             BotTactics.reset(bot)
             bot.aimDirection = bot.root.CFrame.LookVector

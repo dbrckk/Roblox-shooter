@@ -107,6 +107,35 @@ function BotTactics.defensiveGoal(bot, knownPosition, now)
     return selectCover(bot, knownPosition, now)
 end
 
+-- Bounded investigation after a formerly visible target is lost.
+-- Movement uses ONLY the last verified sighting, never the hidden target.
+-- Two safe side sweeps plus the observed point, with ground-height checks
+-- so an investigation cannot send a bot onto a freight container roof.
+function BotTactics.investigateGoal(bot, lastSeen, elapsed, now)
+    if not lastSeen or elapsed < 0 or elapsed >= 9 then return nil end
+    local current = bot.root.Position
+    local flat = Vector3.new(lastSeen.X - current.X, 0, lastSeen.Z - current.Z)
+    local toward
+    if flat.Magnitude > 0.15 then
+        toward = flat.Unit
+    else
+        local look = bot.root.CFrame.LookVector
+        local projected = Vector3.new(look.X, 0, look.Z)
+        toward = projected.Magnitude > 0.15 and projected.Unit or Vector3.new(0, 0, -1)
+    end
+    local side = Vector3.new(-toward.Z, 0, toward.X) * bot.strafeSign
+    local phase = math.floor(elapsed / 3.0)
+    local raw = lastSeen
+    if phase == 1 then
+        raw = lastSeen + side * 12
+    elseif phase >= 2 then
+        raw = lastSeen - side * 13
+    end
+    local params = environmentParams(bot)
+    return groundedGoal(bot, raw, params)
+        or groundedGoal(bot, lastSeen, params)
+end
+
 function BotTactics.flankGoal(bot, lastKnownPosition, now)
     if not lastKnownPosition then return nil end
     -- Stable finite-duration search; never follow the invisible target's
