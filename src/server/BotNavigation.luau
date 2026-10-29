@@ -9,7 +9,7 @@ local rnd = Random.new()
 local WAYPOINT_REACH = 4.5
 local GOAL_REPATH_DISTANCE = 20
 
-local function raycastEnvironment(bot, origin, destination)
+local function environmentParams(bot)
     local ignore = { bot.model }
     local bots = Workspace:FindFirstChild("NeonStrikeBots")
     if bots then table.insert(ignore, bots) end
@@ -20,7 +20,7 @@ local function raycastEnvironment(bot, origin, destination)
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = ignore
     params.IgnoreWater = true
-    return Workspace:Raycast(origin, destination - origin, params)
+    return params
 end
 
 local function directRouteClear(bot, goal)
@@ -32,11 +32,14 @@ local function directRouteClear(bot, goal)
     local flat = Vector3.new(goal.X - origin.X, 0, goal.Z - origin.Z)
     if flat.Magnitude <= 2 then return true end
     local side = Vector3.new(-flat.Z, 0, flat.X).Unit * 1.3
+    -- One shared filter for the full capsule probe, not five allocations
+    -- and five scans of all connected players per bot navigation tick.
+    local params = environmentParams(bot)
     local low = Vector3.new(0, -1.2, 0)
     local high = Vector3.new(0, 1.1, 0)
     for _, offset in ipairs({ low, low + side, low - side, high + side, high - side }) do
         local start = origin + offset
-        if raycastEnvironment(bot, start, start + flat) then
+        if Workspace:Raycast(start, flat, params) then
             return false
         end
     end
