@@ -99,6 +99,11 @@ function BotTactics.defensiveGoal(bot, knownPosition, now)
     if bot.coverGoal and now < (bot.coverGoalUntil or 0) then
         return bot.coverGoal
     end
+    -- If the selected lane is unreachable, do not resample the same lane
+    -- indefinitely. Clear it and alternate the next retreat side.
+    if bot.coverGoal and bot.stuckRecoveries and bot.stuckRecoveries > 0 then
+        bot.strafeSign = -bot.strafeSign
+    end
     return selectCover(bot, knownPosition, now)
 end
 
@@ -112,10 +117,12 @@ function BotTactics.flankGoal(bot, lastKnownPosition, now)
     local toward = flat.Unit
     local side = Vector3.new(-toward.Z, 0, toward.X) * bot.strafeSign
     local destination = lastKnownPosition - toward * 10 + side * 18
-    if math.abs(destination.X) < EDGE_LIMIT and math.abs(destination.Z) < EDGE_LIMIT then
-        return destination
-    end
-    return lastKnownPosition
+    local params = environmentParams(bot)
+    -- Ground the flank on walkable surfaces and reject ledges or freight
+    -- containers. A blocked flank falls back to the last observed position.
+    local grounded = groundedGoal(bot, destination, params)
+    if grounded then return grounded end
+    return groundedGoal(bot, lastKnownPosition, params) or bot.root.Position
 end
 
 return BotTactics
