@@ -216,21 +216,20 @@ local function applyLocalMoveSpeed()
 	end
 end
 
--- Bind visibility to character replication, not RenderStepped. Mobile
--- cameras run at 30-60+ FPS; walking descendants every frame is wasteful.
+-- Cache parts when the character streams in. Roblox's camera transparency
+-- controller can overwrite LocalTransparencyModifier each render frame, so
+-- only the cached parts (not GetDescendants) are reconciled after camera updates.
 local visibleRig = nil
 local visibleRigConnection = nil
+local visibleRigParts = {}
 
-local function updateFirstPersonPart(part)
+local function addFirstPersonPart(part)
     if not part:IsA("BasePart") then return end
     local name = string.lower(part.Name)
     local isArm = string.find(name, "arm") ~= nil or string.find(name, "hand") ~= nil
-    if part.Name == "Head" or part.Name == "HumanoidRootPart" or isArm
-        or part:FindFirstAncestorWhichIsA("Accessory") then
-        part.LocalTransparencyModifier = 1
-    else
-        part.LocalTransparencyModifier = 0
-    end
+    local hide = part.Name == "Head" or part.Name == "HumanoidRootPart" or isArm
+        or part:FindFirstAncestorWhichIsA("Accessory") ~= nil
+    table.insert(visibleRigParts, { part = part, transparency = hide and 1 or 0 })
 end
 
 local function ensureBodyVisibility(character)
@@ -240,20 +239,25 @@ local function ensureBodyVisibility(character)
         visibleRigConnection = nil
     end
     visibleRig = character
+    table.clear(visibleRigParts)
     if not character then return end
     for _, part in ipairs(character:GetDescendants()) do
-        updateFirstPersonPart(part)
+        addFirstPersonPart(part)
     end
-    visibleRigConnection = character.DescendantAdded:Connect(function(part)
-        -- Accessories/meshes can stream in after CharacterAdded.
-        updateFirstPersonPart(part)
-    end)
+    visibleRigConnection = character.DescendantAdded:Connect(addFirstPersonPart)
 end
 
 local function showLocalBody()
     local character, humanoid = getCharacterParts()
     ensureBodyVisibility(character)
     if not humanoid then return end
+
+    for _, entry in ipairs(visibleRigParts) do
+        local part = entry.part
+        if part.Parent and part.LocalTransparencyModifier ~= entry.transparency then
+            part.LocalTransparencyModifier = entry.transparency
+        end
+    end
 
     local offset = Vector3.new(0, -0.05, -0.45)
     if os.clock() < localSlidingUntil then
