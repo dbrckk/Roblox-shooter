@@ -110,6 +110,7 @@ local function createRecord(player)
         earned = zero(),
         committed = zero(),
         loaded = false,
+        triedAcquire = false,
         saving = false,
         closing = false,
         lastWriteAt = 0,
@@ -140,6 +141,7 @@ end
 local function acquire(player, record)
     if record.loaded or record.saving or record.closing or not store then return end
     record.saving = true
+    record.triedAcquire = true
     local success, result = retry(function()
         local timestamp = os.time()
         return store:UpdateAsync(keyFor(player), function(previous)
@@ -187,7 +189,10 @@ local function acquire(player, record)
 end
 
 local function flush(player, record, release)
-    if not store or not record.loaded then return false end
+    -- A load may have successfully acquired its lock before Roblox drops its
+    -- response. On PlayerRemoving, safely release ONLY our GUID-owned lock
+    -- and commit pending XP even when the initial acknowledgement was lost.
+    if not store or (not record.loaded and not release) then return false end
     local waitStarted = os.clock()
     while record.saving and os.clock() - waitStarted < 12 do
         task.wait(0.15)
@@ -314,7 +319,9 @@ function ProgressionService.start()
         -- A pending UpdateAsync load might complete after PlayerRemoving.
         local untilTime = os.clock() + 12
         while record.saving and os.clock() < untilTime do task.wait(0.15) end
-        if record.loaded then flush(player, record, true) end
+        if record.loaded or record.triedAcquire then
+            flush(player, record, true)
+        end
         records[player] = nil
     end)
 
@@ -338,7 +345,7 @@ function ProgressionService.start()
     game:BindToClose(function()
         local pending = 0
         for player, record in pairs(records) do
-            if record.loaded then
+            if record.loaded or record.triedAcquire then
                 pending += 1
                 task.spawn(function()
                     flush(player, record, true)
