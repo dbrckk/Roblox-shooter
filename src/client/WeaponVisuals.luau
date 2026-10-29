@@ -91,17 +91,40 @@ function WeaponVisuals:_addPart(model, className, name, size, color, offset, mat
 	return part
 end
 
+-- Tactical first-person arms: matte fabric sleeves, reinforced gloves and
+-- restrained olive accents, consistent with the VANGUARD industrial palette.
+-- These are one local viewmodel's cosmetic parts, never server hitboxes.
 function WeaponVisuals:_addArms(model, leftHandOffset, rightHandOffset)
-	local sleeveColor = Color3.fromRGB(95, 106, 90)
-	local handColor = Color3.fromRGB(224, 178, 132)
+    local fabric = Color3.fromRGB(100, 113, 92)
+    local glove = Color3.fromRGB(42, 49, 46)
+    local padding = Color3.fromRGB(78, 89, 78)
+    local strap = Color3.fromRGB(128, 133, 107)
 
-	self:_addPart(model, "Part", "RightForearm", Vector3.new(0.24, 0.24, 0.72), sleeveColor, rightHandOffset * CFrame.new(0, 0.06, 0.28) * CFrame.Angles(math.rad(8), 0, 0), MATERIAL_SMOOTH)
-	self:_addPart(model, "Part", "RightHand", Vector3.new(0.28, 0.22, 0.26), handColor, rightHandOffset * CFrame.new(0, 0, -0.13), MATERIAL_SMOOTH)
+    local function createArm(side, pose, forearmLength)
+        local sleeve = pose * CFrame.new(0, 0.06, 0.28) * CFrame.Angles(math.rad(8), 0, 0)
+        self:_addPart(model, "Part", side .. "Forearm",
+            Vector3.new(0.27, 0.28, forearmLength), fabric, sleeve, Enum.Material.Fabric)
+        self:_addPart(model, "Part", side .. "SleeveHem",
+            Vector3.new(0.31, 0.31, 0.14), padding,
+            pose * CFrame.new(0, 0.05, 0.13), MATERIAL_SMOOTH)
+        self:_addPart(model, "Part", side .. "Glove",
+            Vector3.new(0.29, 0.22, 0.27), glove,
+            pose * CFrame.new(0, 0, -0.13), MATERIAL_SMOOTH)
+        self:_addPart(model, "Part", side .. "KnucklePanel",
+            Vector3.new(0.27, 0.055, 0.19), padding,
+            pose * CFrame.new(0, 0.133, -0.18), MATERIAL_SMOOTH)
+        self:_addPart(model, "Part", side .. "WristStrap",
+            Vector3.new(0.33, 0.08, 0.12), strap,
+            pose * CFrame.new(0, 0.075, 0.065), Enum.Material.Fabric)
+        self:_addPart(model, "Part", side .. "SleevePanel",
+            Vector3.new(0.17, 0.025, 0.29), padding,
+            pose * CFrame.new(0, 0.22, 0.38), Enum.Material.Fabric)
+    end
 
-	if leftHandOffset then
-		self:_addPart(model, "Part", "LeftForearm", Vector3.new(0.24, 0.24, 0.74), sleeveColor, leftHandOffset * CFrame.new(0, 0.04, 0.3) * CFrame.Angles(math.rad(8), 0, 0), MATERIAL_SMOOTH)
-		self:_addPart(model, "Part", "LeftHand", Vector3.new(0.28, 0.22, 0.26), handColor, leftHandOffset * CFrame.new(0, 0, -0.12), MATERIAL_SMOOTH)
-	end
+    createArm("Right", rightHandOffset, 0.72)
+    if leftHandOffset then
+        createArm("Left", leftHandOffset, 0.74)
+    end
 end
 
 function WeaponVisuals:_clearModel()

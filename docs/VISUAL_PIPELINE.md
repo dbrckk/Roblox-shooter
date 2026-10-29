@@ -32,3 +32,7 @@ The current Roblox Parts are tangible 3D geometry **not** textured skinned meshe
 
 ## REA evidence
 The architecture was informed by an actual run of REA 6.8.0 against the MIT source of Arena FPS and careful inspection of its AI/mode files. See `docs/REA_RESULTS.md`. REA did not extract proprietary RIVALS content.
+
+## Improved first-person equipment (29 October 2026)
+
+All five native procedural weapons now show reinforced tactical gloves, matte fabric sleeves, wrist straps and knuckle guards instead of bare skin-coloured rectangular hands. These components are local-only viewmodel parts; they are never used as player hitboxes or projectiles. Materials use built-in Roblox Fabric/Metal/SmoothPlastic for immediate appearance without requiring imported asset IDs; this is **not** a claim of real imported PBR texture maps. Impact fragments and spectator tracers are lightweight and controlled separately by the new graphics settings. Verify the hands/weapon overlap while aiming, sprinting, reloading and firing on a phone and in Studio.
