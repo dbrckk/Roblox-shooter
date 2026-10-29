@@ -92,7 +92,8 @@ jobs:
           python3 -m py_compile tools/assetforge/*.py scripts/upload_vanguard_models.py
           python3 scripts/upload_vanguard_models.py --help > /dev/null
           python3 scripts/test_vanguard_upload_contract.py
-          echo "Asset generation and owner-controlled Open Cloud uploader passed offline checks."
+          python3 scripts/test_audit_vanguard_glb.py
+          echo "Asset generation, GLB material parser and Open Cloud upload security checks passed."
 
       - name: Verify visual identity and PBR palette consistency
         shell: bash

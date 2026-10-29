@@ -1,0 +1,51 @@
+name: Audit archived VANGUARD GLB/PBR material data
+
+on:
+  push:
+    paths:
+      - "scripts/audit_vanguard_glb.py"
+      - "scripts/test_audit_vanguard_glb.py"
+      - ".github/workflows/audit-pbr-release.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  glb-content:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out IRON YARD
+        uses: actions/checkout@v4
+
+      - name: Run offline parser regression tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/audit_vanguard_glb.py scripts/test_audit_vanguard_glb.py
+          python3 scripts/test_audit_vanguard_glb.py
+
+      - name: Download the actual latest importable 1K VANGUARD asset release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/release
+          gh release download iron-yard-assets-5cd834601f9e \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern vanguard-3d-pbr-kit.zip \
+            --dir build/release
+          unzip -q build/release/vanguard-3d-pbr-kit.zip -d build/release
+          test -f build/release/build/assets/manifest.json
+
+      - name: Inspect all four real GLB models and embedded PBR channels
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/audit_vanguard_glb.py --assets build/release/build/assets | tee glb-audit.txt
+          echo "### Four original 1K VANGUARD models: structural PBR audit" >> "$GITHUB_STEP_SUMMARY"
+          cat glb-audit.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Audit only: no Roblox asset upload or game publication occurred." >> "$GITHUB_STEP_SUMMARY"
