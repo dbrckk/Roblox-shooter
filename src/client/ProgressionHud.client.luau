@@ -16,7 +16,7 @@ gui.Parent = playerGui
 
 local panel = Instance.new("Frame")
 panel.Name = "Career"
-panel.Size = UDim2.fromOffset(205, 67)
+panel.Size = UDim2.fromOffset(205, 78)
 panel.Position = UDim2.fromOffset(12, 291)
 panel.BackgroundColor3 = Color3.fromRGB(37, 43, 43)
 panel.BackgroundTransparency = 0.10
@@ -57,6 +57,26 @@ local details = label("Stats", UDim2.fromOffset(10, 27), UDim2.fromOffset(185, 1
 local statusLabel = label("Status", UDim2.fromOffset(10, 48), UDim2.fromOffset(185, 13),
     9, Color3.fromRGB(173, 182, 170))
 
+local track = Instance.new("Frame")
+track.Name = "RankXPTrack"
+track.Position = UDim2.fromOffset(10, 64)
+track.Size = UDim2.fromOffset(185, 6)
+track.BorderSizePixel = 0
+track.BackgroundColor3 = Color3.fromRGB(68, 75, 69)
+track.Parent = panel
+local trackCorner = Instance.new("UICorner")
+trackCorner.CornerRadius = UDim.new(1, 0)
+trackCorner.Parent = track
+local fill = Instance.new("Frame")
+fill.Name = "RankXPFill"
+fill.Size = UDim2.fromScale(0, 1)
+fill.BorderSizePixel = 0
+fill.BackgroundColor3 = Color3.fromRGB(219, 176, 95)
+fill.Parent = track
+local fillCorner = Instance.new("UICorner")
+fillCorner.CornerRadius = UDim.new(1, 0)
+fillCorner.Parent = fill
+
 local function safeCount(attribute)
     local value = player:GetAttribute(attribute)
     if typeof(value) ~= "number" then return 0 end
@@ -70,6 +90,9 @@ local function update()
     local kills = safeCount("IronYardLifetimeEliminations")
     local wins = safeCount("IronYardLifetimeVictories")
     local nextLevel = 250 * level * level
+    local currentLevelXP = 250 * (level - 1) * (level - 1)
+    fill.Size = UDim2.fromScale(level >= 1000 and 1
+        or math.clamp((xp - currentLevelXP) / math.max(1, nextLevel - currentLevelXP), 0, 1), 1)
 
     title.Text = string.format("RANK %d    |    %d XP", level, xp)
     if level < 1000 then
