@@ -216,36 +216,53 @@ local function applyLocalMoveSpeed()
 	end
 end
 
+-- Bind visibility to character replication, not RenderStepped. Mobile
+-- cameras run at 30-60+ FPS; walking descendants every frame is wasteful.
+local visibleRig = nil
+local visibleRigConnection = nil
+
+local function updateFirstPersonPart(part)
+    if not part:IsA("BasePart") then return end
+    local name = string.lower(part.Name)
+    local isArm = string.find(name, "arm") ~= nil or string.find(name, "hand") ~= nil
+    if part.Name == "Head" or part.Name == "HumanoidRootPart" or isArm
+        or part:FindFirstAncestorWhichIsA("Accessory") then
+        part.LocalTransparencyModifier = 1
+    else
+        part.LocalTransparencyModifier = 0
+    end
+end
+
+local function ensureBodyVisibility(character)
+    if visibleRig == character then return end
+    if visibleRigConnection then
+        visibleRigConnection:Disconnect()
+        visibleRigConnection = nil
+    end
+    visibleRig = character
+    if not character then return end
+    for _, part in ipairs(character:GetDescendants()) do
+        updateFirstPersonPart(part)
+    end
+    visibleRigConnection = character.DescendantAdded:Connect(function(part)
+        -- Accessories/meshes can stream in after CharacterAdded.
+        updateFirstPersonPart(part)
+    end)
+end
+
 local function showLocalBody()
-	local character, humanoid = getCharacterParts()
-	if not character then
-		return
-	end
+    local character, humanoid = getCharacterParts()
+    ensureBodyVisibility(character)
+    if not humanoid then return end
 
-	if humanoid then
-		local offset = Vector3.new(0, -0.05, -0.45)
-		if os.clock() < localSlidingUntil then
-			offset = Vector3.new(0, -0.55, -0.52)
-		elseif localWallRunning then
-			local sideOffset = localWallSide == "Left" and 0.22 or -0.22
-			offset = Vector3.new(sideOffset, -0.08, -0.48)
-		end
-
-		humanoid.CameraOffset = offset
-	end
-
-	for _, descendant in ipairs(character:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			local partName = string.lower(descendant.Name)
-			local isArmPart = string.find(partName, "arm") ~= nil or string.find(partName, "hand") ~= nil
-
-			if descendant.Name == "Head" or descendant.Name == "HumanoidRootPart" or isArmPart or descendant:FindFirstAncestorWhichIsA("Accessory") then
-				descendant.LocalTransparencyModifier = 1
-			else
-				descendant.LocalTransparencyModifier = 0
-			end
-		end
-	end
+    local offset = Vector3.new(0, -0.05, -0.45)
+    if os.clock() < localSlidingUntil then
+        offset = Vector3.new(0, -0.55, -0.52)
+    elseif localWallRunning then
+        local sideOffset = localWallSide == "Left" and 0.22 or -0.22
+        offset = Vector3.new(sideOffset, -0.08, -0.48)
+    end
+    humanoid.CameraOffset = offset
 end
 
 local function setSprinting(enabled)
