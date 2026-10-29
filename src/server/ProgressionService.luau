@@ -247,6 +247,14 @@ end
 
 local function loadOrRetry(player, record)
     if not isLive(player, record) or record.loaded then return end
+    if not store and not RunService:IsStudio() and game.GameId ~= 0 then
+        -- GetDataStore itself may fail transiently. Recover on the next
+        -- autosave tick rather than freezing every player's status forever.
+        local ok, candidate = pcall(function()
+            return DataStoreService:GetDataStore(STORE_NAME)
+        end)
+        if ok then store = candidate end
+    end
     if not store then
         setStatus(player, record, RunService:IsStudio() and "STUDIO" or "UNAVAILABLE")
         return
