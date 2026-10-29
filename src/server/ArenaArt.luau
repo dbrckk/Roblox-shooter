@@ -234,6 +234,145 @@ local function silhouettes(parent)
     end
 end
 
+-- Secondary architecture: real industrial scale without changing any map collider.
+-- Every component is non-colliding, non-queryable and locally LOD-culled.
+-- Platforms, freight containers and warehouse gameplay volumes are unchanged.
+local function warehouseArchitecture(parent)
+    local roofHeight = 21.5
+    -- Open roof trusses are readable from ground level and make the central
+    -- processing bay feel like a large industrial building instead of a maze.
+    for bay = 0, 4 do
+        local z = -22 + bay * 20
+        for _, side in ipairs({ -1, 1 }) do
+            prop(parent, "WAREHOUSE / roof column " .. bay .. ":" .. side,
+                Vector3.new(0.95, 6.2, 0.95),
+                CFrame.new(side * 29, 19.1, z), COLOR.slate, Enum.Material.Metal, "Core")
+            span(parent, "WAREHOUSE / diagonal brace " .. bay .. ":" .. side,
+                Vector3.new(side * 29, 20.3, z),
+                Vector3.new(side * 18, roofHeight + 1.2, z),
+                0.34, COLOR.steel, "Detail")
+        end
+        span(parent, "WAREHOUSE / overhead truss " .. bay,
+            Vector3.new(-30, roofHeight, z),
+            Vector3.new(30, roofHeight, z), 0.72, COLOR.steel, "Core")
+        prop(parent, "WAREHOUSE / truss center splice " .. bay,
+            Vector3.new(1.3, 1.0, 0.85), CFrame.new(0, roofHeight, z),
+            COLOR.sand, Enum.Material.Metal, "Detail")
+    end
+
+    -- Longitudinal roof purlins keep an uninterrupted open-floor shooting
+    -- lane. They cast only strategic core shadows, never physical collision.
+    for _, x in ipairs({ -28, -15, 0, 15, 28 }) do
+        prop(parent, "WAREHOUSE / roof purlin " .. x,
+            Vector3.new(0.43, 0.42, 86), CFrame.new(x, roofHeight + 1.0, 18),
+            COLOR.slate, Enum.Material.Metal, "Detail")
+    end
+
+    -- Roll-up doors are thin facades over an ALREADY-solid warehouse bulkhead
+    -- at z=61. No fake traversable entrance and no misleading hit geometry.
+    for index, x in ipairs({ -20, 0, 20 }) do
+        local faceZ = 62.68
+        prop(parent, "WAREHOUSE / shutter " .. index,
+            Vector3.new(14.2, 10.0, 0.14), CFrame.new(x, 6, faceZ),
+            COLOR.steel, Enum.Material.Metal, "Core")
+        for row = 0, 5 do
+            prop(parent, "WAREHOUSE / shutter slat " .. index .. ":" .. row,
+                Vector3.new(13.5, 0.09, 0.08),
+                CFrame.new(x, 1.5 + row * 1.65, faceZ + 0.10),
+                row % 2 == 0 and COLOR.slate or COLOR.wall,
+                Enum.Material.Metal, "Detail")
+        end
+        for _, side in ipairs({ -1, 1 }) do
+            prop(parent, "WAREHOUSE / shutter track " .. index .. ":" .. side,
+                Vector3.new(0.33, 11.1, 0.29),
+                CFrame.new(x + side * 7.35, 6, faceZ + 0.09),
+                COLOR.ink, Enum.Material.Metal, "Core")
+        end
+        prop(parent, "WAREHOUSE / dock marker " .. index,
+            Vector3.new(3.0, 1.2, 0.12),
+            CFrame.new(x, 13.8, faceZ), COLOR.orange,
+            Enum.Material.SmoothPlastic, "Detail")
+    end
+
+    for _, side in ipairs({ -1, 1 }) do
+        -- The outer side-wall face is at x= +/-31.5.
+        local x = side * 31.72
+        for index = 0, 5 do
+            local z = -23 + index * 15
+            prop(parent, "WAREHOUSE / vertical conduit " .. side .. ":" .. index,
+                Vector3.new(0.23, 11.0, 0.23), CFrame.new(x, 8.7, z),
+                COLOR.ink, Enum.Material.Metal, "Detail")
+            prop(parent, "WAREHOUSE / junction box " .. side .. ":" .. index,
+                Vector3.new(0.58, 1.15, 0.76), CFrame.new(x + side * 0.19, 12.6, z),
+                COLOR.sand, Enum.Material.Metal, "Detail")
+        end
+    end
+end
+
+local function catwalkSafety(parent)
+    for _, side in ipairs({ -1, 1 }) do
+        local cx = side * 118
+        -- MapService's elevated catwalk occupies x=86..150 and z=-26..26,
+        -- its top surface is y=13; all these pieces are visual only.
+        for _, z in ipairs({ -25.4, 25.4 }) do
+            for index = 0, 6 do
+                local x = cx - 30 + index * 10
+                prop(parent, "CATWALK / rail post " .. side .. ":" .. z .. ":" .. index,
+                    Vector3.new(0.35, 4.1, 0.35), CFrame.new(x, 15.0, z),
+                    COLOR.slate, Enum.Material.Metal, "Detail")
+            end
+            prop(parent, "CATWALK / safety rail " .. side .. ":" .. z,
+                Vector3.new(61.5, 0.33, 0.32), CFrame.new(cx, 17.0, z),
+                COLOR.orange, Enum.Material.Metal, "Detail")
+            prop(parent, "CATWALK / kick plate " .. side .. ":" .. z,
+                Vector3.new(61.5, 0.55, 0.17), CFrame.new(cx, 13.3, z),
+                COLOR.ink, Enum.Material.Metal, "Detail")
+        end
+        -- Deck drainage channels add large-scale texture to the platform
+        -- without the expense of full PBR maps before Studio asset import.
+        for index = 1, 5 do
+            local x = cx - 30 + index * 10
+            prop(parent, "CATWALK / drain grate " .. side .. ":" .. index,
+                Vector3.new(0.19, 0.05, 42), CFrame.new(x, 13.045, 0),
+                COLOR.ink, Enum.Material.Metal, "Detail")
+        end
+        for _, z in ipairs({ -18, 18 }) do
+            prop(parent, "CATWALK / warning panel " .. side .. ":" .. z,
+                Vector3.new(10, 0.052, 1.0), CFrame.new(cx, 13.055, z),
+                COLOR.orange, Enum.Material.SmoothPlastic, "Detail")
+        end
+    end
+end
+
+local function gantryRigging(parent)
+    -- Suspended spreaders and cable runs above the combat area: architectural
+    -- silhouettes, not physics ropes, and NEVER a hidden bullet blocker.
+    for i, v in ipairs({
+        Vector3.new(-146, 0, -145), Vector3.new(146, 0, -145),
+        Vector3.new(-146, 0, 145), Vector3.new(146, 0, 145),
+    }) do
+        local trolleyX = v.X + (i % 2 == 0 and -8 or 8)
+        prop(parent, "GANTRY / trolley carriage " .. i, Vector3.new(6, 1.2, 5.2),
+            CFrame.new(trolleyX, 52.0, v.Z), COLOR.ink, Enum.Material.Metal, "Core")
+        for _, dx in ipairs({ -2.1, 2.1 }) do
+            for _, dz in ipairs({ -1.6, 1.6 }) do
+                prop(parent, "GANTRY / winch cable " .. i .. ":" .. dx .. ":" .. dz,
+                    Vector3.new(0.10, 11.0, 0.10),
+                    CFrame.new(trolleyX + dx, 45.5, v.Z + dz),
+                    COLOR.slate, Enum.Material.Metal, "Detail")
+            end
+        end
+        prop(parent, "GANTRY / container spreader " .. i,
+            Vector3.new(12.6, 0.9, 4.8), CFrame.new(trolleyX, 39.8, v.Z),
+            COLOR.orange, Enum.Material.Metal, "Core")
+        for _, dx in ipairs({ -5.7, 5.7 }) do
+            prop(parent, "GANTRY / spreader foot " .. i .. ":" .. dx,
+                Vector3.new(0.7, 1.35, 4.5), CFrame.new(trolleyX + dx, 39.0, v.Z),
+                COLOR.ink, Enum.Material.Metal, "Detail")
+        end
+    end
+end
+
 function ArenaArt.build(arena)
     -- Internal folder identifier retained for the existing client LOD script.
     local previous = arena:FindFirstChild("NeonStrikeDecor")
@@ -261,6 +400,9 @@ function ArenaArt.build(arena)
     laneMarkings(decor)
     containerDetails(decor)
     cornerCranes(decor)
+    warehouseArchitecture(decor)
+    catwalkSafety(decor)
+    gantryRigging(decor)
     silhouettes(decor)
 
     poster(decor, "SIGN / west logistics", Vector3.new(-142, 17, 134),
