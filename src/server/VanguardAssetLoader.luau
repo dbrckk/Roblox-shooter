@@ -29,6 +29,18 @@ local function pieceName(name)
     return nil
 end
 
+local function hasCompleteTemplateSet(folder)
+    for _, palette in ipairs(COLORS) do
+        local variant = folder:FindFirstChild(palette)
+        if not variant then return false end
+        for _, piece in ipairs(PIECES) do
+            local mesh = variant:FindFirstChild(piece)
+            if not mesh or not mesh:IsA("MeshPart") then return false end
+        end
+    end
+    return true
+end
+
 local function extractPackage(owner, palette)
     local id = AssetIds.paletteModelIds[palette]
     assert(typeof(id) == "number" and id > 0 and id % 1 == 0,
@@ -70,28 +82,9 @@ local function extractPackage(owner, palette)
     paletteFolder.Parent = owner
 end
 
-function VanguardAssetLoader.start()
-    if started then return end
-    started = true
-    Workspace:SetAttribute("IronYardPbrTemplatesLoaded", false)
-
-    -- Preserve manually imported Studio templates; never overwrite user work.
-    if ServerStorage:FindFirstChild("VanguardTemplates") then
-        return
-    end
-    if typeof(AssetIds) ~= "table" or typeof(AssetIds.paletteModelIds) ~= "table" then
-        warn("[IRON YARD] Missing VANGUARD asset registry; using procedural visuals")
-        return
-    end
-    if game.CreatorType ~= Enum.CreatorType.User or game.CreatorId ~= AssetIds.ownerUserId then
-        -- Foreign/group experiences must not load another user's assets.
-        return
-    end
-    for _, palette in ipairs(COLORS) do
-        local id = AssetIds.paletteModelIds[palette]
-        if typeof(id) ~= "number" or id <= 0 then return end
-    end
-
+-- Uploading/importing a PBR GLB can take seconds. NEVER block game
+-- initialization, spawning or matchmaking on remote asset availability.
+local function loadConfiguredPbr()
     local staging = Instance.new("Folder")
     staging.Name = "_VanguardTemplatesStaging"
     local success, message = pcall(function()
@@ -99,17 +92,55 @@ function VanguardAssetLoader.start()
             extractPackage(staging, palette)
         end
     end)
-    if not success then
+    if not success or not hasCompleteTemplateSet(staging) then
         staging:Destroy()
-        warn("[IRON YARD] Imported VANGUARD models are incomplete; procedural fallback: "
+        Workspace:SetAttribute("IronYardPbrStatus", "FALLBACK")
+        warn("[IRON YARD] PBR package import incomplete; keeping procedural avatars: "
             .. tostring(message))
         return
     end
-
+    if ServerStorage:FindFirstChild("VanguardTemplates") then
+        -- A Studio or plugin import may have appeared during asynchronous load.
+        staging:Destroy()
+        Workspace:SetAttribute("IronYardPbrStatus", "MANUAL")
+        return
+    end
     staging.Name = "VanguardTemplates"
     staging.Parent = ServerStorage
     Workspace:SetAttribute("IronYardPbrTemplatesLoaded", true)
-    print("[IRON YARD] Loaded 28 owner-controlled PBR MeshParts across four palettes.")
+    Workspace:SetAttribute("IronYardPbrStatus", "READY")
+    print("[IRON YARD] Owner-controlled PBR kit ready; new bots use MeshParts.")
+end
+
+function VanguardAssetLoader.start()
+    if started then return end
+    started = true
+    Workspace:SetAttribute("IronYardPbrTemplatesLoaded", false)
+    Workspace:SetAttribute("IronYardPbrStatus", "DISABLED")
+
+    local manual = ServerStorage:FindFirstChild("VanguardTemplates")
+    if manual then
+        local valid = hasCompleteTemplateSet(manual)
+        Workspace:SetAttribute("IronYardPbrTemplatesLoaded", valid)
+        Workspace:SetAttribute("IronYardPbrStatus", valid and "MANUAL" or "FALLBACK")
+        return
+    end
+    if typeof(AssetIds) ~= "table" or typeof(AssetIds.paletteModelIds) ~= "table" then
+        warn("[IRON YARD] Missing asset registry; using procedural visuals")
+        return
+    end
+    if game.CreatorType ~= Enum.CreatorType.User or game.CreatorId ~= AssetIds.ownerUserId then
+        return -- No cross-creator insertion.
+    end
+    for _, palette in ipairs(COLORS) do
+        local id = AssetIds.paletteModelIds[palette]
+        if typeof(id) ~= "number" or id <= 0 or id % 1 ~= 0 then
+            return
+        end
+    end
+
+    Workspace:SetAttribute("IronYardPbrStatus", "LOADING")
+    task.spawn(loadConfiguredPbr)
 end
 
 return VanguardAssetLoader

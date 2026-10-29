@@ -84,3 +84,7 @@ Roblox permet d'envoyer des fichiers `.glb` comme assets **Model** via son API o
 **Vérifications indispensables :** (a) la taille de chaque GLB doit être inférieure à 20 Mo, (b) les modèles doivent être autorisés et approuvés par Roblox, (c) ils doivent inclure sept MeshParts identifiables et leurs textures PBR, (d) les permissions InsertService doivent autoriser le propriétaire de l'expérience, (e) leur rendu/impact Android doit être mesuré. La CI GitHub ne valide pas (b) à (e). Aucun upload Roblox n'a été effectué sans cette clé.
 
 Documentation officielle : https://create.roblox.com/docs/cloud/guides/usage-assets
+
+## Activation sans blocage du serveur — 29 octobre 2026
+
+Le loader Roblox charge désormais les quatre packages en tâche asynchrone, en construisant les 28 MeshParts **dans un dossier provisoire**. Le serveur publie `IronYardPbrStatus = LOADING / READY / FALLBACK / MANUAL / DISABLED`. Il ne rend les templates visibles qu'après validation complète ; une erreur Roblox, un refus de permissions ou un asset incomplet laisse la version procédurale active sans empêcher les joueurs d'entrer en partie. Les combattants déjà présents ne changent pas d'apparence pendant un duel ; ils sont recréés au début de la **prochaine manche** si les MeshParts deviennent prêts entretemps. Les templates importés manuellement restent prioritaires.

@@ -675,9 +675,12 @@ function BotService.resetRound()
     end
     local rebuild = {}
     for slot, bot in pairs(slots) do
-        if bot.humanoid.Health <= 0 then
-            -- Do not carry dead characters into the next round. The existing
-            -- delayed despawn callback checks identity before removing anything.
+        local requiresPbrUpgrade = Workspace:GetAttribute("IronYardPbrTemplatesLoaded") == true
+            and bot.model:GetAttribute("NeonVisualSource") ~= "PBR_MESH"
+        if bot.humanoid.Health <= 0 or requiresPbrUpgrade then
+            -- Rebuild at the NEXT ROUND rather than modifying an active
+            -- combatant or stalling gameplay while InsertService is loading.
+            -- The old bot's delayed death cleanup checks identity first.
             slots[slot] = nil
             if bot.model.Parent then bot.model:Destroy() end
             table.insert(rebuild, slot)
