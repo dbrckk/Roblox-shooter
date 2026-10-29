@@ -328,6 +328,8 @@ local function createBot(slot)
         animationAt = os.clock(),
         lastPosition = root.Position,
         stuckSince = 0,
+        requestedGoal = nil,
+        stuckRecoveries = 0,
     }
     slots[slot] = bot
     local previousHealth = humanoid.Health
@@ -360,6 +362,9 @@ local function createBot(slot)
 end
 
 local function steerToward(bot, desired)
+    -- Remember the actual movement request for meaningful stuck detection.
+    -- A bot holding cover or arriving at its patrol point is not stuck.
+    bot.requestedGoal = desired
     BotNavigation.steer(bot, desired, function()
         return slots[bot.slot] == bot and bot.model.Parent ~= nil and bot.humanoid.Health > 0
     end)
@@ -551,16 +556,28 @@ local function updateBot(bot, dt)
         bot.humanoid.AutoRotate = true
     end
     BotAnimation.step(bot, now, moved > 0.3, aimPoint ~= nil)
-    if (phase == "LIVE" or phase == "COUNTDOWN") and moved < 0.3 then
+    local goal = bot.requestedGoal
+    local farFromGoal = goal and (Vector3.new(goal.X, 0, goal.Z)
+        - Vector3.new(currentPosition.X, 0, currentPosition.Z)).Magnitude > 7
+    local movingIntent = phase == "LIVE" or phase == "COUNTDOWN"
+    if movingIntent and farFromGoal and moved < 0.3 then
         if bot.stuckSince == 0 then
             bot.stuckSince = now
         elseif now - bot.stuckSince > 2.3 then
             BotNavigation.invalidate(bot)
             bot.humanoid.Jump = true
+            bot.stuckRecoveries += 1
+            -- Force a new flank direction when repeated obstacle avoidance
+            -- is not working. Do not jump in place forever at a reached goal.
+            if bot.stuckRecoveries % 2 == 0 then
+                bot.strafeSign = -bot.strafeSign
+                BotTactics.reset(bot)
+            end
             bot.stuckSince = now
         end
     else
         bot.stuckSince = 0
+        if moved >= 0.3 then bot.stuckRecoveries = 0 end
     end
     bot.lastPosition = currentPosition
 
@@ -646,6 +663,9 @@ function BotService.resetRound()
             bot.ammoRemaining = config.MagazineSize
             bot.reloadUntil = 0
             bot.target = nil
+            bot.requestedGoal = nil
+            bot.stuckSince = 0
+            bot.stuckRecoveries = 0
             bot.lastTargetSeenAt = 0
             bot.lastKnownTargetPosition = nil
             bot.lastDamageAt = -math.huge
