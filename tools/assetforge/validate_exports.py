@@ -34,16 +34,25 @@ def main(root):
         header = path.read_bytes()[:23]
         check(header.startswith(b"Kaydara FBX Binary"), "incorrect FBX header: " + str(path))
         files.append(path)
+    upload_sizes = {}
     for name in names:
         for lod in ("LOD0", "LOD1"):
             p = root / "meshes" / ("vanguard_" + name + "_" + lod + ".glb")
-            size(p, 2048)
+            byte_count = size(p, 2048)
             with p.open("rb") as stream:
                 magic, version, total_bytes = struct.unpack("<4sII", stream.read(12))
             check(magic == b"glTF" and version == 2, "not glTF 2: " + str(p))
-            check(total_bytes == p.stat().st_size, "GLB reported size mismatch: " + str(p))
+            check(total_bytes == byte_count, "GLB reported size mismatch: " + str(p))
+            if lod == "LOD0":
+                upload_sizes[name] = byte_count
+                # Roblox Open Cloud Assets create has a strict 20 MB/file cap.
+                # Fail during asset generation, not after owner authorization.
+                check(byte_count <= 20_000_000,
+                      "LOD0 GLB exceeds Roblox Open Cloud's 20 MB Model limit: "
+                      + str(p) + " (" + str(byte_count) + " bytes)")
             files.append(p)
         check(manifest["polygons_by_color_LOD0"].get(name, 0) > 250, "model not detailed enough: " + name)
+    print("LOD0 Open Cloud upload sizes (bytes):", upload_sizes)
     for name in ["armor", "carbon", "gunmetal", "visor"] + ["accent_" + n for n in names]:
         for kind in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
             path = root / "textures" / (name + "_" + kind + ".png")
@@ -103,6 +112,9 @@ def main(root):
     size(preview, 4096)
     files.extend([preview, root / "vanguard_source.blend"])
     output = (
+        "- **Roblox Open Cloud LOD0 sizes:** "
+        + ", ".join(f"{name}={upload_sizes[name]/1_000_000:.2f} MB" for name in names)
+        + " (maximum 20 MB per Model).\\n"
         "- **7** real FBX mesh parts (R6), **8** GLB 2.0 full-body previews "
         "(4 palettes × 2 LOD), **32** 1024×1024 PBR maps and a Blender source file.\n"
         "- **Studio import still required**: asset IDs and texture uploads not yet registered with Roblox.\n"

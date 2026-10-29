@@ -88,3 +88,7 @@ Documentation officielle : https://create.roblox.com/docs/cloud/guides/usage-ass
 ## Activation sans blocage du serveur — 29 octobre 2026
 
 Le loader Roblox charge désormais les quatre packages en tâche asynchrone, en construisant les 28 MeshParts **dans un dossier provisoire**. Le serveur publie `IronYardPbrStatus = LOADING / READY / FALLBACK / MANUAL / DISABLED`. Il ne rend les templates visibles qu'après validation complète ; une erreur Roblox, un refus de permissions ou un asset incomplet laisse la version procédurale active sans empêcher les joueurs d'entrer en partie. Les combattants déjà présents ne changent pas d'apparence pendant un duel ; ils sont recréés au début de la **prochaine manche** si les MeshParts deviennent prêts entretemps. Les templates importés manuellement restent prioritaires.
+
+## Limite de taille Open Cloud vérifiée pendant l’export
+
+AssetForge refuse désormais de considérer le kit « prêt à importer » si l'un des quatre GLB haute fidélité LOD0 dépasse la limite officielle **20 Mo par asset Model**. Les tailles exactes des quatre GLB apparaissent dans la synthèse de validation et le résumé GitHub Actions. Cette limite porte sur **chaque GLB**, et non sur les 215 Mo de l'archive source qui comprend huit GLB, les textures séparées et la scène Blender. Aucun upload réel n'est déclenché par ce contrôle.
