@@ -36,3 +36,7 @@ The architecture was informed by an actual run of REA 6.8.0 against the MIT sour
 ## Improved first-person equipment (29 October 2026)
 
 All five native procedural weapons now show reinforced tactical gloves, matte fabric sleeves, wrist straps and knuckle guards instead of bare skin-coloured rectangular hands. These components are local-only viewmodel parts; they are never used as player hitboxes or projectiles. Materials use built-in Roblox Fabric/Metal/SmoothPlastic for immediate appearance without requiring imported asset IDs; this is **not** a claim of real imported PBR texture maps. Impact fragments and spectator tracers are lightweight and controlled separately by the new graphics settings. Verify the hands/weapon overlap while aiming, sprinting, reloading and firing on a phone and in Studio.
+
+## 1K PBR source upgrade
+
+AssetForge now produces original 1024×1024 albedo/normal/roughness/metalness textures (32 PNG maps, eight materials). The validator decompresses and checks actual PNG payloads as well as map dimensions; rigid LOD0/LOD1 geometry stays available. This is a Blender source and export upgrade only, not a claim of Roblox-hosted material IDs or runtime Android FPS.

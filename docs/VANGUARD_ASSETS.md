@@ -6,7 +6,7 @@ Le workflow gratuit [Build original VANGUARD 3D/PBR kit](https://github.com/dbrc
 
 - `meshes/vanguard_{olive,sand,slate,rust}_{LOD0,LOD1}.glb` : huit vraies scènes GLB texturées, chaque combattant séparé en sept éléments rigides.
 - `parts/vanguard_{torso,head,left_arm,right_arm,left_leg,right_leg,rifle}.fbx` : sept pièces individuelles au format FBX, UV et matériaux, destinées à l'import Roblox.
-- `textures/` : huit matériaux de texture distincts, 512 × 512 pixels ; pour chacun, `ColorMap`, `NormalMap`, `RoughnessMap` et `MetalnessMap`. Matériaux des palettes olive, sand, slate et rust.
+- `textures/` : huit matériaux de texture distincts, **1 024 × 1 024 pixels sur les futurs exports**, contre 512 × 512 pour les anciens ; pour chacun, `ColorMap`, `NormalMap`, `RoughnessMap` et `MetalnessMap`. Matériaux des palettes olive, sand, slate et rust.
 - `preview/vanguard_contact_sheet.png` : rendu Blender des quatre coloris.
 - `vanguard_source.blend` : scène source éditable, avec textures intégrées.
 - `manifest.json`, `validation_summary.md` : inventaire et contrôles.
@@ -64,3 +64,9 @@ Le script n'est **pas exécuté depuis GitHub Actions** : Studio/Creator et les 
 ## Mise à jour haute fidélité du matériau (28 octobre 2026)
 
 L'export [GitHub Actions 40740282547](https://github.com/dbrckk/Roblox-shooter/actions/runs/40740282547) a réussi et produit la release **[vanguard-assets-f072ddadf892](https://github.com/dbrckk/Roblox-shooter/releases/tag/vanguard-assets-f072ddadf892)**. Les 32 cartes PNG conservent la résolution mobile maîtrisée de 512×512, mais les normales sont maintenant **calculées à partir des gradients d'une hauteur de surface**. Les couleurs et la rugosité réagissent aux joints de plaques, biseaux, micro-rayures et petites zones d'usure, différenciés selon les matériaux. Cette release remplace la précédente pour les futurs imports ; elle n'est pas automatiquement synchronisée dans la place Roblox sans passage par Studio.
+
+## Génération haute résolution (29 octobre 2026)
+
+Le pipeline gratuit AssetForge produit désormais **32 cartes PBR de 1 024 × 1 024 pixels** : huit matériaux combinant ColorMap, NormalMap, RoughnessMap et MetalnessMap. Le contrôle qualité vérifie les dimensions, tous les CRC des chunks PNG, leur décompression et la non-uniformité des textures. Les deux LOD géométriques sont conservés pour les contraintes Android.
+
+Les kits historiques listés plus haut restent en résolution 512 px ; utiliser la **nouvelle release `iron-yard-assets-*` créée par un workflow réussi** pour les textures 1K. Un ensemble 1K doit être profilé sur téléphone : la résolution ne dispense pas de limiter le nombre de matériaux chargés. L'import des MeshParts et des SurfaceAppearance dans Studio est toujours nécessaire. **Le nouveau kit d'export n'est pas automatiquement actif dans le jeu Roblox.**

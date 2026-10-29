@@ -153,7 +153,7 @@ def generate(name, base, out, size, accent=False):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", required=True)
-    parser.add_argument("--size", type=int, default=512)
+    parser.add_argument("--size", type=int, default=1024)
     args = parser.parse_args()
     if args.size < 64 or args.size > 2048 or args.size & (args.size - 1):
         parser.error("size must be a power of two from 64 to 2048")

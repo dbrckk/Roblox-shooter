@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import struct
 import sys
+import zlib
 
 def check(condition, label):
     if not condition:
@@ -23,6 +24,9 @@ def main(root):
     check(manifest["format"]["components"] == pieces, "component manifest mismatch")
     check(manifest["format"]["asset_ids_published"] is False, "cannot claim Studio upload")
     check(manifest["format"]["skinned"] is False, "rigid asset must not claim skin weights")
+    texture_manifest = json.loads((root / "textures" / "texture_manifest.json").read_text(encoding="utf-8"))
+    check(texture_manifest["resolution"] == [1024, 1024], "PBR map resolution mismatch")
+    check(len(texture_manifest["channel_maps"]) == 4, "Missing PBR channels")
     files = []
     for piece in pieces:
         path = root / "parts" / ("vanguard_" + piece + ".fbx")
@@ -44,10 +48,50 @@ def main(root):
         for kind in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap"):
             path = root / "textures" / (name + "_" + kind + ".png")
             size(path, 1024)
-            with path.open("rb") as stream:
-                header = stream.read(24)
-            check(header[:8] == b"\x89PNG\r\n\x1a\n", "bad PNG: " + str(path))
-            check(struct.unpack(">II", header[16:24]) == (512, 512), "wrong PBR map dimensions: " + str(path))
+            payload = path.read_bytes()
+            check(payload[:8] == bytes.fromhex("89504e470d0a1a0a"),
+                  "bad PNG signature: " + str(path))
+            position = 8
+            image_data = bytearray()
+            width = height = None
+            seen_end = False
+            while position < len(payload):
+                check(position + 12 <= len(payload), "truncated PNG chunk: " + str(path))
+                length = struct.unpack(">I", payload[position:position+4])[0]
+                kind_bytes = payload[position+4:position+8]
+                position += 8
+                check(position + length + 4 <= len(payload),
+                      "truncated PNG chunk payload: " + str(path))
+                blob = payload[position:position+length]
+                crc = struct.unpack(">I", payload[position+length:position+length+4])[0]
+                check(zlib.crc32(kind_bytes + blob) & 0xffffffff == crc,
+                      "corrupt PNG CRC: " + str(path))
+                position += length + 4
+                if kind_bytes == b"IHDR":
+                    width, height, depth, color, comp, filt, interlace = struct.unpack(
+                        ">IIBBBBB", blob
+                    )
+                    check((width, height) == (1024, 1024),
+                          "PBR images must be 1024x1024: " + str(path))
+                    check((depth, color, comp, filt, interlace) == (8, 6, 0, 0, 0),
+                          "PBR PNG must be RGBA8 without interlace: " + str(path))
+                elif kind_bytes == b"IDAT":
+                    image_data.extend(blob)
+                elif kind_bytes == b"IEND":
+                    seen_end = True
+                    break
+            check(seen_end and width is not None, "missing PNG terminator: " + str(path))
+            pixels = zlib.decompress(image_data)
+            row_bytes = width * 4 + 1
+            check(len(pixels) == row_bytes * height, "decoded pixel count mismatch: " + str(path))
+            check(all(pixels[y*row_bytes] == 0 for y in range(height)),
+                  "Unexpected PNG scanline filters: " + str(path))
+            # Deterministic non-flat samples reject placeholder surface maps.
+            samples = {tuple(pixels[y * row_bytes + 1 + 4*x:
+                                    y * row_bytes + 1 + 4*x + 4])
+                       for x, y in ((6, 6), (155, 93), (381, 475), (700, 677),
+                                    (991, 977), (513, 31), (91, 731))}
+            check(len(samples) >= 2, "flat placeholder PBR map: " + str(path))
             files.append(path)
     size(root / "vanguard_source.blend", 4096)
     preview = root / "preview" / "vanguard_contact_sheet.png"
@@ -55,7 +99,7 @@ def main(root):
     files.extend([preview, root / "vanguard_source.blend"])
     output = (
         "- **7** real FBX mesh parts (R6), **8** GLB 2.0 full-body previews "
-        "(4 palettes × 2 LOD), **32** 512×512 PBR maps and a Blender source file.\n"
+        "(4 palettes × 2 LOD), **32** 1024×1024 PBR maps and a Blender source file.\n"
         "- **Studio import still required**: asset IDs and texture uploads not yet registered with Roblox.\n"
         "- **Total payload:** %.2f MiB. Contact sheet present.\n"
         % (sum(p.stat().st_size for p in files) / 1024**2)
