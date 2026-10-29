@@ -11,6 +11,8 @@ local MovementService = require(script:WaitForChild("MovementService"))
 local WeaponService = require(script:WaitForChild("WeaponService"))
 
 MapService.start()
+local VanguardAssetLoader = require(script:WaitForChild("VanguardAssetLoader"))
+VanguardAssetLoader.start()
 local SpawnService = require(script:WaitForChild("SpawnService"))
 SpawnService.start()
 -- Training dummies are available as a separate module, not spawned in PvP FFA.
