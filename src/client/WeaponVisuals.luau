@@ -53,6 +53,12 @@ function WeaponVisuals.new(WeaponConfig)
 	self.sprinting = false
 	self.scoped = false
     self.aimBlend = 0
+    self.reloadActive = false
+    self.reloadStartedAt = 0
+    self.reloadBlend = 0
+    self.stepPhase = 0
+    self.stepBlend = 0
+    self.lastCameraPosition = nil
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
 	self.renderConnection = RunService.RenderStepped:Connect(function(deltaTime)
@@ -198,6 +204,9 @@ function WeaponVisuals:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
 	self.equipStartedAt = os.clock()
 	self.recoil = 0
+    self.reloadActive = false
+    self.reloadBlend = 0
+    self.lastCameraPosition = nil
 	self:_clearModel()
 
 	local model = Instance.new("Model")
@@ -226,13 +235,23 @@ function WeaponVisuals:setScoped(isScoped)
 	self.scoped = isScoped
 end
 
+-- Reload state comes only from server Ammo messages. Repeated snapshots
+-- must not restart the timeline, and canceled reloads fade out smoothly.
+function WeaponVisuals:setReloading(weaponId, active)
+    if weaponId ~= self.currentWeaponId then return end
+    if active and not self.reloadActive then
+        self.reloadStartedAt = os.clock()
+    end
+    self.reloadActive = active == true
+end
+
 function WeaponVisuals:kick(weaponId)
 	local config = self.WeaponConfig.get(weaponId)
 	self.recoil = math.max(self.recoil, config and config.recoilKick or 0.08)
 	self.fireStartedAt = os.clock()
 end
 
-function WeaponVisuals:_getAnimationCFrame(deltaTime)
+function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingPose)
 	local mouseDelta = UserInputService:GetMouseDelta()
 	local targetSway = Vector2.new(
 		math.clamp(-mouseDelta.X * 0.002, -0.04, 0.04),
@@ -243,27 +262,37 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime)
 
 	local timeNow = os.clock()
 	local sprintAlpha = self.sprinting and 1 or 0
-	local bobSpeed = self.sprinting and 14 or 8
-	local bobAmount = self.sprinting and 0.035 or 0.007
+    -- Bob follows actual movement, not uptime: idling and airborne
+    -- no longer make the weapon glide as if the operator were running.
+    local movement = motion or 0
+    local bobAmount = (self.sprinting and 0.035 or 0.014) * movement
+    local cadence = self.sprinting and 13.5 or 10
+    self.stepPhase = (self.stepPhase + cadence * deltaTime * movement) % (math.pi * 2)
 	local bob = CFrame.new(
-		math.sin(timeNow * bobSpeed) * bobAmount,
-		math.abs(math.cos(timeNow * bobSpeed)) * bobAmount * 0.75,
+		math.sin(self.stepPhase) * bobAmount,
+		math.abs(math.cos(self.stepPhase)) * bobAmount * 0.7,
 		self.recoil
 	)
 
 	local equipAlpha = smoothStep(math.min((timeNow - self.equipStartedAt) / 0.22, 1))
-	local equipMotion = CFrame.new(0, (1 - equipAlpha) * 0.5, (1 - equipAlpha) * 0.36) * CFrame.Angles(math.rad((1 - equipAlpha) * -18), math.rad((1 - equipAlpha) * 10), 0)
+	local equipMotion = CFrame.new(0, (1 - equipAlpha) * 0.5, (1 - equipAlpha) * 0.36)
+        * CFrame.Angles(math.rad((1 - equipAlpha) * -18), math.rad((1 - equipAlpha) * 10), 0)
 
 	local fireAlpha = 1 - math.clamp((timeNow - self.fireStartedAt) / 0.14, 0, 1)
-	local fireMotion = CFrame.new(0, 0, fireAlpha * 0.06) * CFrame.Angles(math.rad(fireAlpha * 7), math.rad(fireAlpha * -2), math.rad(fireAlpha * 1.5))
+	local fireMotion = CFrame.new(0, 0, fireAlpha * 0.06)
+        * CFrame.Angles(math.rad(fireAlpha * 7), math.rad(fireAlpha * -2), math.rad(fireAlpha * 1.5))
 
 	local swayMotion = CFrame.Angles(self.sway.Y, self.sway.X, self.sway.X * 0.45)
 	local sprintOffset = SPRINT_OFFSETS[self.currentWeaponId] or CFrame.new()
 	local sprintMotion = CFrame.new():Lerp(sprintOffset, sprintAlpha)
 
-	return sprintMotion * bob * swayMotion * fireMotion * equipMotion
+    -- Distinct, readable reload dip and roll. Rifle, pistol and sniper
+    -- all share this timeline, with their own server-configured duration.
+    local reloadMotion = CFrame.new(0.07 * reloadingPose, -0.16 * reloadingPose, 0.16 * reloadingPose)
+        * CFrame.Angles(math.rad(17 * reloadingPose), math.rad(12 * reloadingPose),
+            math.rad(10 * reloadingPose))
+	return sprintMotion * bob * swayMotion * fireMotion * reloadMotion * equipMotion
 end
-
 function WeaponVisuals:_render(deltaTime)
 	local camera = workspace.CurrentCamera
 	if not camera or not self.model then
@@ -276,6 +305,31 @@ function WeaponVisuals:_render(deltaTime)
 
 	self.recoil = math.max(0, self.recoil - deltaTime * 5.5)
 
+    local now = os.clock()
+    local reloadConfig = self.WeaponConfig.get(self.currentWeaponId)
+    local reloadSeconds = reloadConfig and reloadConfig.reloadSeconds or 2
+    local progress = math.clamp((now - self.reloadStartedAt) / math.max(reloadSeconds, 0.25), 0, 1)
+    local reloadTarget = self.reloadActive and 1 or 0
+    self.reloadBlend += (reloadTarget - self.reloadBlend) * math.clamp(deltaTime * 13, 0, 1)
+    -- Smooth pose in/out, with a distinct magazine manipulation around mid-reload.
+    local reloadPose = self.reloadBlend * math.sin(math.pi * progress * 0.93)
+    local magazineDip = self.reloadActive
+        and smoothStep(math.clamp((progress - 0.22) / 0.18, 0, 1))
+            * (1 - smoothStep(math.clamp((progress - 0.58) / 0.18, 0, 1)))
+        or 0
+
+    local character = game:GetService("Players").LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    local moving = 0
+    if humanoid and rootPart and humanoid.Health > 0
+        and humanoid.FloorMaterial ~= Enum.Material.Air then
+        local velocity = rootPart.AssemblyLinearVelocity
+        local horizontalSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+        moving = math.clamp(horizontalSpeed / math.max(12, humanoid.WalkSpeed), 0, 1)
+    end
+    self.stepBlend += (moving - self.stepBlend) * math.clamp(deltaTime * 9, 0, 1)
+
 	local offset = WEAPON_OFFSETS[self.currentWeaponId] or WEAPON_OFFSETS.Pistol
     local aimTarget = self.scoped and self.currentWeaponId ~= "Sniper" and 1 or 0
     self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(deltaTime * 13, 0, 1)
@@ -284,11 +338,22 @@ function WeaponVisuals:_render(deltaTime)
     local aimOffset = CFrame.new(-0.40, 0.13, -0.14)
         * CFrame.Angles(math.rad(-2), math.rad(-4), 0)
     local root = camera.CFrame * offset * CFrame.new():Lerp(aimOffset, self.aimBlend)
-        * self:_getAnimationCFrame(deltaTime)
+        * self:_getAnimationCFrame(deltaTime, camera, self.stepBlend, reloadPose)
 	local hideForScope = self.currentWeaponId == "Sniper" and self.scoped
 
 	for _, entry in ipairs(self.parts) do
-		entry.part.CFrame = root * entry.offset
+        local localOffset = entry.offset
+        local partName = entry.part.Name
+        if partName == "LeftHand" or partName == "LeftForearm" then
+            -- The support hand works the magazine while the weapon is dipped.
+            localOffset = localOffset * CFrame.new(0.13 * magazineDip,
+                -0.22 * magazineDip, -0.11 * magazineDip)
+        elseif partName == "Magazine" and self.currentWeaponId ~= "Shotgun" then
+            -- A detachable magazine drops and seats before the reload completes.
+            localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip,
+                0.04 * magazineDip)
+        end
+		entry.part.CFrame = root * localOffset
 		entry.part.Transparency = hideForScope and 1 or entry.baseTransparency
 	end
 end
