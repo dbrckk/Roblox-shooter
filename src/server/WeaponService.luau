@@ -13,6 +13,7 @@ local WeaponService = {}
 local remotes = nil
 local playerState = {}
 local started = false
+local weaponRandom = Random.new()
 
 local function getState(player)
 	local state = playerState[player]
@@ -199,8 +200,78 @@ local function fireRaycastWeapon(player, weaponId, config, direction)
 	local params = makeRaycastParams({ character })
 	broadcastFireFx(player, weaponId, origin)
 
-	local result = workspace:Raycast(origin, direction * config.range, params)
+	local result = workspace:Raycast(origin, randomSpread(direction, config.spreadDegrees) * config.range, params)
 	damageHit(player, weaponId, config, result, origin)
+end
+
+-- Server-side cone sampling: the client never selects individual pellets.
+local function randomSpread(direction, spreadDegrees)
+    if not spreadDegrees or spreadDegrees <= 0 then return direction end
+    local theta = weaponRandom:NextNumber(0, 2 * math.pi)
+    local radius = math.sqrt(weaponRandom:NextNumber()) * math.rad(spreadDegrees)
+    return (CFrame.lookAt(Vector3.zero, direction)
+        * CFrame.Angles(math.cos(theta) * radius, math.sin(theta) * radius, 0)).LookVector
+end
+
+local function firePelletWeapon(player, weaponId, config, direction)
+    local character, _, head = getLiveCharacter(player)
+    if not character then return end
+    local origin = head.Position
+    local params = makeRaycastParams({ character })
+    local victims = {}
+    broadcastFireFx(player, weaponId, origin)
+
+    for _ = 1, config.pellets do
+        local ray = workspace:Raycast(origin, randomSpread(direction, config.spreadDegrees) * config.range, params)
+        if ray then
+            local humanoid, model = getHumanoidFromHit(ray.Instance)
+            if humanoid and humanoid.Health > 0 and model ~= character then
+                local opponent = Players:GetPlayerFromCharacter(model)
+                if (opponent or model:GetAttribute("IsArenaBot") == true)
+                    and not SpawnService.isProtected(model) then
+                    local entry = victims[humanoid]
+                    if not entry then
+                        entry = { model = model, player = opponent, damage = 0, headshots = 0, distance = config.range }
+                        victims[humanoid] = entry
+                    end
+                    local headshot = ray.Instance.Name == "Head"
+                    local distance = (ray.Position - origin).Magnitude
+                    local falloff = math.clamp(1 - distance / config.range * 0.55, 0.45, 1)
+                    entry.damage += (headshot and config.headshotDamage or config.damage) * falloff
+                    if headshot then entry.headshots += 1 end
+                    entry.distance = math.min(entry.distance, distance)
+                end
+            end
+        end
+    end
+
+    local anyHit = false
+    for humanoid, entry in pairs(victims) do
+        if humanoid.Health > 0 and entry.model.Parent and not SpawnService.isProtected(entry.model) then
+            local damage = math.max(1, math.floor(entry.damage + 0.5))
+            local oldHealth = humanoid.Health
+            humanoid:TakeDamage(damage)
+            local killed = oldHealth > 0 and humanoid.Health <= 0
+            anyHit = true
+            sendFeedback(player, {
+                kind = "Hit", weaponId = weaponId,
+                targetName = entry.player and entry.player.DisplayName or entry.model.Name,
+                damage = damage, headshot = entry.headshots > 0,
+                killed = killed, distance = entry.distance,
+            })
+            if killed then
+                local stats = player:FindFirstChild("leaderstats")
+                local score = stats and stats:FindFirstChild("Eliminations")
+                if score then score.Value += 1 end
+                remotes.KillFeed:FireAllClients({
+                    attacker = player.DisplayName,
+                    target = entry.player and entry.player.DisplayName or entry.model.Name,
+                    weapon = weaponId, headshot = entry.headshots > 0,
+                })
+            end
+        end
+    end
+    if not anyHit then sendFeedback(player, { kind = "Miss", weaponId = weaponId }) end
 end
 
 local function createKnifeVisual(origin, direction)
@@ -303,6 +374,9 @@ local function onFireWeapon(player, payload)
 		return
 	end
 
+	-- A dead character cannot fire or consume its rate limit.
+    local liveCharacter = getLiveCharacter(player)
+    if not liveCharacter then return end
 	if not canFire(player, weaponId, config) then
 		return
 	end
@@ -311,6 +385,8 @@ local function onFireWeapon(player, payload)
     SpawnService.clearProtection(player.Character)
 	if config.kind == "Raycast" then
 		fireRaycastWeapon(player, weaponId, config, direction)
+	elseif config.kind == "Pellet" then
+        firePelletWeapon(player, weaponId, config, direction)
 	elseif config.kind == "Projectile" then
 		fireKnife(player, weaponId, config, direction)
 	end

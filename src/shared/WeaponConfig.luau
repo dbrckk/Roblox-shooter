@@ -1,12 +1,36 @@
 local WeaponConfig = {}
 
 WeaponConfig.Order = {
+	"AssaultRifle",
 	"Pistol",
+	"Shotgun",
 	"Sniper",
 	"Knife",
 }
 
 WeaponConfig.Definitions = {
+    AssaultRifle = {
+        displayName = "AR-24 | Assault Rifle", kind = "Raycast", automatic = true,
+        fireCooldown = 0.115, damage = 24, headshotDamage = 38,
+        range = 440, spreadDegrees = 1.1,
+        fireSoundId = "rbxasset://sounds/snap.wav", fireVolume = 0.44,
+        soundLayers = {
+            { soundId = "rbxasset://sounds/snap.wav", volume = 0.54, playbackSpeed = 0.92 },
+            { soundId = "rbxasset://sounds/electronicpingshort.wav", volume = 0.16, playbackSpeed = 0.53 },
+        },
+        recoilKick = 0.085,
+    },
+    Shotgun = {
+        displayName = "B-8 | Tactical Shotgun", kind = "Pellet", automatic = false,
+        fireCooldown = 0.84, damage = 13, headshotDamage = 16,
+        pellets = 8, spreadDegrees = 5.1, range = 115,
+        fireSoundId = "rbxasset://sounds/snap.wav", fireVolume = 0.85,
+        soundLayers = {
+            { soundId = "rbxasset://sounds/snap.wav", volume = 0.9, playbackSpeed = 0.67 },
+            { soundId = "rbxasset://sounds/bass.wav", volume = 0.34, playbackSpeed = 1.65 },
+        },
+        recoilKick = 0.2,
+    },
 	Pistol = {
 		displayName = "Pistol",
 		kind = "Raycast",
