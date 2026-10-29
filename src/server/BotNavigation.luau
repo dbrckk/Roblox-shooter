@@ -24,13 +24,23 @@ local function raycastEnvironment(bot, origin, destination)
 end
 
 local function directRouteClear(bot, goal)
-    -- Probe waist/leg height, not above short crate walls.
-    -- Elevated targets still require pathfinding to locate stairs and platforms.
+    -- A single centre ray can slip past the corner of a freight container
+    -- while the two-stud humanoid collides. Approximate the full walking
+    -- capsule with side probes at leg and shoulder height.
     if math.abs(goal.Y - bot.root.Position.Y) > 2.5 then return false end
-    local start = bot.root.Position + Vector3.new(0, -1.25, 0)
-    local finish = Vector3.new(goal.X, start.Y, goal.Z)
-    if (finish - start).Magnitude <= 2 then return true end
-    return raycastEnvironment(bot, start, finish) == nil
+    local origin = bot.root.Position
+    local flat = Vector3.new(goal.X - origin.X, 0, goal.Z - origin.Z)
+    if flat.Magnitude <= 2 then return true end
+    local side = Vector3.new(-flat.Z, 0, flat.X).Unit * 1.3
+    local low = Vector3.new(0, -1.2, 0)
+    local high = Vector3.new(0, 1.1, 0)
+    for _, offset in ipairs({ low, low + side, low - side, high + side, high - side }) do
+        local start = origin + offset
+        if raycastEnvironment(bot, start, start + flat) then
+            return false
+        end
+    end
+    return true
 end
 
 function BotNavigation.invalidate(bot)
@@ -77,6 +87,8 @@ function BotNavigation.steer(bot, goal, isCurrent)
     -- This prevents the previous AI from standing still every navigation refresh.
     local moving = followWaypoints(bot)
     if not moving then
+        -- Pending path: request motion toward the destination as a fallback.
+        -- The next resolved route will replace it with traversable waypoints.
         bot.humanoid:MoveTo(goal)
     end
 
@@ -86,11 +98,14 @@ function BotNavigation.steer(bot, goal, isCurrent)
         -- Its revision is invalidated, while old waypoints remain usable.
         bot.pathRevision = (bot.pathRevision or 0) + 1
         bot.pathing = false
-        bot.nextPathAt = 0
+        -- Respect a short minimum interval even for rapidly switching targets.
+        bot.nextPathAt = math.max(0, now - 0.05)
     end
-    if bot.pathing or now < (bot.nextPathAt or 0) then return end
+    if bot.pathing or now < (bot.nextPathAt or 0)
+        or now - (bot.lastComputeAt or -math.huge) < 0.9 then return end
 
     bot.pathing = true
+    bot.lastComputeAt = now
     bot.pathRevision = (bot.pathRevision or 0) + 1
     local revision = bot.pathRevision
     bot.pathGoal = goal
