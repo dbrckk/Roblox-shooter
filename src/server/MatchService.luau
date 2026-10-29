@@ -21,6 +21,7 @@ local phase = "WAITING"
 local deadline = 0
 local round = 0
 local winner = ""
+local winnerUserId = 0
 local lastPublishedSecond = nil
 
 local function scoreFor(player)
@@ -80,14 +81,16 @@ local function publish(remaining)
     Workspace:SetAttribute("NeonMatchPhase", phase)
     Workspace:SetAttribute("NeonMatchRound", round)
     Workspace:SetAttribute("NeonMatchWinner", winner)
+    Workspace:SetAttribute("IronYardWinnerUserId", winnerUserId)
     Workspace:SetAttribute("NeonMatchTimeLeft", remaining)
     Workspace:SetAttribute("NeonMatchScoreLimit", ELIMINATIONS_TO_WIN)
     publishStandings()
 end
 
-local function transition(nextPhase, seconds, result)
+local function transition(nextPhase, seconds, result, winningUserId)
     phase = nextPhase
     winner = result or ""
+    winnerUserId = winningUserId or 0
     deadline = os.clock() + seconds
     lastPublishedSecond = nil
     publish(math.ceil(seconds))
@@ -154,15 +157,17 @@ end
 local function endRound()
     local name, topScore, tied, winningPlayer = leader()
     local result = "DRAW"
+    local resultUserId = 0
     if name and not tied and topScore > 0 then
         result = name
-        -- Award victory to the actual Player reference, never to a matching
-        -- display name (which is not unique and can be changed).
+        -- Capture immutable winner identity for the results screen. The
+        -- display name is cosmetic and may collide with another player's.
         if winningPlayer and winningPlayer.Parent then
+            resultUserId = winningPlayer.UserId
             CombatAwards.recordVictory(winningPlayer)
         end
     end
-    transition("RESULTS", RESULTS_SECONDS, result)
+    transition("RESULTS", RESULTS_SECONDS, result, resultUserId)
 end
 
 local function tick()
