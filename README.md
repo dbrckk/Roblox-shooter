@@ -14,8 +14,10 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - Classement FFA top 3 actualisé par le serveur : vrais joueurs et IA, orientation et secteur dans un HUD compact pour Android.
 - Nouveaux repères de terrain : chariots élévateurs, palettes et couvertures industrielles avec collisions de jeu distinctes des détails graphiques.
 - Projet Rojo + CI Github Actions build Roblox.
-- **Arène originale de 356 × 356 studs**, couverture, verticalité, éclairage naturel, terminal de fret moderne avec conteneurs et grues industrielles, signalétique et décors à LOD dynamique ; les vrais meshes PBR importés restent à produire.
-- **Combattants VANGUARD** : quatre opérateurs tactiques stylisés construites à partir d'armures modulaires (casques tactiques, visières non émissives, protections balistiques, sac dorsal et fusils). Animations procédurales de marche, posture de visée, regard et recul. Leurs détails lointains sont masqués localement sur Android.
+- **Arène originale de 356 × 356 studs**, couverture, verticalité, éclairage naturel, terminal de fret moderne avec conteneurs et grues industrielles, signalétique et décors à LOD dynamique ; les meshes PBR ont été générés mais restent à importer dans Roblox Studio.
+- **Combattants VANGUARD** : quatre opérateurs tactiques stylisés construits à partir d'armures modulaires (casques tactiques, visières non émissives, protections balistiques, sac dorsal et fusils). Animations procédurales synchronisées avec la distance parcourue : marche, saut, rechargement, visée et recul. Les détails lointains sont masqués localement sur Android.
+- **IA tactique serveur** : recherche de cibles avec lignes de vue vérifiées, dernière position observée, contournement, repli vers les couvertures lorsqu'un bot est blessé ou recharge, déplacements avec contrôle de largeur de passage. La recharge fonctionne même si la cible disparaît.
+- **Lisibilité du combat** : indicateur bref de direction des tirs entrants après dégâts validés côté serveur. Le classement mobile se masque temporairement pendant le briefing initial pour ne pas le recouvrir.
 
 ## Publier comme expérience Roblox PRIVÉE
 

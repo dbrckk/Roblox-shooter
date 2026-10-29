@@ -30,6 +30,12 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] orientation physique des bots face aux cibles visibles et animation de visée existante (à confirmer en Studio)
 - [x] couteau : contrôle serveur du segment d'apparition pour éviter de traverser une couverture proche
 - [x] LOD : prise en compte des modèles chargés après l'arrivée du client, cache de détails mis à jour à la réplication
+- [x] IA tactique : préférence pour les adversaires visibles, mémoire uniquement de la dernière position observée, contournement de couvertures et recherche de repli quand blessé/en rechargement (validation Studio requise)
+- [x] déplacement IA : collision testée sur cinq rayons de capsule, filtres réutilisés, limites de recalcul d'itinéraires
+- [x] animations bot : cadence de pas liée à la distance parcourue, transition saut / rechargement / visée, sans AnimationId externe
+- [x] feedback des tirs entrants : indicateur directionnel léger avec origine vérifiée côté serveur, compatibilité téléphone
+- [x] correction UX mobile : classement caché pendant le briefing, puis rétabli
+- [x] correctif combat : couteaux invalidés au changement de manche / réapparition du tireur ; recharge IA même sans cible visible
 - [ ] importer/publiquer les MeshParts et SurfaceAppearance dans Roblox Studio, calibrer positions, FX, animation rigide et Android
 - [ ] skinned meshes haut de gamme, animations professionnelles, mixage audio spatial, profils graphiques
 - [ ] anti-triche et latence validées sous charge
