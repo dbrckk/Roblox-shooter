@@ -23,7 +23,7 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] personnages IA mobiles : recherche de cible, navigation PathfindingService, tir et réaction variable (test Studio à réaliser)
 - [x] armures tactiques VANGUARD originales sur R6, animation procédurale marche/visée/recul, fusils 3D, muzzle flash et traînées colorées (validation runtime requise)
 - [x] thème IRON YARD : terminal industriel de jour, grues, containers, marquages routiers, signalétique, sans Bloom, LOD local Android
-- [x] nouveaux meshes Blender PBR mats olive/sable/ardoise/rouille : 7 FBX, 8 GLB en 2 LOD, 32 cartes PBR 512×512 validés et archivés sur GitHub (upload Roblox encore à faire)
+- [x] nouveaux meshes Blender PBR mats olive/sable/ardoise/rouille : 7 FBX, 8 GLB en 2 LOD, 32 cartes PBR 1 024×1 024 validées et archivées sur GitHub (quatre modèles LOD0 de 14,96 Mo, compatibles avec la limite d'upload Roblox) (upload Roblox encore à faire)
 - [x] briefing de début de manche et réticule contrasté sur fond clair (validation en jeu requise)
 - [x] classement des trois meilleurs combattants, secteur et direction en temps réel (tests en jeu nécessaires)
 - [x] silhouettes industrielles, couvertures physiques et détails LOD optimisés sur mobile (tests Android nécessaires)

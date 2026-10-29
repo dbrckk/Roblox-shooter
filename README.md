@@ -58,13 +58,13 @@ Le workflow [AssetForge VANGUARD](https://github.com/dbrckk/Roblox-shooter/actio
 
 ### Kits 3D/PBR vérifiés — IRON YARD
 
-La [génération militaire IRON YARD](https://github.com/dbrckk/Roblox-shooter/actions/runs/40760716987) a réussi : **7 modèles rigides FBX**, **8 modèles GLB (4 tenues × 2 LOD)**, **32 cartes PBR 512 × 512**, scène Blender source et aperçu. Les quatre palettes actuelles sont **olive, sable, ardoise et rouille** ; les anciens coloris lumineux ne sont plus les modèles à importer.
+La [génération militaire IRON YARD du 29 octobre 2026](https://github.com/dbrckk/Roblox-shooter/actions/runs/40889978913) a réussi : **7 modèles rigides FBX**, **8 modèles GLB (4 tenues × 2 LOD)**, **32 cartes PBR 1 024 × 1 024**, scène Blender source et aperçu. Les quatre palettes actuelles sont **olive, sable, ardoise et rouille** ; les anciens coloris lumineux ne sont plus les modèles à importer.
 
-Le kit complet est sauvegardé dans une [GitHub Release permanente d'assets](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-f2066be670e7). Il s'agit d'une archive de création, **pas d'une publication de l'expérience Roblox**.
+Le kit complet est sauvegardé dans une [GitHub Release permanente d'assets](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-5cd834601f9e). Il s'agit d'une archive de création, **pas d'une publication de l'expérience Roblox**.
 
 ## Assets VANGUARD et textures PBR
 
-Le kit 3D original a été généré une première fois avant le passage à la direction IRON YARD. Une nouvelle génération utilise désormais les palettes olive, sable, ardoise et rouille. Le lot de 7 pièces FBX, 4 palettes GLB LOD0/LOD1 et 32 cartes Color/Normal/Roughness/Metallic a été **généré et exporté** via [AssetForge GitHub Actions](https://github.com/dbrckk/Roblox-shooter/actions/workflows/assetforge.yml). La [version IRON YARD actuelle](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-f2066be670e7) comporte des normals dérivées d'une hauteur procédurale, des rainures et de l'usure. Un script `tools/studio/install_vanguard.lua` prépare 28 MeshParts une fois l'import effectué en Studio. **Les meshes ne sont pas encore présents dans la place Rojo et leur rendu Studio / Android reste non vérifié.**
+Le kit 3D original a été généré une première fois avant le passage à la direction IRON YARD. Une nouvelle génération utilise désormais les palettes olive, sable, ardoise et rouille. Le lot de 7 pièces FBX, 4 palettes GLB LOD0/LOD1 et 32 cartes Color/Normal/Roughness/Metallic a été **généré et exporté** via [AssetForge GitHub Actions](https://github.com/dbrckk/Roblox-shooter/actions/workflows/assetforge.yml). La [version IRON YARD actuelle](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-5cd834601f9e) comporte des normals dérivées d'une hauteur procédurale, des rainures et de l'usure. Un script `tools/studio/install_vanguard.lua` prépare 28 MeshParts une fois l'import effectué en Studio. **Les meshes ne sont pas encore présents dans la place Rojo et leur rendu Studio / Android reste non vérifié.**
 
 ## Direction artistique IRON YARD
 
@@ -72,4 +72,8 @@ La direction néon est abandonnée : carte industrielle **de jour**, lumière so
 
 ## Publication automatisée des quatre modèles PBR — prêt, accès Roblox requis
 
-La génération haute résolution **1024 × 1024** a été validée le 29 octobre 2026 : [Release VANGUARD 1K](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-a94f1989267c). Le workflow [upload vers Roblox Open Cloud](https://github.com/dbrckk/Roblox-shooter/actions/workflows/upload-vanguard-opencloud.yml) prépare quatre modèles GLB LOD0, vérifie le propriétaire et les statuts de traitement, puis peut pousser leurs identifiants sur `main`. Sans secret `ROBLOX_OPEN_CLOUD_ASSETS_KEY`, les valeurs restent à zéro et les armures procédurales servent de fallback. Ce pipeline n'est **pas une preuve d'upload ou de rendu en jeu**. Voir [docs/VANGUARD_ASSETS.md](docs/VANGUARD_ASSETS.md).
+La génération haute résolution **1024 × 1024** compatible avec la limite d'import Roblox a été validée le 29 octobre 2026 : [Release VANGUARD 1K](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-5cd834601f9e). Le workflow [upload vers Roblox Open Cloud](https://github.com/dbrckk/Roblox-shooter/actions/workflows/upload-vanguard-opencloud.yml) prépare quatre modèles GLB LOD0, vérifie le propriétaire et les statuts de traitement, puis peut pousser leurs identifiants sur `main`. Sans secret `ROBLOX_OPEN_CLOUD_ASSETS_KEY`, les valeurs restent à zéro et les armures procédurales servent de fallback. Ce pipeline n'est **pas une preuve d'upload ou de rendu en jeu**. Voir [docs/VANGUARD_ASSETS.md](docs/VANGUARD_ASSETS.md).
+
+### Fichiers PBR optimisés pour l’importation Roblox
+
+La génération corrigée [AssetForge 40889978913](https://github.com/dbrckk/Roblox-shooter/actions/runs/40889978913) a confirmé les tailles des quatre GLB LOD0 (**olive 14,963 Mo ; sable 14,963 Mo ; ardoise 14,963 Mo ; rouille 14,963 Mo**, chacun sous la limite de 20 Mo). L'archive complète de création a été ramenée à **151,6 Mo**. La résolution source reste 1 024 × 1 024. Les packages ne sont toujours pas des assets Roblox publiés : l'envoi Open Cloud et la vérification visuelle du rendu restent nécessaires.

@@ -6,12 +6,12 @@ Le workflow gratuit [Build original VANGUARD 3D/PBR kit](https://github.com/dbrc
 
 - `meshes/vanguard_{olive,sand,slate,rust}_{LOD0,LOD1}.glb` : huit vraies scènes GLB texturées, chaque combattant séparé en sept éléments rigides.
 - `parts/vanguard_{torso,head,left_arm,right_arm,left_leg,right_leg,rifle}.fbx` : sept pièces individuelles au format FBX, UV et matériaux, destinées à l'import Roblox.
-- `textures/` : huit matériaux de texture distincts, **1 024 × 1 024 pixels sur les futurs exports**, contre 512 × 512 pour les anciens ; pour chacun, `ColorMap`, `NormalMap`, `RoughnessMap` et `MetalnessMap`. Matériaux des palettes olive, sand, slate et rust.
+- `textures/` : huit matériaux de texture distincts, **1 024 × 1 024 pixels sur le dernier export validé**, contre 512 × 512 pour les anciens ; pour chacun, `ColorMap`, `NormalMap`, `RoughnessMap` et `MetalnessMap`. Matériaux des palettes olive, sand, slate et rust.
 - `preview/vanguard_contact_sheet.png` : rendu Blender des quatre coloris.
 - `vanguard_source.blend` : scène source éditable, avec textures intégrées.
 - `manifest.json`, `validation_summary.md` : inventaire et contrôles.
 
-**Export actuel IRON YARD vérifié le 28 octobre 2026 :** le run [40760716987](https://github.com/dbrckk/Roblox-shooter/actions/runs/40760716987) a réussi l'export, la validation des 7 FBX / 8 GLB / 32 cartes PBR et la publication de la [Release `iron-yard-assets-f2066be670e7`](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-f2066be670e7). Importer ce nouveau kit **olive/sand/slate/rust**, pas la version colorée historique.
+**Export actuel IRON YARD vérifié le 29 octobre 2026 :** le run [40889978913](https://github.com/dbrckk/Roblox-shooter/actions/runs/40889978913) a généré et validé 7 FBX, 8 GLB, 32 cartes PBR 1K, ainsi que les quatre GLB LOD0 sous 20 Mo. Télécharger la [Release actuelle `iron-yard-assets-5cd834601f9e`](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-5cd834601f9e), et non l'ancien lot 512 px.
 
 **Export historique (ancienne palette) vérifié le 28 octobre 2026 :** le run [40733818033](https://github.com/dbrckk/Roblox-shooter/actions/runs/40733818033) a généré les 7 FBX, 8 GLB, 32 PNG PBR, la scène Blender et l'aperçu. Les 4 meshes LOD0 comptent chacun 3 636 polygones, selon Blender. Une publication dans [GitHub Releases](https://github.com/dbrckk/Roblox-shooter/releases) est automatisée pour conserver le ZIP durablement, sous l'étiquette *assets / prerelease*, et ne constitue pas une publication du jeu.
 
@@ -73,7 +73,7 @@ Les kits historiques listés plus haut restent en résolution 512 px ; utiliser 
 
 ## Import Roblox sans importer chaque modèle à la main — option Open Cloud (29 octobre 2026)
 
-Le kit **1K réellement exporté et validé** est disponible dans la release [iron-yard-assets-a94f1989267c](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-a94f1989267c) et le [workflow réussi](https://github.com/dbrckk/Roblox-shooter/actions/runs/40884993381). L'archive de sources (Blender, huit GLB et PNG) pèse environ **215 Mo compressés** ; cela ne signifie pas qu'un appareil charge toute l'archive en jeu.
+Le kit **1K optimisé et validé sous la limite Roblox** est disponible dans la release [iron-yard-assets-5cd834601f9e](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-assets-5cd834601f9e) et le [workflow réussi](https://github.com/dbrckk/Roblox-shooter/actions/runs/40889978913). L'archive de sources (Blender, huit GLB et PNG) pèse environ **151,6 Mo compressés** ; cela ne signifie pas qu'un appareil charge toute l'archive en jeu.
 
 Roblox permet d'envoyer des fichiers `.glb` comme assets **Model** via son API officielle Open Cloud (modèles uniques limités à **20 Mo** par requête). L'outil `scripts/upload_vanguard_models.py` prépare quatre imports LOD0, contrôle l'identité du propriétaire, vérifie les entêtes GLB et attend la confirmation de Roblox. Il ne prétend pas importer les MeshParts sans clé et lève une erreur si un GLB dépasse les limites d'upload.
 
@@ -91,8 +91,8 @@ Le loader Roblox charge désormais les quatre packages en tâche asynchrone, en 
 
 ## Limite de taille Open Cloud vérifiée pendant l’export
 
-AssetForge refuse désormais de considérer le kit « prêt à importer » si l'un des quatre GLB haute fidélité LOD0 dépasse la limite officielle **20 Mo par asset Model**. Les tailles exactes des quatre GLB apparaissent dans la synthèse de validation et le résumé GitHub Actions. Cette limite porte sur **chaque GLB**, et non sur les 215 Mo de l'archive source qui comprend huit GLB, les textures séparées et la scène Blender. Aucun upload réel n'est déclenché par ce contrôle.
+AssetForge refuse désormais de considérer le kit « prêt à importer » si l'un des quatre GLB haute fidélité LOD0 dépasse la limite officielle **20 Mo par asset Model**. Les tailles exactes des quatre GLB apparaissent dans la synthèse de validation et le résumé GitHub Actions. Cette limite porte sur **chaque GLB**, et non sur les 151,6 Mo de l'archive source qui comprend huit GLB, les textures séparées et la scène Blender. Aucun upload réel n'est déclenché par ce contrôle.
 
 ### Compression procédurale sans baisse de résolution
 
-Le premier contrôle de taille a détecté un GLB LOD0 olive de **20 757 752 octets**, au-dessus des **20 000 000 octets** autorisés pour un upload de modèle Roblox. La génération des microtextures utilise maintenant de petites cellules cohérentes de 2 × 2 texels, réduisant l'entropie des images et préservant les 1 024 × 1 024 pixels, les cartes de normales physiques, les usures métalliques et les rainures. La nouvelle archive ne sera validée que si **les quatre variantes LOD0** passent le contrôle strict de taille et les contrôles PNG/GLB.
+Le premier contrôle de taille a détecté un GLB LOD0 olive de **20 757 752 octets**, au-dessus des **20 000 000 octets** autorisés pour un upload de modèle Roblox. La génération des microtextures utilise maintenant de petites cellules cohérentes de 2 × 2 texels, réduisant l'entropie des images et préservant les 1 024 × 1 024 pixels, les cartes de normales physiques, les usures métalliques et les rainures. **Résultat validé :** olive **14 963 544 octets**, sable **14 963 436**, ardoise **14 963 160**, rouille **14 962 856**. Les quatre GLB passent la limite stricte de 20 000 000 octets, et la nouvelle archive a été publiée. L'autorisation Open Cloud demeure requise pour activer les vrais MeshParts dans l'expérience.
