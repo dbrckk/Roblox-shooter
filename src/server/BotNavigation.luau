@@ -81,7 +81,11 @@ function BotNavigation.steer(bot, goal, isCurrent)
     end
 
     local goalChanged = bot.pathGoal and (goal - bot.pathGoal).Magnitude > GOAL_REPATH_DISTANCE
-    if goalChanged and not bot.pathing then
+    if goalChanged then
+        -- A running ComputeAsync may finish long after the target has moved.
+        -- Its revision is invalidated, while old waypoints remain usable.
+        bot.pathRevision = (bot.pathRevision or 0) + 1
+        bot.pathing = false
         bot.nextPathAt = 0
     end
     if bot.pathing or now < (bot.nextPathAt or 0) then return end

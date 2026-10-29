@@ -194,25 +194,55 @@ local function targetInfo(model)
     return humanoid, root, head
 end
 
+-- Target acquisition balances line-of-sight, distance and target persistence.
+-- Bots no longer chase the nearest enemy through an opaque warehouse wall.
 local function getTargetModel(bot, limit)
-    local best, bestDistance = nil, limit
-    local candidates = {}
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then table.insert(candidates, player.Character) end
-    end
-    for _, other in pairs(slots) do
-        if other ~= bot and other.model and other.model.Parent then
-            table.insert(candidates, other.model)
+    local now = os.clock()
+    local best, bestScore = nil, -math.huge
+    local origin = bot.head.Position
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { bot.model }
+    params.IgnoreWater = true
+
+    local function consider(model)
+        if not model or model == bot.model or not model.Parent then return end
+        if SpawnService.isProtected(model) then return end
+        local humanoid, root, head = targetInfo(model)
+        if not humanoid or not root or not head then return end
+        local distance = (root.Position - bot.root.Position).Magnitude
+        if distance > limit then return end
+
+        local direction = head.Position - origin
+        local ray = Workspace:Raycast(origin, direction, params)
+        local visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
+        -- If the player ducked behind cover, remember them only briefly.
+        -- Otherwise switch to a visible fighter rather than wall-staring.
+        local recent = model == bot.target and (now - (bot.lastTargetSeenAt or 0)) < 2.2
+        if not visible and not recent then return end
+        if visible and model == bot.target then
+            bot.lastTargetSeenAt = now
+        end
+
+        local score = (visible and 150 or 25) - distance * 0.58
+        if model == bot.target then score += 28 end
+        if score > bestScore then
+            best, bestScore = model, score
         end
     end
-    for _, model in ipairs(candidates) do
-        local humanoid, root = targetInfo(model)
-        if humanoid and root and not SpawnService.isProtected(model) then
-            local distance = (root.Position - bot.root.Position).Magnitude
-            if distance < bestDistance then
-                best = model
-                bestDistance = distance
-            end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        consider(player.Character)
+    end
+    for _, other in pairs(slots) do
+        if other ~= bot then consider(other.model) end
+    end
+    if best then
+        bot.lastKnownTargetPosition = best:FindFirstChild("HumanoidRootPart")
+            and best.HumanoidRootPart.Position or bot.lastKnownTargetPosition
+        if best ~= bot.target then
+            -- A newly visible target has just been spotted; begin its reaction timer.
+            bot.lastTargetSeenAt = now
         end
     end
     return best
@@ -258,6 +288,8 @@ local function createBot(slot)
         accent = appearance.accent,
         skill = skill,
         target = nil,
+        lastTargetSeenAt = 0,
+        lastKnownTargetPosition = nil,
         reactionReadyAt = 0,
         nextFireAt = 0,
         ammoRemaining = config.MagazineSize,
@@ -321,18 +353,24 @@ local function navigationGoal(bot, target)
     local _, targetRoot = targetInfo(target)
     if not targetRoot then return patrolGoal(bot) end
 
+    -- Chase the last observed location, not an omniscient live position
+    -- while the opponent is behind cover.
+    local recent = now - (bot.lastTargetSeenAt or 0) < 2.2
+    local destination = recent and (bot.lastKnownTargetPosition or targetRoot.Position)
+        or targetRoot.Position
+
     if now > bot.nextStrafeAt then
         bot.strafeSign = -bot.strafeSign
         bot.nextStrafeAt = now + rng:NextNumber(1.8, 3.8)
     end
-    local offset = targetRoot.Position - bot.root.Position
+    local offset = destination - bot.root.Position
     local flat = Vector3.new(offset.X, 0, offset.Z)
     local distance = flat.Magnitude
     if distance < 0.01 then return patrolGoal(bot) end
     local toward = flat.Unit
     local side = Vector3.new(-toward.Z, 0, toward.X) * bot.strafeSign
     if distance > 49 then
-        return targetRoot.Position - toward * 26 + side * 9
+        return destination - toward * 26 + side * 9
     elseif distance < 16 then
         return bot.root.Position - toward * 16 + side * 10
     end
@@ -351,6 +389,9 @@ local function shoot(bot, target, aimPoint, dt)
     end
     if now < bot.reactionReadyAt or now < bot.nextFireAt then return end
     if direction.Magnitude > config.MaximumAttackDistance then return end
+    -- Do not spend ammo firing through the cover between head and muzzle.
+    local muzzleBlock = Workspace:Raycast(origin, direction, rayParams(bot.model))
+    if not muzzleBlock or not muzzleBlock.Instance:IsDescendantOf(target) then return end
     if bot.ammoRemaining <= 0 then
         if bot.reloadUntil == 0 then
             bot.reloadUntil = now + config.ReloadSeconds
@@ -457,7 +498,7 @@ local function updateBot(bot, dt)
         bot.humanoid.AutoRotate = true
     end
     BotAnimation.step(bot, now, moved > 0.3, aimPoint ~= nil)
-    if moved < 0.3 then
+    if (phase == "LIVE" or phase == "COUNTDOWN") and moved < 0.3 then
         if bot.stuckSince == 0 then
             bot.stuckSince = now
         elseif now - bot.stuckSince > 2.3 then
@@ -552,6 +593,8 @@ function BotService.resetRound()
             bot.ammoRemaining = config.MagazineSize
             bot.reloadUntil = 0
             bot.target = nil
+            bot.lastTargetSeenAt = 0
+            bot.lastKnownTargetPosition = nil
             bot.aimDirection = bot.root.CFrame.LookVector
             BotNavigation.invalidate(bot)
             bot.humanoid.Health = bot.humanoid.MaxHealth
