@@ -54,7 +54,11 @@ def material_sample(x, y, seed, size, accent, category):
     seam = px <= 2 or py <= 2
     # Three-pixel chamfers produce highlights without requiring additional geometry.
     bevel = px in (3, 4, cell - 2, cell - 3) or py in (3, 4, cell - 2, cell - 3)
-    micro = (hash_noise(x, y, seed) - 127.5) / 127.5
+    # Use coherent 2x2-pixel microcells rather than independent white noise
+    # at every texel. This retains authored 1K normals, brushed wear and
+    # panel relief while materially reducing glTF-embedded texture entropy.
+    # Model package imports must remain below Roblox Open Cloud's 20 MB cap.
+    micro = (hash_noise(x // 2, y // 2, seed) - 127.5) / 127.5
     grain = (hash_noise(x // 4, y // 3, seed + 37) - 127.5) / 127.5
     # Brushed-direction bands are subtle, with different amplitudes for fabric/visor.
     brushed = math.sin(y * 0.18 + seed * 0.07) * (0.55 if category == "gunmetal" else 0.23)

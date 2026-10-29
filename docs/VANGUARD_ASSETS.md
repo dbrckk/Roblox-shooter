@@ -92,3 +92,7 @@ Le loader Roblox charge désormais les quatre packages en tâche asynchrone, en 
 ## Limite de taille Open Cloud vérifiée pendant l’export
 
 AssetForge refuse désormais de considérer le kit « prêt à importer » si l'un des quatre GLB haute fidélité LOD0 dépasse la limite officielle **20 Mo par asset Model**. Les tailles exactes des quatre GLB apparaissent dans la synthèse de validation et le résumé GitHub Actions. Cette limite porte sur **chaque GLB**, et non sur les 215 Mo de l'archive source qui comprend huit GLB, les textures séparées et la scène Blender. Aucun upload réel n'est déclenché par ce contrôle.
+
+### Compression procédurale sans baisse de résolution
+
+Le premier contrôle de taille a détecté un GLB LOD0 olive de **20 757 752 octets**, au-dessus des **20 000 000 octets** autorisés pour un upload de modèle Roblox. La génération des microtextures utilise maintenant de petites cellules cohérentes de 2 × 2 texels, réduisant l'entropie des images et préservant les 1 024 × 1 024 pixels, les cartes de normales physiques, les usures métalliques et les rainures. La nouvelle archive ne sera validée que si **les quatre variantes LOD0** passent le contrôle strict de taille et les contrôles PNG/GLB.
