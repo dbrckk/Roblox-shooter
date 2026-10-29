@@ -84,7 +84,8 @@ jobs:
           set -euo pipefail
           python3 -m py_compile tools/assetforge/*.py scripts/upload_vanguard_models.py
           python3 scripts/upload_vanguard_models.py --help > /dev/null
-          echo "Asset generation and owner-controlled Open Cloud uploader are syntactically valid."
+          python3 scripts/test_vanguard_upload_contract.py
+          echo "Asset generation and owner-controlled Open Cloud uploader passed offline checks."
 
       - name: Verify visual identity and PBR palette consistency
         shell: bash
