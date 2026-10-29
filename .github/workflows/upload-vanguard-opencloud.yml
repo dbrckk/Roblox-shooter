@@ -1,0 +1,111 @@
+name: Upload VANGUARD PBR models to Roblox (owner-authorized)
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_run_id:
+        description: "Successful AssetForge run ID; leave blank for latest successful"
+        type: string
+        required: false
+        default: ""
+      creator_user_id:
+        description: "Confirmed Roblox creator User ID (not Universe ID)"
+        type: string
+        required: true
+        default: "9774173158"
+      publish_assets:
+        description: "Upload four Model assets and commit their IDs (requires Open Cloud key)"
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: vanguard-owner-assets
+  cancel-in-progress: false
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out current IRON YARD
+        uses: actions/checkout@v4
+
+      - name: Locate validated original Blender asset export
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN_ID: ${{ inputs.asset_run_id }}
+        run: |
+          set -euo pipefail
+          run_id="$INPUT_RUN_ID"
+          if [[ -z "$run_id" ]]; then
+            run_id="$(gh run list --workflow assetforge.yml --limit 15               --json databaseId,conclusion               --jq '[.[] | select(.conclusion == "success")][0].databaseId')"
+          fi
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "No successful AssetForge job found"; exit 1; }
+          state="$(gh run view "$run_id" --json conclusion --jq '.conclusion')"
+          [[ "$state" == "success" ]] || { echo "Source job did not succeed"; exit 1; }
+          source_sha="$(gh run view "$run_id" --json headSha --jq '.headSha')"
+          [[ "$source_sha" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          echo "SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
+          mkdir -p build/assets
+          gh run download "$run_id" --name vanguard-3d-pbr-kit --dir build/assets
+          test -f build/assets/manifest.json
+          echo "Using validated AssetForge run $run_id" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate asset files, PBR maps and upload tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/upload_vanguard_models.py
+          python3 tools/assetforge/validate_exports.py build/assets
+
+      - name: Owner-authorized upload or offline validation only
+        shell: bash
+        env:
+          CREATOR_ID: ${{ inputs.creator_user_id }}
+          PUBLISH: ${{ inputs.publish_assets }}
+          ROBLOX_OPEN_CLOUD_ASSETS_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_ASSETS_KEY }}
+        run: |
+          set -euo pipefail
+          args=(--assets build/assets
+            --owner-user-id "$CREATOR_ID"
+            --source-commit "$SOURCE_SHA"
+            --registry build/vanguard_upload_registry.json
+            --module src/shared/VanguardAssetIds.luau)
+          if [[ "$PUBLISH" != "true" ]]; then
+            args+=(--dry-run)
+            echo "Validation mode: no Roblox network request or asset creation." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          python3 scripts/upload_vanguard_models.py "${args[@]}"
+
+      - name: Save asset processing checkpoint (if any)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vanguard-upload-checkpoint
+          path: build/vanguard_upload_registry.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Commit verified owner-owned Model IDs
+        if: ${{ inputs.publish_assets }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/shared/VanguardAssetIds.luau
+          if git diff --cached --quiet; then
+            echo "No new model IDs to commit" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "assets(vanguard): authorize four original 1K PBR model packages"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+          echo "Owner-controlled model IDs pushed to main; Rojo CI will validate them." >> "$GITHUB_STEP_SUMMARY"
