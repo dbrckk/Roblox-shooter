@@ -222,12 +222,18 @@ local function getTargetModel(bot, limit)
         if not visible and not recent then return end
         if visible and model == bot.target then
             bot.lastTargetSeenAt = now
+            bot.lastKnownTargetPosition = root.Position
         end
 
         local score = (visible and 150 or 25) - distance * 0.58
         if model == bot.target then score += 28 end
         if score > bestScore then
             best, bestScore = model, score
+            if visible then
+                bot.nextVisibleTargetPosition = root.Position
+            else
+                bot.nextVisibleTargetPosition = nil
+            end
         end
     end
 
@@ -237,13 +243,9 @@ local function getTargetModel(bot, limit)
     for _, other in pairs(slots) do
         if other ~= bot then consider(other.model) end
     end
-    if best then
-        bot.lastKnownTargetPosition = best:FindFirstChild("HumanoidRootPart")
-            and best.HumanoidRootPart.Position or bot.lastKnownTargetPosition
-        if best ~= bot.target then
-            -- A newly visible target has just been spotted; begin its reaction timer.
-            bot.lastTargetSeenAt = now
-        end
+    if best and best ~= bot.target and bot.nextVisibleTargetPosition then
+        bot.lastTargetSeenAt = now
+        bot.lastKnownTargetPosition = bot.nextVisibleTargetPosition
     end
     return best
 end
@@ -461,6 +463,9 @@ local function updateBot(bot, dt)
     local target = getTargetModel(bot, config.MaximumSightDistance)
     if target ~= bot.target then
         bot.target = target
+        if not target then
+            bot.lastKnownTargetPosition = nil
+        end
         bot.reactionReadyAt = now + bot.skill.reaction
         bot.aimDirection = bot.root.CFrame.LookVector
         BotNavigation.invalidate(bot)
