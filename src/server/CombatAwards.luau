@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
+local ProgressionService = require(script.Parent:WaitForChild("ProgressionService"))
 local CombatAwards = {}
 local states = {}
 local started = false
@@ -61,6 +62,9 @@ function CombatAwards.recordElimination(player, headshot)
         + (state.streak >= 5 and 20 or 0)
     state.roundXP += points
     state.sessionXP += points
+    -- Grant only after server-verified damage has registered a real elimination.
+    -- ProgressionService remains safe when DataStore is temporarily offline.
+    ProgressionService.recordElimination(player, points, headshot == true)
     player:SetAttribute("IronYardRoundXP", state.roundXP)
     player:SetAttribute("IronYardSessionXP", state.sessionXP)
     player:SetAttribute("IronYardKillStreak", state.streak)

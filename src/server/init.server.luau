@@ -1,3 +1,6 @@
+-- Initialize DataStore sessions before XP-earning gameplay services.
+local ProgressionService = require(script:WaitForChild("ProgressionService"))
+ProgressionService.start()
 local CombatAwards = require(script:WaitForChild("CombatAwards"))
 CombatAwards.start()
 local ScoreService = require(script:WaitForChild("ScoreService"))

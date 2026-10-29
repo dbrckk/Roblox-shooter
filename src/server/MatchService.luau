@@ -9,6 +9,7 @@ local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
+local ProgressionService = require(script.Parent:WaitForChild("ProgressionService"))
 local MatchService = {}
 local started = false
 
@@ -96,14 +97,17 @@ end
 local function leader()
     local best = -1
     local selectedName = nil
+    local selectedPlayer = nil
     local tied = false
     for _, player in ipairs(Players:GetPlayers()) do
         local score = scoreFor(player)
         if score > best then
             best = score
             selectedName = player.DisplayName
+            selectedPlayer = player
             tied = false
         elseif score == best then
+            selectedPlayer = nil
             tied = true
         end
     end
@@ -111,11 +115,13 @@ local function leader()
     if botName and botScore > best then
         best = botScore
         selectedName = botName
+        selectedPlayer = nil
         tied = botsTied
     elseif botName and botScore == best then
         tied = true
+        selectedPlayer = nil
     end
-    return selectedName, best, tied
+    return selectedName, best, tied, selectedPlayer
 end
 
 local function resetRoundScores()
@@ -147,10 +153,15 @@ local function startRound()
 end
 
 local function endRound()
-    local name, topScore, tied = leader()
+    local name, topScore, tied, winningPlayer = leader()
     local result = "DRAW"
     if name and not tied and topScore > 0 then
         result = name
+        -- Award victory to the actual Player reference, never to a matching
+        -- display name (which is not unique and can be changed).
+        if winningPlayer and winningPlayer.Parent then
+            ProgressionService.recordVictory(winningPlayer)
+        end
     end
     transition("RESULTS", RESULTS_SECONDS, result)
 end
