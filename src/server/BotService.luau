@@ -14,6 +14,7 @@ local BotService = {}
 local BotVisuals = require(script.Parent:WaitForChild("BotVisuals"))
 local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
 local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
+local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local folder = nil
 local slots = {}
@@ -292,6 +293,9 @@ local function createBot(slot)
         target = nil,
         lastTargetSeenAt = 0,
         lastKnownTargetPosition = nil,
+        lastDamageAt = -math.huge,
+        coverGoal = nil,
+        coverGoalUntil = 0,
         reactionReadyAt = 0,
         nextFireAt = 0,
         ammoRemaining = config.MagazineSize,
@@ -316,6 +320,13 @@ local function createBot(slot)
         stuckSince = 0,
     }
     slots[slot] = bot
+    local previousHealth = humanoid.Health
+    humanoid.HealthChanged:Connect(function(value)
+        if value < previousHealth and value > 0 then
+            bot.lastDamageAt = os.clock()
+        end
+        previousHealth = value
+    end)
     humanoid.Died:Connect(function()
         bot.deaths += 1
         BotNavigation.invalidate(bot)
@@ -349,22 +360,36 @@ local function patrolGoal(bot)
     return points[(bot.slot * 3 + math.floor(os.clock() / 7)) % #points + 1]
 end
 
-local function navigationGoal(bot, target)
+local function navigationGoal(bot, target, canSee)
     local now = os.clock()
-    if not target then return patrolGoal(bot) end
+    if not target then
+        BotTactics.reset(bot)
+        return patrolGoal(bot)
+    end
     local _, targetRoot = targetInfo(target)
-    if not targetRoot then return patrolGoal(bot) end
+    if not targetRoot then
+        BotTactics.reset(bot)
+        return patrolGoal(bot)
+    end
 
-    -- Chase the last observed location, not an omniscient live position
-    -- while the opponent is behind cover.
-    local recent = now - (bot.lastTargetSeenAt or 0) < 2.2
-    local destination = recent and (bot.lastKnownTargetPosition or targetRoot.Position)
-        or targetRoot.Position
+    -- The only pursuit coordinate is the last verified line-of-sight
+    -- position. Never substitute a hidden fighter's current root position.
+    local destination = bot.lastKnownTargetPosition
+    if not destination then return patrolGoal(bot) end
 
     if now > bot.nextStrafeAt then
         bot.strafeSign = -bot.strafeSign
         bot.nextStrafeAt = now + rng:NextNumber(1.8, 3.8)
     end
+
+    -- Retreat and seek static cover during a reload or after taking
+    -- meaningful damage; this is not an instantaneous aim or teleport.
+    local defensive = BotTactics.defensiveGoal(bot, destination, now)
+    if defensive then return defensive end
+    if not canSee then
+        return BotTactics.flankGoal(bot, destination, now) or patrolGoal(bot)
+    end
+
     local offset = destination - bot.root.Position
     local flat = Vector3.new(offset.X, 0, offset.Z)
     local distance = flat.Magnitude
@@ -460,7 +485,7 @@ local function updateBot(bot, dt)
     bot.nextThinkAt = now + config.ThinkInterval
 
     local phase = Workspace:GetAttribute("NeonMatchPhase")
-    local target = getTargetModel(bot, config.MaximumSightDistance)
+    local target = phase == "LIVE" and getTargetModel(bot, config.MaximumSightDistance) or nil
     if target ~= bot.target then
         bot.target = target
         if not target then
@@ -468,18 +493,19 @@ local function updateBot(bot, dt)
         end
         bot.reactionReadyAt = now + bot.skill.reaction
         bot.aimDirection = bot.root.CFrame.LookVector
+        BotTactics.reset(bot)
         BotNavigation.invalidate(bot)
     end
 
+    local aimPoint = target and visibleAimPoint(bot, target) or nil
     if phase == "LIVE" or phase == "COUNTDOWN" then
-        steerToward(bot, navigationGoal(bot, target))
+        steerToward(bot, navigationGoal(bot, target, aimPoint ~= nil))
     else
         bot.humanoid:MoveTo(bot.root.Position)
     end
 
     local currentPosition = bot.root.Position
     local moved = (currentPosition - bot.lastPosition).Magnitude
-    local aimPoint = target and visibleAimPoint(bot, target) or nil
     local targetRoot = nil
     if target then
         local _, root = targetInfo(target)
@@ -600,6 +626,8 @@ function BotService.resetRound()
             bot.target = nil
             bot.lastTargetSeenAt = 0
             bot.lastKnownTargetPosition = nil
+            bot.lastDamageAt = -math.huge
+            BotTactics.reset(bot)
             bot.aimDirection = bot.root.CFrame.LookVector
             BotNavigation.invalidate(bot)
             bot.humanoid.Health = bot.humanoid.MaxHealth
