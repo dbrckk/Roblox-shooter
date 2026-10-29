@@ -18,7 +18,10 @@ local function tryImportedMeshKit(model, rig, index, accent)
     local source = {}
     for _, partName in ipairs(importedParts) do
         local mesh = variant:FindFirstChild(partName)
-        if not mesh or not mesh:IsA("MeshPart") then return nil end
+        if not mesh or not mesh:IsA("MeshPart")
+            or not mesh:FindFirstChildOfClass("SurfaceAppearance") then
+            return nil
+        end
         source[partName] = mesh
     end
 

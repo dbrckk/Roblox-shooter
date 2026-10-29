@@ -117,6 +117,11 @@ def main():
                 "SurfaceAppearance", "CanQuery = false", "CanCollide = false",
                 "staging.Parent = ServerStorage"):
         check(key in loader, "Owner-controlled asset loader missing: " + key)
+    check("mesh:FindFirstChildOfClass(\"SurfaceAppearance\") == nil" in loader,
+          "Manual PBR kit must have actual SurfaceAppearance maps")
+    check("mesh:FindFirstChildOfClass(\"SurfaceAppearance\")" in
+          source("src/server/BotVisuals.luau"),
+          "Procedural fallback must activate when imported materials are absent")
     for key in ("task.spawn(loadConfiguredPbr)", "IronYardPbrStatus",
                 "hasCompleteTemplateSet(", "IronYardPbrTemplatesLoaded"):
         check(key in loader, "Non-blocking verified PBR import is missing: " + key)

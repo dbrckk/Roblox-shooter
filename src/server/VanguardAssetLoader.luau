@@ -35,7 +35,10 @@ local function hasCompleteTemplateSet(folder)
         if not variant then return false end
         for _, piece in ipairs(PIECES) do
             local mesh = variant:FindFirstChild(piece)
-            if not mesh or not mesh:IsA("MeshPart") then return false end
+            if not mesh or not mesh:IsA("MeshPart")
+                or mesh:FindFirstChildOfClass("SurfaceAppearance") == nil then
+                return false
+            end
         end
     end
     return true
