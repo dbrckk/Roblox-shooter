@@ -98,6 +98,12 @@ jobs:
           set -euo pipefail
           python3 scripts/check_weapon_contract.py
 
+      - name: Verify persistent DataStore progression contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check_progression_contract.py
+
       - name: Build place
         run: ./rojo build default.project.json -o iron-yard.rbxlx
 

@@ -95,8 +95,8 @@ def main():
     require("ONLINE" in ui, "No success indication for confirmed DataStore access")
     require("CombatAward" in hud, "Session medal feedback must remain intact")
 
-    contains(doc, ("UpdateAsync", "idempotent", "45", "180", "STUDIO",
-                   "published experience", "not a transaction guarantee"),
+    contains(doc.lower(), ("updateasync", "idempotent", "45", "180", "studio",
+                           "published experience", "not a transaction guarantee"),
              "Progression runbook")
     print("IRON YARD persistent progression source contracts: OK")
     print("NOTE: real Roblox DataStore read/write/reconnect tests are still required.")

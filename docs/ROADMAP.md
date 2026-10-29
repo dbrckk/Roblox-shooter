@@ -15,6 +15,8 @@ RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal p
 - [x] build CI Rojo
 - [x] carte arène originale de 356 x 356 studs, couvertures et plateformes
 - [x] statistiques de session (éliminations et morts, sans persistance)
+- [x] moteur de carrière DataStore v1 : XP et rang, éliminations, tirs à la tête, victoires par UserId, verrou concurrent, autosave, BindToClose et reprise après erreur (implémenté et compilé, validation publiée encore requise)
+- [ ] confirmer **en expérience Roblox publiée** la persistance après reconnexion, reprise des verrous et métriques de perte sous déconnexion serveur
 - [x] Arena FFA : gestion serveur des phases countdown/live/résultats, objectif 15 éliminations et HUD (tests Studio requis)
 - [ ] vrais duels 1v1 jusqu'à 5v5, équipes, spectateur et matchmaking
 - [ ] tests réellement exécutés en Roblox Studio et sur Android
