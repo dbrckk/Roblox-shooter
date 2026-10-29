@@ -20,6 +20,8 @@ local localBoostFuel = MovementConfig.boostFuelMax
 local baseFieldOfView = 70
 local mouseSensitivity = 1
 local lastLocalFire = {}
+local ammoByWeapon = {}
+local lastReloadRequestAt = -math.huge
 local lastLocalSlideAt = -math.huge
 local lastLocalSlideJumpAt = -math.huge
 local lastLocalBoostAt = -math.huge
@@ -698,6 +700,10 @@ local function equipWeapon(weaponId)
 	end
 
 	hud:setWeapon(weaponId)
+    local ammunition = ammoByWeapon[weaponId]
+    if ammunition then
+        hud:setAmmo(weaponId, ammunition.loaded, ammunition.capacity, ammunition.reloading)
+    end
 	visuals:setWeapon(weaponId)
 	remotes.EquipWeapon:FireServer(weaponId)
 end
@@ -712,11 +718,31 @@ local function getAimRay()
 	return camera:ViewportPointToRay(viewportSize.X * 0.5, viewportSize.Y * 0.5)
 end
 
+local function requestReload()
+    local config = WeaponConfig.get(currentWeaponId)
+    if not config or not config.magazineSize then return end
+    local now = os.clock()
+    if now - lastReloadRequestAt < 0.24 then return end
+    local state = ammoByWeapon[currentWeaponId]
+    if state and state.reloading then return end
+    lastReloadRequestAt = now
+    remotes.ReloadWeapon:FireServer(currentWeaponId)
+end
+
 local function fireWeapon(weaponId)
 	local config = WeaponConfig.get(weaponId)
 	if not config then
 		return
 	end
+
+    local ammo = ammoByWeapon[weaponId]
+    if ammo and (ammo.reloading or ammo.loaded <= 0 and ammo.capacity > 0) then
+        if ammo.loaded <= 0 and not ammo.reloading then requestReload() end
+        return
+    end
+    local _, humanoid = getCharacterParts()
+    if not humanoid or humanoid.Health <= 0 then return end
+    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
 
 	local now = os.clock()
 	local lastShot = lastLocalFire[weaponId] or -math.huge
@@ -730,6 +756,10 @@ local function fireWeapon(weaponId)
 	end
 
 	lastLocalFire[weaponId] = now
+    if ammo and ammo.capacity > 0 then
+        ammo.loaded = math.max(0, ammo.loaded - 1)
+        hud:setAmmo(weaponId, ammo.loaded, ammo.capacity, false)
+    end
 	visuals:kick(weaponId)
 	visuals:playFireSound(weaponId, ray.Origin)
 
@@ -907,6 +937,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 
 	if input.KeyCode == Enum.KeyCode.M then
+        mouseFireHeld = false
 		hud:toggleSettings()
 		return
 	end
@@ -935,7 +966,9 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
         equipWeapon("Sniper")
     elseif input.KeyCode == Enum.KeyCode.Five then
         equipWeapon("Knife")
-	elseif input.KeyCode == Enum.KeyCode.Q then
+	elseif input.KeyCode == Enum.KeyCode.R then
+        requestReload()
+    elseif input.KeyCode == Enum.KeyCode.Q then
 		quickThrowKnife()
 	end
 end)
@@ -966,7 +999,17 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
 	end
 
 	if message.kind == "Hit" then
-		hud:showHitFeedback(message)
+        hud:showHitFeedback(message)
+    elseif message.kind == "Ammo" and typeof(message.weaponId) == "string"
+        and typeof(message.capacity) == "number" and typeof(message.loaded) == "number" then
+        ammoByWeapon[message.weaponId] = {
+            loaded = message.loaded,
+            capacity = message.capacity,
+            reloading = message.reloading == true,
+        }
+        hud:setAmmo(message.weaponId, message.loaded, message.capacity, message.reloading == true)
+    elseif message.kind == "OutOfAmmo" and message.weaponId == currentWeaponId then
+        requestReload()
 	end
 end)
 
@@ -1024,6 +1067,9 @@ player.CharacterAdded:Connect(function()
 		localBoosting = false
 		localBoostStartedAt = -math.huge
 		lastGroundedAt = os.clock()
+        ammoByWeapon = {}
+        lastLocalFire = {}
+        equipWeapon(currentWeaponId)
 		hud:setBoostFuel(1)
 		applyLocalMoveSpeed()
 	end)
@@ -1100,6 +1146,7 @@ if UserInputService.TouchEnabled then
     local aim = button("Aim", "AIM", -135, -163, 70, 65)
     local sprint = button("Sprint", "RUN", -22, -276, 78, 55)
     local slide = button("Slide", "SLIDE", -112, -276, 78, 55)
+    local reload = button("Reload", "RLD", -205, -276, 72, 55)
     local rifle = button("AssaultRifle", "AR", -22, -348, 50, 48)
     local pistol = button("Pistol", "P", -80, -348, 50, 48)
     local shotgun = button("Shotgun", "SG", -138, -348, 50, 48)
@@ -1135,6 +1182,9 @@ if UserInputService.TouchEnabled then
     end)
     slide.Activated:Connect(function()
         if not hud:isSettingsOpen() then requestSlide() end
+    end)
+    reload.Activated:Connect(function()
+        if not hud:isSettingsOpen() then requestReload() end
     end)
     rifle.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("AssaultRifle") end end)
     shotgun.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Shotgun") end end)

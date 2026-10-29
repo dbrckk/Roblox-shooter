@@ -83,6 +83,7 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self:_buildBoostMeter()
 	self:_buildHealthBar()
 	self:_buildWeaponLabel()
+    self:_buildAmmoLabel()
 	self:_buildScopeOverlay()
 	self:_buildSettingsMenu()
 	self:_bindHealth(player.Character)
@@ -227,6 +228,43 @@ function HudController:_buildWeaponLabel()
 	weaponLabel.TextScaled = true
 	weaponLabel.Parent = self.gui
 	self.weaponLabel = weaponLabel
+end
+
+function HudController:_buildAmmoLabel()
+    local t = Instance.new("TextLabel")
+    t.Name = "Magazine"
+    t.AnchorPoint = Vector2.new(0.5, 1)
+    t.Position = UDim2.new(0.5, 0, 1, -12)
+    t.Size = UDim2.fromOffset(230, 24)
+    t.BackgroundTransparency = 1
+    t.Font = Enum.Font.GothamBold
+    t.TextSize = 15
+    t.TextColor3 = Color3.fromRGB(231, 217, 181)
+    t.TextStrokeColor3 = Color3.fromRGB(27, 32, 31)
+    t.TextStrokeTransparency = 0.4
+    t.TextXAlignment = Enum.TextXAlignment.Center
+    t.Text = "AMMO  --"
+    t.Parent = self.gui
+    self.ammoLabel = t
+end
+
+function HudController:setAmmo(weaponId, loaded, capacity, reloading)
+    if weaponId ~= self.currentWeaponId or not self.ammoLabel then return end
+    if capacity == nil or capacity <= 0 then
+        self.ammoLabel.Text = "UNLIMITED"
+        self.ammoLabel.TextColor3 = Color3.fromRGB(218, 219, 204)
+    elseif reloading then
+        self.ammoLabel.Text = "RELOADING..."
+        self.ammoLabel.TextColor3 = Color3.fromRGB(241, 189, 97)
+    elseif loaded == nil then
+        self.ammoLabel.Text = string.format("-- / %d", capacity)
+        self.ammoLabel.TextColor3 = Color3.fromRGB(231, 217, 181)
+    else
+        local remaining = math.clamp(math.floor(loaded), 0, capacity)
+        self.ammoLabel.Text = string.format("%02d / %02d", remaining, capacity)
+        self.ammoLabel.TextColor3 = remaining <= 3 and Color3.fromRGB(242, 134, 102)
+            or Color3.fromRGB(231, 224, 200)
+    end
 end
 
 function HudController:_buildScopeOverlay()
@@ -453,6 +491,7 @@ function HudController:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
 	local config = self.WeaponConfig.get(weaponId)
 	self.weaponLabel.Text = config and config.displayName or weaponId
+    self:setAmmo(weaponId, nil, config and config.magazineSize, false)
 
 	local color = Color3.fromRGB(247, 244, 235)
 	if weaponId == "AssaultRifle" then
