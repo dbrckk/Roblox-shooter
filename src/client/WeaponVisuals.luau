@@ -52,6 +52,7 @@ function WeaponVisuals.new(WeaponConfig)
 	self.equipStartedAt = os.clock()
 	self.sprinting = false
 	self.scoped = false
+    self.aimBlend = 0
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
 	self.renderConnection = RunService.RenderStepped:Connect(function(deltaTime)
@@ -276,7 +277,14 @@ function WeaponVisuals:_render(deltaTime)
 	self.recoil = math.max(0, self.recoil - deltaTime * 5.5)
 
 	local offset = WEAPON_OFFSETS[self.currentWeaponId] or WEAPON_OFFSETS.Pistol
-	local root = camera.CFrame * offset * self:_getAnimationCFrame(deltaTime)
+    local aimTarget = self.scoped and self.currentWeaponId ~= "Sniper" and 1 or 0
+    self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(deltaTime * 13, 0, 1)
+    -- Smooth sight alignment for iron-sight weapons. The sniper uses its
+    -- dedicated scope overlay and hides the viewmodel when scoped.
+    local aimOffset = CFrame.new(-0.40, 0.13, -0.14)
+        * CFrame.Angles(math.rad(-2), math.rad(-4), 0)
+    local root = camera.CFrame * offset * CFrame.new():Lerp(aimOffset, self.aimBlend)
+        * self:_getAnimationCFrame(deltaTime)
 	local hideForScope = self.currentWeaponId == "Sniper" and self.scoped
 
 	for _, entry in ipairs(self.parts) do

@@ -691,9 +691,10 @@ local function setScoped(enabled)
 		return
 	end
 
-	if enabled and currentWeaponId ~= "Sniper" then
-		enabled = false
-	end
+	local config = WeaponConfig.get(currentWeaponId)
+    if enabled and (not config or (not config.aimFov and not config.zoomFieldOfView)) then
+        enabled = false
+    end
 
 	if enabled == scoped then
 		return
@@ -701,8 +702,7 @@ local function setScoped(enabled)
 
 	scoped = enabled
 	if scoped then
-		local sniperConfig = WeaponConfig.get("Sniper")
-		camera.FieldOfView = sniperConfig.zoomFieldOfView or 35
+		camera.FieldOfView = config.zoomFieldOfView or config.aimFov or baseFieldOfView
 	else
 		camera.FieldOfView = baseFieldOfView
 	end

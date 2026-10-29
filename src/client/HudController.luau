@@ -545,9 +545,10 @@ function HudController:setWeapon(weaponId)
 end
 
 function HudController:setScoped(scoped)
-	self.scopeOverlay.Visible = scoped
-	self.scopeRing.Visible = scoped
-	self.crosshair.Visible = not scoped
+	local isOptical = self.currentWeaponId == "Sniper"
+    self.scopeOverlay.Visible = scoped and isOptical
+    self.scopeRing.Visible = scoped and isOptical
+    self.crosshair.Visible = not (scoped and isOptical)
 end
 
 function HudController:showHitFeedback(message)
