@@ -454,6 +454,10 @@ local function shoot(bot, target, aimPoint, dt)
         origin = origin,
     })
     local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, rayParams(bot.model))
+    -- The impact material is sampled only when a static/world object was hit.
+    local traceModel = ray and ray.Instance:FindFirstAncestorOfClass("Model")
+    local traceHumanoid = traceModel and traceModel:FindFirstChildOfClass("Humanoid")
+    local worldImpact = ray ~= nil and traceHumanoid == nil
     -- Visual-only effects; never trusted for hit registration.
     remotes.WeaponFx:FireAllClients({
         kind = "BotTracer",
@@ -461,6 +465,8 @@ local function shoot(bot, target, aimPoint, dt)
         direction = rayDirection,
         color = Color3.fromRGB(244, 202, 132),
         length = ray and (ray.Position - origin).Magnitude or config.MaximumAttackDistance,
+        impactNormal = worldImpact and ray.Normal or nil,
+        impactMaterial = worldImpact and ray.Material.Name or nil,
     })
     if not ray then return end
     local hitModel = ray.Instance:FindFirstAncestorOfClass("Model")

@@ -378,6 +378,51 @@ function WeaponVisuals:drawTracer(origin, direction, range, accentColor)
 	Debris:AddItem(tracer, 0.12)
 end
 
+-- Brief, surface-sensitive physical impact fragments; never gameplay geometry.
+-- Capped count, lifespan and visibility distance keep Android overdraw bounded.
+function WeaponVisuals:drawImpact(position, normal, materialName)
+    if typeof(position) ~= "Vector3" or typeof(normal) ~= "Vector3" then return end
+    if normal.Magnitude < 0.9 then return end
+    local camera = workspace.CurrentCamera
+    local touch = UserInputService.TouchEnabled
+    if not camera or (camera.CFrame.Position - position).Magnitude > (touch and 100 or 185) then return end
+    local now = os.clock()
+    if now - (self.lastImpactAt or -math.huge) < (touch and 0.105 or 0.065) then return end
+    self.lastImpactAt = now
+
+    local metallic = materialName == "Metal" or materialName == "DiamondPlate"
+        or materialName == "CorrodedMetal" or materialName == "Foil"
+    local woody = materialName == "Wood" or materialName == "WoodPlanks"
+    local tint = metallic and Color3.fromRGB(242, 190, 107)
+        or (woody and Color3.fromRGB(188, 154, 108) or Color3.fromRGB(182, 177, 164))
+    local n = normal.Unit
+    local reference = math.abs(n.Y) > 0.88 and Vector3.xAxis or Vector3.yAxis
+    local tangent = n:Cross(reference).Unit
+    local bitangent = n:Cross(tangent).Unit
+    local count = touch and 2 or 4
+    for i = 1, count do
+        local angle = i / count * math.pi * 2 + self.random:NextNumber(-0.25, 0.25)
+        local spread = tangent * math.cos(angle) + bitangent * math.sin(angle)
+        local direction = (n * self.random:NextNumber(0.4, 0.8) + spread).Unit
+        local length = self.random:NextNumber(0.22, metallic and 0.85 or 0.56)
+        local center = position + n * 0.10 + direction * (length * 0.5)
+        local chip = Instance.new("Part")
+        chip.Name = "IronYardImpactChip"
+        configurePart(chip)
+        chip.Material = metallic and MATERIAL_NEON or MATERIAL_SMOOTH
+        chip.Color = tint
+        chip.Size = Vector3.new(0.034, 0.034, length)
+        chip.CFrame = CFrame.lookAt(center, center + direction)
+        chip.Transparency = 0.12
+        chip.Parent = workspace
+        TweenService:Create(chip, TweenInfo.new(metallic and 0.16 or 0.22), {
+            Transparency = 1,
+            Size = Vector3.new(0.02, 0.02, 0.045),
+        }):Play()
+        Debris:AddItem(chip, 0.28)
+    end
+end
+
 function WeaponVisuals:drawMuzzleFlash(origin, accentColor)
     local burst = Instance.new("Part")
     burst.Name = "LocalBotMuzzle"

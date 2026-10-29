@@ -110,6 +110,26 @@ local function broadcastFireFx(player, weaponId, origin)
     })
 end
 
+-- Spectator effects use server raycasts, never client-submitted hit data.
+-- Send at most ONE trace for an accepted shot, including pellet weapons.
+local function broadcastTrace(player, weaponId, origin, direction, range, result)
+    local isWorldImpact = false
+    if result then
+        local humanoid = getHumanoidFromHit(result.Instance)
+        isWorldImpact = humanoid == nil
+    end
+    remotes.WeaponFx:FireAllClients({
+        kind = "PlayerTracer",
+        shooterUserId = player.UserId,
+        weaponId = weaponId,
+        origin = origin,
+        direction = direction,
+        length = result and (result.Position - origin).Magnitude or range,
+        impactNormal = isWorldImpact and result.Normal or nil,
+        impactMaterial = isWorldImpact and result.Material.Name or nil,
+    })
+end
+
 local function damageHit(attacker, weaponId, config, raycastResult, origin)
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
         return false
@@ -288,7 +308,9 @@ local function fireRaycastWeapon(player, weaponId, config, direction)
     local params = makeRaycastParams({ character })
     broadcastFireFx(player, weaponId, origin)
 
-    local result = workspace:Raycast(origin, randomSpread(direction, config.spreadDegrees) * config.range, params)
+    local shotDirection = randomSpread(direction, config.spreadDegrees)
+    local result = workspace:Raycast(origin, shotDirection * config.range, params)
+    broadcastTrace(player, weaponId, origin, shotDirection, config.range, result)
     damageHit(player, weaponId, config, result, origin)
 end
 
@@ -299,9 +321,16 @@ local function firePelletWeapon(player, weaponId, config, direction)
     local params = makeRaycastParams({ character })
     local victims = {}
     broadcastFireFx(player, weaponId, origin)
+    local firstDirection = nil
+    local firstResult = nil
 
     for _ = 1, config.pellets do
-        local ray = workspace:Raycast(origin, randomSpread(direction, config.spreadDegrees) * config.range, params)
+        local pelletDirection = randomSpread(direction, config.spreadDegrees)
+        local ray = workspace:Raycast(origin, pelletDirection * config.range, params)
+        if not firstDirection then
+            firstDirection = pelletDirection
+            firstResult = ray
+        end
         if ray then
             local humanoid, model = getHumanoidFromHit(ray.Instance)
             if humanoid and humanoid.Health > 0 and model ~= character then
@@ -322,6 +351,10 @@ local function firePelletWeapon(player, weaponId, config, direction)
                 end
             end
         end
+    end
+
+    if firstDirection then
+        broadcastTrace(player, weaponId, origin, firstDirection, config.range, firstResult)
     end
 
     local anyHit = false

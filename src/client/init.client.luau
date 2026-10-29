@@ -802,9 +802,26 @@ local function fireWeapon(weaponId)
 	visuals:kick(weaponId)
 	visuals:playFireSound(weaponId, ray.Origin)
 
-	if config.kind == "Raycast" or config.kind == "Pellet" then
-        visuals:drawTracer(ray.Origin, ray.Direction.Unit, config.kind == "Pellet" and 100 or config.range)
-	end
+
+    if config.kind == "Raycast" or config.kind == "Pellet" then
+        -- Predicted tracers are immediate but visually stop at local cover.
+        -- Actual hit registration still uses the authoritative server ray.
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        local ignore = { player.Character }
+        if workspace.CurrentCamera then table.insert(ignore, workspace.CurrentCamera) end
+        params.FilterDescendantsInstances = ignore
+        params.IgnoreWater = true
+        local hit = workspace:Raycast(ray.Origin, ray.Direction.Unit * config.range, params)
+        local length = hit and (hit.Position - ray.Origin).Magnitude or config.range
+        visuals:drawTracer(ray.Origin, ray.Direction.Unit, length)
+        if hit then
+            local hitModel = hit.Instance:FindFirstAncestorOfClass("Model")
+            if not (hitModel and hitModel:FindFirstChildOfClass("Humanoid")) then
+                visuals:drawImpact(hit.Position, hit.Normal, hit.Material.Name)
+            end
+        end
+    end
 
 	remotes.FireWeapon:FireServer({
 		weaponId = weaponId,
@@ -1060,6 +1077,23 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
 
 	if message.kind == "FireSound" and message.shooterUserId ~= player.UserId and typeof(message.origin) == "Vector3" then
 		visuals:playFireSound(message.weaponId, message.origin)
+    elseif message.kind == "PlayerTracer"
+        and message.shooterUserId ~= player.UserId
+        and typeof(message.origin) == "Vector3"
+        and typeof(message.direction) == "Vector3"
+        and typeof(message.length) == "number" then
+        local cameraNow = workspace.CurrentCamera
+        local fullLength = math.clamp(message.length, 0, 1500)
+        local direction = message.direction
+        if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 220
+            and direction.Magnitude > 0.01 and fullLength > 0.1 then
+            visuals:drawTracer(message.origin, direction.Unit, fullLength, Color3.fromRGB(240, 213, 165))
+            visuals:drawMuzzleFlash(message.origin)
+            if typeof(message.impactNormal) == "Vector3" then
+                visuals:drawImpact(message.origin + direction.Unit * fullLength,
+                    message.impactNormal, message.impactMaterial)
+            end
+        end
     elseif message.kind == "BotTracer"
         and typeof(message.origin) == "Vector3"
         and typeof(message.direction) == "Vector3"
@@ -1069,6 +1103,10 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
             local accent = typeof(message.color) == "Color3" and message.color or nil
             visuals:drawTracer(message.origin, message.direction.Unit, distance, accent)
             visuals:drawMuzzleFlash(message.origin, accent)
+            if typeof(message.impactNormal) == "Vector3" then
+                visuals:drawImpact(message.origin + message.direction.Unit * distance,
+                    message.impactNormal, message.impactMaterial)
+            end
         end
 	end
 end)

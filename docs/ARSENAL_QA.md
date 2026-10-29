@@ -36,3 +36,11 @@ has been independently established.
 
 All weapon shapes, scripts and balancing values are original assets developed
 for IRON YARD. No copyrighted source assets from RIVALS or Arsenal were cloned.
+
+## Server-verified spectator tracers and light material impacts (29 October 2026)
+
+- Every accepted **human hitscan shot** broadcasts one trace from its actual server raycast. A shotgun emits only a representative trace for eight server-computed pellets; damage remains computed independently per pellet.
+- The firing client predicts its own tracer immediately and excludes its own replicated trace; local tracers now stop at the first world collision rather than continuing through containers.
+- Bot tracers and remote-player tracers include authoritative impact normals and material names when hitting world cover. Metal, wood and concrete produce small short-lived chips; humanoid impacts do not create wall sparks.
+- Android clients use at most two chips at 100 studs; desktop clients use up to four at 185 studs. All effects are non-colliding, non-queryable, non-touching and Debris-cleaned; no extra gameplay network remotes.
+- **Studio acceptance:** test 2 humans + 4 bots, automatic fire against steel/concrete/wood, shotgun traffic, spectator view, first-person wall occlusion, and mobile frame pacing. Predictions do not establish server damage authority. The Rojo/Luau CI is not a runtime playtest.
