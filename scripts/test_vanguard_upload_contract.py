@@ -59,7 +59,7 @@ def main():
         json_bytes += b" " * (-len(json_bytes) % 4)
         binary = bytes(4096)
         chunks = (struct.pack("<I4s", len(json_bytes), b"JSON") + json_bytes
-                  + struct.pack("<I4s", len(binary), b"BIN\\x00") + binary)
+                  + struct.pack("<I4s", len(binary), b"BIN\x00") + binary)
         content = struct.pack("<4sII", b"glTF", 2, 12 + len(chunks)) + chunks
         for palette in uploader.PALETTES:
             (root / "meshes" / f"vanguard_{palette}_LOD0.glb").write_bytes(content)
