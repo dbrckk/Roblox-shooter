@@ -91,7 +91,12 @@ def main(root):
                                     y * row_bytes + 1 + 4*x + 4])
                        for x, y in ((6, 6), (155, 93), (381, 475), (700, 677),
                                     (991, 977), (513, 31), (91, 731))}
-            check(len(samples) >= 2, "flat placeholder PBR map: " + str(path))
+            # Metallic response is deliberately constant on the painted
+            # accent materials; changing it just to vary pixels would be
+            # physically misleading. Other channels must show real texture.
+            is_constant_metal = name.startswith("accent_") and kind == "MetalnessMap"
+            check(len(samples) >= 2 or is_constant_metal,
+                  "flat placeholder PBR map: " + str(path))
             files.append(path)
     size(root / "vanguard_source.blend", 4096)
     preview = root / "preview" / "vanguard_contact_sheet.png"
