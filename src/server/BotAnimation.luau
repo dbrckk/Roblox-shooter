@@ -49,6 +49,13 @@ function BotAnimation.step(bot, now, moved, targeting)
     local sway = math.cos(bot.gaitPhase) * 0.06 * bot.walkBlend
     local breath = math.sin(now * 1.8 + bot.slot) * 0.022
     local recoil = math.max(0, 1 - (now - (bot.lastShotAt or -100)) / 0.17) * 0.20
+    -- Distinct pre-fire brace and short follow-through prevent a robotic
+    -- single-frame weapon kick, while remaining procedural and asset-free.
+    local fireAge = now - (bot.lastShotAt or -100)
+    local fireBrace = math.max(0, 1 - math.abs(fireAge - 0.11) / 0.18) * 0.085
+    local reloadPhase = bot.reloadUntil > now
+        and math.clamp(1 - (bot.reloadUntil - now) / 1.85, 0, 1) or 0
+    local magazineReach = math.sin(reloadPhase * math.pi) * bot.reloadBlend * 0.26
     local aim = bot.aimBlend
     local reload = bot.reloadBlend
     local air = bot.airBlend
@@ -65,10 +72,10 @@ function BotAnimation.step(bot, now, moved, targeting)
     -- Firing shoulder, supporting hand, reload dip and airborne recovery.
     joints.leftShoulder.C0 = CFrame.new(-1, 0.5, 0) *
         CFrame.Angles(step * (1 - aim) - aim * 0.55 + breath
-            + reload * 0.8 - air * 0.24 + hit * 0.34,
+            + reload * 0.8 + magazineReach - air * 0.24 + hit * 0.34,
             -aim * 0.28 + reload * 0.16, -aim * 0.15)
     joints.rightShoulder.C0 = CFrame.new(1, 0.5, 0) *
-        CFrame.Angles(-step * (1 - aim) - aim * 0.48 - recoil
+        CFrame.Angles(-step * (1 - aim) - aim * 0.48 - recoil + fireBrace
             + reload * 0.17 - air * 0.2 + hit * 0.29,
             aim * 0.04, aim * 0.1)
     joints.leftHip.C0 = CFrame.new(-0.5, -1, 0) *
