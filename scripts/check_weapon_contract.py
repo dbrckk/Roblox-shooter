@@ -94,7 +94,8 @@ def main():
         "Weapon switch restores reload state")
     for key in ("humanoid.FloorMaterial ~= Enum.Material.Air",
                 "rootPart.AssemblyLinearVelocity", "self.stepPhase",
-                'partName == "LeftHand"', 'partName == "Magazine"'):
+                'string.sub(partName, 1, 4) == "Left"', 'partName == "Magazine"',
+                'partName == "Slide"', 'partName == "PumpAction"', 'partName == "Bolt"'):
         has(viewmodel, key, "Grounded movement and animated reload visual")
     botAnimation = source("src/server/BotAnimation.luau")
     for key in ("bot.wasAirborne", "bot.landedAt", "bot.lastDamageAt",
