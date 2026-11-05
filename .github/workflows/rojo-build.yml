@@ -46,6 +46,7 @@ jobs:
           ./luau scripts/test_progression_ledger.luau
           ./luau scripts/test_operator_finishes.luau
           ./luau scripts/test_touch_layout.luau
+          ./luau scripts/test_gantry_motion.luau
 
       - name: Parse private Roblox publish script
         shell: bash

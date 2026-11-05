@@ -74,3 +74,5 @@ A central, responsive **12-second results card** now displays the server-verifie
 - [x] Move the mobile killfeed to the top-left in a compact two-entry variant, hide it during onboarding and on very narrow portrait devices, while keeping the full desktop feed intact.
 - [x] Remove redundant TOP 3 overlay from mobile gameplay (already displayed in the server-led RESULTS summary); show a small career rank panel instead of a large panel occupying the virtual joystick.
 - [ ] Verify physical touch hitboxes, the native Roblox jump and thumbstick, notch insets and device rotation in a **published Android client**. Luau geometry tests and Rojo build cannot measure device screen occlusion or FPS.
+
+- [x] Add client-side moving gantry trolleys and suspended spreaders at the four arena corners, using a deterministic finite motion budget; visual-only and graphics-preset-aware. Real Android scene profiling remains pending.

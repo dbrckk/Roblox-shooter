@@ -70,6 +70,25 @@ def main():
     check("p.CanCollide = true" not in art and "p.CanQuery = true" not in art,
           "The decorative module must never take over authoritative gameplay geometry")
 
+    # Visual-only gantries must be separate client-animated assemblies, with
+    # absolutely no real player collision, raycast or server tween workload.
+    industrialMotion = source("src/client/IndustrialMotion.client.luau")
+    gantryMotion = source("src/shared/GantryMotion.luau")
+    for needle in ('assembly:SetAttribute("IronYardGantryMover", true)',
+                   'assembly:SetAttribute("IronYardGantryIndex", i)',
+                   'beacon:SetAttribute("IronYardGantryBeacon", true)'):
+        check(needle in art, "Moving industrial gantry assembly missing: " + needle)
+    for needle in ("function GantryMotion.pose(", 'preset == "ECO"',
+                   'preset == "QUALITY"', "math.sin(seconds"):
+        check(needle in gantryMotion, "Bounded crane animation missing: " + needle)
+    for needle in ('Motion.pose(elapsed, rig.index, quality, distance)',
+                   'model:PivotTo(rig.base * CFrame.new(travel, lift, 0))',
+                   'RunService.Heartbeat:Connect(', 'PointLight',
+                   'distance < 150', 'local interval = UserInputService.TouchEnabled'):
+        check(needle in industrialMotion, "Client-only crane animation missing: " + needle)
+    check("RunService" not in art and "TweenService" not in art,
+          "Server should not drive per-frame cosmetic crane motion")
+
     lod = source("src/client/BotLOD.client.luau")
     hud = source("src/client/HudController.luau")
     effects = source("src/client/WeaponVisuals.luau")
