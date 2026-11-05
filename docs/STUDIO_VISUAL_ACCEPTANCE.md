@@ -27,3 +27,7 @@ Check settings and LOD in both portrait-width and landscape mobile viewports; tr
 - Verify the entire support glove (wrist/knuckles/sleeve) follows the rifle and sniper reloading hand. Check pistol slide, shotgun pump and sniper bolt movements during repeated fire.
 - Verify human elimination awards and headshots are server-authored, do not trigger during RESULTS, reset streaks on death/new round and keep **session-only** XP on round transitions. They do not survive quitting.
 - Test the medal overlay against Top 3, kill feed, scoreboard, mobile fire and reload controls at phone viewports. Record FPS and frametime on representative Android devices.
+
+## Android touch control acceptance — 5 November 2026
+
+The new `TouchLayout` operates on the actual safe-area GUI frame size, not hardcoded screen offsets. Run the experience on (at minimum) 568×320, 800×360, 915×412, and one high-DPI large phone/tablet. Verify all five weapons, FIRE hold/release, ADS toggle, RUN, SLIDE, RELOAD, and default Roblox jump + thumbstick remain independently touchable. Rotate the device; confirm no buttons overlap or escape the safe area. Enter RESULTS while holding FIRE; no further shots should be sent. Open Settings while holding FIRE; release auto-fire and hide tactical buttons. During LIVE the rank is compact, killfeed displays two items left of the touch controls, and the duplicate TOP 3 panel is hidden. On landscape devices shorter than 390px the location label is hidden so it does not overlap the thumbstick. Desktop TOP 3 and desktop killfeed remain unchanged.

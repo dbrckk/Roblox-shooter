@@ -66,3 +66,11 @@ The player unlocks matte, cosmetic-only finishes automatically at career ranks *
 ## End-of-round retention and mobile presentation — 29 October 2026
 
 A central, responsive **12-second results card** now displays the server-verified winner, personal eliminations/deaths, round XP, total career XP, next-rank progress and top-three leaderboard. The player receives a VICTORY headline only when `IronYardWinnerUserId` equals their immutable Roblox UserId; matching display names cannot spoof wins. It is display-only and automatically hides outside the RESULTS phase. Runtime screen-overlap/playtest remains to be completed in Studio and Android.
+
+## 5 November 2026 — responsive mobile UX, priority: playability
+
+- [x] Replace fixed pixel offsets for FIRE/ADS/SLIDE/RUN/RELOAD and all five weapons with an adaptive, viewport-safe layout; geometry is verified for 11 representative Android/tablet/desktop touch viewports.
+- [x] Disable the whole touch surface during RESULTS and while Settings is open. Kill any held auto-fire loop when the touch controls become inactive, so a finger held across a round transition cannot shoot through UI.
+- [x] Move the mobile killfeed to the top-left in a compact two-entry variant, hide it during onboarding and on very narrow portrait devices, while keeping the full desktop feed intact.
+- [x] Remove redundant TOP 3 overlay from mobile gameplay (already displayed in the server-led RESULTS summary); show a small career rank panel instead of a large panel occupying the virtual joystick.
+- [ ] Verify physical touch hitboxes, the native Roblox jump and thumbstick, notch insets and device rotation in a **published Android client**. Luau geometry tests and Rojo build cannot measure device screen occlusion or FPS.

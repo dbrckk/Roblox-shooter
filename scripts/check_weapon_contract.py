@@ -141,6 +141,26 @@ def main():
                    'leaderboard[i].Text'):
         has(roundResults, needle, "Server-authored end-round recap")
 
+    touchLayout = source("src/shared/TouchLayout.luau")
+    killFeed = source("src/client/KillFeed.client.luau")
+    tacticalHud = source("src/client/TacticalHud.client.luau")
+    progressionHud = source("src/client/ProgressionHud.client.luau")
+    for needle in ("function Layout.compute(width, height)", "function Layout.check(width, height, buttons)",
+                   "Overlapping touch buttons", "Invalid/hidden touch button"):
+        has(touchLayout, needle, "Android layout geometry and guards")
+    for needle in ('touchGui.IgnoreGuiInset = false', "TouchLayout.compute(viewport.X, viewport.Y)",
+                   'touchRoot:GetPropertyChangedSignal("AbsoluteSize")',
+                   'updateTouchVisibility = function()', 'touchGui.Enabled = enabled',
+                   'heldFireInput = nil -- stops any running automatic-fire loop'):
+        has(client, needle, "Responsive safe-area touch and results gating")
+    for needle in ('local MAX_ENTRIES = touch and 2 or 4', 'frame.Visible = viewport.X >= 360',
+                   'IronYardBriefingOpen'):
+        has(killFeed, needle, "Mobile kill-feed space management")
+    has(tacticalHud, "board.Visible = false", "Hide duplicate top-3 HUD on small touch screens")
+    has(progressionHud, "local compact = UserInputService.TouchEnabled", "Compact mobile rank display")
+    has(progressionHud, "panel.Size = UDim2.fromOffset(205, compact and 27 or 96)",
+        "Player rank must not obstruct the virtual joystick")
+
     print("IRON YARD weapon, ammo, ADS and control source contracts: OK")
     print("NOTE: Studio/Android playtests are still required.")
 

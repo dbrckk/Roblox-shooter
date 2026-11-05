@@ -45,6 +45,7 @@ jobs:
           set -euo pipefail
           ./luau scripts/test_progression_ledger.luau
           ./luau scripts/test_operator_finishes.luau
+          ./luau scripts/test_touch_layout.luau
 
       - name: Parse private Roblox publish script
         shell: bash
