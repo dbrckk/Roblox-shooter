@@ -381,7 +381,7 @@ local function gantryRigging(parent)
         local beacon = prop(assembly, "GANTRY / beacon " .. i,
             Vector3.new(0.9, 0.56, 0.9),
             CFrame.new(trolleyX, 53.0, v.Z),
-            COLOR.orange, Enum.Material.Neon, "Detail")
+            COLOR.orange, Enum.Material.Glass, "Detail")
         beacon.Transparency = 0.14
         beacon:SetAttribute("IronYardGantryBeacon", true)
         assembly.Parent = parent
