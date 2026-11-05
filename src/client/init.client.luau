@@ -8,6 +8,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
+local TouchLayout = require(shared:WaitForChild("TouchLayout"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
 local WeaponVisuals = require(script:WaitForChild("WeaponVisuals"))
@@ -22,6 +23,7 @@ local mouseSensitivity = 1
 local lastLocalFire = {}
 local ammoByWeapon = {}
 local touchWeaponButtons = {}
+local updateTouchVisibility = nil
 local lastReloadRequestAt = -math.huge
 local lastLocalSlideAt = -math.huge
 local lastLocalSlideJumpAt = -math.huge
@@ -100,6 +102,7 @@ hud = HudController.new(player, gui, WeaponConfig, {
 	end,
 	onSettingsOpenChanged = function(isOpen)
 		applyMenuMouseState(isOpen)
+        if updateTouchVisibility then updateTouchVisibility() end
 	end,
 })
 
@@ -1188,20 +1191,31 @@ enforceFirstPerson()
 hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)
 equipWeapon(currentWeaponId)
 
--- IRON YARD: mobile touch fire/aim/weapon controls; Roblox provides left thumbstick and camera drag.
+-- IRON YARD / SAFE AREA Android FPS controls: responsive and mutually exclusive
+-- with the full-screen results card. Roblox still owns the native joystick/jump.
 if UserInputService.TouchEnabled then
     local touchGui = Instance.new("ScreenGui")
     touchGui.Name = "NeonStrikeTouchControls"
-    touchGui.IgnoreGuiInset = true
+    touchGui.IgnoreGuiInset = false -- respect device notch and Roblox safe inset
     touchGui.ResetOnSpawn = false
     touchGui.DisplayOrder = 30
     touchGui.Parent = playerGui
 
+    local touchRoot = Instance.new("Frame")
+    touchRoot.Name = "TouchSafeArea"
+    touchRoot.BackgroundTransparency = 1
+    touchRoot.BorderSizePixel = 0
+    touchRoot.Size = UDim2.fromScale(1, 1)
+    touchRoot.Parent = touchGui
+
+    local allButtons = {}
     local function button(name, label, x, y, width, height)
+        -- Legacy offsets are not used: the renderer positions every control
+        -- using the viewport-safe TouchLayout geometry below.
         local b = Instance.new("TextButton")
         b.Name = name
-        b.AnchorPoint = Vector2.new(1, 1)
-        b.Position = UDim2.new(1, x, 1, y)
+        b.AnchorPoint = Vector2.new(0, 0)
+        b.Position = UDim2.fromOffset(0, 0)
         b.Size = UDim2.fromOffset(width, height)
         b.Font = Enum.Font.GothamBold
         b.Text = label
@@ -1209,14 +1223,16 @@ if UserInputService.TouchEnabled then
         b.BackgroundColor3 = Color3.fromRGB(38, 45, 43)
         b.BackgroundTransparency = 0.17
         b.TextColor3 = Color3.fromRGB(250, 239, 213)
-        b.Parent = touchGui
+        b.AutoButtonColor = true
+        b.Parent = touchRoot
         local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 12)
+        corner.CornerRadius = UDim.new(0, 10)
         corner.Parent = b
         local stroke = Instance.new("UIStroke")
         stroke.Thickness = 2
         stroke.Color = Color3.fromRGB(204, 165, 94)
         stroke.Parent = b
+        allButtons[name] = b
         return b
     end
 
@@ -1234,11 +1250,54 @@ if UserInputService.TouchEnabled then
         AssaultRifle = rifle, Pistol = pistol, Shotgun = shotgun,
         Sniper = sniper, Knife = knife,
     }
+
+    local function layoutControls()
+        local viewport = touchRoot.AbsoluteSize
+        if viewport.X < 300 or viewport.Y < 260 then return end
+        local positions = TouchLayout.compute(viewport.X, viewport.Y)
+        local valid, reason = TouchLayout.check(viewport.X, viewport.Y, positions)
+        if not valid then
+            warn("[IRON YARD] Touch controls are out of safe bounds: " .. tostring(reason))
+            return
+        end
+        for name, b in pairs(allButtons) do
+            local rect = positions[name]
+            b.Position = UDim2.fromOffset(rect.x, rect.y)
+            b.Size = UDim2.fromOffset(rect.w, rect.h)
+        end
+    end
+    touchRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutControls)
+    task.defer(layoutControls)
+
     refreshTouchSelection()
     local heldFireInput = nil
+
+    updateTouchVisibility = function()
+        local phase = workspace:GetAttribute("NeonMatchPhase")
+        local enabled = not hud:isSettingsOpen()
+            and (phase == "LIVE" or phase == "COUNTDOWN")
+        if not enabled then
+            heldFireInput = nil -- stops any running automatic-fire loop
+            if scoped then setScoped(false) end
+            if sprinting then setSprinting(false) end
+        end
+        touchGui.Enabled = enabled
+    end
+
+    workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(updateTouchVisibility)
+    playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(function()
+        -- The briefing is non-blocking, but controls remain clearly visible
+        -- in COUNTDOWN and are fully hidden in RESULTS.
+        updateTouchVisibility()
+    end)
+    updateTouchVisibility()
+
     fire.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        if heldFireInput then return end
+        if input.UserInputType ~= Enum.UserInputType.Touch
+            and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+        if not touchGui.Enabled or hud:isSettingsOpen()
+            or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE"
+            or heldFireInput then return end
         heldFireInput = input
         fireWeapon(currentWeaponId)
         task.spawn(function()
@@ -1246,32 +1305,46 @@ if UserInputService.TouchEnabled then
                 local selected = WeaponConfig.get(currentWeaponId)
                 if not selected or not selected.automatic then break end
                 task.wait(math.max(0.04, selected.fireCooldown * 0.40))
-                if heldFireInput == input and not hud:isSettingsOpen() then
+                if heldFireInput == input and touchGui.Enabled
+                    and not hud:isSettingsOpen()
+                    and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
                     fireWeapon(currentWeaponId)
                 end
             end
         end)
     end)
     fire.InputEnded:Connect(function(input)
-        if input == heldFireInput then
-            heldFireInput = nil
-        end
+        if input == heldFireInput then heldFireInput = nil end
     end)
+    UserInputService.WindowFocusReleased:Connect(function()
+        heldFireInput = nil
+    end)
+
     aim.Activated:Connect(function()
-        if not hud:isSettingsOpen() then setScoped(not scoped) end
+        if touchGui.Enabled and not hud:isSettingsOpen() then setScoped(not scoped) end
     end)
     sprint.Activated:Connect(function()
-        if not hud:isSettingsOpen() then setSprinting(not sprinting) end
+        if touchGui.Enabled and not hud:isSettingsOpen() then setSprinting(not sprinting) end
     end)
     slide.Activated:Connect(function()
-        if not hud:isSettingsOpen() then requestSlide() end
+        if touchGui.Enabled and not hud:isSettingsOpen() then requestSlide() end
     end)
     reload.Activated:Connect(function()
-        if not hud:isSettingsOpen() then requestReload() end
+        if touchGui.Enabled and not hud:isSettingsOpen() then requestReload() end
     end)
-    rifle.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("AssaultRifle") end end)
-    shotgun.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Shotgun") end end)
-    pistol.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Pistol") end end)
-    sniper.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Sniper") end end)
-    knife.Activated:Connect(function() if not hud:isSettingsOpen() then equipWeapon("Knife") end end)
+    rifle.Activated:Connect(function()
+        if touchGui.Enabled and not hud:isSettingsOpen() then equipWeapon("AssaultRifle") end
+    end)
+    shotgun.Activated:Connect(function()
+        if touchGui.Enabled and not hud:isSettingsOpen() then equipWeapon("Shotgun") end
+    end)
+    pistol.Activated:Connect(function()
+        if touchGui.Enabled and not hud:isSettingsOpen() then equipWeapon("Pistol") end
+    end)
+    sniper.Activated:Connect(function()
+        if touchGui.Enabled and not hud:isSettingsOpen() then equipWeapon("Sniper") end
+    end)
+    knife.Activated:Connect(function()
+        if touchGui.Enabled and not hud:isSettingsOpen() then equipWeapon("Knife") end
+    end)
 end
