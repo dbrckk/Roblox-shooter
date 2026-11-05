@@ -345,33 +345,49 @@ local function catwalkSafety(parent)
 end
 
 local function gantryRigging(parent)
-    -- Suspended spreaders and cable runs above the combat area: architectural
-    -- silhouettes, not physics ropes, and NEVER a hidden bullet blocker.
+    -- Four LARGE visible mechanical trolley assemblies. Each is a separate
+    -- anchored Model with no collisions, touches, or raycast participation.
+    -- A local client animation moves only these cosmetics along the crane rail.
     for i, v in ipairs({
         Vector3.new(-146, 0, -145), Vector3.new(146, 0, -145),
         Vector3.new(-146, 0, 145), Vector3.new(146, 0, 145),
     }) do
         local trolleyX = v.X + (i % 2 == 0 and -8 or 8)
-        prop(parent, "GANTRY / trolley carriage " .. i, Vector3.new(6, 1.2, 5.2),
+        local assembly = Instance.new("Model")
+        assembly.Name = "IRON YARD / trolley assembly " .. i
+        assembly:SetAttribute("IronYardGantryMover", true)
+        assembly:SetAttribute("IronYardGantryIndex", i)
+        prop(assembly, "GANTRY / trolley carriage " .. i, Vector3.new(6, 1.2, 5.2),
             CFrame.new(trolleyX, 52.0, v.Z), COLOR.ink, Enum.Material.Metal, "Core")
         for _, dx in ipairs({ -2.1, 2.1 }) do
             for _, dz in ipairs({ -1.6, 1.6 }) do
-                prop(parent, "GANTRY / winch cable " .. i .. ":" .. dx .. ":" .. dz,
+                prop(assembly, "GANTRY / winch cable " .. i .. ":" .. dx .. ":" .. dz,
                     Vector3.new(0.10, 11.0, 0.10),
                     CFrame.new(trolleyX + dx, 45.5, v.Z + dz),
                     COLOR.slate, Enum.Material.Metal, "Detail")
             end
         end
-        prop(parent, "GANTRY / container spreader " .. i,
+        prop(assembly, "GANTRY / container spreader " .. i,
             Vector3.new(12.6, 0.9, 4.8), CFrame.new(trolleyX, 39.8, v.Z),
             COLOR.orange, Enum.Material.Metal, "Core")
         for _, dx in ipairs({ -5.7, 5.7 }) do
-            prop(parent, "GANTRY / spreader foot " .. i .. ":" .. dx,
+            prop(assembly, "GANTRY / spreader foot " .. i .. ":" .. dx,
                 Vector3.new(0.7, 1.35, 4.5), CFrame.new(trolleyX + dx, 39.0, v.Z),
                 COLOR.ink, Enum.Material.Metal, "Detail")
         end
+        -- A locally animated warning light is visible from the upper walkways.
+        -- The actual PointLight is instantiated ONLY on nearby high-quality
+        -- clients; the server sends no animated properties or light updates.
+        local beacon = prop(assembly, "GANTRY / beacon " .. i,
+            Vector3.new(0.9, 0.56, 0.9),
+            CFrame.new(trolleyX, 53.0, v.Z),
+            COLOR.orange, Enum.Material.Neon, "Detail")
+        beacon.Transparency = 0.14
+        beacon:SetAttribute("IronYardGantryBeacon", true)
+        assembly.Parent = parent
     end
 end
+
 
 function ArenaArt.build(arena)
     -- Internal folder identifier retained for the existing client LOD script.
