@@ -2,6 +2,7 @@
 -- Only replicated server attributes are read; no client stat mutations.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local player = Players.LocalPlayer
@@ -128,7 +129,19 @@ local function update()
         statusLabel.Text = "SAVE NOT CONFIRMED / RETRYING"
         statusLabel.TextColor3 = Color3.fromRGB(244, 154, 104)
     end
-    panel.Visible = playerGui:GetAttribute("IronYardBriefingOpen") ~= true
+    local phase = Workspace:GetAttribute("NeonMatchPhase")
+    local compact = UserInputService.TouchEnabled and phase == "LIVE"
+    panel.Size = UDim2.fromOffset(205, compact and 27 or 96)
+    details.Visible = not compact
+    statusLabel.Visible = not compact
+    finishLabel.Visible = not compact
+    track.Visible = not compact
+    if compact and status ~= "ONLINE" then
+        title.Text = string.format("RANK %d  |  SAVE %s", level,
+            status == "LOADING" and "WAIT" or "OFFLINE")
+    end
+    panel.Visible = phase ~= "RESULTS"
+        and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
 end
 
 local function layout()
@@ -137,7 +150,9 @@ local function layout()
     local viewport = camera.ViewportSize
     local factor = math.clamp(math.min(viewport.X / 1000, viewport.Y / 600), 0.73, 1)
     scale.Scale = factor
-    panel.Position = UDim2.fromOffset(12, math.floor(94 + 131 * factor + 52 * factor + 10))
+    -- Upper left is outside the Roblox virtual joystick's lower-left zone.
+    panel.Position = UDim2.fromOffset(12,
+        math.floor(math.clamp(viewport.Y * 0.16, 84, 128)))
 end
 
 local cameraConnection
@@ -157,6 +172,7 @@ for _, name in ipairs({
     player:GetAttributeChangedSignal(name):Connect(update)
 end
 playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(update)
+Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(update)
 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(connectCamera)
 connectCamera()
 update()

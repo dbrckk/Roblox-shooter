@@ -83,6 +83,20 @@ local scaling = Instance.new("UIScale")
 scaling.Parent = board
 local locationScale = Instance.new("UIScale")
 locationScale.Parent = locationPanel
+local function refreshHudVisibility()
+    local visible = Workspace:GetAttribute("NeonMatchPhase") ~= "WAITING"
+        and gui.Parent:GetAttribute("IronYardBriefingOpen") ~= true
+    if UserInputService.TouchEnabled then
+        -- Mobile has the objective above, career rank and an actual killfeed.
+        -- A redundant top-three board obscured both the controls and feedback.
+        board.Visible = false
+        local camera = Workspace.CurrentCamera
+        locationPanel.Visible = visible and camera ~= nil and camera.ViewportSize.Y >= 390
+    else
+        board.Visible = visible
+        locationPanel.Visible = true
+    end
+end
 local function adjustScale()
     local camera = Workspace.CurrentCamera
     if not camera then return end
@@ -91,6 +105,7 @@ local function adjustScale()
     scaling.Scale = scale
     locationScale.Scale = scale
     locationPanel.Position = UDim2.fromOffset(12, math.floor(94 + 131 * scale))
+    refreshHudVisibility()
 end
 
 local function showStandings()
@@ -115,10 +130,7 @@ local function showStandings()
             row.score.Text = "0"
         end
     end
-    -- The onboarding mission card occupies this area on narrow phones.
-    -- Show standings again immediately after the briefing fades.
-    board.Visible = Workspace:GetAttribute("NeonMatchPhase") ~= "WAITING"
-        and gui.Parent:GetAttribute("IronYardBriefingOpen") ~= true
+    refreshHudVisibility()
 end
 
 local sectors = {

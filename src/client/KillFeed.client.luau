@@ -3,6 +3,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet")).getRemotes(false)
@@ -13,24 +15,51 @@ gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
+local touch = UserInputService.TouchEnabled
 local frame = Instance.new("Frame")
 frame.Name = "Feed"
-frame.AnchorPoint = Vector2.new(1, 0)
-frame.Position = UDim2.new(1, -12, 0, 92)
-frame.Size = UDim2.fromOffset(290, 165)
+frame.AnchorPoint = touch and Vector2.new(0, 0) or Vector2.new(1, 0)
+frame.Position = touch and UDim2.fromOffset(12, 113) or UDim2.new(1, -12, 0, 92)
+frame.Size = touch and UDim2.fromOffset(200, 72) or UDim2.fromOffset(290, 165)
 frame.BackgroundTransparency = 1
 frame.Parent = gui
 
 local layout = Instance.new("UIListLayout")
 layout.SortOrder = Enum.SortOrder.LayoutOrder
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+layout.HorizontalAlignment = touch and Enum.HorizontalAlignment.Left
+    or Enum.HorizontalAlignment.Right
 layout.VerticalAlignment = Enum.VerticalAlignment.Top
 layout.Padding = UDim.new(0, 5)
 layout.Parent = frame
 
 local entries = {}
 local serial = 0
-local MAX_ENTRIES = 4
+local MAX_ENTRIES = touch and 2 or 4
+
+local function updateFeedLayout()
+    if not touch then return end
+    local camera = Workspace.CurrentCamera
+    if not camera then return end
+    local viewport = camera.ViewportSize
+    local width = math.min(234, math.max(136, math.floor(viewport.X * 0.38)))
+    frame.Size = UDim2.fromOffset(width, 72)
+    -- In very narrow portrait displays, priority goes to weapon controls.
+    frame.Visible = viewport.X >= 360
+        and Workspace:GetAttribute("NeonMatchPhase") == "LIVE"
+        and gui.Parent:GetAttribute("IronYardBriefingOpen") ~= true
+end
+Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(updateFeedLayout)
+gui.Parent:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(updateFeedLayout)
+Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    local camera = Workspace.CurrentCamera
+    if camera then
+        camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateFeedLayout)
+    end
+    updateFeedLayout()
+end)
+local camera = Workspace.CurrentCamera
+if camera then camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateFeedLayout) end
+updateFeedLayout()
 
 local function addEntry(info)
     if typeof(info) ~= "table" or typeof(info.attacker) ~= "string" or typeof(info.target) ~= "string" then
@@ -40,7 +69,8 @@ local function addEntry(info)
     local row = Instance.new("Frame")
     row.Name = "Elimination"
     row.LayoutOrder = -serial
-    row.Size = UDim2.fromOffset(270, 31)
+    row.Size = touch and UDim2.new(1, -4, 0, 31)
+        or UDim2.fromOffset(270, 31)
     row.BackgroundColor3 = Color3.fromRGB(43, 48, 47)
     row.BackgroundTransparency = 0.15
     row.BorderSizePixel = 0
