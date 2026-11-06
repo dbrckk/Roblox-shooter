@@ -151,3 +151,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Les calculs de visibilité sont effectués **uniquement au spawn**, limités aux combattants situés à moins de 165 studs. Aucun raycast supplémentaire sur les boucles IA/HUD.
 - [x] Scoring testable sous Luau dans la CI ; la protection temporaire de 2,5 secondes et son annulation au tir sont préservées.
 - [ ] Vérifier les spawns physiques depuis Studio sur PC et Android, notamment plusieurs morts simultanées, coins de conteneurs et nouveaux MeshParts.
+
+
+## 6 novembre 2026 — stations médicales tactiques interactives
+
+- [x] Quatre bornes médicales 3D aux abords des couloirs nord et sud, utilisant une interaction native Roblox accessible au clavier et sur mobile.
+- [x] Soin jusqu'à 40 PV, uniquement pendant LIVE, sur joueur vivant et réellement blessé, avec contrôle de distance et cooldown partagés par station côté serveur.
+- [x] Indicateurs READY/RECHARGING répliqués, audio localisé, confirmation HUD individuelle, remise à disponibilité en début de manche avec protection contre les anciens temporisateurs.
+- [x] Aucune collision, aucun CanQuery et aucun nouveau raycast pour les bornes, afin de ne pas modifier les tirs, les couvertures ou le pathfinding.
+- [x] Règles pures vérifiables avec script Luau dans la CI, compilation Rojo complète.
+- [ ] Vérification réelle Roblox Studio et Android : accessibilité tactile, lisibilité à plusieurs distances, placement, rythme de soin et coût GPU/CPU.

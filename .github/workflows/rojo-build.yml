@@ -58,6 +58,7 @@ jobs:
           ./luau scripts/test_weapon_cadence.luau
           ./luau scripts/test_safe_planar_input.luau
           ./luau scripts/test_spawn_safety.luau
+          ./luau scripts/test_supply_rules.luau
 
       - name: Parse private Roblox publish script
         shell: bash

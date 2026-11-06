@@ -11,6 +11,8 @@ local MovementService = require(script:WaitForChild("MovementService"))
 local WeaponService = require(script:WaitForChild("WeaponService"))
 
 MapService.start()
+local SupplyService = require(script:WaitForChild("SupplyService"))
+SupplyService.start()
 local VanguardAssetLoader = require(script:WaitForChild("VanguardAssetLoader"))
 VanguardAssetLoader.start()
 local SpawnService = require(script:WaitForChild("SpawnService"))
