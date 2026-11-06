@@ -92,6 +92,9 @@ def main():
     for needle in (
         "local function chooseDetour(bot, goal)",
         "local function walkableCandidate(bot, raw, params)",
+        "Capsule clearance does not imply the FLOOR exists",
+        "math.min(7, flat.Magnitude), math.min(14, flat.Magnitude)",
+        "floor.Normal.Y < 0.68",
         "Planner.offsets(bot.strafeSign, attempt)",
         "directRouteClear(bot, grounded, params)",
         'setMode(bot, "AVOID")',
@@ -101,6 +104,7 @@ def main():
         'bot.model:SetAttribute("IronYardNavMode", mode)',
     ):
         has(navigation, needle, "Ground-checked detours and bounded path retries")
+    has(bot, "bot.pathFailures = 0", "Reset failure backoff on changed enemy")
     for needle in ("local waitingForRoute = bot.navMode", "local waitedLongEnough",
                    'bot.navMode == "DIRECT" and bot.stuckRecoveries % 3 == 0'):
         has(bot, needle, "No repeated jumps while waiting for a valid path")

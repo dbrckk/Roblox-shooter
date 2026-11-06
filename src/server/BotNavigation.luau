@@ -55,6 +55,20 @@ local function directRouteClear(bot, goal, cachedParams)
             return false
         end
     end
+    -- Capsule clearance does not imply the FLOOR exists. Especially from
+    -- catwalks, an empty lane can lead straight off an exposed platform.
+    -- Two near-future ground probes stop movement BEFORE the edge while
+    -- keeping the raycast budget independent of total route distance.
+    local direction = flat.Unit
+    for _, distance in ipairs({ math.min(7, flat.Magnitude), math.min(14, flat.Magnitude) }) do
+        local sample = origin + direction * distance
+        local downFrom = Vector3.new(sample.X, origin.Y + 4.5, sample.Z)
+        local floor = Workspace:Raycast(downFrom, Vector3.new(0, -12, 0), params)
+        if not floor or floor.Normal.Y < 0.68
+            or math.abs(floor.Position.Y + 3.4 - origin.Y) > MAX_GROUND_DELTA then
+            return false
+        end
+    end
     return true
 end
 

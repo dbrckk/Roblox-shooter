@@ -554,6 +554,8 @@ local function updateBot(bot, dt)
         end
         bot.reactionReadyAt = now + bot.skill.reaction
         bot.aimDirection = bot.root.CFrame.LookVector
+        bot.pathFailures = 0
+        bot.detourAttempts = 0
         BotTactics.reset(bot)
         BotNavigation.invalidate(bot)
     end
