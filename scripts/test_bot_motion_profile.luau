@@ -1,0 +1,30 @@
+local M = require("../src/shared/BotMotionProfile")
+
+local function near(actual, expected, tolerance, label)
+    assert(math.abs(actual - expected) <= (tolerance or 0.00001),
+        label .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+end
+
+local v, f, s = M.weights(0, -16, 16, 16, true)
+near(v, 1, nil, "normal travel")
+near(f, 1, nil, "forward motion")
+near(s, 0, nil, "no strafing")
+v, f, s = M.weights(0, 16, 16, 16, true)
+near(v, 1, nil, "reverse travel")
+near(f, -1, nil, "reverse leg direction")
+v, f, s = M.weights(10, 0, 10, 16, true)
+near(v, 0.625, nil, "speed scaling")
+near(s, 1, nil, "right strafe")
+v, f, s = M.weights(10, 0, 0, 16, true)
+near(v, 0, nil, "no skating while blocked")
+v, f, s = M.weights(0, -16, 16, 16, false)
+near(v, 0, nil, "airborne feet do not run")
+near(M.smooth(0, 1, 0, 9), 0, nil, "zero dt")
+assert(M.smooth(0, 1, 0.1, 10) > M.smooth(0, 1, 0.1, 3),
+    "Higher response blends more quickly")
+assert(M.smooth(0.5, 1, 0.1, 10) < 1, "No overshoot")
+near(M.gaitPhase(0, 0), 0, nil, "no distance: no foot cycle")
+near(M.gaitPhase(0, math.pi / 0.80), math.pi, 0.00001, "phase tracks distance")
+near(M.interval(100), 1 / 15, nil, "visible rig runs at 15Hz")
+near(M.interval(300), 1 / 8, nil, "distant rig runs at 8Hz")
+print("IRON YARD R6 directional locomotion, exponential pose blends and animation LOD: OK")
