@@ -90,9 +90,11 @@ function BotNavigation.steer(bot, goal, isCurrent)
     -- This prevents the previous AI from standing still every navigation refresh.
     local moving = followWaypoints(bot)
     if not moving then
-        -- Pending path: request motion toward the destination as a fallback.
-        -- The next resolved route will replace it with traversable waypoints.
-        bot.humanoid:MoveTo(goal)
+        -- The capsule probe has CONFIRMED this lane is obstructed. Sending
+        -- MoveTo(goal) here pushes the bot repeatedly into a wall until
+        -- ComputeAsync resolves (or fails). Hold position instead; path
+        -- computation continues asynchronously below.
+        bot.humanoid:MoveTo(bot.root.Position)
     end
 
     local goalChanged = bot.pathGoal and (goal - bot.pathGoal).Magnitude > GOAL_REPATH_DISTANCE
