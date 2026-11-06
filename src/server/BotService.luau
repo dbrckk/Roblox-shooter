@@ -15,6 +15,7 @@ local BotVisuals = require(script.Parent:WaitForChild("BotVisuals"))
 local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
 local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
 local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
+local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local folder = nil
 local slots = {}
@@ -305,6 +306,11 @@ local function createBot(slot)
         lastKnownTargetPosition = nil,
         investigationTurn = 0,
         lastDamageAt = -math.huge,
+        lastHitStamp = nil,
+        hitSide = 0,
+        hitFront = 0,
+        suppressedUntil = 0,
+        recentThreatOrigin = nil,
         coverGoal = nil,
         coverGoalUntil = 0,
         reactionReadyAt = 0,
@@ -372,6 +378,33 @@ local function createBot(slot)
     return bot
 end
 
+-- Server-authored hit attributes are published AFTER confirmed damage,
+-- so HealthChanged never races ahead of the incoming attack coordinates.
+-- Shooter position is used only to select cover, not to aim or reveal a target.
+local function observeRecentHit(bot, now)
+    local stamp = bot.model:GetAttribute("IronYardLastHitTime")
+    local origin = bot.model:GetAttribute("IronYardLastHitPosition")
+    if typeof(stamp) ~= "number" or stamp == bot.lastHitStamp
+        or typeof(origin) ~= "Vector3" then
+        return
+    end
+    bot.lastHitStamp = stamp
+    local incoming = origin - bot.root.Position
+    if incoming.Magnitude < 0.5 then return end
+    local localDirection = bot.root.CFrame:VectorToObjectSpace(incoming.Unit)
+    local reaction = BotCombatResponse.reaction(localDirection.X, -localDirection.Z,
+        now, bot.humanoid.Health / math.max(bot.humanoid.MaxHealth, 1))
+    bot.hitSide = reaction.hitSide
+    bot.hitFront = reaction.hitFront
+    bot.suppressedUntil = reaction.suppressedUntil
+    bot.recentThreatOrigin = origin
+    bot.lastDamageAt = now
+    -- A hit briefly disrupts aim, without disabling combat or granting
+    -- the AI knowledge of the shooter behind an occluding wall.
+    bot.reactionReadyAt = math.max(bot.reactionReadyAt, now + 0.16)
+    BotTactics.reset(bot)
+end
+
 local function steerToward(bot, desired)
     -- Remember the actual movement request for meaningful stuck detection.
     -- A bot holding cover or arriving at its patrol point is not stuck.
@@ -393,6 +426,13 @@ local SEARCH_MEMORY_SECONDS = 9
 local function navigationGoal(bot, target, canSee)
     local now = os.clock()
     if not target then
+        if bot.recentThreatOrigin and now < (bot.suppressedUntil or 0) then
+            local retreat = BotTactics.defensiveGoal(bot, bot.recentThreatOrigin, now)
+            if retreat then return retreat end
+            -- Preserve a failed-cover search cache until the next search
+            -- window, rather than recasting four lanes at every think tick.
+            return patrolGoal(bot)
+        end
         BotTactics.reset(bot)
         if bot.lastKnownTargetPosition
             and (now - bot.lastTargetSeenAt) < SEARCH_MEMORY_SECONDS then
@@ -503,8 +543,8 @@ local function shoot(bot, target, aimPoint, dt)
     if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     local before = humanoid.Health
     humanoid:TakeDamage(config.Damage)
-    if targetPlayer and humanoid.Health < before then
-        -- Replicated server-owned combat direction for mobile/desktop HUD.
+    if humanoid.Health < before then
+        -- Replicated server-owned impact origin for human HUD and bot reactions.
         hitModel:SetAttribute("IronYardLastHitPosition", origin)
         hitModel:SetAttribute("IronYardLastHitTime", Workspace:GetServerTimeNow())
     end
@@ -538,6 +578,7 @@ local function updateBot(bot, dt)
     if now < bot.nextThinkAt then return end
     bot.nextThinkAt = now + config.ThinkInterval
     serviceReload(bot, now)
+    observeRecentHit(bot, now)
 
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local target = phase == "LIVE" and getTargetModel(bot, config.MaximumSightDistance) or nil
@@ -723,6 +764,13 @@ function BotService.resetRound()
             bot.lastKnownTargetPosition = nil
             bot.investigationTurn = 0
             bot.lastDamageAt = -math.huge
+            bot.lastHitStamp = nil
+            bot.hitSide = 0
+            bot.hitFront = 0
+            bot.suppressedUntil = 0
+            bot.recentThreatOrigin = nil
+            bot.model:SetAttribute("IronYardLastHitPosition", nil)
+            bot.model:SetAttribute("IronYardLastHitTime", nil)
             BotTactics.reset(bot)
             bot.aimDirection = bot.root.CFrame.LookVector
             BotNavigation.invalidate(bot)

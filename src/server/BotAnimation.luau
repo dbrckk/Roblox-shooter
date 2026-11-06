@@ -36,6 +36,12 @@ function BotAnimation.step(bot, now, moved, targeting)
     landing = landing * landing
     local hit = math.max(0, 1 - (now - (bot.lastDamageAt or -100)) / 0.28)
     hit = hit * hit
+    -- Impact side comes from a verified server ray, not an arbitrary
+    -- per-slot alternating lean. Preserve locomotion and reload blending.
+    local hitSide = math.clamp(bot.hitSide or 0, -1, 1)
+    local hitFront = math.clamp(bot.hitFront or 0, -1, 1)
+    local hitRoll = hit * hitSide * 0.14
+    local hitPitch = hit * hitFront * 0.09
     local defensive = (bot.coverGoal and (bot.ammoRemaining <= 0 or bot.reloadUntil > now))
         and 1 or 0
     bot.defensiveBlend = smooth(bot.defensiveBlend or 0, defensive, smoothing * 0.65)
@@ -83,14 +89,14 @@ function BotAnimation.step(bot, now, moved, targeting)
     joints.rightHip.C0 = CFrame.new(0.5, -1, 0) *
         CFrame.Angles(step + air * 0.28, 0, -sway)
     joints.neck.C0 = CFrame.new(0, 1, 0) *
-        CFrame.Angles(-breath + air * 0.05 - hit * 0.13, yaw,
-            strafeLean * -0.055)
+        CFrame.Angles(-breath + air * 0.05 - hit * 0.13, yaw + hitSide * hit * 0.065,
+            strafeLean * -0.055 - hitRoll * 0.3)
     joints.root.C0 = CFrame.new(0,
         breath * 0.25 + math.abs(step) * 0.032 - landing * 0.12
             - bot.defensiveBlend * 0.10, 0) *
         CFrame.Angles(-bot.walkBlend * 0.055 - air * 0.055
-            + landing * 0.09 + hit * 0.11 + bot.defensiveBlend * 0.07,
-            0, sway * 0.35 - strafeLean * 0.075 + hit * (bot.slot % 2 == 0 and 0.08 or -0.08))
+            + landing * 0.09 + hit * 0.11 + hitPitch + bot.defensiveBlend * 0.07,
+            0, sway * 0.35 - strafeLean * 0.075 + hitRoll)
 end
 
 return BotAnimation

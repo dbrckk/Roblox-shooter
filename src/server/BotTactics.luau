@@ -2,6 +2,8 @@
 -- Decisions use only previously observed enemy positions. No through-wall tracking.
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BotCombatResponse = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCombatResponse"))
 
 local BotTactics = {}
 local COVER_HOLD_SECONDS = 2.4
@@ -105,8 +107,10 @@ function BotTactics.defensiveGoal(bot, knownPosition, now)
 
     local healthRatio = bot.humanoid.Health / math.max(1, bot.humanoid.MaxHealth)
     local recentlyHit = now - (bot.lastDamageAt or -math.huge) < 4.5
-    local needsCover = (healthRatio < 0.68 and recentlyHit)
-        or bot.ammoRemaining <= 0 or bot.reloadUntil > now
+    local needsCover = BotCombatResponse.shouldTakeCover(healthRatio,
+        recentlyHit and now - bot.lastDamageAt or math.huge,
+        bot.ammoRemaining <= 0 or bot.reloadUntil > now,
+        now < (bot.suppressedUntil or 0))
     if not needsCover then
         BotTactics.reset(bot)
         return nil

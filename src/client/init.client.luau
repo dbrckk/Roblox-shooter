@@ -1113,7 +1113,11 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         and typeof(message.direction) == "Vector3"
         and typeof(message.length) == "number" then
         local distance = math.clamp(message.length, 0, 140)
-        if message.direction.Magnitude > 0.01 and distance > 1 then
+        local cameraNow = workspace.CurrentCamera
+        -- Do not allocate tracer/muzzle parts for shots beyond the local
+        -- view distance (especially expensive with four simultaneous bots).
+        if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 195
+            and message.direction.Magnitude > 0.01 and distance > 1 then
             local accent = typeof(message.color) == "Color3" and message.color or nil
             visuals:drawTracer(message.origin, message.direction.Unit, distance, accent)
             visuals:drawMuzzleFlash(message.origin, accent)

@@ -176,7 +176,9 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
     local damage = headshot and config.headshotDamage or config.damage
     local healthBefore = targetHumanoid.Health
     targetHumanoid:TakeDamage(damage)
-    if targetPlayer and targetHumanoid.Health < healthBefore then
+    if targetHumanoid.Health < healthBefore then
+        -- Validated human and bot hit targets publish the trusted firing
+        -- origin. AI uses it for avoidance, never for through-wall shooting.
         targetCharacter:SetAttribute("IronYardLastHitPosition", origin)
         targetCharacter:SetAttribute("IronYardLastHitTime", workspace:GetServerTimeNow())
     end
@@ -369,7 +371,7 @@ local function firePelletWeapon(player, weaponId, config, direction)
             local damage = math.max(1, math.floor(entry.damage + 0.5))
             local oldHealth = humanoid.Health
             humanoid:TakeDamage(damage)
-            if entry.player and humanoid.Health < oldHealth then
+            if humanoid.Health < oldHealth then
                 entry.model:SetAttribute("IronYardLastHitPosition", origin)
                 entry.model:SetAttribute("IronYardLastHitTime", workspace:GetServerTimeNow())
             end

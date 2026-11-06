@@ -115,7 +115,7 @@ def main():
         "local function coverApproachClear(bot, destination, params)",
         "if candidate and coverApproachClear(bot, candidate, params) then",
         "if now < (bot.coverGoalUntil or 0) then",
-        "healthRatio < 0.68 and recentlyHit",
+        "BotCombatResponse.shouldTakeCover(healthRatio,",
     ):
         has(tactics, key, "Reachable defensive cover and bounded resampling")
     for needle in (
@@ -137,6 +137,16 @@ def main():
     for needle in ("local waitingForRoute = bot.navMode", "local waitedLongEnough",
                    'bot.navMode == "DIRECT" and bot.stuckRecoveries % 3 == 0'):
         has(bot, needle, "No repeated jumps while waiting for a valid path")
+    for needle in ("local function observeRecentHit(bot, now)",
+                   "BotCombatResponse.reaction(localDirection.X, -localDirection.Z,",
+                   "bot.recentThreatOrigin and now < (bot.suppressedUntil or 0)",
+                   "observeRecentHit(bot, now)"):
+        has(bot, needle, "Incoming fire triggers AI flinch and safe cover retreat")
+    for needle in ("if targetHumanoid.Health < healthBefore then",
+                   "if humanoid.Health < oldHealth then"):
+        has(server, needle, "Human and AI hit origins derive from confirmed damage")
+    has(client, "(cameraNow.CFrame.Position - message.origin).Magnitude < 195",
+        "Distant bot tracers must not allocate unnecessary parts")
     has(bot, "config.MagazineSize", "Bot finite ammunition")
     has(bot, "config.ReloadSeconds", "Bot reloading")
     has(client, "visibleRigParts", "Cached first-person rig visibility")
@@ -171,7 +181,8 @@ def main():
         has(botTactics, needle, "Grounded, finite-duration search")
     botAnimation = source("src/server/BotAnimation.luau")
     for key in ("bot.wasAirborne", "bot.landedAt", "bot.lastDamageAt",
-                "bot.defensiveBlend", "strafeLean"):
+                "bot.defensiveBlend", "strafeLean", "local hitRoll = hit * hitSide",
+                "local hitPitch = hit * hitFront"):
         has(botAnimation, key, "Bot reactions and combat locomotion")
     awards = source("src/server/CombatAwards.luau")
     awards_ui = source("src/client/CombatAwards.client.luau")
