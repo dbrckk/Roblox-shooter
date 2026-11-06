@@ -92,6 +92,31 @@ def main():
           and 'Instance.new("PointLight")' not in art,
           "Replicated arena art must never instantiate dynamic fixtures")
 
+    # High-visibility native 3D upgrades are an honest playable fallback
+    # while the real PBR asset registry is still unpopulated.
+    for needle in (
+        "local function warehouseRoof(parent)",
+        '"ROOF / pitched corrugated shell "',
+        '"ROOF / skylight glass "',
+        '"ROOF / extraction duct "',
+        '"SKYLINE / dock shutter "',
+        "warehouseRoof(decor)",
+        "sheet.CastShadow = false",
+        "pane.CastShadow = false",
+    ):
+        check(needle in art, "Native visual warehouse fidelity regression: " + needle)
+    native_props = source("src/server/IndustrialProps.luau")
+    for needle in (
+        '"hydraulic cylinder "', '"hydraulic ram "',
+        '"fork tip "', 'Instance.new("WedgePart")',
+        '"wheel lug "', '"cab steering wheel"',
+        '"rear counterweight"', '"rear signal "',
+        'wedge.CanCollide = false', 'wedge.CanQuery = false',
+        'wedge:SetAttribute("NeonArtTier", "Detail")',
+    ):
+        check(needle in native_props,
+              "Native forklift PBR-fallback detail or physics safety missing: " + needle)
+
     # Visual-only gantries must be separate client-animated assemblies, with
     # absolutely no real player collision, raycast or server tween workload.
     industrialMotion = source("src/client/IndustrialMotion.client.luau")
