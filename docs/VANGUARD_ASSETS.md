@@ -56,7 +56,7 @@ Un script de **barre de commandes Studio** évite de renommer/déplacer les 28 p
 1. Importer les **quatre GLB LOD0** (olive, sand, slate, rust) via **Studio 3D Importer** ; les ressources doivent être importées et autorisées par Roblox.
 2. Vérifier que chaque modèle contient sept MeshParts nommés `VANGUARD_torso`, `VANGUARD_head`, `VANGUARD_left_arm`, etc. Renommer les **quatre modèles racines** pour inclure leur palette respective.
 3. Sélectionner simultanément ces **quatre modèles racines** dans l'Explorer, puis exécuter `tools/studio/install_vanguard.lua` dans **View → Command Bar** (copier-coller son contenu).
-4. Le script vérifie l'existence et l'ID de chaque mesh et construit automatiquement les **28 MeshParts** de `ServerStorage/VanguardTemplates` ; il prévient si les SurfaceAppearance PBR manquent. Il ne modifie pas les modèles sources sélectionnés.
+4. Le script vérifie les **28 MeshParts** et les quatre cartes `ColorMap`, `NormalMap`, `RoughnessMap`, `MetalnessMap` de chacun. Si une carte manque, il s'arrête **sans remplacer** l'éventuel kit précédent. Les clones installés conservent uniquement le MeshPart et son SurfaceAppearance : scripts ou autres objets imbriqués ne sont pas propagés aux personnages. Les modèles sources sélectionnés restent inchangés.
 5. Enregistrer l'expérience dans Studio. Lors du Play, inspecter l'attribut `NeonVisualSource` des bots : `PBR_MESH` signifie que le pack est activé, `PROCEDURAL_PARTS` indique le fallback.
 
 Le script n'est **pas exécuté depuis GitHub Actions** : Studio/Creator et les permissions d'upload restent nécessaires. Aucun ID ni résultat de test mobile n'est inventé.
@@ -100,3 +100,7 @@ Le premier contrôle de taille a détecté un GLB LOD0 olive de **20 757 752 oct
 ### Audit des vrais canaux PBR des GLB (29 octobre 2026)
 
 En complément de la validation des textures PNG, l'audit GitHub [40891068263](https://github.com/dbrckk/Roblox-shooter/actions/runs/40891068263) a décompressé la **véritable release 1K** et inspecté ses quatre fichiers GLB : **7 pièces Mesh** et **5 matériaux PBR** par modèle, dont **15 images embarquées**, **5 maps de normales** et **5 textures métallicité/rugosité**. Les quatre variantes ont passé les tests, ainsi qu'un contrôle de leurs buffers internes et de leurs noms de pièces. Le workflow d'upload vérifie désormais exactement ces structures avant tout appel à l'API Roblox : les GLB à en-tête valide mais dépourvus de véritables canaux PBR seront rejetés.
+
+## Renforcement de l'import runtime — 6 novembre 2026
+
+Les quatre packages ne sont pas considérés prêts sur la seule présence d'un `SurfaceAppearance`. Chaque composant doit posséder un véritable `MeshId` et les **quatre références de cartes PBR non vides**. Le serveur applique un inventaire strict des sept noms de pièces, sans accepter des MeshParts dont le nom contient simplement le nom recherché au milieu d'une autre chaîne. Le clone est **assaini avant publication dans le jeu** : seuls le MeshPart et son premier `SurfaceAppearance` direct subsistent ; tous les scripts, sons, événements, attachments et enfants inattendus sont supprimés. Un import incomplet conserve le bot procédural jouable ; les imports réussis entrent en scène à la prochaine manche. Ces garanties sont compilées et testées en CI, sans revendiquer d'import ni de validation Roblox Studio en direct.

@@ -204,11 +204,29 @@ def main():
                 "SurfaceAppearance", "CanQuery = false", "CanCollide = false",
                 "staging.Parent = ServerStorage"):
         check(key in loader, "Owner-controlled asset loader missing: " + key)
-    check("mesh:FindFirstChildOfClass(\"SurfaceAppearance\") == nil" in loader,
-          "Manual PBR kit must have actual SurfaceAppearance maps")
-    check("mesh:FindFirstChildOfClass(\"SurfaceAppearance\")" in
-          source("src/server/BotVisuals.luau"),
-          "Procedural fallback must activate when imported materials are absent")
+    policy = source("src/shared/VanguardMeshPolicy.luau")
+    kit = source("src/server/VanguardMeshKit.luau")
+    studio = source("tools/studio/install_vanguard.lua")
+    bot_visuals = source("src/server/BotVisuals.luau")
+    for needle in ("function Policy.identifyPiece(", "function Policy.mapsReady(",
+                   "function Policy.keepChild(", '"ColorMap"', '"NormalMap"',
+                   '"RoughnessMap"', '"MetalnessMap"'):
+        check(needle in policy, "Strict PBR mesh selection or material validation missing: " + needle)
+    for needle in ("function Kit.isRenderable(mesh)", "function Kit.cleanClone(source)",
+                   "Policy.mapsReady(maps(appearance))", "clone:GetDescendants()",
+                   "Policy.keepChild(child.ClassName, child.Parent == clone,",
+                   "child:Destroy()", "clone.CanQuery = false"):
+        check(needle in kit, "Untrusted owner-controlled PBR package bypasses sanitization: " + needle)
+    for needle in ("MeshKit.isRenderable(mesh)", "MeshKit.cleanClone(selected[name])",
+                   "Policy.identifyPiece(item.Name)", "loaded:Destroy()"):
+        check(needle in loader, "Owner-controlled asset loader lacks verified safe extraction: " + needle)
+    for needle in ("MeshKit.isRenderable(mesh)", "MeshKit.cleanClone(source[partName])",
+                   'model:SetAttribute("NeonVisualSource", "PROCEDURAL_PARTS")'):
+        check(needle in bot_visuals, "Bots must preserve safe procedural fallback: " + needle)
+    for needle in ("assert(completeMaps(", "local function safeClone(mesh)",
+                   "clone:GetDescendants()", "item:Destroy()",
+                   "if previous then previous:Destroy() end"):
+        check(needle in studio, "Studio PBR installation is unsafe or not atomic: " + needle)
     for key in ("task.spawn(loadConfiguredPbr)", "IronYardPbrStatus",
                 "hasCompleteTemplateSet(", "IronYardPbrTemplatesLoaded"):
         check(key in loader, "Non-blocking verified PBR import is missing: " + key)
