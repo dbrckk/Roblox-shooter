@@ -62,7 +62,7 @@ end
 
 
 local artCache = setmetatable({}, { __mode = "k" })
-local artFolders = { "NeonStrikeDecor", "FreightLandmarks" }
+local artFolders = { "NeonStrikeDecor", "FreightLandmarks", "IronYardCoverSkins" }
 
 local function getDetailParts(folder)
     local entry = artCache[folder]
