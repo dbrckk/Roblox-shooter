@@ -806,6 +806,7 @@ local function fireWeapon(weaponId)
         hud:setAmmo(weaponId, ammo.loaded, ammo.capacity, false)
     end
 	visuals:kick(weaponId)
+    visuals:drawLocalMuzzleFlash()
 	visuals:playFireSound(weaponId, ray.Origin)
 
 
@@ -1102,7 +1103,7 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 220
             and direction.Magnitude > 0.01 and fullLength > 0.1 then
             visuals:drawTracer(message.origin, direction.Unit, fullLength, Color3.fromRGB(240, 213, 165))
-            visuals:drawMuzzleFlash(message.origin)
+            visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)
             if typeof(message.impactNormal) == "Vector3" then
                 visuals:drawImpact(message.origin + direction.Unit * fullLength,
                     message.impactNormal, message.impactMaterial)
@@ -1120,7 +1121,7 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
             and message.direction.Magnitude > 0.01 and distance > 1 then
             local accent = typeof(message.color) == "Color3" and message.color or nil
             visuals:drawTracer(message.origin, message.direction.Unit, distance, accent)
-            visuals:drawMuzzleFlash(message.origin, accent)
+            visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)
             if typeof(message.impactNormal) == "Vector3" then
                 visuals:drawImpact(message.origin + message.direction.Unit * distance,
                     message.impactNormal, message.impactMaterial)

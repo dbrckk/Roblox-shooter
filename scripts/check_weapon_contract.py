@@ -149,6 +149,20 @@ def main():
         "Distant bot tracers must not allocate unnecessary parts")
     has(bot, "config.MagazineSize", "Bot finite ammunition")
     has(bot, "config.ReloadSeconds", "Bot reloading")
+    for key in ("CombatVfxProfile.tracer(range)",
+                "function WeaponVisuals:_trackImpactMark(mark, cap)",
+                "function WeaponVisuals:drawLocalMuzzleFlash()",
+                "CombatVfxProfile.surface(materialName)",
+                "CombatVfxProfile.budget(preset, touch, distance)",
+                "self:_trackImpactMark(mark, budget.marks)",
+                "Debris:AddItem(mark, budget.markSeconds)",
+                "for i = 1, budget.muzzleFins do",
+                "if budget.muzzleLight then"):
+        has(viewmodel, key, "Material-aware client-only combat effects")
+    for key in ("visuals:drawLocalMuzzleFlash()",
+                "visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)",
+                "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)"):
+        has(client, key, "Local and remote gun flashes use shot direction")
     has(client, "visibleRigParts", "Cached first-person rig visibility")
     # Confirm a reload effect is driven by authoritative server ammo state,
     # and weapon bob uses character ground/velocity rather than a ticking clock.
