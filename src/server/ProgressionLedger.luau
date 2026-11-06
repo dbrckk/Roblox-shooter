@@ -125,6 +125,22 @@ function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds,
     return data
 end
 
+-- The stored total already includes this session's acknowledged writes.
+-- Subtract its committed snapshot before adding local earned XP in the HUD.
+-- This also recovers a lost acquire acknowledgement after an autosave.
+function Ledger.sessionBase(data, token)
+    local totals = Ledger.copyStats(data)
+    if data.lock and data.lock.owner == token then
+        local committed = Ledger.copyStats(data.lock.committed)
+        for _, field in ipairs(Ledger.STATS) do
+            assert(totals[field] >= committed[field],
+                "Committed session counters exceed stored total: " .. field)
+            totals[field] -= committed[field]
+        end
+    end
+    return totals
+end
+
 function Ledger.levelForXP(xp)
     assert(safeInt(xp), "Invalid XP total")
     return math.clamp(1 + math.floor(math.sqrt(xp / 250)), 1, 1000)

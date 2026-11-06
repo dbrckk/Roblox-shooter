@@ -100,15 +100,16 @@ local function acquire(player, record)
         -- The player left during acquisition; release any lock just acquired.
         if success and result then
             record.loaded = true
-            record.base = copyStats(result)
+            record.base = Ledger.sessionBase(result, record.token)
+            record.committed = copyStats(result.lock.committed)
             return true
         end
         return false
     end
     if success and result then
         record.loaded = true
-        record.base = copyStats(result)
-        record.committed = zero()
+        record.base = Ledger.sessionBase(result, record.token)
+        record.committed = copyStats(result.lock.committed)
         setStatus(player, record, "ONLINE")
         publish(player, record) -- includes XP earned during the load
         return true
