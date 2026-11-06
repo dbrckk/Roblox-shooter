@@ -82,6 +82,13 @@ def main():
                  "self.scopeOverlay.Visible = scoped and isOptical"):
         has(hud, name, "HUD accessibility")
 
+    navigation = source("src/server/BotNavigation.luau")
+    has(navigation, "local direct = directRouteClear(bot, goal)", "Capsule collision probe")
+    has(navigation, "bot.humanoid:MoveTo(bot.root.Position)",
+        "Bots must not walk into a confirmed obstructed direct route")
+    require("bot.humanoid:MoveTo(goal)" in navigation,
+            "Unobstructed bot routes must still move directly")
+    has(navigation, "task.spawn(function()", "Asynchronous path computation")
     has(bot, "config.MagazineSize", "Bot finite ammunition")
     has(bot, "config.ReloadSeconds", "Bot reloading")
     has(client, "visibleRigParts", "Cached first-person rig visibility")
