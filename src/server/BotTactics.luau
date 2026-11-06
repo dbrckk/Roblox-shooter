@@ -33,6 +33,26 @@ local function groundedGoal(bot, proposed, params)
     return ground
 end
 
+local function coverApproachClear(bot, destination, params)
+    local current = bot.root.Position
+    local direction = Vector3.new(destination.X - current.X, 0, destination.Z - current.Z)
+    if direction.Magnitude < 2 then return true end
+    local side = Vector3.new(-direction.Z, 0, direction.X).Unit * 1.25
+    -- A single centre ray ignores a humanoid's shoulders. Reject a cover
+    -- candidate when a freight wall blocks any of the three walking lanes.
+    for _, lateral in ipairs({ Vector3.zero, side, -side }) do
+        local origin = current + lateral + Vector3.new(0, -0.65, 0)
+        if Workspace:Raycast(origin, direction, params) then return false end
+    end
+    -- A walkable endpoint alone is insufficient if there is a catwalk gap.
+    local middle = current + direction * 0.5
+    local surface = Workspace:Raycast(
+        Vector3.new(middle.X, current.Y + 4, middle.Z),
+        Vector3.new(0, -11, 0), params)
+    return surface ~= nil and surface.Normal.Y >= 0.68
+        and math.abs(surface.Position.Y + 3.4 - current.Y) <= 3.5
+end
+
 local function selectCover(bot, seenPosition, now)
     local current = bot.root.Position
     local flat = Vector3.new(seenPosition.X - current.X, 0, seenPosition.Z - current.Z)
@@ -52,20 +72,16 @@ local function selectCover(bot, seenPosition, now)
     local best, bestScore = nil, -math.huge
     for i, raw in ipairs(candidates) do
         local candidate = groundedGoal(bot, raw, params)
-        if candidate then
+        if candidate and coverApproachClear(bot, candidate, params) then
             local offset = candidate - current
-            local moveCast = Workspace:Raycast(current + Vector3.new(0, -1, 0),
-                Vector3.new(offset.X, 0, offset.Z), params)
-            local approachClear = moveCast == nil
             local start = seenPosition + Vector3.new(0, 1.0, 0)
             local finish = candidate + Vector3.new(0, 1.0, 0)
             local blockingCover = Workspace:Raycast(start, finish - start, params) ~= nil
-            -- Cover beats raw distance. Favor low-cost reachable moves,
-            -- stagger left/right by slot to avoid identical AI clustering.
+            -- Reject unreachable cover; prefer an actual solid obstacle
+            -- shielding the bot, not an unreachable destination behind one.
             local sideBias = (i % 2 == (bot.slot % 2)) and 2 or 0
             local score = (blockingCover and 65 or 0)
-                + (approachClear and 18 or -8)
-                - offset.Magnitude * 0.28 + sideBias
+                + 18 - offset.Magnitude * 0.28 + sideBias
             if score > bestScore then
                 best, bestScore = candidate, score
             end
@@ -89,14 +105,17 @@ function BotTactics.defensiveGoal(bot, knownPosition, now)
 
     local healthRatio = bot.humanoid.Health / math.max(1, bot.humanoid.MaxHealth)
     local recentlyHit = now - (bot.lastDamageAt or -math.huge) < 4.5
-    local needsCover = (healthRatio < 0.55 and recentlyHit)
+    local needsCover = (healthRatio < 0.68 and recentlyHit)
         or bot.ammoRemaining <= 0 or bot.reloadUntil > now
     if not needsCover then
         BotTactics.reset(bot)
         return nil
     end
 
-    if bot.coverGoal and now < (bot.coverGoalUntil or 0) then
+    -- A failed search (nil coverGoal) is still cached for the same 2.4 s
+    -- window. Otherwise four candidates × four raycasts run every AI tick
+    -- when a wounded bot cannot find any reachable cover.
+    if now < (bot.coverGoalUntil or 0) then
         return bot.coverGoal
     end
     -- If the selected lane is unreachable, do not resample the same lane
