@@ -108,7 +108,7 @@ def main():
     native_props = source("src/server/IndustrialProps.luau")
     for needle in (
         '"hydraulic cylinder "', '"hydraulic ram "',
-        '"fork tip "', 'Instance.new("WedgePart")',
+        '" / fork tip "', 'Instance.new("WedgePart")',
         '"wheel lug "', '"cab steering wheel"',
         '"rear counterweight"', '"rear signal "',
         'wedge.CanCollide = false', 'wedge.CanQuery = false',
