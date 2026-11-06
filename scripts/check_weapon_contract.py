@@ -83,7 +83,7 @@ def main():
         has(hud, name, "HUD accessibility")
 
     navigation = source("src/server/BotNavigation.luau")
-    has(navigation, "local direct = directRouteClear(bot, goal)", "Capsule collision probe")
+    has(navigation, "if directRouteClear(bot, goal) then", "Capsule collision probe")
     has(navigation, "bot.humanoid:MoveTo(bot.root.Position)",
         "Bots must not walk into a confirmed obstructed direct route")
     require("bot.humanoid:MoveTo(goal)" in navigation,
