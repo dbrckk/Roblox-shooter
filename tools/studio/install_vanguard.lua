@@ -18,11 +18,40 @@ local function identifyPiece(mesh)
     local n = normalize(mesh.Name)
     for _, part in ipairs(pieces) do
         local key = normalize(part)
-        if n == key or n == "vanguard" .. key or n:find("vanguard" .. key, 1, true) then
+        if n == key or n == "vanguard" .. key then
             return part
         end
     end
     return nil
+end
+
+local function completeMaps(appearance)
+    if not appearance then return false end
+    for _, field in ipairs({ "ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap" }) do
+        local id = appearance[field]
+        if typeof(id) ~= "string" or id == "" or id == "rbxassetid://0" then
+            return false
+        end
+    end
+    return true
+end
+
+local function safeClone(mesh)
+    local clone = mesh:Clone()
+    local primary = clone:FindFirstChildOfClass("SurfaceAppearance")
+    for _, item in ipairs(clone:GetDescendants()) do
+        -- Keep one direct PBR surface only; no scripts or arbitrary objects
+        -- can be attached to server-owned runtime characters.
+        if item ~= primary or item.Parent ~= clone then
+            item:Destroy()
+        end
+    end
+    clone.Anchored = false
+    clone.CanCollide = false
+    clone.CanQuery = false
+    clone.CanTouch = false
+    clone.Massless = true
+    return clone
 end
 
 local function findMeshes(root)
@@ -35,6 +64,9 @@ local function findMeshes(root)
             if id then
                 assert(not result[id], "Duplicate mesh for " .. id .. " inside " .. root.Name)
                 assert(item.MeshId ~= "", "Import the real mesh before installing " .. root.Name .. "/" .. id)
+                assert(completeMaps(item:FindFirstChildOfClass("SurfaceAppearance")),
+                    "Import all four PBR maps (Color, Normal, Roughness, Metalness): "
+                        .. root.Name .. "/" .. id)
                 result[id] = item
             end
         end
@@ -62,24 +94,15 @@ end
 
 local staging = Instance.new("Folder")
 staging.Name = "_VanguardTemplatesStaging"
-local untextured = {}
 local count = 0
 for _, color in ipairs(palettes) do
     local paletteFolder = Instance.new("Folder")
     paletteFolder.Name = color
     paletteFolder.Parent = staging
     for _, name in ipairs(pieces) do
-        local clone = imports[color][name]:Clone()
+        local clone = safeClone(imports[color][name])
         clone.Name = name
-        clone.Anchored = false
-        clone.CanCollide = false
-        clone.CanQuery = false
-        clone.CanTouch = false
-        clone.Massless = true
         clone.Parent = paletteFolder
-        if not clone:FindFirstChildOfClass("SurfaceAppearance") then
-            table.insert(untextured, color .. "/" .. name)
-        end
         count += 1
     end
 end
@@ -91,12 +114,5 @@ if previous then previous:Destroy() end
 staging.Name = "VanguardTemplates"
 print("[IRON YARD] Installed " .. count .. " original MeshParts in ServerStorage/VanguardTemplates.")
 print("[IRON YARD] All four bot palettes now have seven complete rigid components.")
-if #untextured > 0 then
-    warn("[IRON YARD] PBR SurfaceAppearance not found for " .. #untextured ..
-        " pieces. Mesh geometry will work, but import and assign PBR maps before publication.")
-    for _, name in ipairs(untextured) do
-        warn("[IRON YARD] Missing SurfaceAppearance: " .. name)
-    end
-else
-    print("[IRON YARD] All 28 components have SurfaceAppearance. Check actual map IDs in Studio.")
-end
+print("[IRON YARD] Validated all four PBR maps on each imported piece.")
+print("[IRON YARD] Existing kit was replaced only after full validation; scripts were stripped.")
