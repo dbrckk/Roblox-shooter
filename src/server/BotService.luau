@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local config = require(shared:WaitForChild("BotConfig"))
@@ -16,6 +17,7 @@ local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
 local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
 local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
+local BotMotionProfile = require(shared:WaitForChild("BotMotionProfile"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local folder = nil
 local slots = {}
@@ -287,6 +289,29 @@ local function visibleAimPoint(bot, model)
     return nil
 end
 
+-- A short, visible stagger on defeat. The dead rig is cosmetic only:
+-- weapon hitboxes become non-colliding below and are removed on schedule.
+-- Animation updates stop immediately when Humanoid.Health reaches zero.
+local function playDeathStagger(bot)
+    local joints = bot.joints
+    if not joints then return end
+    local lean = math.clamp(bot.hitSide or 0, -1, 1)
+    local info = TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+    local poses = {
+        { joint = joints.root, pose = CFrame.new(0, -0.46, 0)
+            * CFrame.Angles(-0.72, 0, lean * 0.26) },
+        { joint = joints.leftShoulder, pose = CFrame.new(-1, 0.5, 0)
+            * CFrame.Angles(0.72, 0, -0.21) },
+        { joint = joints.rightShoulder, pose = CFrame.new(1, 0.5, 0)
+            * CFrame.Angles(0.58, 0, 0.24) },
+        { joint = joints.neck, pose = CFrame.new(0, 1, 0)
+            * CFrame.Angles(0.26, 0, -lean * 0.12) },
+    }
+    for _, entry in ipairs(poses) do
+        TweenService:Create(entry.joint, info, { C0 = entry.pose }):Play()
+    end
+end
+
 local function createBot(slot)
     local skill = config.Difficulties[slot]
     local model, humanoid, root, head, joints, appearance = buildCharacter(slot, skill)
@@ -340,7 +365,11 @@ local function createBot(slot)
         deaths = 0,
         lastShotAt = -math.huge,
         walkBlend = 0,
+        forwardBlend = 0,
+        lateralBlend = 0,
         aimBlend = 0,
+        isAiming = false,
+        nextAnimationAt = 0,
         animationAt = os.clock(),
         lastPosition = root.Position,
         stuckSince = 0,
@@ -360,6 +389,7 @@ local function createBot(slot)
         bot.deaths += 1
         BotNavigation.invalidate(bot)
         bot.joints.facing.Enabled = false
+        playDeathStagger(bot)
         -- A defeated bot must not become invisible bullet-blocking cover.
         -- Keep its visible body briefly for a readable elimination.
         for _, component in ipairs(model:GetDescendants()) do
@@ -632,7 +662,9 @@ local function updateBot(bot, dt)
         facing.Enabled = false
         bot.humanoid.AutoRotate = true
     end
-    BotAnimation.step(bot, now, moved > 0.3, aimPoint ~= nil)
+    -- The render-oriented 15Hz/8Hz pose loop below animates independently
+    -- from the 5Hz tactical decisions. No extra raycasts/path requests.
+    bot.isAiming = phase == "LIVE" and aimPoint ~= nil
     local goal = bot.requestedGoal
     local farFromGoal = goal and (Vector3.new(goal.X, 0, goal.Z)
         - Vector3.new(currentPosition.X, 0, currentPosition.Z)).Magnitude > 7
@@ -783,8 +815,13 @@ function BotService.resetRound()
             bot.lastAnimationPosition = bot.root.Position
             bot.gaitPhase = 0
             bot.walkBlend = 0
+            bot.forwardBlend = 0
+            bot.lateralBlend = 0
             bot.airBlend = 0
             bot.reloadBlend = 0
+            bot.isAiming = false
+            bot.nextAnimationAt = 0
+            bot.animationAt = os.clock()
             SpawnService.protectCharacter(bot.model, 2.0)
         end
     end
@@ -819,6 +856,36 @@ function BotService.start()
                 updateBot(bot, dt)
             end
             task.wait(config.ThinkInterval)
+        end
+    end)
+
+    -- Cosmetic R6 pose updates are paced separately from the AI decision
+    -- loop. Server combat, movement and navigation still tick at 5Hz.
+    -- Near players see 15Hz transitions; distant bots use 8Hz.
+    task.spawn(function()
+        while started do
+            local now = os.clock()
+            local humanRoots = {}
+            for _, player in ipairs(Players:GetPlayers()) do
+                local character = player.Character
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if humanoid and humanoid.Health > 0 and root then
+                    table.insert(humanRoots, root)
+                end
+            end
+            for _, bot in pairs(slots) do
+                if bot.model.Parent and bot.humanoid.Health > 0
+                    and now >= (bot.nextAnimationAt or 0) then
+                    local distance = math.huge
+                    for _, root in ipairs(humanRoots) do
+                        distance = math.min(distance, (root.Position - bot.root.Position).Magnitude)
+                    end
+                    bot.nextAnimationAt = now + BotMotionProfile.interval(distance)
+                    BotAnimation.step(bot, now, bot.isAiming == true)
+                end
+            end
+            task.wait(1 / 30)
         end
     end)
 end
