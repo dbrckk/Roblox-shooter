@@ -11,6 +11,7 @@ local rnd = Random.new()
 local WAYPOINT_REACH = 4.5
 local GOAL_REPATH_DISTANCE = 20
 local PATH_COMPUTE_TIMEOUT = 5.0
+local PATH_REUSE_SECONDS = 6.0
 local DETOUR_RECHECK_SECONDS = 1.35
 local DETOUR_HOLD_SECONDS = 2.4
 local MAX_GROUND_DELTA = 3.2
@@ -131,6 +132,7 @@ function BotNavigation.invalidate(bot)
     bot.waypoints = nil
     bot.waypointIndex = 1
     bot.pathGoal = nil
+    bot.pathAcceptedAt = nil
     bot.nextPathAt = 0
     bot.detourGoal = nil
     bot.detourUntil = 0
@@ -237,6 +239,15 @@ function BotNavigation.steer(bot, goal, isCurrent)
         abandonWaypoints(bot)
         bot.nextPathAt = math.max(bot.nextPathAt or 0, now + 0.2)
     end
+    -- The old implementation started a new ComputeAsync every ~1.25 s,
+    -- even when a valid waypoint path was already being followed. With four
+    -- bots this wastes navmesh CPU and can reset a nearly finished route.
+    if Planner.reusePath(bot.waypoints ~= nil,
+        bot.pathGoal and (goal - bot.pathGoal).Magnitude or math.huge,
+        now - (bot.pathAcceptedAt or -math.huge),
+        GOAL_REPATH_DISTANCE, PATH_REUSE_SECONDS) then
+        return
+    end
     if bot.pathing or now < (bot.nextPathAt or 0)
         or now - (bot.lastComputeAt or -math.huge) < 0.9 then
         return
@@ -273,6 +284,7 @@ function BotNavigation.steer(bot, goal, isCurrent)
             and (bot.root.Position - start).Magnitude <= 24 then
             abandonWaypoints(bot)
             bot.waypoints = waypoints
+            bot.pathAcceptedAt = os.clock()
             bot.waypointIndex = 2
             bot.activePath = computedPath
             bot.pathBlockedConnection = computedPath.Blocked:Connect(function(blockedIndex)

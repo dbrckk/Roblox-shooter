@@ -97,6 +97,8 @@ def main():
         "Planner.blockedAhead(blockedIndex, bot.waypointIndex)",
         "abandonWaypoints(bot)",
         "Planner.targetChanged((goal - bot.pathGoal).Magnitude, GOAL_REPATH_DISTANCE)",
+        "Planner.reusePath(bot.waypoints ~= nil,",
+        "bot.pathAcceptedAt = os.clock()",
     ):
         has(navigation, key, "Active path obstruction handling")
     tactics = source("src/server/BotTactics.luau")

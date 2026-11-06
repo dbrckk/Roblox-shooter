@@ -41,4 +41,13 @@ function Planner.targetChanged(waypointGoalDistance, threshold)
         and waypointGoalDistance > threshold
 end
 
+-- Reuse a traversable path for its intended goal rather than launching
+-- ComputeAsync on every AI think tick. A finite TTL prevents stale routes.
+function Planner.reusePath(hasWaypoints, distanceToOriginalGoal, age, threshold, maxAge)
+    return hasWaypoints == true
+        and type(age) == "number" and age >= 0 and age < maxAge
+        and type(distanceToOriginalGoal) == "number"
+        and distanceToOriginalGoal <= threshold
+end
+
 return Planner
