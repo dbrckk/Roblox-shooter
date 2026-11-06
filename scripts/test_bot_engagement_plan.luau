@@ -1,0 +1,27 @@
+local Plan = require("../src/shared/BotEngagementPlan")
+assert(Plan.mode(70) == "ADVANCE")
+assert(Plan.mode(45) == "STRAFE")
+assert(Plan.mode(8) == "DISENGAGE")
+assert(Plan.mode(0 / 0) == "HOLD")
+for _, distance in ipairs({8, 40, 78}) do
+    local offsets = Plan.offsets(distance, -1)
+    assert(#offsets == 3, "Each combat distance must have three bounded options")
+    for _, offset in ipairs(offsets) do
+        assert(math.abs(offset.forward) <= 24 and math.abs(offset.lateral) <= 16)
+    end
+end
+local a = Plan.offsets(35, 1)
+local b = Plan.offsets(35, -1)
+assert(a[1].lateral == -b[1].lateral, "Preferred strafe side must reverse")
+assert(Plan.offsets(8, 1)[1].forward < 0, "Near-range AI must back away")
+assert(Plan.offsets(80, 1)[1].forward > 0, "Distant AI must advance")
+assert(Plan.reuseGoal(10, 11, 5, 9), "Stable engagement anchor must persist")
+assert(Plan.reuseGoal(10, 11, 60, 9.5), "Rapid changes cannot spam replans")
+assert(not Plan.reuseGoal(10, 11, 60, 9.0), "Old target position must refresh")
+assert(not Plan.reuseGoal(11, 11, 0, 9.5), "Expired anchor must refresh")
+assert(not Plan.reuseGoal(10, 11, 0 / 0, 9.5))
+assert(Plan.aimReady(0.99, 100), "Well-aligned long-range shot accepted")
+assert(not Plan.aimReady(0.94, 100), "Long-range turn cannot instantly shoot")
+assert(Plan.aimReady(0.96, 20), "Close-range bots remain responsive")
+assert(not Plan.aimReady(0 / 0, 20), "Invalid aim rejected")
+print("IRON YARD tactical engagement anchors, bounded flanks and aim discipline: OK")

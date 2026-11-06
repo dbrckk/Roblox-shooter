@@ -18,6 +18,7 @@ local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
 local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
 local BotMotionProfile = require(shared:WaitForChild("BotMotionProfile"))
+local BotEngagementPlan = require(shared:WaitForChild("BotEngagementPlan"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local folder = nil
@@ -339,6 +340,10 @@ local function createBot(slot)
         recentThreatOrigin = nil,
         coverGoal = nil,
         coverGoalUntil = 0,
+        engagementGoal = nil,
+        engagementTarget = nil,
+        engagementExpiresAt = 0,
+        engagementSampledAt = -math.huge,
         reactionReadyAt = 0,
         nextFireAt = 0,
         ammoRemaining = config.MagazineSize,
@@ -498,18 +503,15 @@ local function navigationGoal(bot, target, canSee)
         return BotTactics.flankGoal(bot, destination, now) or patrolGoal(bot)
     end
 
-    local offset = destination - bot.root.Position
-    local flat = Vector3.new(offset.X, 0, offset.Z)
-    local distance = flat.Magnitude
-    if distance < 0.01 then return patrolGoal(bot) end
-    local toward = flat.Unit
-    local side = Vector3.new(-toward.Z, 0, toward.X) * bot.strafeSign
-    if distance > 49 then
-        return destination - toward * 26 + side * 9
-    elseif distance < 16 then
-        return bot.root.Position - toward * 16 + side * 10
-    end
-    return bot.root.Position + side * 15 + toward * (distance > 30 and 10 or -3)
+    -- A reachable, committed 1.65-second duel anchor replaces continuous
+    -- left/right MoveTo retargeting. Existing BotNavigation handles blocked
+    -- approaches with its async waypoints and bounded detour logic.
+    local engagement = BotTactics.engagementGoal(bot, destination, now)
+    if engagement then return engagement end
+    local separation = (destination - bot.root.Position).Magnitude
+    -- When no side lane is safely walkable at close range, hold the position
+    -- rather than making the bot slide into a freight wall.
+    return separation <= 46 and bot.root.Position or destination
 end
 
 local function shoot(bot, target, aimPoint, dt)
@@ -524,6 +526,10 @@ local function shoot(bot, target, aimPoint, dt)
     end
     if now < bot.reactionReadyAt or now < bot.nextFireAt then return end
     if direction.Magnitude > config.MaximumAttackDistance then return end
+    -- No firing while the barrel is still sweeping across the opponent.
+    -- Uses only the server's smoothed aim and verified current target.
+    local alignment = bot.aimDirection.Unit:Dot(direction.Unit)
+    if not BotEngagementPlan.aimReady(alignment, direction.Magnitude) then return end
     -- Do not spend ammo firing through the cover between head and muzzle.
     local muzzleBlock = Workspace:Raycast(origin, direction, rayParams(bot.model))
     if not muzzleBlock or not muzzleBlock.Instance:IsDescendantOf(target) then return end

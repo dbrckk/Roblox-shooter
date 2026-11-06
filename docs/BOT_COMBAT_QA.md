@@ -39,3 +39,9 @@ GitHub Actions compiles Luau and serializes the Rojo place; it does not run Robl
 
 ## Reference
 AI/mode structure remains informed by the REA run against a legally accessible MIT-licensed FPS, never by copying a proprietary Roblox experience. Roblox Creator Hub documents `PathfindingService`, `Humanoid` and the one-attachment `AlignOrientation` used here.
+
+## New engagement movement — 6 November 2026
+
+Visible-duel movement uses a server-chosen 1.65-second goal anchor rather than recomputing a moving lateral endpoint every 0.2s. Three candidate lanes are grounded at the bot's level and rejected if their approach intersects freight geometry or a void. Distant fighters advance toward useful range, close fighters back away and mid-range fighters strafe on alternating sides. Replans are rate-limited even when the observed enemy moves more than 14 studs; failure is cached too. This works with existing defensive cover, last-seen memory and asynchronous navigation. Shooting additionally requires sufficient alignment between the smoothed aim vector and the current verified target direction, with stricter accuracy at long distance.
+
+Studio/Android validation remains necessary: compare movement oscillations in container corridors, close-quarter duels, distant fights and pathfinding load; check that bots don't become passive or too inaccurate. Luau regression and successful Rojo build are not a substitute for physical simulation.

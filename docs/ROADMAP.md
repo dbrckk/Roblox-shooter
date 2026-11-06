@@ -161,3 +161,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Aucune collision, aucun CanQuery et aucun nouveau raycast pour les bornes, afin de ne pas modifier les tirs, les couvertures ou le pathfinding.
 - [x] Règles pures vérifiables avec script Luau dans la CI, compilation Rojo complète.
 - [ ] Vérification réelle Roblox Studio et Android : accessibilité tactile, lisibilité à plusieurs distances, placement, rythme de soin et coût GPU/CPU.
+
+
+## 6 novembre 2026 — IA de duel moins mécanique
+
+- [x] Points de déplacement de combat stabilisés 1,65 s : flancs/repli/avance choisis sur le sol et au niveau du bot, jamais par simple changement continuel de cible de MoveTo.
+- [x] Trois directions candidates au maximum par calcul ; cache des recherches infructueuses, cadence de replanification plafonnée à 0,7 s lorsque la position adverse vérifiée évolue rapidement.
+- [x] Le comportement dépend de la distance (approche à longue portée, strafing à mi-distance, recul au contact) et du côté de déplacement ; l'IA conserve son comportement défensif prioritaire lors de dommages/recharge.
+- [x] Le serveur n'ouvre le feu que lorsque la visée interpolée correspond suffisamment à la cible visible, avec exigence accrue à longue distance ; cadence et dégâts restent inchangés.
+- [x] Tests exécutables sur les règles sans services Roblox, reliés à la CI Luau/Rojo.
+- [ ] Validation Studio/Android avec plusieurs combattants : mouvements de côté, conteneurs, coins de couverture, précision, temps d'engagement, coûts de pathfinding et animations en situation.

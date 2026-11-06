@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BotCombatResponse = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCombatResponse"))
+local BotEngagementPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotEngagementPlan"))
 
 local BotTactics = {}
 local COVER_HOLD_SECONDS = 2.4
@@ -94,14 +95,60 @@ local function selectCover(bot, seenPosition, now)
     return best
 end
 
-function BotTactics.reset(bot)
+local function clearDefensiveGoal(bot)
     bot.coverGoal = nil
     bot.coverGoalUntil = 0
 end
 
+function BotTactics.reset(bot)
+    clearDefensiveGoal(bot)
+    bot.engagementGoal = nil
+    bot.engagementTarget = nil
+    bot.engagementExpiresAt = 0
+    bot.engagementSampledAt = -math.huge
+end
+
+-- A short-lived anchor stops a visible opponent from forcing a new MoveTo
+-- target every 0.2 seconds. Retreat and strafing targets are selected with
+-- real ground/shoulder clearance, never from hidden live player coordinates.
+function BotTactics.engagementGoal(bot, seenPosition, now)
+    if not seenPosition then return nil end
+    local current = bot.root.Position
+    local flat = Vector3.new(seenPosition.X - current.X, 0, seenPosition.Z - current.Z)
+    if flat.Magnitude < 0.5 then return current end
+
+    local previous = bot.engagementTarget
+    local changed = previous and (seenPosition - previous).Magnitude or math.huge
+    if BotEngagementPlan.reuseGoal(now, bot.engagementExpiresAt or 0,
+        changed, bot.engagementSampledAt or -math.huge) then
+        return bot.engagementGoal -- nil is also a cached failed search.
+    end
+
+    local toward = flat.Unit
+    local lateral = Vector3.new(-toward.Z, 0, toward.X)
+    local params = environmentParams(bot)
+    local chosen = nil
+    -- Stop after the first reachable candidate. At most three destinations
+    -- are sampled every 1.65s unless the last sighting moved substantially.
+    for _, offset in ipairs(BotEngagementPlan.offsets(flat.Magnitude, bot.strafeSign)) do
+        local proposed = current + toward * offset.forward + lateral * offset.lateral
+        local grounded = groundedGoal(bot, proposed, params)
+        if grounded and coverApproachClear(bot, grounded, params) then
+            chosen = grounded
+            break
+        end
+    end
+
+    bot.engagementTarget = seenPosition
+    bot.engagementGoal = chosen
+    bot.engagementSampledAt = now
+    bot.engagementExpiresAt = now + BotEngagementPlan.GOAL_LIFETIME
+    return chosen
+end
+
 function BotTactics.defensiveGoal(bot, knownPosition, now)
     if not knownPosition then
-        BotTactics.reset(bot)
+        clearDefensiveGoal(bot)
         return nil
     end
 
@@ -112,7 +159,7 @@ function BotTactics.defensiveGoal(bot, knownPosition, now)
         bot.ammoRemaining <= 0 or bot.reloadUntil > now,
         now < (bot.suppressedUntil or 0))
     if not needsCover then
-        BotTactics.reset(bot)
+        clearDefensiveGoal(bot)
         return nil
     end
 
