@@ -49,6 +49,7 @@ jobs:
           ./luau scripts/test_gantry_motion.luau
           ./luau scripts/test_bot_avoidance.luau
           ./luau scripts/test_weapon_cadence.luau
+          ./luau scripts/test_safe_planar_input.luau
 
       - name: Parse private Roblox publish script
         shell: bash
@@ -111,6 +112,12 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check_weapon_contract.py
+
+      - name: Verify server movement remote validation contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/check_movement_contract.py
 
       - name: Verify persistent DataStore progression contracts
         shell: bash

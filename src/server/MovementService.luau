@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
+local SafePlanarInput = require(shared:WaitForChild("SafePlanarInput"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 
 local MovementService = {}
@@ -92,39 +93,26 @@ local function isMantleTarget(part)
 end
 
 local function getFlatDirection(payload, root)
-	local direction = nil
-
-	if typeof(payload) == "table" and typeof(payload.direction) == "Vector3" and payload.direction.Magnitude > 0.05 then
-		direction = payload.direction
-	end
-
-	if not direction then
-		direction = root.CFrame.LookVector
-	end
-
-	direction = Vector3.new(direction.X, 0, direction.Z)
-	if direction.Magnitude < 0.05 then
-		direction = Vector3.new(root.CFrame.LookVector.X, 0, root.CFrame.LookVector.Z)
-	end
-
-	if direction.Magnitude < 0.05 then
-		return Vector3.new(0, 0, -1)
-	end
-
-	return direction.Unit
+    local raw = typeof(payload) == "table" and payload.direction or nil
+    local flat = typeof(raw) == "Vector3"
+        and SafePlanarInput.normalize(raw.X, raw.Y, raw.Z) or nil
+    if not flat then
+        -- A malformed remote must not inject non-finite physics velocity.
+        -- Forced actions can safely fall back to server-owned facing.
+        local look = root.CFrame.LookVector
+        flat = SafePlanarInput.normalize(look.X, look.Y, look.Z)
+    end
+    if not flat then return Vector3.new(0, 0, -1) end
+    return Vector3.new(flat.x, 0, flat.z)
 end
 
 local function getOptionalFlatDirection(payload)
-	if typeof(payload) ~= "table" or typeof(payload.direction) ~= "Vector3" or payload.direction.Magnitude <= 0.05 then
-		return nil
-	end
-
-	local direction = Vector3.new(payload.direction.X, 0, payload.direction.Z)
-	if direction.Magnitude < 0.05 then
-		return nil
-	end
-
-	return direction.Unit
+    if typeof(payload) ~= "table" or typeof(payload.direction) ~= "Vector3" then
+        return nil
+    end
+    local raw = payload.direction
+    local flat = SafePlanarInput.normalize(raw.X, raw.Y, raw.Z)
+    return flat and Vector3.new(flat.x, 0, flat.z) or nil
 end
 
 local function lerpNumber(a, b, alpha)
@@ -539,7 +527,9 @@ local function requestMantle(player, payload)
 	root.AssemblyLinearVelocity = direction * MovementConfig.mantleForwardSpeed + UP * MovementConfig.mantleUpSpeed
 	task.delay(0.14, function()
 		local _, currentHumanoid, currentRoot = getCharacterParts(player)
-		if not currentHumanoid or not currentRoot then
+		-- No delayed mantle movement may affect a newly respawned rig.
+		if not currentHumanoid or currentRoot ~= root
+			or player.Character ~= character then
 			return
 		end
 
