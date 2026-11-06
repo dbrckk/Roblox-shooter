@@ -87,6 +87,84 @@ local function forklift(folder, label, x, z, yaw, coat)
     end
     cube("mast crossbar", Vector3.new(5.1, 0.43, 0.58),
         Vector3.new(0, 5.1, -5.0), C.charcoal, "Core")
+
+    -- The forklift becomes a recognisable industrial machine, rather than
+    -- just the previous boxes-and-wheels silhouette. These are all cosmetic
+    -- Roblox-native 3D components, not unuploaded PBR MeshParts.
+    for _, side in ipairs({ -1, 1 }) do
+        -- Hydraulic lift cylinder with a narrower polished ram. Each side
+        -- has a defined dark mount and a visible moving-stage housing.
+        cube("hydraulic cylinder " .. side, Vector3.new(0.42, 5.9, 0.48),
+            Vector3.new(side * 1.72, 4.3, -4.8),
+            C.dark, "Core", Enum.Material.Metal)
+        cube("hydraulic ram " .. side, Vector3.new(0.20, 3.3, 0.24),
+            Vector3.new(side * 1.72, 7.05, -4.8),
+            Color3.fromRGB(177, 183, 176), "Detail", Enum.Material.Metal)
+        cube("chain rail " .. side, Vector3.new(0.22, 6.6, 0.18),
+            Vector3.new(side * 2.33, 5.15, -5.13),
+            C.charcoal, "Detail", Enum.Material.DiamondPlate)
+        -- A tapered fork point is actual wedge geometry. Reuse the existing
+        -- part conventions but never introduce a walkable or bullet collider.
+        local wedge = Instance.new("WedgePart")
+        wedge.Name = "FORKLIFT / " .. label .. " / fork tip " .. side
+        wedge.Anchored = true
+        wedge.CanCollide = false
+        wedge.CanQuery = false
+        wedge.CanTouch = false
+        wedge.CastShadow = false
+        wedge.Material = Enum.Material.Metal
+        wedge.Color = C.slate
+        wedge.Size = Vector3.new(0.56, 0.32, 1.25)
+        wedge.CFrame = cf * CFrame.new(side * 1.5, 0.62, -10.35)
+        wedge:SetAttribute("NeonArtTier", "Detail")
+        wedge.Parent = folder
+        cube("fork heel " .. side, Vector3.new(0.70, 1.30, 0.53),
+            Vector3.new(side * 1.5, 1.11, -4.92),
+            C.dark, "Core", Enum.Material.Metal)
+        cube("safety windshield frame " .. side, Vector3.new(0.22, 2.9, 0.22),
+            Vector3.new(side * 2.6, 5.25, -2.92),
+            C.charcoal, "Detail")
+        cube("sideview mirror " .. side, Vector3.new(0.14, 0.64, 0.95),
+            Vector3.new(side * 3.46, 5.82, -2.35),
+            C.glass, "Detail", Enum.Material.Glass)
+        -- Wheel lugs are large enough to read from nearby without the cost
+        -- of complex per-frame rubber simulation.
+        for _, front in ipairs({ -1, 1 }) do
+            for groove = 1, 5 do
+                local angle = groove * (math.pi * 2 / 5)
+                cube("wheel lug " .. side .. ":" .. front .. ":" .. groove,
+                    Vector3.new(0.11, 0.31, 0.35),
+                    Vector3.new(side * 4.28, 1.15 + math.cos(angle) * 1.1,
+                        front * 3.05 + math.sin(angle) * 1.1),
+                    C.dark, "Detail", Enum.Material.SmoothPlastic)
+            end
+        end
+    end
+
+    -- Cab controls and recognisable mechanical details.
+    cube("rear counterweight", Vector3.new(6.0, 2.7, 0.68),
+        Vector3.new(0, 2.3, 5.5), C.charcoal, "Core")
+    cube("engine vent upper", Vector3.new(5.1, 0.11, 2.8),
+        Vector3.new(0, 3.52, 2.9), C.dark, "Detail")
+    cube("exhaust chimney", Vector3.new(0.29, 2.1, 0.29),
+        Vector3.new(2.8, 4.4, 3.9), C.charcoal, "Detail",
+        Enum.Material.Metal, Enum.PartType.Cylinder)
+    cube("cab steering column", Vector3.new(0.17, 1.7, 0.19),
+        Vector3.new(0.9, 4.3, -1.8), C.charcoal, "Detail")
+    cube("cab steering wheel", Vector3.new(0.17, 1.05, 1.05),
+        Vector3.new(0.9, 5.18, -1.8), C.slate, "Detail",
+        Enum.Material.Metal, Enum.PartType.Cylinder)
+    for index = 1, 3 do
+        cube("hood grille slat " .. index, Vector3.new(4.9, 0.1, 0.18),
+            Vector3.new(0, 2.15 + index * 0.27, 5.22),
+            C.slate, "Detail")
+    end
+    -- Amber and red rear service lamps, with no real PointLight allocation.
+    for _, side in ipairs({ -1, 1 }) do
+        cube("rear signal " .. side, Vector3.new(0.76, 0.34, 0.11),
+            Vector3.new(side * 2.55, 3.48, 5.93),
+            side == 1 and C.safety or C.rust, "Detail", Enum.Material.Glass)
+    end
     cube("amber warning beacon", Vector3.new(0.65, 0.45, 0.65),
         Vector3.new(-2.3, 7.6, 2.4), C.safety, "Detail", Enum.Material.Glass)
     local serial = cube("fleet insignia", Vector3.new(3.4, 1.2, 0.1),
