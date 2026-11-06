@@ -48,6 +48,7 @@ jobs:
           ./luau scripts/test_touch_layout.luau
           ./luau scripts/test_gantry_motion.luau
           ./luau scripts/test_bot_avoidance.luau
+          ./luau scripts/test_round_standings.luau
           ./luau scripts/test_weapon_cadence.luau
           ./luau scripts/test_safe_planar_input.luau
 

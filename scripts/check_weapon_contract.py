@@ -188,10 +188,13 @@ def main():
 
     roundResults = source("src/client/RoundResults.client.luau")
     for needle in ("IronYardWinnerUserId", 'winnerUserId = winningUserId or 0',
-                   'resultUserId = winningPlayer.UserId'):
-        has(match, needle, "Immutable results winner ID")
+                   'finalResult.winnerUserId', 'IronYardFinalStandings',
+                   'finalResult = currentStandings()',
+                   'RoundStandings.build(entries, round)'):
+        has(match, needle, "Frozen server-authored results and winner ID")
     for needle in ('NeonMatchPhase") ~= "RESULTS"',
                    'owner == player.UserId', 'IronYardStandings',
+                   'IronYardFinalStandings', 'myStanding.rank',
                    'IronYardRoundXP', 'IronYardProgressLevel',
                    'leaderboard[i].Text'):
         has(roundResults, needle, "Server-authored end-round recap")

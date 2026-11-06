@@ -115,6 +115,16 @@ local function scoreValue(name)
     return stat and stat:IsA("IntValue") and math.max(0, stat.Value) or 0
 end
 
+local function finalSnapshot()
+    local raw = Workspace:GetAttribute("IronYardFinalStandings")
+    if typeof(raw) ~= "string" or raw == "" then return nil end
+    local ok, parsed = pcall(function() return HttpService:JSONDecode(raw) end)
+    if ok and typeof(parsed) == "table" and typeof(parsed.standings) == "table" then
+        return parsed
+    end
+    return nil
+end
+
 local function standings()
     local result = {}
     local raw = Workspace:GetAttribute("IronYardStandings")
@@ -137,10 +147,14 @@ local function render()
         root.Visible = false
         return
     end
-    local owner = Workspace:GetAttribute("IronYardWinnerUserId") or 0
+    local snapshot = finalSnapshot()
+    local owner = snapshot and snapshot.winnerUserId
+        or Workspace:GetAttribute("IronYardWinnerUserId") or 0
     local isWinner = owner ~= 0 and owner == player.UserId
-    local winner = Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
-    local round = Workspace:GetAttribute("NeonMatchRound") or 0
+    local winner = snapshot and snapshot.winner
+        or Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
+    local round = snapshot and snapshot.round
+        or Workspace:GetAttribute("NeonMatchRound") or 0
     local seconds = Workspace:GetAttribute("NeonMatchTimeLeft") or 0
     local xp = safeCount("IronYardLifetimeXP")
     local level = math.max(1, safeCount("IronYardProgressLevel"))
@@ -151,8 +165,27 @@ local function render()
     title.TextColor3 = isWinner and green or amber
     winnerLabel.Text = winner == "DRAW" and "MATCH DRAW"
         or ("WINNER  /  " .. string.sub(tostring(winner), 1, 30))
-    personalLabel.Text = string.format("YOU   /   %d ELIMS   ·   %d DEATHS",
-        scoreValue("Eliminations"), scoreValue("Deaths"))
+    local myStanding = nil
+    local participants = snapshot and #snapshot.standings or 0
+    if snapshot then
+        for _, entry in ipairs(snapshot.standings) do
+            if not entry.bot and entry.userId == player.UserId then
+                myStanding = entry
+                break
+            end
+        end
+    end
+    if myStanding then
+        personalLabel.Text = string.format(
+            "YOU  /  #%d OF %d   ·   %d ELIMS   ·   %d DEATHS",
+            myStanding.rank or 0, participants,
+            myStanding.eliminations or 0, myStanding.deaths or 0)
+    elseif snapshot then
+        personalLabel.Text = "YOU  /  JOINED BETWEEN ROUNDS"
+    else
+        personalLabel.Text = string.format("YOU   /   %d ELIMS   ·   %d DEATHS",
+            scoreValue("Eliminations"), scoreValue("Deaths"))
+    end
     xpLabel.Text = string.format("+%d ROUND XP     /     %d CAREER XP",
         safeCount("IronYardRoundXP"), xp)
     progressLabel.Text = level >= 1000 and "RANK 1000  |  MAX RANK"
@@ -160,15 +193,20 @@ local function render()
     fill.Size = UDim2.fromScale(level >= 1000 and 1
         or math.clamp((xp - baseXP) / math.max(1, nextXP - baseXP), 0, 1), 1)
 
-    local top = standings()
+    local top = snapshot and snapshot.standings or standings()
     for i = 1, 3 do
         local row = top[i]
         if typeof(row) == "table" then
             local name = string.sub(tostring(row.name or "Operator"), 1, 23)
             local score = math.max(0, math.floor(tonumber(row.eliminations) or 0))
-            leaderboard[i].Text = string.format("%d     %s     ·     %d ELIMS", i, name, score)
+            local placement = math.max(1, math.floor(tonumber(row.rank) or i))
+            leaderboard[i].Text = string.format("%d     %s     ·     %d ELIMS",
+                placement, name, score)
+            leaderboard[i].TextColor3 = not row.bot and row.userId == player.UserId
+                and green or (i == 1 and amber or muted)
         else
             leaderboard[i].Text = string.format("%d     ---", i)
+            leaderboard[i].TextColor3 = muted
         end
     end
     countdown.Text = string.format("NEXT ROUND IN %ds", math.max(0, seconds))
@@ -190,6 +228,7 @@ reconnectCamera()
 for _, attr in ipairs({
     "NeonMatchPhase", "NeonMatchWinner", "NeonMatchRound",
     "NeonMatchTimeLeft", "IronYardWinnerUserId", "IronYardStandings",
+    "IronYardFinalStandings",
 }) do
     Workspace:GetAttributeChangedSignal(attr):Connect(render)
 end

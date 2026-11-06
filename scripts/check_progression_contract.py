@@ -88,14 +88,14 @@ def main():
     require(weapon.count("CombatAwards.recordElimination(") == 2,
             "Hitscan and shotgun must both feed server-confirmed awards")
     contains(match, (
-        "local selectedPlayer = nil",
-        "selectedPlayer = player",
-        "selectedPlayer = nil",
-        "return selectedName, best, tied, selectedPlayer",
-        "local name, topScore, tied, winningPlayer = leader()",
+        'local RoundStandings = require(script.Parent:WaitForChild("RoundStandings"))',
+        "finalResult = currentStandings()",
+        "Workspace:SetAttribute(\"IronYardFinalStandings\"",
+        "if finalResult.winnerUserId > 0 then",
+        "Players:GetPlayerByUserId(finalResult.winnerUserId)",
         "if winningPlayer and winningPlayer.Parent then",
         "CombatAwards.recordVictory(winningPlayer)",
-    ), "Winner identity")
+    ), "Winner identity and frozen result snapshot")
 
     require("DataStoreService" not in ui, "HUD may not access Roblox DataStore")
     require('IronYardProgressStatus' in ui, "HUD must announce saving state")
