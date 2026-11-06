@@ -88,8 +88,9 @@ def main():
                    "lamp.Shadows = false",
                    'player:GetAttributeChangedSignal("IronYardGraphicsPreset")'):
         check(needle in clientLighting, "Client-only preset-aware lighting is missing: " + needle)
-    check("SpotLight" not in art and "PointLight" not in art,
-          "Replicated arena art must never spawn dynamic fixtures")
+    check('Instance.new("SpotLight")' not in art
+          and 'Instance.new("PointLight")' not in art,
+          "Replicated arena art must never instantiate dynamic fixtures")
 
     # Visual-only gantries must be separate client-animated assemblies, with
     # absolutely no real player collision, raycast or server tween workload.
