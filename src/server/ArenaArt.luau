@@ -227,10 +227,39 @@ local function silhouettes(parent)
         local x = direction * (209 + index % 3 * 20)
         local z = ((index * 43) % 370) - 185
         local height = 24 + (index * 17) % 43
+        local facade = index % 3 == 0 and COLOR.sand or COLOR.wall
         prop(parent, "SKYLINE / warehouse " .. index,
             Vector3.new(32, height, 38),
             CFrame.new(x, height / 2 - 0.2, z),
-            index % 3 == 0 and COLOR.sand or COLOR.wall, Enum.Material.Concrete, "Detail")
+            facade, Enum.Material.Concrete, "Detail")
+        -- Each warehouse now has an actual roof, parapet and loading-bay
+        -- language rather than twenty identical plain rectangular boxes.
+        local roof = prop(parent, "SKYLINE / roof " .. index,
+            Vector3.new(35, 1.1, 40),
+            CFrame.new(x, height + 0.26, z),
+            index % 2 == 0 and COLOR.slate or COLOR.steel,
+            Enum.Material.Metal, "Detail")
+        roof.CastShadow = false
+        for bay = -1, 1 do
+            local facingX = x - direction * 16.13
+            local shutter = prop(parent, "SKYLINE / dock shutter " .. index .. ":" .. bay,
+                Vector3.new(0.19, math.min(12, height * 0.38), 8),
+                CFrame.new(facingX, math.min(7, height * 0.25), z + bay * 11),
+                COLOR.slate, Enum.Material.Metal, "Detail")
+            shutter.CastShadow = false
+            local warning = prop(parent, "SKYLINE / dock header " .. index .. ":" .. bay,
+                Vector3.new(0.22, 0.34, 8.3),
+                CFrame.new(facingX - direction * 0.1, math.min(14, height * 0.46), z + bay * 11),
+                COLOR.orange, Enum.Material.Metal, "Detail")
+            warning.CastShadow = false
+        end
+        if index % 4 == 0 then
+            local ventilation = prop(parent, "SKYLINE / extractor " .. index,
+                Vector3.new(5, 4.8, 5),
+                CFrame.new(x - 7, height + 2.7, z + 10),
+                COLOR.ink, Enum.Material.Metal, "Detail")
+            ventilation.CastShadow = false
+        end
     end
 end
 
@@ -306,6 +335,76 @@ local function warehouseArchitecture(parent)
                 Vector3.new(0.58, 1.15, 0.76), CFrame.new(x + side * 0.19, 12.6, z),
                 COLOR.sand, Enum.Material.Metal, "Detail")
         end
+    end
+end
+
+-- A recognisable pitched warehouse roof is missing from the original open
+-- trusses. These sheets form a visual canopy without becoming gameplay cover:
+-- they never collide, receive raycasts, or alter pathfinding. Shadow casting
+-- is disabled to preserve the already-tested bright daytime combat contrast.
+local function warehouseRoof(parent)
+    local roofY = 24.5
+    for _, side in ipairs({ -1, 1 }) do
+        local sheet = prop(parent, "ROOF / pitched corrugated shell " .. side,
+            Vector3.new(28.6, 0.33, 88),
+            CFrame.new(side * 16.7, roofY - 0.55, 18)
+                * CFrame.Angles(0, 0, side * math.rad(-8)),
+            COLOR.slate, Enum.Material.Metal, "Core")
+        sheet.CastShadow = false
+        -- Rolled metal seams provide a broad material rhythm from ground
+        -- and from elevated catwalks, without uploading texture assets.
+        for index = -4, 4 do
+            local z = 18 + index * 10
+            local ridge = prop(parent, "ROOF / rolled seam " .. side .. ":" .. index,
+                Vector3.new(28.8, 0.13, 0.22),
+                CFrame.new(side * 16.7, roofY - 0.30, z)
+                    * CFrame.Angles(0, 0, side * math.rad(-8)),
+                COLOR.steel, Enum.Material.Metal, "Detail")
+            ridge.CastShadow = false
+        end
+        -- Fascia, downspout, and low wall/roof interface.
+        local gutter = prop(parent, "ROOF / drainage gutter " .. side,
+            Vector3.new(0.47, 0.31, 89),
+            CFrame.new(side * 30.0, 21.8, 18),
+            COLOR.ink, Enum.Material.Metal, "Core")
+        gutter.CastShadow = false
+        for _, z in ipairs({ -21, 58 }) do
+            prop(parent, "ROOF / exterior downpipe " .. side .. ":" .. z,
+                Vector3.new(0.29, 17, 0.29),
+                CFrame.new(side * 30.17, 9.1, z),
+                COLOR.steel, Enum.Material.Metal, "Detail")
+        end
+    end
+
+    -- Glazed clerestory is genuinely open to the daylight: no opaque roof
+    -- plate is hidden below it, so it does not make the battlefield darker.
+    for bay = 0, 4 do
+        local z = -18 + bay * 19.5
+        local pane = prop(parent, "ROOF / skylight glass " .. bay,
+            Vector3.new(4.6, 0.12, 13.7),
+            CFrame.new(0, 24.0, z), Color3.fromRGB(184, 215, 222),
+            Enum.Material.Glass, "Detail")
+        pane.Transparency = 0.52
+        pane.CastShadow = false
+        for _, side in ipairs({ -1, 1 }) do
+            local rail = prop(parent, "ROOF / skylight framing " .. bay .. ":" .. side,
+                Vector3.new(0.18, 0.26, 14),
+                CFrame.new(side * 2.40, 24.1, z),
+                COLOR.ink, Enum.Material.Metal, "Detail")
+            rail.CastShadow = false
+        end
+    end
+
+    -- Two extraction housings give the upper skyline a believable purpose.
+    for _, z in ipairs({ -3, 43 }) do
+        local base = prop(parent, "ROOF / extraction duct " .. z,
+            Vector3.new(3.1, 2.5, 3.1),
+            CFrame.new(-20, 25.8, z), COLOR.steel, Enum.Material.Metal, "Core")
+        base.CastShadow = false
+        local cap = prop(parent, "ROOF / louver hood " .. z,
+            Vector3.new(4.2, 0.34, 4.2),
+            CFrame.new(-20, 27.2, z), COLOR.ink, Enum.Material.Metal, "Detail")
+        cap.CastShadow = false
     end
 end
 
@@ -498,6 +597,7 @@ function ArenaArt.build(arena)
     containerDetails(decor)
     cornerCranes(decor)
     warehouseArchitecture(decor)
+    warehouseRoof(decor)
     catwalkSafety(decor)
     gantryRigging(decor)
     industrialLightFixtures(decor)
