@@ -84,3 +84,12 @@ L'IA utilise désormais une **navigation à quatre états** : DIRECT (couloir d�
 Le détecteur de blocage attend qu'un véritable échec de mouvement persiste avant de recalculer. Il n'annule plus systématiquement les calculs simplement parce qu'un bot attend, et n'utilise un saut de récupération qu'occasionnellement en mode DIRECT. Un test Luau exécute la sélection des six directions de contournement et la temporisation ; la **validation physique et le framerate Android restent à effectuer dans Roblox Studio**.
 
 Les contrôles de déplacement direct sondent aussi **la présence du sol à 7 et 14 studs devant le bot** : un corridor sans mur ne suffit pas si le chemin traverse le vide ou quitte une passerelle. Les nouveaux adversaires visibles réinitialisent les échecs de route précédents afin qu'un vieux blocage n'entraîne pas de retard artificiel au combat. La vérification physique Studio reste nécessaire.
+
+## Combat IA — chemins dynamiques et couvertures atteignables (novembre 2026)
+
+- [x] Suivi des chemins calculés par l'événement Roblox `Path.Blocked` : les obstacles apparus **devant** un bot invalident l'itinéraire, ceux derrière lui ne provoquent pas de recalcul.
+- [x] Nettoyage des abonnements aux anciens chemins lors d'un changement de cible, d'une interruption, de l'arrivée au but ou d'une mort ; les réponses PathfindingService périmées ne sont pas réutilisées.
+- [x] Abandon des chemins vers un adversaire ayant changé de position de plus de 20 studs, avec reprise par contournement local ou nouveau pathfinding.
+- [x] Couverture défensive limitée aux positions réellement approchables par le gabarit du humanoïde et reliées par un sol, et mise en cache de 2,4 s **même en cas d'échec**, réduisant les sondages inutiles.
+- [x] Réactivité à la pression : dès qu'un bot est blessé et descend sous 68 % de vie, il peut chercher un abri atteignable, indépendamment du rechargement.
+- [ ] Vérification Studio/Android : blocages d'itinéraires en cours, passage des escaliers, angles de conteneurs, mouvement sous tirs, fréquence des PathfindingService `ComputeAsync`.

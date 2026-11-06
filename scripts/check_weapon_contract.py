@@ -89,6 +89,23 @@ def main():
     require("bot.humanoid:MoveTo(goal)" in navigation,
             "Unobstructed bot routes must still move directly")
     has(navigation, "task.spawn(function()", "Asynchronous path computation")
+    for key in (
+        "local function releaseActivePath(bot)",
+        "bot.pathBlockedConnection:Disconnect()",
+        "computedPath.Blocked:Connect(function(blockedIndex)",
+        "Planner.blockedAhead(blockedIndex, bot.waypointIndex)",
+        "abandonWaypoints(bot)",
+        "Planner.targetChanged((goal - bot.pathGoal).Magnitude, GOAL_REPATH_DISTANCE)",
+    ):
+        has(navigation, key, "Active path obstruction handling")
+    tactics = source("src/server/BotTactics.luau")
+    for key in (
+        "local function coverApproachClear(bot, destination, params)",
+        "if candidate and coverApproachClear(bot, candidate, params) then",
+        "if now < (bot.coverGoalUntil or 0) then",
+        "healthRatio < 0.68 and recentlyHit",
+    ):
+        has(tactics, key, "Reachable defensive cover and bounded resampling")
     for needle in (
         "local function chooseDetour(bot, goal)",
         "local function walkableCandidate(bot, raw, params)",
