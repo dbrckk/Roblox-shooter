@@ -1,13 +1,11 @@
 -- IRON YARD / procedural R6 combat motion using travelled distance, not wall-clock skating.
 -- No external AnimationIds or per-frame remote events; at most four server-owned AI.
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Motion = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotMotionProfile"))
 local BotAnimation = {}
 
-local function smooth(value, goal, factor)
-    return value + (goal - value) * factor
-end
-
-function BotAnimation.step(bot, now, moved, targeting)
-    local dt = math.clamp(now - (bot.animationAt or now - 0.2), 0.02, 0.35)
+function BotAnimation.step(bot, now, targeting)
+    local dt = math.clamp(now - (bot.animationAt or now - 0.08), 0.01, 0.35)
     bot.animationAt = now
 
     local current = bot.root.Position
@@ -20,14 +18,21 @@ function BotAnimation.step(bot, now, moved, targeting)
 
     local floor = bot.humanoid.FloorMaterial
     local airborne = floor == Enum.Material.Air
-    local speed = horizontalDistance / dt
-    local moveGoal = (moved and not airborne) and math.clamp(speed / math.max(1, bot.skill.speed), 0, 1) or 0
-    local smoothing = math.clamp(dt * 7, 0, 1)
-    bot.walkBlend = smooth(bot.walkBlend or 0, moveGoal, smoothing)
-    bot.aimBlend = smooth(bot.aimBlend or 0, targeting and 1 or 0, smoothing)
+    -- Sample the ACTUAL velocity relative to the rig's aim-facing chassis.
+    -- A bot can run backwards or strafe while facing its opponent; neither
+    -- motion should look like a forward sprint. Travel distance also gates
+    -- the cycle, so a bot pushing into a wall cannot keep running in place.
+    local planar = bot.root.CFrame:VectorToObjectSpace(bot.root.AssemblyLinearVelocity)
+    local moveGoal, forward, lateral = Motion.weights(planar.X, planar.Z,
+        horizontalDistance / dt, bot.skill.speed, not airborne)
+    bot.walkBlend = Motion.smooth(bot.walkBlend or 0, moveGoal, dt, 8)
+    bot.forwardBlend = Motion.smooth(bot.forwardBlend or 0, forward, dt, 10)
+    bot.lateralBlend = Motion.smooth(bot.lateralBlend or 0, lateral, dt, 10)
+    bot.aimBlend = Motion.smooth(bot.aimBlend or 0, targeting and 1 or 0, dt, 11)
     local reloading = bot.reloadUntil > now
-    bot.reloadBlend = smooth(bot.reloadBlend or 0, reloading and 1 or 0, smoothing)
-    bot.airBlend = smooth(bot.airBlend or 0, airborne and 1 or 0, smoothing)
+    bot.reloadBlend = Motion.smooth(bot.reloadBlend or 0, reloading and 1 or 0, dt, 10)
+    bot.airBlend = Motion.smooth(bot.airBlend or 0, airborne and 1 or 0, dt, 8)
+    local smoothing = 1 - math.exp(-dt * 8)
     -- Each landing gets a short weighted compression rather than an instant
     -- return to the standing pose. A hit adds torso and shoulder flinch.
     if bot.wasAirborne and not airborne then bot.landedAt = now end
@@ -42,16 +47,21 @@ function BotAnimation.step(bot, now, moved, targeting)
     local hitFront = math.clamp(bot.hitFront or 0, -1, 1)
     local hitRoll = hit * hitSide * 0.14
     local hitPitch = hit * hitFront * 0.09
-    local defensive = (bot.coverGoal and (bot.ammoRemaining <= 0 or bot.reloadUntil > now))
-        and 1 or 0
-    bot.defensiveBlend = smooth(bot.defensiveBlend or 0, defensive, smoothing * 0.65)
-    local sideways = bot.root.CFrame.RightVector:Dot(bot.root.AssemblyLinearVelocity)
-    local strafeLean = math.clamp(sideways / math.max(bot.skill.speed, 1), -1, 1)
-        * bot.walkBlend
+    local defensive = (bot.coverGoal and (bot.ammoRemaining <= 0 or reloading))
+        or now < (bot.suppressedUntil or 0)
+    bot.defensiveBlend = Motion.smooth(bot.defensiveBlend or 0,
+        defensive and 1 or 0, dt, 6)
+    local strafeLean = (bot.lateralBlend or 0) * bot.walkBlend
+    local forwardStride = (bot.forwardBlend or 0)
+    local lateralStride = (bot.lateralBlend or 0)
+    local braking = math.clamp((bot.walkBlend or 0) - moveGoal, 0, 0.6)
 
-    bot.gaitPhase = ((bot.gaitPhase or bot.slot * 0.33) + horizontalDistance * 0.72) % (math.pi * 2)
+    bot.gaitPhase = Motion.gaitPhase(bot.gaitPhase or bot.slot * 0.33, horizontalDistance)
     local gait = math.sin(bot.gaitPhase)
     local step = gait * 0.62 * bot.walkBlend
+    local stridePitch = step * (math.abs(forwardStride) * 0.7 + 0.3)
+        * (forwardStride < -0.2 and -1 or 1)
+    local sideStep = math.cos(bot.gaitPhase) * lateralStride * bot.walkBlend * 0.26
     local sway = math.cos(bot.gaitPhase) * 0.06 * bot.walkBlend
     local breath = math.sin(now * 1.8 + bot.slot) * 0.022
     local recoil = math.max(0, 1 - (now - (bot.lastShotAt or -100)) / 0.17) * 0.20
@@ -77,26 +87,30 @@ function BotAnimation.step(bot, now, moved, targeting)
 
     -- Firing shoulder, supporting hand, reload dip and airborne recovery.
     joints.leftShoulder.C0 = CFrame.new(-1, 0.5, 0) *
-        CFrame.Angles(step * (1 - aim) - aim * 0.55 + breath
+        CFrame.Angles(stridePitch * (1 - aim) - aim * 0.55 + breath
             + reload * 0.8 + magazineReach - air * 0.24 + hit * 0.34,
             -aim * 0.28 + reload * 0.16, -aim * 0.15)
     joints.rightShoulder.C0 = CFrame.new(1, 0.5, 0) *
-        CFrame.Angles(-step * (1 - aim) - aim * 0.48 - recoil + fireBrace
+        CFrame.Angles(-stridePitch * (1 - aim) - aim * 0.48 - recoil + fireBrace
             + reload * 0.17 - air * 0.2 + hit * 0.29,
             aim * 0.04, aim * 0.1)
     joints.leftHip.C0 = CFrame.new(-0.5, -1, 0) *
-        CFrame.Angles(-step - air * 0.38, 0, sway)
+        CFrame.Angles(-stridePitch - air * 0.38 - braking * 0.14,
+            -sideStep * 0.75, sway + sideStep * 0.30)
     joints.rightHip.C0 = CFrame.new(0.5, -1, 0) *
-        CFrame.Angles(step + air * 0.28, 0, -sway)
+        CFrame.Angles(stridePitch + air * 0.28 - braking * 0.14,
+            sideStep * 0.75, -sway + sideStep * 0.30)
     joints.neck.C0 = CFrame.new(0, 1, 0) *
         CFrame.Angles(-breath + air * 0.05 - hit * 0.13, yaw + hitSide * hit * 0.065,
             strafeLean * -0.055 - hitRoll * 0.3)
     joints.root.C0 = CFrame.new(0,
         breath * 0.25 + math.abs(step) * 0.032 - landing * 0.12
-            - bot.defensiveBlend * 0.10, 0) *
-        CFrame.Angles(-bot.walkBlend * 0.055 - air * 0.055
-            + landing * 0.09 + hit * 0.11 + hitPitch + bot.defensiveBlend * 0.07,
-            0, sway * 0.35 - strafeLean * 0.075 + hitRoll)
+            - bot.defensiveBlend * 0.12, 0) *
+        CFrame.Angles(-forwardStride * bot.walkBlend * 0.075 - air * 0.055
+            + landing * 0.09 + hit * 0.11 + hitPitch
+            + bot.defensiveBlend * 0.095 + braking * 0.045,
+            strafeLean * -0.035,
+            sway * 0.35 - strafeLean * 0.10 + hitRoll)
 end
 
 return BotAnimation
