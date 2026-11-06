@@ -1,13 +1,29 @@
--- IRON YARD / server-owned navigation for reactive FFA opponents.
--- Pathfinding work runs asynchronously and never freezes movement when computing.
+-- IRON YARD / server-owned, bounded obstacle navigation for FFA opponents.
+-- Uses capsule checks, asynchronous PathfindingService and safe ground detours.
 local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Planner = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotAvoidancePlan"))
 
 local BotNavigation = {}
 local rnd = Random.new()
 local WAYPOINT_REACH = 4.5
 local GOAL_REPATH_DISTANCE = 20
+local PATH_COMPUTE_TIMEOUT = 5.0
+local DETOUR_RECHECK_SECONDS = 1.35
+local DETOUR_HOLD_SECONDS = 2.4
+local MAX_GROUND_DELTA = 3.2
+local EDGE_LIMIT = 162
+
+local function setMode(bot, mode)
+    if bot.navMode == mode then return end
+    bot.navMode = mode
+    bot.navModeSince = os.clock()
+    if bot.model and bot.model.Parent then
+        bot.model:SetAttribute("IronYardNavMode", mode)
+    end
+end
 
 local function environmentParams(bot)
     local ignore = { bot.model }
@@ -23,36 +39,72 @@ local function environmentParams(bot)
     return params
 end
 
-local function directRouteClear(bot, goal)
-    -- A single centre ray can slip past the corner of a freight container
-    -- while the two-stud humanoid collides. Approximate the full walking
-    -- capsule with side probes at leg and shoulder height.
+local function directRouteClear(bot, goal, cachedParams)
+    -- A centre-only ray slips past freight-container corners while a two-stud
+    -- humanoid collides. Probe the approximate capsule at two elevations.
     if math.abs(goal.Y - bot.root.Position.Y) > 2.5 then return false end
     local origin = bot.root.Position
     local flat = Vector3.new(goal.X - origin.X, 0, goal.Z - origin.Z)
     if flat.Magnitude <= 2 then return true end
     local side = Vector3.new(-flat.Z, 0, flat.X).Unit * 1.3
-    -- One shared filter for the full capsule probe, not five allocations
-    -- and five scans of all connected players per bot navigation tick.
-    local params = environmentParams(bot)
+    local params = cachedParams or environmentParams(bot)
     local low = Vector3.new(0, -1.2, 0)
     local high = Vector3.new(0, 1.1, 0)
     for _, offset in ipairs({ low, low + side, low - side, high + side, high - side }) do
-        local start = origin + offset
-        if Workspace:Raycast(start, flat, params) then
+        if Workspace:Raycast(origin + offset, flat, params) then
             return false
         end
     end
     return true
 end
 
+local function walkableCandidate(bot, raw, params)
+    if math.abs(raw.X) > EDGE_LIMIT or math.abs(raw.Z) > EDGE_LIMIT then
+        return nil
+    end
+    -- Grounding rejects roof tops, drops, voids and different catwalk heights.
+    local castFrom = Vector3.new(raw.X, bot.root.Position.Y + 4.5, raw.Z)
+    local hit = Workspace:Raycast(castFrom, Vector3.new(0, -12, 0), params)
+    if not hit or hit.Normal.Y < 0.68 then return nil end
+    local grounded = hit.Position + Vector3.new(0, 3.4, 0)
+    if math.abs(grounded.Y - bot.root.Position.Y) > MAX_GROUND_DELTA then
+        return nil
+    end
+    return grounded
+end
+
+local function chooseDetour(bot, goal)
+    local origin = bot.root.Position
+    local vector = Vector3.new(goal.X - origin.X, 0, goal.Z - origin.Z)
+    if vector.Magnitude < 2 then return nil end
+    local ahead = vector.Unit
+    local right = Vector3.new(-ahead.Z, 0, ahead.X)
+    local params = environmentParams(bot)
+    local attempt = bot.detourAttempts or 0
+    bot.detourAttempts = attempt + 1
+    -- At most six grounded candidates, each checked with the same five
+    -- capsule rays. Checked no more than once per 1.35 s on each bot.
+    for _, offset in ipairs(Planner.offsets(bot.strafeSign, attempt)) do
+        local raw = origin + ahead * offset.forward + right * offset.lateral
+        local grounded = walkableCandidate(bot, raw, params)
+        if grounded and directRouteClear(bot, grounded, params) then
+            return grounded
+        end
+    end
+    return nil
+end
+
 function BotNavigation.invalidate(bot)
     bot.pathRevision = (bot.pathRevision or 0) + 1
     bot.pathing = false
+    bot.pathStartedAt = nil
     bot.waypoints = nil
     bot.waypointIndex = 1
     bot.pathGoal = nil
     bot.nextPathAt = 0
+    bot.detourGoal = nil
+    bot.detourUntil = 0
+    bot.nextDetourAt = 0
 end
 
 local function followWaypoints(bot)
@@ -74,42 +126,80 @@ local function followWaypoints(bot)
     return true
 end
 
+local function followDetour(bot, goal, now)
+    local detour = bot.detourGoal
+    if detour then
+        local expired = now >= (bot.detourUntil or 0)
+        local arrived = (bot.root.Position - detour).Magnitude <= 3.5
+        local goalMoved = bot.detourTarget
+            and (goal - bot.detourTarget).Magnitude > GOAL_REPATH_DISTANCE
+        if expired or arrived or goalMoved or not directRouteClear(bot, detour) then
+            bot.detourGoal = nil
+        else
+            bot.humanoid:MoveTo(detour)
+            setMode(bot, "AVOID")
+            return true
+        end
+    end
+    if now < (bot.nextDetourAt or 0) then return false end
+
+    bot.nextDetourAt = now + DETOUR_RECHECK_SECONDS
+    local candidate = chooseDetour(bot, goal)
+    if not candidate then return false end
+    bot.detourGoal = candidate
+    bot.detourTarget = goal
+    bot.detourUntil = now + DETOUR_HOLD_SECONDS
+    bot.humanoid:MoveTo(candidate)
+    setMode(bot, "AVOID")
+    return true
+end
+
 function BotNavigation.steer(bot, goal, isCurrent)
     if bot.humanoid.Health <= 0 or not bot.root.Parent then return end
     local now = os.clock()
-
-    -- Use unobstructed movement without a pathfinding job: responsive and cheap.
-    local direct = directRouteClear(bot, goal)
-    if direct then
+    if directRouteClear(bot, goal) then
         if bot.waypoints or bot.pathing then BotNavigation.invalidate(bot) end
+        bot.detourGoal = nil
         bot.humanoid:MoveTo(goal)
+        setMode(bot, "DIRECT")
         return
     end
 
-    -- Existing waypoints continue to drive movement while ComputeAsync yields.
-    -- This prevents the previous AI from standing still every navigation refresh.
+    -- Retain a valid path while an asynchronous replacement is computing.
     local moving = followWaypoints(bot)
-    if not moving then
-        -- The capsule probe has CONFIRMED this lane is obstructed. Sending
-        -- MoveTo(goal) here pushes the bot repeatedly into a wall until
-        -- ComputeAsync resolves (or fails). Hold position instead; path
-        -- computation continues asynchronously below.
+    if moving then
+        setMode(bot, "PATH")
+    elseif not followDetour(bot, goal, now) then
+        -- Never charge directly into cover known to block the full capsule.
+        -- The next verified path/detour, not an attempted collision, moves us.
         bot.humanoid:MoveTo(bot.root.Position)
+        setMode(bot, "WAIT")
+    end
+
+    if bot.pathing and now - (bot.pathStartedAt or now) > PATH_COMPUTE_TIMEOUT then
+        -- Abandon a hung ComputeAsync result without interrupting movement.
+        -- Its old completion must never overwrite a newer route.
+        bot.pathRevision = (bot.pathRevision or 0) + 1
+        bot.pathing = false
+        bot.pathGoal = nil
+        bot.pathFailures = (bot.pathFailures or 0) + 1
+        bot.nextPathAt = now + Planner.retryDelay(bot.pathFailures)
     end
 
     local goalChanged = bot.pathGoal and (goal - bot.pathGoal).Magnitude > GOAL_REPATH_DISTANCE
     if goalChanged then
-        -- A running ComputeAsync may finish long after the target has moved.
-        -- Its revision is invalidated, while old waypoints remain usable.
         bot.pathRevision = (bot.pathRevision or 0) + 1
         bot.pathing = false
-        -- Respect a short minimum interval even for rapidly switching targets.
-        bot.nextPathAt = math.max(0, now - 0.05)
+        bot.pathGoal = nil
+        bot.nextPathAt = math.max(bot.nextPathAt or 0, now + 0.2)
     end
     if bot.pathing or now < (bot.nextPathAt or 0)
-        or now - (bot.lastComputeAt or -math.huge) < 0.9 then return end
+        or now - (bot.lastComputeAt or -math.huge) < 0.9 then
+        return
+    end
 
     bot.pathing = true
+    bot.pathStartedAt = now
     bot.lastComputeAt = now
     bot.pathRevision = (bot.pathRevision or 0) + 1
     local revision = bot.pathRevision
@@ -127,22 +217,23 @@ function BotNavigation.steer(bot, goal, isCurrent)
                 WaypointSpacing = 6,
             })
             path:ComputeAsync(start, goal)
-            if path.Status ~= Enum.PathStatus.Success then
-                return nil
-            end
+            if path.Status ~= Enum.PathStatus.Success then return nil end
             return path:GetWaypoints()
         end)
-        -- Old asynchronous path results must never override new target decisions,
-        -- respawned models, or a stuck-recovery invalidation.
         if not isCurrent() or bot.pathRevision ~= revision then return end
         bot.pathing = false
-        if ok and waypoints and #waypoints > 1 then
+        bot.pathStartedAt = nil
+        if ok and waypoints and #waypoints > 1
+            and (bot.root.Position - start).Magnitude <= 24 then
             bot.waypoints = waypoints
             bot.waypointIndex = 2
+            bot.detourGoal = nil
+            bot.pathFailures = 0
         else
             bot.waypoints = nil
-            -- Retry later rather than repeatedly recalculating a blocked goal.
-            bot.nextPathAt = math.max(bot.nextPathAt, os.clock() + 1.5)
+            bot.pathFailures = (bot.pathFailures or 0) + 1
+            bot.nextPathAt = math.max(bot.nextPathAt,
+                os.clock() + Planner.retryDelay(bot.pathFailures))
         end
     end)
 end
