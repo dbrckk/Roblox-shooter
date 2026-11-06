@@ -93,6 +93,7 @@ def main():
         "local function releaseActivePath(bot)",
         "bot.pathBlockedConnection:Disconnect()",
         "computedPath.Blocked:Connect(function(blockedIndex)",
+        "bot.activePath == computedPath",
         "Planner.blockedAhead(blockedIndex, bot.waypointIndex)",
         "abandonWaypoints(bot)",
         "Planner.targetChanged((goal - bot.pathGoal).Magnitude, GOAL_REPATH_DISTANCE)",
