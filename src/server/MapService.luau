@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ArenaArt = require(script.Parent:WaitForChild("ArenaArt"))
 local IndustrialProps = require(script.Parent:WaitForChild("IndustrialProps"))
+local CoverArt = require(script.Parent:WaitForChild("CoverArt"))
 local MapService = {}
 local started = false
 
@@ -224,6 +225,7 @@ function MapService.start()
     Lighting.ShadowSoftness = 0.28
     Workspace:SetAttribute("ArenaTheme", "IRON_YARD_DAYLIGHT")
     buildArena(folder)
+    CoverArt.build(folder)
     ArenaArt.build(folder)
     IndustrialProps.build(folder)
     ArenaArt.applyLighting()
