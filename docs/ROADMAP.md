@@ -93,3 +93,7 @@ Les contrôles de déplacement direct sondent aussi **la présence du sol à 7 e
 - [x] Couverture défensive limitée aux positions réellement approchables par le gabarit du humanoïde et reliées par un sol, et mise en cache de 2,4 s **même en cas d'échec**, réduisant les sondages inutiles.
 - [x] Réactivité à la pression : dès qu'un bot est blessé et descend sous 68 % de vie, il peut chercher un abri atteignable, indépendamment du rechargement.
 - [ ] Vérification Studio/Android : blocages d'itinéraires en cours, passage des escaliers, angles de conteneurs, mouvement sous tirs, fréquence des PathfindingService `ComputeAsync`.
+
+## Combat : cadence globale anti-rotation d'armes — novembre 2026
+
+Le serveur conserve la date du prochain tir après chaque coup réellement accepté, selon le rechargement instantané de l'arme qui vient de tirer. Changer d'arme ne remet plus ce temps à zéro : un tir au fusil à pompe ou au sniper ne peut pas être suivi instantanément d'un autre tir via le pistolet ou un autre emplacement. Le client applique le même délai en prédiction locale afin de ne pas afficher de coups qui seraient refusés par le serveur. Le lancer rapide de couteau est ignoré si ce délai n'est pas écoulé. Les compteurs reviennent à zéro au début de la manche ; une réapparition en cours de manche ne réinitialise pas la protection. Test Luau `scripts/test_weapon_cadence.luau` et vérification du branchement dans le workflow Rojo.

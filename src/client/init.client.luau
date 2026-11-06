@@ -21,6 +21,7 @@ local localBoostFuel = MovementConfig.boostFuelMax
 local baseFieldOfView = 70
 local mouseSensitivity = 1
 local lastLocalFire = {}
+local nextLocalGlobalFireAt = 0
 local ammoByWeapon = {}
 local touchWeaponButtons = {}
 local updateTouchVisibility = nil
@@ -788,7 +789,8 @@ local function fireWeapon(weaponId)
 
 	local now = os.clock()
 	local lastShot = lastLocalFire[weaponId] or -math.huge
-	if now - lastShot < config.fireCooldown * 1.015 then
+	if now - lastShot < config.fireCooldown * 1.015
+        or now < nextLocalGlobalFireAt then
 		return
 	end
 
@@ -798,6 +800,7 @@ local function fireWeapon(weaponId)
 	end
 
 	lastLocalFire[weaponId] = now
+    nextLocalGlobalFireAt = WeaponConfig.nextGlobalFireAt(weaponId, now)
     if ammo and ammo.capacity > 0 then
         ammo.loaded = math.max(0, ammo.loaded - 1)
         hud:setAmmo(weaponId, ammo.loaded, ammo.capacity, false)
@@ -834,6 +837,14 @@ local function fireWeapon(weaponId)
 end
 
 local function quickThrowKnife()
+    local now = os.clock()
+    local knife = WeaponConfig.get("Knife")
+    -- A blocked quick-throw must not visually equip and immediately unequip
+    -- a knife or play a hit effect for a shot that the server will reject.
+    if now < nextLocalGlobalFireAt
+        or now - (lastLocalFire.Knife or -math.huge) < knife.fireCooldown * 1.015 then
+        return
+    end
 	local previousWeaponId = currentWeaponId
 	equipWeapon("Knife")
 	fireWeapon("Knife")

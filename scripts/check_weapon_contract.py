@@ -64,6 +64,15 @@ def main():
     require(server.index("local function randomSpread") < server.index("local function fireRaycastWeapon"),
             "Local spread helper must precede raycast closure")
     has(match, "WeaponService.resetRound()", "Per-round magazine reset")
+    for token in ('nextGlobalFireAt = 0', 'if now < (state.nextGlobalFireAt or 0)',
+                  'state.nextGlobalFireAt = WeaponConfig.nextGlobalFireAt(weaponId, now)'):
+        has(server, token, "Server-only inter-weapon firing gate")
+    for token in ('nextLocalGlobalFireAt = 0', 'or now < nextLocalGlobalFireAt',
+                  'nextLocalGlobalFireAt = WeaponConfig.nextGlobalFireAt(weaponId, now)',
+                  'now - (lastLocalFire.Knife or -math.huge)'):
+        has(client, token, "Predicted cadence and quick-knife feedback")
+    has(config, "function WeaponConfig.nextGlobalFireAt(weaponId, firedAt)",
+        "One cadence model for all five weapons")
 
     for id in names:
         has(client, f'equipWeapon("{id}")', f"Weapon selector {id}")

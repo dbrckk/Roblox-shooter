@@ -99,4 +99,14 @@ function WeaponConfig.isValid(weaponId)
 	return WeaponConfig.Definitions[weaponId] ~= nil
 end
 
+-- A weapon swap never cancels the cooldown of the previous accepted shot.
+-- This pure rule is shared by server validation and client prediction.
+function WeaponConfig.nextGlobalFireAt(weaponId, firedAt)
+    local definition = WeaponConfig.get(weaponId)
+    assert(definition, "Unknown weapon cadence")
+    assert(type(firedAt) == "number" and firedAt == firedAt
+        and firedAt >= 0 and firedAt < math.huge, "Invalid shot timestamp")
+    return firedAt + definition.fireCooldown
+end
+
 return WeaponConfig

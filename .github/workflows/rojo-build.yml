@@ -48,6 +48,7 @@ jobs:
           ./luau scripts/test_touch_layout.luau
           ./luau scripts/test_gantry_motion.luau
           ./luau scripts/test_bot_avoidance.luau
+          ./luau scripts/test_weapon_cadence.luau
 
       - name: Parse private Roblox publish script
         shell: bash

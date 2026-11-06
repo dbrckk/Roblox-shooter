@@ -22,6 +22,7 @@ local function getState(player)
         state = {
             equippedWeaponId = "AssaultRifle",
             lastFireAt = {},
+            nextGlobalFireAt = 0,
             magazines = {},
             reloadUntil = {},
             reloadTokens = {},
@@ -275,6 +276,8 @@ local function canFire(player, weaponId, config)
     if now - (state.lastFireAt[weaponId] or -math.huge) < config.fireCooldown then
         return false
     end
+    -- Slot cycling cannot bypass the preceding weapon's shot cooldown.
+    if now < (state.nextGlobalFireAt or 0) then return false end
     if (state.reloadUntil[weaponId] or 0) > now then return false end
 
     local loaded = getLoaded(state, weaponId, config)
@@ -288,6 +291,7 @@ local function canFire(player, weaponId, config)
         sendAmmo(player, weaponId)
     end
     state.lastFireAt[weaponId] = now
+    state.nextGlobalFireAt = WeaponConfig.nextGlobalFireAt(weaponId, now)
     return true
 end
 
@@ -539,6 +543,7 @@ function WeaponService.resetRound()
         for id in pairs(state.reloadUntil) do cancelReload(state, id) end
         state.magazines = {}
         state.lastFireAt = {}
+        state.nextGlobalFireAt = 0
         if player.Parent then sendAmmo(player, state.equippedWeaponId) end
     end
 end
@@ -561,6 +566,7 @@ function WeaponService.start()
             for id in pairs(state.reloadUntil) do cancelReload(state, id) end
             state.magazines = {}
             state.lastFireAt = {}
+            -- Respawn deliberately keeps the prior global shot deadline.
             task.defer(function()
                 if player.Parent then sendAmmo(player, state.equippedWeaponId) end
             end)
