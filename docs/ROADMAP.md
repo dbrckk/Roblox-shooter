@@ -141,3 +141,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Carte PC/Android de défaite avec tireur, arme, headshot et compte à rebours de redéploiement ; causes environnementales sans faux tireur ; réception tardive des attributs prise en charge.
 - [x] Carte cachée à la réapparition et durant le podium officiel. Nettoyage des abonnements entre personnages.
 - [ ] Vérifier dans Roblox Studio et sur Android : affichage lors de morts rapides, temps de retour Roblox réel, chevauchements du HUD et latence réseau. La CI ne peut pas certifier le rendu en jeu.
+
+
+## 6 novembre 2026 — réapparitions tactiques protégées
+
+- [x] Un choix de réapparition évalue désormais la **distance réelle aux combattants** et leur **ligne de tir non masquée** ; le décor sans collision n'est pas considéré comme un abri.
+- [x] Un candidat libre derrière une couverture solide est favorisé par rapport à une position exposée de distance comparable. Un ennemi à proximité immédiate reste fortement pénalisé, même si la position est cachée.
+- [x] Les 12 points de réapparition existants restent prioritaires, sans modifier la géométrie de l'arène ; un point central validé sert de secours lorsqu'ils sont tous bloqués.
+- [x] Les calculs de visibilité sont effectués **uniquement au spawn**, limités aux combattants situés à moins de 165 studs. Aucun raycast supplémentaire sur les boucles IA/HUD.
+- [x] Scoring testable sous Luau dans la CI ; la protection temporaire de 2,5 secondes et son annulation au tir sont préservées.
+- [ ] Vérifier les spawns physiques depuis Studio sur PC et Android, notamment plusieurs morts simultanées, coins de conteneurs et nouveaux MeshParts.

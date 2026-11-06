@@ -2,6 +2,8 @@
 -- A candidate must be clear of physical cover and far from live combatants.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SpawnSafety = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SpawnSafety"))
 
 local SpawnService = {}
 local started = false
@@ -25,7 +27,8 @@ local candidates = {
 }
 
 local function livePositions(excludeCharacter)
-    local positions = {}
+    local positions, ignoredCharacters = {}, {}
+    if excludeCharacter then table.insert(ignoredCharacters, excludeCharacter) end
     for _, player in ipairs(Players:GetPlayers()) do
         local character = player.Character
         if character and character ~= excludeCharacter then
@@ -33,6 +36,7 @@ local function livePositions(excludeCharacter)
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if root and humanoid and humanoid.Health > 0 then
                 table.insert(positions, root.Position)
+                table.insert(ignoredCharacters, character)
             end
         end
     end
@@ -43,10 +47,11 @@ local function livePositions(excludeCharacter)
             local humanoid = model:FindFirstChildOfClass("Humanoid")
             if root and humanoid and humanoid.Health > 0 then
                 table.insert(positions, root.Position)
+                table.insert(ignoredCharacters, model)
             end
         end
     end
-    return positions
+    return positions, ignoredCharacters
 end
 
 local function clearAt(position, character)
@@ -64,36 +69,63 @@ local function clearAt(position, character)
 end
 
 local function safestPosition(character)
-    local others = livePositions(character)
+    local others, ignoredCharacters = livePositions(character)
+    -- Cover visibility is measured against solid gameplay geometry, not
+    -- decorative non-colliding trim, transparent VFX or another combatant.
+    local sight = RaycastParams.new()
+    sight.FilterType = Enum.RaycastFilterType.Exclude
+    sight.FilterDescendantsInstances = ignoredCharacters
+    sight.IgnoreWater = true
+    sight.RespectCanCollide = true
+
+    local function scoreAt(position)
+        local nearest = 200
+        local exposedCount = 0
+        local nearestExposed = SpawnSafety.EXPOSURE_RANGE
+        local from = position + Vector3.new(0, 1.4, 0)
+        for _, enemy in ipairs(others) do
+            local distance = (enemy - position).Magnitude
+            nearest = math.min(nearest, distance)
+            -- This is spawn-only work, never called every frame. Avoid
+            -- raycasting distant threats that cannot pressure a fresh spawn.
+            if distance < SpawnSafety.EXPOSURE_RANGE then
+                local to = enemy + Vector3.new(0, 1.4, 0)
+                if not Workspace:Raycast(from, to - from, sight) then
+                    exposedCount += 1
+                    nearestExposed = math.min(nearestExposed, distance)
+                end
+            end
+        end
+        return SpawnSafety.score(nearest, exposedCount, nearestExposed,
+            rng:NextNumber(-6, 6))
+    end
+
     local best, bestScore = nil, -math.huge
     for _, position in ipairs(candidates) do
         if clearAt(position, character) then
-            local minimum = 200
-            for _, enemy in ipairs(others) do
-                minimum = math.min(minimum, (enemy - position).Magnitude)
-            end
-            -- Tie breaker avoids choosing an identical vacant corner forever.
-            local score = minimum + rng:NextNumber(-6, 6)
+            local score = scoreAt(position)
             if score > bestScore then
                 best, bestScore = position, score
             end
         end
     end
-    -- All candidates occupied: prefer the most distant, still bounded to the map.
-    if not best then
-        for _, position in ipairs(candidates) do
-            local minimum = 200
-            for _, enemy in ipairs(others) do
-                minimum = math.min(minimum, (enemy - position).Magnitude)
-            end
-            if minimum > bestScore then
-                best, bestScore = position, minimum
-            end
+    if best then return best end
+
+    -- All twelve edge pads may become obstructed by a future arena update.
+    -- The original Roblox spawn pad is a final validated fallback before
+    -- considering a blocked edge: avoid teleporting into cargo collisions.
+    local centralPad = Vector3.new(0, 3.4, 130)
+    if clearAt(centralPad, character) then return centralPad end
+
+    for _, position in ipairs(candidates) do
+        local score = scoreAt(position)
+        if score > bestScore then
+            best, bestScore = position, score
         end
     end
-    return best or candidates[1]
+    warn("IRON YARD: no unobstructed spawn pad; using fallback under shield")
+    return best or centralPad
 end
-
 function SpawnService.selectSafeSpawn(excludeCharacter)
     return safestPosition(excludeCharacter)
 end
