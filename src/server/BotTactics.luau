@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BotCombatResponse = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCombatResponse"))
 local BotEngagementPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotEngagementPlan"))
+local BotCoverPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCoverPlan"))
 
 local BotTactics = {}
 local COVER_HOLD_SECONDS = 2.4
@@ -21,6 +22,7 @@ local function environmentParams(bot)
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = ignore
     params.IgnoreWater = true
+    params.RespectCanCollide = true
     return params
 end
 
@@ -48,12 +50,19 @@ local function coverApproachClear(bot, destination, params)
         if Workspace:Raycast(origin, direction, params) then return false end
     end
     -- A walkable endpoint alone is insufficient if there is a catwalk gap.
-    local middle = current + direction * 0.5
-    local surface = Workspace:Raycast(
-        Vector3.new(middle.X, current.Y + 4, middle.Z),
-        Vector3.new(0, -11, 0), params)
-    return surface ~= nil and surface.Normal.Y >= 0.68
-        and math.abs(surface.Position.Y + 3.4 - current.Y) <= 3.5
+    -- Three bounded ground probes, rather than one midpoint, prevent unsafe
+    -- retreat steps over short drops and exposed catwalk edges.
+    for _, fraction in ipairs({ 0.25, 0.5, 0.75 }) do
+        local sample = current + direction * fraction
+        local surface = Workspace:Raycast(
+            Vector3.new(sample.X, current.Y + 4, sample.Z),
+            Vector3.new(0, -11, 0), params)
+        if not surface or surface.Normal.Y < 0.68
+            or math.abs(surface.Position.Y + 3.4 - current.Y) > 3.5 then
+            return false
+        end
+    end
+    return true
 end
 
 local function selectCover(bot, seenPosition, now)
@@ -64,27 +73,24 @@ local function selectCover(bot, seenPosition, now)
     local sideways = Vector3.new(-toward.Z, 0, toward.X)
     local params = environmentParams(bot)
 
-    -- Four sampled retreat lanes, not a map-wide search. Max ~12 raycasts
-    -- every 2.4s per injured/reloading bot, bounded for low-end Android servers.
-    local candidates = {
-        current - toward * 19 + sideways * 12,
-        current - toward * 19 - sideways * 12,
-        current - toward * 28 + sideways * 7,
-        current - toward * 28 - sideways * 7,
-    }
+    -- Bounded six-lane retreat, checked once per 2.4 s. First prefer a
+    -- physically reachable position where SOLID level geometry blocks fire.
+    -- A lane that genuinely caused a stuck recovery is excluded for eight
+    -- seconds; no repeated sprint into the same container corner.
     local best, bestScore = nil, -math.huge
-    for i, raw in ipairs(candidates) do
+    for i, offset in ipairs(BotCoverPlan.offsets(bot.strafeSign)) do
+        local raw = current - toward * offset.back + sideways * offset.lateral
         local candidate = groundedGoal(bot, raw, params)
-        if candidate and coverApproachClear(bot, candidate, params) then
-            local offset = candidate - current
-            local start = seenPosition + Vector3.new(0, 1.0, 0)
-            local finish = candidate + Vector3.new(0, 1.0, 0)
-            local blockingCover = Workspace:Raycast(start, finish - start, params) ~= nil
-            -- Reject unreachable cover; prefer an actual solid obstacle
-            -- shielding the bot, not an unreachable destination behind one.
-            local sideBias = (i % 2 == (bot.slot % 2)) and 2 or 0
-            local score = (blockingCover and 65 or 0)
-                + 18 - offset.Magnitude * 0.28 + sideBias
+        if candidate
+            and not BotCoverPlan.rejected(bot.failedCoverGoal
+                and (candidate - bot.failedCoverGoal).Magnitude or math.huge,
+                now, bot.failedCoverUntil or 0)
+            and coverApproachClear(bot, candidate, params) then
+            local sightFrom = seenPosition + Vector3.new(0, 1.0, 0)
+            local sightTo = candidate + Vector3.new(0, 1.0, 0)
+            local shield = Workspace:Raycast(sightFrom, sightTo - sightFrom, params) ~= nil
+            local score = BotCoverPlan.score(shield,
+                (candidate - current).Magnitude, (i % 2 == bot.slot % 2))
             if score > bestScore then
                 best, bestScore = candidate, score
             end
@@ -102,10 +108,20 @@ end
 
 function BotTactics.reset(bot)
     clearDefensiveGoal(bot)
+    bot.failedCoverGoal = nil
+    bot.failedCoverUntil = 0
     bot.engagementGoal = nil
     bot.engagementTarget = nil
     bot.engagementExpiresAt = 0
     bot.engagementSampledAt = -math.huge
+end
+
+-- Record an actual failed retreat before another tactical decision.
+function BotTactics.rejectStuckCover(bot, failedGoal, now)
+    if not failedGoal then return end
+    bot.failedCoverGoal = failedGoal
+    bot.failedCoverUntil = now + BotCoverPlan.FAILED_LANE_SECONDS
+    clearDefensiveGoal(bot)
 end
 
 -- A short-lived anchor stops a visible opponent from forcing a new MoveTo

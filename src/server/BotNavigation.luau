@@ -37,6 +37,7 @@ local function environmentParams(bot)
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = ignore
     params.IgnoreWater = true
+    params.RespectCanCollide = true
     return params
 end
 
@@ -61,7 +62,8 @@ local function directRouteClear(bot, goal, cachedParams)
     -- Two near-future ground probes stop movement BEFORE the edge while
     -- keeping the raycast budget independent of total route distance.
     local direction = flat.Unit
-    for _, distance in ipairs({ math.min(7, flat.Magnitude), math.min(14, flat.Magnitude) }) do
+    for _, lookahead in ipairs({ 7, 14, 22, 30 }) do
+        local distance = math.min(lookahead, flat.Magnitude)
         local sample = origin + direction * distance
         local downFrom = Vector3.new(sample.X, origin.Y + 4.5, sample.Z)
         local floor = Workspace:Raycast(downFrom, Vector3.new(0, -12, 0), params)

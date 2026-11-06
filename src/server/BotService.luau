@@ -331,6 +331,8 @@ local function createBot(slot)
         recentThreatOrigin = nil,
         coverGoal = nil,
         coverGoalUntil = 0,
+        failedCoverGoal = nil,
+        failedCoverUntil = 0,
         medicalTargetId = nil,
         medicalHoldUntil = 0,
         medicalFailedId = nil,
@@ -708,18 +710,21 @@ local function updateBot(bot, dt)
             if bot.medicalGoalActive then
                 SupplyService.reportBotStuck(bot)
             end
+            -- Remember the blocked cover before any reset. Do not let an
+            -- AI reclaim the same unreachable retreat goal next tick.
+            local stuckCover = bot.coverGoal
+            local oldMode = bot.navMode
             BotNavigation.invalidate(bot)
             bot.stuckRecoveries += 1
             -- Only occasional unobstructed direct movement merits a jump.
-            -- Obstructed WAIT/PATH/AVOID states instead resample safe ground
-            -- around the obstacle to avoid endless jumping on one spot.
-            if bot.navMode == "DIRECT" and bot.stuckRecoveries % 3 == 0 then
+            if oldMode == "DIRECT" and bot.stuckRecoveries % 3 == 0 then
                 bot.humanoid.Jump = true
             end
             if bot.stuckRecoveries % 2 == 0 then
                 bot.strafeSign = -bot.strafeSign
                 BotTactics.reset(bot)
             end
+            BotTactics.rejectStuckCover(bot, stuckCover, now)
             bot.stuckSince = now
         end
     else

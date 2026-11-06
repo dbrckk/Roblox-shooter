@@ -191,3 +191,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Abandon du chemin de soin lors du retour au combat et réinitialisation des objectifs au début de manche.
 - [x] Règles pures et scénarios d'échec intégrés à GitHub Actions.
 - [ ] À vérifier dans Roblox Studio et sur Android : bots bloqués autour des conteneurs, temps d'accès, choix alternatif, priorité des cibles et performance.
+
+
+## 6 novembre 2026 — combat défensif contre les obstacles
+
+- [x] Retraites IA parmi six positions validées, priorité à une couverture solide au lieu d'une exposition inutile.
+- [x] Exclusion temporaire (8 s) d'une couverture ayant réellement bloqué le bot ; nouvelle tentative sur un autre chemin.
+- [x] Contrôles du sol sur trois portions de la trajectoire de couverture et quatre points d'anticipation de la marche directe, pour réduire les chutes aux passerelles.
+- [x] Raycasts IA cohérents avec la géométrie physique (`RespectCanCollide`), sans intervention dans les hitboxes du FPS.
+- [x] Tests de stratégie de repli et vérification complète Rojo/Luau dans la CI.
+- [ ] Scénarios Studio et Android : coins de conteneur, couverture après blessure, comportement de rechargement et coût CPU de quatre bots.

@@ -49,6 +49,7 @@ jobs:
           ./luau scripts/test_gantry_motion.luau
           ./luau scripts/test_bot_avoidance.luau
           ./luau scripts/test_bot_combat_response.luau
+          ./luau scripts/test_bot_cover_plan.luau
           ./luau scripts/test_bot_engagement_plan.luau
           ./luau scripts/test_bot_target_selection.luau
           ./luau scripts/test_bot_medical_objective.luau

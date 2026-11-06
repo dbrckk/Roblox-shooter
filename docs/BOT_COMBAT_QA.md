@@ -56,3 +56,10 @@ La sélection de cible retourne un couple indissociable (modèle, dernière posi
 Wounded AI commit to a selected medical goal for 2 seconds instead of switching every 0.2-second update. Stations are ranked by health-availability, distance and danger from a *previously verified* sighting only. An actually stuck bot excludes the failed station for 14 seconds and can seek an alternative. The navigation path is invalidated when switching between combat and medical intent. The objective history is cleared at round reset. No client-controlled health, teleport or ability to track hidden enemy positions was added.
 
 Studio/Android acceptance is still required: approach/blocked freight passages, contested medical sites, priority when shot, movement transitions and cooldown fairness.
+
+
+## 6 novembre 2026 — défense derrière couverture et récupération des coins
+
+Les bots blessés, sous suppression ou en rechargement évaluent désormais six directions bornées (au lieu de quatre), avec priorité forte à une vraie couverture de tir solide. Les raycasts de navigation et de couverture respectent les pièces physiques `CanCollide`, et trois échantillons intermédiaires de sol rejettent les trajectoires passant par des vides/passerelles. Lorsqu'un déplacement tactique échoue réellement et que la récupération de blocage est déclenchée, la dernière couverture infranchissable est exclue pendant huit secondes. Une issue de repli alternative reste possible sans redémarrer tout le comportement d'un bot. La navigation directe anticipe désormais le sol jusqu'à 30 studs devant le bot (quatre sondes plafonnées), sans scan intégral de la carte et sans nouvelle API externe. La sélection et le délai de rejet sont vérifiés par un script Luau pur dans la CI.
+
+A confirmer dans Roblox Studio : mouvements autour des conteneurs et forklifts, passerelles élevées, couverture lors du rechargement, fuite hors des coins, consommation de raycasts et absence de passivité excessive. Le succès du build ne confirme pas la physique Roblox sur Android.
