@@ -315,6 +315,15 @@ local function createBot(slot)
         nextPathAt = 0,
         pathRevision = 0,
         pathing = false,
+        pathStartedAt = nil,
+        pathFailures = 0,
+        detourGoal = nil,
+        detourTarget = nil,
+        detourUntil = 0,
+        nextDetourAt = 0,
+        detourAttempts = 0,
+        navMode = "IDLE",
+        navModeSince = os.clock(),
         waypoints = nil,
         waypointIndex = 1,
         pathGoal = nil,
@@ -333,6 +342,7 @@ local function createBot(slot)
         stuckRecoveries = 0,
     }
     slots[slot] = bot
+    model:SetAttribute("IronYardNavMode", "IDLE")
     local previousHealth = humanoid.Health
     humanoid.HealthChanged:Connect(function(value)
         if value < previousHealth and value > 0 then
@@ -584,15 +594,24 @@ local function updateBot(bot, dt)
     local farFromGoal = goal and (Vector3.new(goal.X, 0, goal.Z)
         - Vector3.new(currentPosition.X, 0, currentPosition.Z)).Magnitude > 7
     local movingIntent = phase == "LIVE" or phase == "COUNTDOWN"
-    if movingIntent and farFromGoal and moved < 0.3 then
+    local waitingForRoute = bot.navMode == "WAIT"
+    -- A valid path can take several seconds to compute. Waiting is not the
+    -- same thing as being stuck; don't repeatedly cancel ComputeAsync and
+    -- command a jump into the wall while the route is still pending.
+    local waitedLongEnough = not waitingForRoute
+        or now - (bot.navModeSince or now) > 4.5
+    if movingIntent and farFromGoal and moved < 0.3 and waitedLongEnough then
         if bot.stuckSince == 0 then
             bot.stuckSince = now
         elseif now - bot.stuckSince > 2.3 then
             BotNavigation.invalidate(bot)
-            bot.humanoid.Jump = true
             bot.stuckRecoveries += 1
-            -- Force a new flank direction when repeated obstacle avoidance
-            -- is not working. Do not jump in place forever at a reached goal.
+            -- Only occasional unobstructed direct movement merits a jump.
+            -- Obstructed WAIT/PATH/AVOID states instead resample safe ground
+            -- around the obstacle to avoid endless jumping on one spot.
+            if bot.navMode == "DIRECT" and bot.stuckRecoveries % 3 == 0 then
+                bot.humanoid.Jump = true
+            end
             if bot.stuckRecoveries % 2 == 0 then
                 bot.strafeSign = -bot.strafeSign
                 BotTactics.reset(bot)
@@ -693,6 +712,11 @@ function BotService.resetRound()
             bot.requestedGoal = nil
             bot.stuckSince = 0
             bot.stuckRecoveries = 0
+            bot.detourAttempts = 0
+            bot.pathFailures = 0
+            bot.navMode = "IDLE"
+            bot.navModeSince = os.clock()
+            bot.model:SetAttribute("IronYardNavMode", "IDLE")
             bot.lastTargetSeenAt = 0
             bot.lastKnownTargetPosition = nil
             bot.investigationTurn = 0

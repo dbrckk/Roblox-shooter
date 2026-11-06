@@ -76,3 +76,9 @@ A central, responsive **12-second results card** now displays the server-verifie
 - [ ] Verify physical touch hitboxes, the native Roblox jump and thumbstick, notch insets and device rotation in a **published Android client**. Luau geometry tests and Rojo build cannot measure device screen occlusion or FPS.
 
 - [x] Add client-side moving gantry trolleys and suspended spreaders at the four arena corners, using a deterministic finite motion budget; visual-only and graphics-preset-aware. Real Android scene profiling remains pending.
+
+## Blocage de navigation IA — novembre 2026
+
+L'IA utilise désormais une **navigation à quatre états** : DIRECT (couloir dégagé), PATH (points de passage calculés), AVOID (détour latéral/arriéré validé au sol) et WAIT (attente sans charger un obstacle). Chaque détournement examine au maximum six candidats proches, rejette les sorties de carte et les dénivelés, puis les vérifie avec cinq rayons de gabarit du humanoïde. Les calculs Roblox PathfindingService sont asynchrones et leur résultat périmé est ignoré ; un calcul qui dépasse cinq secondes est annulé logiquement et les nouvelles tentatives bénéficient d'un délai plafonné à 4,2 s. Les états sont visibles dans l'attribut de modèle `IronYardNavMode` pour diagnostic Studio.
+
+Le détecteur de blocage attend qu'un véritable échec de mouvement persiste avant de recalculer. Il n'annule plus systématiquement les calculs simplement parce qu'un bot attend, et n'utilise un saut de récupération qu'occasionnellement en mode DIRECT. Un test Luau exécute la sélection des six directions de contournement et la temporisation ; la **validation physique et le framerate Android restent à effectuer dans Roblox Studio**.

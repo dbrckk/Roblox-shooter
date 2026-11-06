@@ -89,6 +89,21 @@ def main():
     require("bot.humanoid:MoveTo(goal)" in navigation,
             "Unobstructed bot routes must still move directly")
     has(navigation, "task.spawn(function()", "Asynchronous path computation")
+    for needle in (
+        "local function chooseDetour(bot, goal)",
+        "local function walkableCandidate(bot, raw, params)",
+        "Planner.offsets(bot.strafeSign, attempt)",
+        "directRouteClear(bot, grounded, params)",
+        'setMode(bot, "AVOID")',
+        'setMode(bot, "WAIT")',
+        "PATH_COMPUTE_TIMEOUT = 5.0",
+        "Planner.retryDelay(bot.pathFailures)",
+        'bot.model:SetAttribute("IronYardNavMode", mode)',
+    ):
+        has(navigation, needle, "Ground-checked detours and bounded path retries")
+    for needle in ("local waitingForRoute = bot.navMode", "local waitedLongEnough",
+                   'bot.navMode == "DIRECT" and bot.stuckRecoveries % 3 == 0'):
+        has(bot, needle, "No repeated jumps while waiting for a valid path")
     has(bot, "config.MagazineSize", "Bot finite ammunition")
     has(bot, "config.ReloadSeconds", "Bot reloading")
     has(client, "visibleRigParts", "Cached first-person rig visibility")
