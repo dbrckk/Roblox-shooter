@@ -51,6 +51,8 @@ def main():
           "Sunlight changed unexpectedly")
 
     art = source("src/server/ArenaArt.luau")
+    clientLighting = source("src/client/EnvironmentLighting.client.luau")
+    profile = source("src/shared/EnvironmentProfile.luau")
     for part in ("side flute", "locking rod", "door seam", "FreightSerial"):
         check(part in art, "Container modeling missing: " + part)
     check('Enum.Material.Neon' not in art, "Container art must remain industrial daylight")
@@ -69,6 +71,25 @@ def main():
         check(name in art, "Missing art physics / LOD contract: " + name)
     check("p.CanCollide = true" not in art and "p.CanQuery = true" not in art,
           "The decorative module must never take over authoritative gameplay geometry")
+    for needle in ("local function industrialLightFixtures(parent)",
+                   "local function groundWear(parent)",
+                   'lens:SetAttribute("IronYardLightFixture", true)',
+                   "industrialLightFixtures(decor)", "groundWear(decor)"):
+        check(needle in art, "Missing non-colliding industrial illumination or ground wear: " + needle)
+    for needle in ("function EnvironmentProfile.get(",
+                   "function EnvironmentProfile.activeFixtureIndices(",
+                   "lamps = 0", "lamps = 2", "lamps = 8"):
+        check(needle in profile, "Missing bounded graphics quality policy: " + needle)
+    for needle in ("Lighting.ExposureCompensation = settings.exposure",
+                   "Lighting.EnvironmentDiffuseScale",
+                   "bloom.Enabled = settings.bloom",
+                   "Profile.activeFixtureIndices(distances,",
+                   'lamp.Face = Enum.NormalId.Bottom',
+                   "lamp.Shadows = false",
+                   'player:GetAttributeChangedSignal("IronYardGraphicsPreset")'):
+        check(needle in clientLighting, "Client-only preset-aware lighting is missing: " + needle)
+    check("SpotLight" not in art and "PointLight" not in art,
+          "Replicated arena art must never spawn dynamic fixtures")
 
     # Visual-only gantries must be separate client-animated assemblies, with
     # absolutely no real player collision, raycast or server tween workload.
