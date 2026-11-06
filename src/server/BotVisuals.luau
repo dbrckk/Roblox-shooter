@@ -2,6 +2,7 @@
 -- Procedurally authored Roblox 3D parts: no external IDs, copyrighted meshes or textures.
 -- Armor is welded to the R6 Humanoid skeleton and is non-colliding/non-queryable.
 local ServerStorage = game:GetService("ServerStorage")
+local MeshKit = require(script.Parent:WaitForChild("VanguardMeshKit"))
 local BotVisuals = {}
 local importedPalette = { "olive", "sand", "slate", "rust" }
 local importedParts = { "torso", "head", "left_arm", "right_arm", "left_leg", "right_leg", "rifle" }
@@ -18,8 +19,7 @@ local function tryImportedMeshKit(model, rig, index, accent)
     local source = {}
     for _, partName in ipairs(importedParts) do
         local mesh = variant:FindFirstChild(partName)
-        if not mesh or not mesh:IsA("MeshPart")
-            or not mesh:FindFirstChildOfClass("SurfaceAppearance") then
+        if not MeshKit.isRenderable(mesh) then
             return nil
         end
         source[partName] = mesh
@@ -36,7 +36,7 @@ local function tryImportedMeshKit(model, rig, index, accent)
     }
     for _, partName in ipairs(importedParts) do
         local target = anchors[partName]
-        local part = source[partName]:Clone()
+        local part = MeshKit.cleanClone(source[partName])
         part.Name = "VANGUARD Mesh " .. partName
         part.Anchored = false
         part.Massless = true
