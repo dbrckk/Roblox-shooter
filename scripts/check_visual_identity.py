@@ -117,6 +117,27 @@ def main():
         check(needle in native_props,
               "Native forklift PBR-fallback detail or physics safety missing: " + needle)
 
+    # All surface replacements are visibly attached to ACTUAL colliders and
+    # never author additional bullet or movement collision volumes.
+    cover = source("src/server/CoverArt.luau")
+    cover_plan = source("src/shared/CoverSurfacePlan.luau")
+    for needle in ("CoverArt.build(folder)", 'local CoverArt = require(script.Parent:WaitForChild("CoverArt"))'):
+        check(needle in map_source, "World cover facade integration is missing: " + needle)
+    for needle in ("function CoverArt.build(arena)",
+                   'folder.Name = "IronYardCoverSkins"',
+                   'item:IsA("BasePart")',
+                   "Plan.forCollider(item.Name, size.X, size.Y, size.Z)",
+                   "part.CanCollide = false", "part.CanTouch = false",
+                   "part.CanQuery = false",
+                   'part:SetAttribute("NeonArtTier", tier)'):
+        check(needle in cover, "Combat cover render safety/LOD regression: " + needle)
+    for needle in ('"CAST_CONCRETE"', '"ARMED_ROADBLOCK"', '"CARGO_BARRIER"',
+                   "function CoverSurfacePlan.forCollider("):
+        check(needle in cover_plan, "Missing deterministic combat cover style: " + needle)
+    lod_source = source("src/client/BotLOD.client.luau")
+    check('"IronYardCoverSkins"' in lod_source,
+          "Cover detail must have mobile visibility culling")
+
     # Visual-only gantries must be separate client-animated assemblies, with
     # absolutely no real player collision, raycast or server tween workload.
     industrialMotion = source("src/client/IndustrialMotion.client.luau")
