@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
+local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -68,6 +69,7 @@ function WeaponVisuals.new(WeaponConfig)
     self.lastCameraPosition = nil
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
+    self.impactMarks = {}
     -- Server-authored rank only affects the cosmetic local viewmodel.
     self.finishConnection = Players.LocalPlayer:GetAttributeChangedSignal(
         "IronYardProgressLevel"):Connect(function()
@@ -449,97 +451,224 @@ function WeaponVisuals:_render(deltaTime)
     end
 end
 
+-- A short high-speed segment is more legible than a stationary full-range
+-- laser bar, especially on lower-resolution Android screens. The actual
+-- raycast/hit registration remains completely server-owned.
 function WeaponVisuals:drawTracer(origin, direction, range, accentColor)
-    local length = math.clamp(range, 0, 420)
-    if length < 0.10 or direction.Magnitude < 0.01 then return end
-	local tracer = Instance.new("Part")
-	tracer.Name = "LocalTracer"
-	tracer.Anchored = true
-	tracer.CanCollide = false
-	tracer.CanQuery = false
-	tracer.CanTouch = false
-	tracer.Color = accentColor or Color3.fromRGB(245, 248, 255)
-	tracer.Material = MATERIAL_NEON
-	tracer.Size = Vector3.new(0.035, 0.035, length)
-	tracer.Transparency = 0.2
-	tracer.CFrame = CFrame.lookAt(origin + direction * (length * 0.5), origin + direction * length)
-	tracer.Parent = workspace
-
-	local tween = TweenService:Create(tracer, TweenInfo.new(0.08), { Transparency = 1 })
-	tween:Play()
-	Debris:AddItem(tracer, 0.12)
+    if typeof(origin) ~= "Vector3" or typeof(direction) ~= "Vector3"
+        or direction.Magnitude < 0.01 then return end
+    local profile = CombatVfxProfile.tracer(range)
+    if not profile then return end
+    local aim = direction.Unit
+    local distance = math.clamp(range, 0, 1500)
+    local half = profile.length * 0.5
+    local startCenter = origin + aim * half
+    local endCenter = origin + aim * math.max(half, distance - half)
+    local tracer = Instance.new("Part")
+    tracer.Name = "IronYardFlightTracer"
+    configurePart(tracer)
+    tracer.Material = MATERIAL_NEON
+    tracer.Color = accentColor or Color3.fromRGB(248, 225, 174)
+    tracer.Size = Vector3.new(0.047, 0.047, profile.length)
+    tracer.Transparency = 0.13
+    tracer.CFrame = CFrame.lookAt(startCenter, startCenter + aim)
+    tracer.Parent = workspace
+    TweenService:Create(tracer, TweenInfo.new(profile.duration, Enum.EasingStyle.Linear), {
+        CFrame = CFrame.lookAt(endCenter, endCenter + aim),
+        Transparency = 1,
+        Size = Vector3.new(0.025, 0.025, profile.length),
+    }):Play()
+    Debris:AddItem(tracer, profile.duration + 0.04)
 end
 
--- Brief, surface-sensitive physical impact fragments; never gameplay geometry.
--- Capped count, lifespan and visibility distance keep Android overdraw bounded.
-function WeaponVisuals:drawImpact(position, normal, materialName)
-    if typeof(position) ~= "Vector3" or typeof(normal) ~= "Vector3" then return end
-    if normal.Magnitude < 0.9 then return end
-    local camera = workspace.CurrentCamera
-    local touch = UserInputService.TouchEnabled
-    local preset = game:GetService("Players").LocalPlayer:GetAttribute("IronYardGraphicsPreset")
-    local maxDistance = preset == "ECO" and 65
-        or (preset == "QUALITY" and (touch and 140 or 185) or (touch and 100 or 155))
-    if not camera or (camera.CFrame.Position - position).Magnitude > maxDistance then return end
-    local now = os.clock()
-    if now - (self.lastImpactAt or -math.huge) < (preset == "ECO" and 0.19
-        or (touch and 0.105 or 0.065)) then return end
-    self.lastImpactAt = now
+local function colorFromChannels(channels)
+    return Color3.fromRGB(channels[1], channels[2], channels[3])
+end
 
-    local metallic = materialName == "Metal" or materialName == "DiamondPlate"
-        or materialName == "CorrodedMetal" or materialName == "Foil"
-    local woody = materialName == "Wood" or materialName == "WoodPlanks"
-    local tint = metallic and Color3.fromRGB(242, 190, 107)
-        or (woody and Color3.fromRGB(188, 154, 108) or Color3.fromRGB(182, 177, 164))
-    local n = normal.Unit
-    local reference = math.abs(n.Y) > 0.88 and Vector3.xAxis or Vector3.yAxis
-    local tangent = n:Cross(reference).Unit
-    local bitangent = n:Cross(tangent).Unit
-    local count = preset == "ECO" and 1
-        or (preset == "QUALITY" and (touch and 3 or 4) or (touch and 2 or 3))
-    for i = 1, count do
-        local angle = i / count * math.pi * 2 + self.random:NextNumber(-0.25, 0.25)
-        local spread = tangent * math.cos(angle) + bitangent * math.sin(angle)
-        local direction = (n * self.random:NextNumber(0.4, 0.8) + spread).Unit
-        local length = self.random:NextNumber(0.22, metallic and 0.85 or 0.56)
-        local center = position + n * 0.10 + direction * (length * 0.5)
-        local chip = Instance.new("Part")
-        chip.Name = "IronYardImpactChip"
-        configurePart(chip)
-        chip.Material = metallic and MATERIAL_NEON or MATERIAL_SMOOTH
-        chip.Color = tint
-        chip.Size = Vector3.new(0.034, 0.034, length)
-        chip.CFrame = CFrame.lookAt(center, center + direction)
-        chip.Transparency = 0.12
-        chip.Parent = workspace
-        TweenService:Create(chip, TweenInfo.new(metallic and 0.16 or 0.22), {
-            Transparency = 1,
-            Size = Vector3.new(0.02, 0.02, 0.045),
-        }):Play()
-        Debris:AddItem(chip, 0.28)
+-- Surface marks are local, non-queryable and short-lived. Always cap their
+-- total number, even under concentrated automatic fire or low-end Android.
+function WeaponVisuals:_trackImpactMark(mark, cap)
+    local marks = self.impactMarks
+    for i = #marks, 1, -1 do
+        if not marks[i].Parent then table.remove(marks, i) end
+    end
+    table.insert(marks, mark)
+    while #marks > cap do
+        local oldest = table.remove(marks, 1)
+        if oldest.Parent then oldest:Destroy() end
     end
 end
 
-function WeaponVisuals:drawMuzzleFlash(origin, accentColor)
-    local burst = Instance.new("Part")
-    burst.Name = "LocalBotMuzzle"
-    burst.Anchored = true
-    burst.CanCollide = false
-    burst.CanQuery = false
-    burst.CanTouch = false
-    burst.CastShadow = false
-    burst.Material = MATERIAL_NEON
-    burst.Shape = Enum.PartType.Ball
-    burst.Size = Vector3.new(0.27, 0.27, 0.27)
-    burst.Color = accentColor or Color3.fromRGB(244, 202, 132)
-    burst.CFrame = CFrame.new(origin)
-    burst.Parent = workspace
-    local tween = TweenService:Create(burst, TweenInfo.new(0.11), {
-        Size = Vector3.new(0.06, 0.06, 0.06),
+function WeaponVisuals:drawImpact(position, normal, materialName)
+    if typeof(position) ~= "Vector3" or typeof(normal) ~= "Vector3"
+        or normal.Magnitude < 0.9 then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local preset = Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset")
+    local touch = UserInputService.TouchEnabled
+    local distance = (camera.CFrame.Position - position).Magnitude
+    local budget = CombatVfxProfile.budget(preset, touch, distance)
+    if not budget then return end
+    local now = os.clock()
+    if now - (self.lastImpactAt or -math.huge) < budget.cooldown then return end
+    self.lastImpactAt = now
+
+    local surface = CombatVfxProfile.surface(materialName)
+    local n = normal.Unit
+    local tint = colorFromChannels(surface.debris)
+    local reference = math.abs(n.Y) > 0.88 and Vector3.xAxis or Vector3.yAxis
+    local tangent = n:Cross(reference).Unit
+    local bitangent = n:Cross(tangent).Unit
+
+    -- Embedded circular mark on the actual contact plane (no TextureIds,
+    -- collision, server instances or permanently growing decal inventory).
+    local mark = Instance.new("Part")
+    mark.Name = "IronYardBulletMark"
+    configurePart(mark)
+    mark.Shape = Enum.PartType.Cylinder
+    mark.Material = MATERIAL_SMOOTH
+    mark.Color = colorFromChannels(surface.mark)
+    mark.Transparency = 0.24
+    local width = self.random:NextNumber(0.15, 0.26)
+    mark.Size = Vector3.new(0.019, width, width * self.random:NextNumber(0.86, 1.14))
+    mark.CFrame = CFrame.lookAt(position + n * 0.032, position + n)
+        * CFrame.Angles(0, math.pi * 0.5, 0)
+        * CFrame.Angles(self.random:NextNumber(0, math.pi * 2), 0, 0)
+    mark.Parent = workspace
+    self:_trackImpactMark(mark, budget.marks)
+    TweenService:Create(mark, TweenInfo.new(1.1, Enum.EasingStyle.Quad,
+        Enum.EasingDirection.Out, 0, false, budget.markSeconds - 1.1), {
         Transparency = 1,
-    })
-    tween:Play()
-    Debris:AddItem(burst, 0.16)
+    }):Play()
+    Debris:AddItem(mark, budget.markSeconds)
+
+    -- Fleeting directional sparks for metal, glass glints, splinters for wood,
+    -- and small dust/gravel for concrete and ground. All VFX are cosmetic.
+    for _ = 1, budget.fragments do
+        local angle = self.random:NextNumber(0, math.pi * 2)
+        local ring = tangent * math.cos(angle) + bitangent * math.sin(angle)
+        local travel = (n * self.random:NextNumber(0.28, 0.68) + ring).Unit
+        local reach = self.random:NextNumber(0.28, surface.spread)
+        local length = self.random:NextNumber(0.14,
+            surface.sparks and 0.67 or (surface.glimmer and 0.37 or 0.30))
+        local chip = Instance.new("Part")
+        chip.Name = surface.sparks and "IronYardRicochetSpark"
+            or (surface.glimmer and "IronYardGlassGlint" or "IronYardSurfaceDebris")
+        configurePart(chip)
+        chip.Material = (surface.sparks or surface.glimmer) and MATERIAL_NEON or MATERIAL_SMOOTH
+        chip.Color = tint
+        chip.Size = Vector3.new(surface.sparks and 0.034 or 0.065,
+            surface.sparks and 0.034 or 0.045, length)
+        chip.Transparency = surface.sparks and 0.02 or 0.16
+        local center = position + n * 0.07 + travel * (length * 0.35)
+        chip.CFrame = CFrame.lookAt(center, center + travel)
+        chip.Parent = workspace
+        local finish = center + travel * reach - Vector3.new(0, reach * 0.22, 0)
+        local life = surface.sparks and 0.18 or 0.28
+        TweenService:Create(chip, TweenInfo.new(life, Enum.EasingStyle.Quad,
+            Enum.EasingDirection.Out), {
+            CFrame = CFrame.lookAt(finish, finish + travel),
+            Transparency = 1,
+            Size = Vector3.new(0.025, 0.025, 0.035),
+        }):Play()
+        Debris:AddItem(chip, life + 0.04)
+    end
+
+    -- One short diffuse puff only at higher settings, never on ECO.
+    if budget.fragments >= 2 and not surface.sparks and not surface.glimmer then
+        local dust = Instance.new("Part")
+        dust.Name = "IronYardImpactDust"
+        configurePart(dust)
+        dust.Shape = Enum.PartType.Ball
+        dust.Material = MATERIAL_SMOOTH
+        dust.Color = tint
+        dust.Transparency = 0.76
+        dust.Size = Vector3.new(0.18, 0.18, 0.18)
+        dust.CFrame = CFrame.new(position + n * 0.13)
+        dust.Parent = workspace
+        TweenService:Create(dust, TweenInfo.new(0.25), {
+            Transparency = 1,
+            Size = Vector3.new(0.75, 0.50, 0.75),
+            CFrame = dust.CFrame + n * 0.22,
+        }):Play()
+        Debris:AddItem(dust, 0.29)
+    end
+end
+
+-- Remote combatants use an oriented, compact muzzle burst. Only desktop
+-- QUALITY enables a short-lived local light: never a networked light source.
+function WeaponVisuals:drawMuzzleFlash(origin, accentColor, shotDirection)
+    if typeof(origin) ~= "Vector3" then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local touch = UserInputService.TouchEnabled
+    local budget = CombatVfxProfile.budget(
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        touch, (camera.CFrame.Position - origin).Magnitude)
+    if not budget then return end
+    local direction = typeof(shotDirection) == "Vector3" and shotDirection.Magnitude > 0.01
+        and shotDirection.Unit or camera.CFrame.LookVector
+    local tint = accentColor or Color3.fromRGB(250, 204, 125)
+
+    local core = Instance.new("Part")
+    core.Name = "IronYardMuzzleCore"
+    configurePart(core)
+    core.Shape = Enum.PartType.Ball
+    core.Material = MATERIAL_NEON
+    core.Color = tint
+    core.Size = Vector3.new(0.26, 0.26, 0.26)
+    core.CFrame = CFrame.new(origin)
+    core.Parent = workspace
+    if budget.muzzleLight then
+        local light = Instance.new("PointLight")
+        light.Brightness = 1.25
+        light.Range = 9
+        light.Color = tint
+        light.Shadows = false
+        light.Parent = core
+    end
+    TweenService:Create(core, TweenInfo.new(0.09), {
+        Size = Vector3.new(0.05, 0.05, 0.05),
+        Transparency = 1,
+    }):Play()
+    Debris:AddItem(core, 0.12)
+
+    for i = 1, budget.muzzleFins do
+        local fin = Instance.new("Part")
+        fin.Name = "IronYardMuzzlePetal"
+        configurePart(fin)
+        fin.Material = MATERIAL_NEON
+        fin.Color = tint
+        fin.Transparency = 0.24
+        fin.Size = Vector3.new(0.09, 0.36, 0.54)
+        fin.CFrame = CFrame.lookAt(origin + direction * 0.24,
+            origin + direction) * CFrame.Angles(0, 0, (i - 1) * math.pi * 0.5)
+        fin.Parent = workspace
+        TweenService:Create(fin, TweenInfo.new(0.08), {
+            Transparency = 1,
+            Size = Vector3.new(0.035, 0.07, 0.17),
+        }):Play()
+        Debris:AddItem(fin, 0.10)
+    end
+end
+
+-- First-person weapons use their actual viewmodel muzzle, not the character's
+-- head. For scoped sniper shots the hidden weapon does not flash on the reticle.
+function WeaponVisuals:drawLocalMuzzleFlash()
+    if self.currentWeaponId == "Knife" or (self.currentWeaponId == "Sniper" and self.scoped) then
+        return
+    end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local muzzleNames = { Muzzle = true, MuzzleBrake = true,
+        MuzzleRing = true, FlashHider = true }
+    for _, entry in ipairs(self.parts) do
+        if muzzleNames[entry.part.Name] and entry.part.Parent then
+            local direction = camera.CFrame.LookVector
+            self:drawMuzzleFlash(entry.part.Position + direction * 0.25, nil, direction)
+            return
+        end
+    end
 end
 
 function WeaponVisuals:_playSoundLayer(parent, layer)
