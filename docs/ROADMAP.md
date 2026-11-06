@@ -171,3 +171,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Le serveur n'ouvre le feu que lorsque la visée interpolée correspond suffisamment à la cible visible, avec exigence accrue à longue distance ; cadence et dégâts restent inchangés.
 - [x] Tests exécutables sur les règles sans services Roblox, reliés à la CI Luau/Rojo.
 - [ ] Validation Studio/Android avec plusieurs combattants : mouvements de côté, conteneurs, coins de couverture, précision, temps d'engagement, coûts de pathfinding et animations en situation.
+
+
+## 6 novembre 2026 — IA : mémoire correcte et stations contestées
+
+- [x] Attribution atomique de la cible et de sa dernière position réellement visible, contre les poursuites d'un adversaire différent.
+- [x] Les cibles cachées ne livrent plus leur position courante ; ancienne observation conservée au plus 2,2 s.
+- [x] Bots blessés (≤ 48 % HP) attirés par les stations de soin disponibles à courte distance lorsque l'ennemi n'est plus visible ; couverture tactique prioritaire.
+- [x] Réserve de soin serveur partagée entre humains et IA, distance réduite et rayon contre le soin à travers les murs pour les bots ; pas de magie ni de collaboration FFA.
+- [x] Régressions Luau du choix de cible, de la mémoire visuelle et des seuils de soin branchées dans GitHub Actions.
+- [ ] Vérifier en Roblox Studio et sur Android : concurrence aux stations, poursuite en entrepôt, tirs visibles, risque de camping, équilibre des soins et navigation.

@@ -13,6 +13,11 @@ function Rules.canUse(phase, health, maxHealth, distance, now, readyAt)
     return maxHealth > 0 and health > 0 and health < maxHealth
         and distance >= 0 and distance <= Rules.SERVER_RANGE and now >= readyAt
 end
+function Rules.botNeedsHeal(health, maxHealth)
+    return finite(health) and finite(maxHealth) and maxHealth > 0
+        and health > 0 and health / maxHealth <= 0.48
+end
+
 function Rules.healedHealth(health, maxHealth)
     assert(finite(health) and finite(maxHealth) and maxHealth > 0)
     local result = math.min(maxHealth, math.max(0, health) + Rules.HEAL_AMOUNT)

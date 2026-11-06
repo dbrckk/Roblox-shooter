@@ -19,6 +19,8 @@ local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
 local BotMotionProfile = require(shared:WaitForChild("BotMotionProfile"))
 local BotEngagementPlan = require(shared:WaitForChild("BotEngagementPlan"))
+local BotTargetSelection = require(shared:WaitForChild("BotTargetSelection"))
+local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local folder = nil
@@ -204,12 +206,12 @@ end
 -- Bots no longer chase the nearest enemy through an opaque warehouse wall.
 local function getTargetModel(bot, limit)
     local now = os.clock()
-    local best, bestScore = nil, -math.huge
     local origin = bot.head.Position
     local params = RaycastParams.new()
     params.FilterType = Enum.RaycastFilterType.Exclude
     params.FilterDescendantsInstances = { bot.model }
     params.IgnoreWater = true
+    local sightings = {}
 
     local function consider(model)
         if not model or model == bot.model or not model.Parent then return end
@@ -218,39 +220,23 @@ local function getTargetModel(bot, limit)
         if not humanoid or not root or not head then return end
         local distance = (root.Position - bot.root.Position).Magnitude
         if distance > limit then return end
-
-        -- Test the head first and the torso if crouching/cover hides it.
-        -- The same physical map raycast controls actual firing.
+        -- Only server-verified head/torso LOS authorizes a new sighting.
         local direction = head.Position - origin
         local ray = Workspace:Raycast(origin, direction, params)
         local visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
         if not visible then
             local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
             if torso then
-                direction = torso.Position - origin
-                ray = Workspace:Raycast(origin, direction, params)
+                ray = Workspace:Raycast(origin, torso.Position - origin, params)
                 visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
             end
         end
-        -- If the player ducked behind cover, remember them only briefly.
-        -- Otherwise switch to a visible fighter rather than wall-staring.
-        local recent = model == bot.target and (now - (bot.lastTargetSeenAt or 0)) < 2.2
-        if not visible and not recent then return end
-        if visible and model == bot.target then
-            bot.lastTargetSeenAt = now
-            bot.lastKnownTargetPosition = root.Position
-        end
-
-        local score = (visible and 150 or 25) - distance * 0.58
-        if model == bot.target then score += 28 end
-        if score > bestScore then
-            best, bestScore = model, score
-            if visible then
-                bot.nextVisibleTargetPosition = root.Position
-            else
-                bot.nextVisibleTargetPosition = nil
-            end
-        end
+        table.insert(sightings, {
+            model = model,
+            distance = distance,
+            visible = visible,
+            position = visible and root.Position or nil,
+        })
     end
 
     for _, player in ipairs(Players:GetPlayers()) do
@@ -259,9 +245,14 @@ local function getTargetModel(bot, limit)
     for _, other in pairs(slots) do
         if other ~= bot then consider(other.model) end
     end
-    if best and best ~= bot.target and bot.nextVisibleTargetPosition then
+
+    -- The chosen fighter and its verified coordinate must come from
+    -- the SAME candidate; never inherit another fighter's observation.
+    local best, seenPosition = BotTargetSelection.choose(
+        sightings, bot.target, now, bot.lastTargetSeenAt)
+    if best and seenPosition then
         bot.lastTargetSeenAt = now
-        bot.lastKnownTargetPosition = bot.nextVisibleTargetPosition
+        bot.lastKnownTargetPosition = seenPosition
     end
     return best
 end
@@ -469,6 +460,8 @@ local function navigationGoal(bot, target, canSee)
             -- window, rather than recasting four lanes at every think tick.
             return patrolGoal(bot)
         end
+        local medical = SupplyService.botGoal(bot.model)
+        if medical then return medical end
         BotTactics.reset(bot)
         if bot.lastKnownTargetPosition
             and (now - bot.lastTargetSeenAt) < SEARCH_MEMORY_SECONDS then
@@ -500,6 +493,10 @@ local function navigationGoal(bot, target, canSee)
     local defensive = BotTactics.defensiveGoal(bot, destination, now)
     if defensive then return defensive end
     if not canSee then
+        -- Medical objectives are only considered when the opponent has
+        -- broken line of sight. Defensive cover retains first priority.
+        local medical = SupplyService.botGoal(bot.model)
+        if medical then return medical end
         return BotTactics.flankGoal(bot, destination, now) or patrolGoal(bot)
     end
 
@@ -619,6 +616,9 @@ local function updateBot(bot, dt)
     observeRecentHit(bot, now)
 
     local phase = Workspace:GetAttribute("NeonMatchPhase")
+    if phase == "LIVE" then
+        SupplyService.tryHealBot(bot.model)
+    end
     local target = phase == "LIVE" and getTargetModel(bot, config.MaximumSightDistance) or nil
     if target ~= bot.target then
         local previousTarget = bot.target

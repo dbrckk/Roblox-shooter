@@ -97,7 +97,7 @@ local function create(parent, index, x, z)
     audio.Volume = 0.36
     audio.Parent = console
 
-    local station = { model = model, readyAt = 0, revision = 0 }
+    local station = { model = model, console = console, readyAt = 0, revision = 0 }
     local function setReady(ready)
         prompt.Enabled = ready
         light.Color = ready and COLOR.green or COLOR.off
@@ -113,32 +113,104 @@ local function create(parent, index, x, z)
     end
     station.reset()
 
+    -- One non-yielding supply transaction is shared by humans and AI.
+    -- A globally consumed station cannot be redeemed twice in one tick.
+    station.use = function(character, humanoid, root, player)
+        if not character or not character.Parent or not humanoid or not root
+            or not humanoid:IsDescendantOf(character)
+            or not root:IsDescendantOf(Workspace) then return false end
+        local now = Workspace:GetServerTimeNow()
+        local distance = (root.Position - console.Position).Magnitude
+        if not Rules.canUse(Workspace:GetAttribute("NeonMatchPhase"),
+            humanoid.Health, humanoid.MaxHealth, distance, now, station.readyAt) then
+            return false
+        end
+        local health, amount = Rules.healedHealth(humanoid.Health, humanoid.MaxHealth)
+        if amount <= 0 then return false end
+        station.readyAt = now + Rules.COOLDOWN
+        station.revision += 1
+        local revision = station.revision
+        setReady(false)
+        humanoid.Health = health
+        audio:Play()
+        if player then
+            remotes.WeaponFeedback:FireClient(player, { kind = "MedicalHeal", amount = amount })
+        end
+        task.delay(Rules.COOLDOWN, function()
+            if station.revision ~= revision or not model.Parent then return end
+            station.reset()
+        end)
+        return true
+    end
+
     prompt.Triggered:Connect(function(player)
         if not player or not player:IsA("Player") or player.Parent ~= Players then return end
         local character = player.Character
         local humanoid = character and character:FindFirstChildOfClass("Humanoid")
         local root = character and character:FindFirstChild("HumanoidRootPart")
-        if not humanoid or not root or not root:IsDescendantOf(Workspace) then return end
-        local now = Workspace:GetServerTimeNow()
-        local distance = (root.Position - console.Position).Magnitude
-        if not Rules.canUse(Workspace:GetAttribute("NeonMatchPhase"),
-            humanoid.Health, humanoid.MaxHealth, distance, now, station.readyAt) then return end
-        -- A single non-yielding callback verifies and claims this station.
-        local newHealth, amount = Rules.healedHealth(humanoid.Health, humanoid.MaxHealth)
-        if amount <= 0 then return end
-        humanoid.Health = newHealth
-        station.readyAt = now + Rules.COOLDOWN
-        station.revision += 1
-        local revision = station.revision
-        setReady(false)
-        audio:Play()
-        remotes.WeaponFeedback:FireClient(player, { kind = "MedicalHeal", amount = amount })
-        task.delay(Rules.COOLDOWN, function()
-            if revision ~= station.revision or not model.Parent then return end
-            station.reset()
-        end)
+        station.use(character, humanoid, root, player)
     end)
     table.insert(stations, station)
+end
+
+-- Medical objectives for wounded NPCs use the SAME 40 HP / 24 s pool.
+local BOT_SEARCH_RADIUS = 65
+local BOT_USE_DISTANCE = 7.5
+local function botState(character)
+    if not character or not character.Parent
+        or character:GetAttribute("IsArenaBot") ~= true then return nil end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not root or not root:IsDescendantOf(Workspace)
+        or not Rules.botNeedsHeal(humanoid.Health, humanoid.MaxHealth) then
+        return nil
+    end
+    return humanoid, root
+end
+
+function Service.botGoal(character)
+    local humanoid, root = botState(character)
+    if not humanoid or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+        return nil
+    end
+    local now = Workspace:GetServerTimeNow()
+    local best, bestDistance = nil, BOT_SEARCH_RADIUS
+    for _, station in ipairs(stations) do
+        local console = station.console
+        local distance = (root.Position - console.Position).Magnitude
+        if station.readyAt <= now
+            and math.abs(root.Position.Y - console.Position.Y - 1.2) <= 4
+            and distance < bestDistance then
+            best, bestDistance = console.Position, distance
+        end
+    end
+    return best and Vector3.new(best.X, root.Position.Y, best.Z) or nil
+end
+
+function Service.tryHealBot(character)
+    local humanoid, root = botState(character)
+    if not humanoid or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+        return false
+    end
+    local now = Workspace:GetServerTimeNow()
+    for _, station in ipairs(stations) do
+        local console = station.console
+        if station.readyAt <= now
+            and (root.Position - console.Position).Magnitude <= BOT_USE_DISTANCE then
+            -- Never allow AI to heal through physical cover.
+            local params = RaycastParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = { character, station.model }
+            params.RespectCanCollide = true
+            params.IgnoreWater = true
+            local origin = root.Position + Vector3.new(0, 0.2, 0)
+            if not Workspace:Raycast(origin, console.Position - origin, params)
+                and station.use(character, humanoid, root, nil) then
+                return true
+            end
+        end
+    end
+    return false
 end
 
 function Service.resetRound()

@@ -18,3 +18,8 @@ assert(hp == 100 and healed == 7)
 hp, healed = R.healedHealth(10, 250)
 assert(hp == 50 and healed == 40)
 print("IRON YARD medical station eligibility and healing: OK")
+
+assert(R.botNeedsHeal(48, 100) and R.botNeedsHeal(10, 100))
+assert(not R.botNeedsHeal(49, 100) and not R.botNeedsHeal(0, 100))
+assert(not R.botNeedsHeal(100, 100) and not R.botNeedsHeal(100, 0))
+assert(not R.botNeedsHeal(0 / 0, 100) and not R.botNeedsHeal(10, math.huge))
