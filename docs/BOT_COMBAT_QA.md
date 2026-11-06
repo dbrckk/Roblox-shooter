@@ -49,3 +49,10 @@ Studio/Android validation remains necessary: compare movement oscillations in co
 ## Cible IA vérifiée et usage des soins — 6 novembre 2026
 
 La sélection de cible retourne un couple indissociable (modèle, dernière position vérifiée par rayon du serveur). Aucune position d'un autre adversaire examiné ni les coordonnées actuelles d'une cible cachée ne sont transmises à la poursuite. Mémoire d'une cible invisible limitée à 2,2 s, avec tests de régression. Les bots blessés à 48 % de vie ou moins peuvent choisir une station publique disponible dans un rayon de 65 studs au même niveau. Ils s'y rendent seulement en l'absence de ligne de tir directe, après priorité à leur couverture défensive. À portée de 7,5 studs et à travers une ligne sans mur, un bot utilise la même recharge de 24 s et les mêmes 40 PV que les joueurs. Le FFA reste chacun pour soi. Tests Studio et Android nécessaires pour l'équilibre et la navigation réelle.
+
+
+## Recovery from unreachable medical objectives — November 2026
+
+Wounded AI commit to a selected medical goal for 2 seconds instead of switching every 0.2-second update. Stations are ranked by health-availability, distance and danger from a *previously verified* sighting only. An actually stuck bot excludes the failed station for 14 seconds and can seek an alternative. The navigation path is invalidated when switching between combat and medical intent. The objective history is cleared at round reset. No client-controlled health, teleport or ability to track hidden enemy positions was added.
+
+Studio/Android acceptance is still required: approach/blocked freight passages, contested medical sites, priority when shot, movement transitions and cooldown fairness.

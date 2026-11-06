@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(shared:WaitForChild("SupplyRules"))
+local Objective = require(shared:WaitForChild("BotMedicalObjective"))
 local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(true)
 local Service = {}
 local stations = {}
@@ -153,8 +154,8 @@ local function create(parent, index, x, z)
     table.insert(stations, station)
 end
 
--- Medical objectives for wounded NPCs use the SAME 40 HP / 24 s pool.
-local BOT_SEARCH_RADIUS = 65
+-- Stable, bounded objective selection prevents repeatedly navigating
+-- to a blocked medical station. No hidden enemy coordinates are consulted.
 local BOT_USE_DISTANCE = 7.5
 local function botState(character)
     if not character or not character.Parent
@@ -168,23 +169,61 @@ local function botState(character)
     return humanoid, root
 end
 
-function Service.botGoal(character)
-    local humanoid, root = botState(character)
+function Service.resetBotGoal(bot)
+    bot.medicalTargetId = nil
+    bot.medicalHoldUntil = 0
+    bot.medicalFailedId = nil
+    bot.medicalFailedUntil = 0
+    bot.medicalGoalActive = false
+end
+
+function Service.reportBotStuck(bot)
+    if not bot.medicalGoalActive or not bot.medicalTargetId then return end
+    bot.medicalFailedId = bot.medicalTargetId
+    bot.medicalFailedUntil = os.clock() + Objective.AVOID_SECONDS
+    bot.medicalTargetId = nil
+    bot.medicalHoldUntil = 0
+    bot.medicalGoalActive = false
+end
+
+function Service.botGoal(bot)
+    if not bot or not bot.model then return nil end
+    local humanoid, root = botState(bot.model)
     if not humanoid or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+        bot.medicalTargetId = nil
         return nil
     end
-    local now = Workspace:GetServerTimeNow()
-    local best, bestDistance = nil, BOT_SEARCH_RADIUS
-    for _, station in ipairs(stations) do
-        local console = station.console
-        local distance = (root.Position - console.Position).Magnitude
-        if station.readyAt <= now
-            and math.abs(root.Position.Y - console.Position.Y - 1.2) <= 4
-            and distance < bestDistance then
-            best, bestDistance = console.Position, distance
-        end
+    local now = os.clock()
+    local serverNow = Workspace:GetServerTimeNow()
+    local seen = bot.lastKnownTargetPosition
+    -- An enemy position may influence safety for 9 s after actual sighting;
+    -- do not inspect currently hidden players or other bots' observations.
+    local threat = typeof(seen) == "Vector3"
+        and now - (bot.lastTargetSeenAt or -math.huge) <= 9
+        and seen or nil
+    local choices = {}
+    for index, station in ipairs(stations) do
+        local p = station.console.Position
+        table.insert(choices, {
+            id = index,
+            available = station.readyAt <= serverNow
+                and math.abs(root.Position.Y - p.Y - 1.2) <= 4,
+            distance = (root.Position - p).Magnitude,
+            dangerDistance = threat and (p - threat).Magnitude or nil,
+        })
     end
-    return best and Vector3.new(best.X, root.Position.Y, best.Z) or nil
+    local selected = Objective.choose(choices, now, bot.medicalTargetId,
+        bot.medicalHoldUntil or 0, bot.medicalFailedId, bot.medicalFailedUntil or 0)
+    if not selected then
+        bot.medicalTargetId = nil
+        return nil
+    end
+    if bot.medicalTargetId ~= selected or now >= (bot.medicalHoldUntil or 0) then
+        bot.medicalHoldUntil = now + Objective.HOLD_SECONDS
+        bot.medicalTargetId = selected
+    end
+    local position = stations[selected].console.Position
+    return Vector3.new(position.X, root.Position.Y, position.Z)
 end
 
 function Service.tryHealBot(character)

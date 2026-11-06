@@ -181,3 +181,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Réserve de soin serveur partagée entre humains et IA, distance réduite et rayon contre le soin à travers les murs pour les bots ; pas de magie ni de collaboration FFA.
 - [x] Régressions Luau du choix de cible, de la mémoire visuelle et des seuils de soin branchées dans GitHub Actions.
 - [ ] Vérifier en Roblox Studio et sur Android : concurrence aux stations, poursuite en entrepôt, tirs visibles, risque de camping, équilibre des soins et navigation.
+
+
+## 6 novembre 2026 — récupération IA aux stations de soins
+
+- [x] Sélection d'objectif médical stabilisée 2 secondes (réduit les oscillations entre deux stations).
+- [x] Échec de mouvement : exclusion temporaire (14 s) de la borne inaccessible, puis possibilité d'un autre itinéraire.
+- [x] Prise en compte des positions adverses **déjà vues** pour éviter les bornes dangereuses ; aucune lecture de position de joueur caché.
+- [x] Abandon du chemin de soin lors du retour au combat et réinitialisation des objectifs au début de manche.
+- [x] Règles pures et scénarios d'échec intégrés à GitHub Actions.
+- [ ] À vérifier dans Roblox Studio et sur Android : bots bloqués autour des conteneurs, temps d'accès, choix alternatif, priorité des cibles et performance.

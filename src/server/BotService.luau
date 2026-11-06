@@ -331,6 +331,11 @@ local function createBot(slot)
         recentThreatOrigin = nil,
         coverGoal = nil,
         coverGoalUntil = 0,
+        medicalTargetId = nil,
+        medicalHoldUntil = 0,
+        medicalFailedId = nil,
+        medicalFailedUntil = 0,
+        medicalGoalActive = false,
         engagementGoal = nil,
         engagementTarget = nil,
         engagementExpiresAt = 0,
@@ -460,8 +465,11 @@ local function navigationGoal(bot, target, canSee)
             -- window, rather than recasting four lanes at every think tick.
             return patrolGoal(bot)
         end
-        local medical = SupplyService.botGoal(bot.model)
-        if medical then return medical end
+        local medical = SupplyService.botGoal(bot)
+        if medical then
+            bot.medicalGoalActive = true
+            return medical
+        end
         BotTactics.reset(bot)
         if bot.lastKnownTargetPosition
             and (now - bot.lastTargetSeenAt) < SEARCH_MEMORY_SECONDS then
@@ -495,8 +503,11 @@ local function navigationGoal(bot, target, canSee)
     if not canSee then
         -- Medical objectives are only considered when the opponent has
         -- broken line of sight. Defensive cover retains first priority.
-        local medical = SupplyService.botGoal(bot.model)
-        if medical then return medical end
+        local medical = SupplyService.botGoal(bot)
+        if medical then
+            bot.medicalGoalActive = true
+            return medical
+        end
         return BotTactics.flankGoal(bot, destination, now) or patrolGoal(bot)
     end
 
@@ -641,7 +652,14 @@ local function updateBot(bot, dt)
 
     local aimPoint = target and visibleAimPoint(bot, target) or nil
     if phase == "LIVE" or phase == "COUNTDOWN" then
-        steerToward(bot, navigationGoal(bot, target, aimPoint ~= nil))
+        local wasMedical = bot.medicalGoalActive == true
+        bot.medicalGoalActive = false
+        local goal = navigationGoal(bot, target, aimPoint ~= nil)
+        if (bot.medicalGoalActive == true) ~= wasMedical then
+            -- Different intent must not reuse waypoints to obsolete goals.
+            BotNavigation.invalidate(bot)
+        end
+        steerToward(bot, goal)
     else
         bot.humanoid:MoveTo(bot.root.Position)
     end
@@ -687,6 +705,9 @@ local function updateBot(bot, dt)
         if bot.stuckSince == 0 then
             bot.stuckSince = now
         elseif now - bot.stuckSince > 2.3 then
+            if bot.medicalGoalActive then
+                SupplyService.reportBotStuck(bot)
+            end
             BotNavigation.invalidate(bot)
             bot.stuckRecoveries += 1
             -- Only occasional unobstructed direct movement merits a jump.
@@ -809,6 +830,7 @@ function BotService.resetRound()
             bot.hitFront = 0
             bot.suppressedUntil = 0
             bot.recentThreatOrigin = nil
+            SupplyService.resetBotGoal(bot)
             bot.model:SetAttribute("IronYardLastHitPosition", nil)
             bot.model:SetAttribute("IronYardLastHitTime", nil)
             BotTactics.reset(bot)
