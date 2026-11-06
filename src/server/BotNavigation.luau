@@ -276,7 +276,9 @@ function BotNavigation.steer(bot, goal, isCurrent)
             bot.waypointIndex = 2
             bot.activePath = computedPath
             bot.pathBlockedConnection = computedPath.Blocked:Connect(function(blockedIndex)
-                if isCurrent() and bot.pathRevision == revision
+                -- Keep watching the current active route even while a
+                -- replacement ComputeAsync is running in the background.
+                if isCurrent() and bot.activePath == computedPath
                     and Planner.blockedAhead(blockedIndex, bot.waypointIndex) then
                     bot.blockedWaypoint = blockedIndex
                 end
