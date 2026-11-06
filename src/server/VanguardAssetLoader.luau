@@ -7,27 +7,13 @@ local ServerStorage = game:GetService("ServerStorage")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local AssetIds = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("VanguardAssetIds"))
+local Policy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("VanguardMeshPolicy"))
+local MeshKit = require(script.Parent:WaitForChild("VanguardMeshKit"))
 
 local VanguardAssetLoader = {}
 local started = false
-local COLORS = { "olive", "sand", "slate", "rust" }
-local PIECES = { "torso", "head", "left_arm", "right_arm", "left_leg", "right_leg", "rifle" }
-
-local function normalize(name)
-    return string.lower(name):gsub("[^a-z0-9]", "")
-end
-
-local function pieceName(name)
-    local n = normalize(name)
-    for _, piece in ipairs(PIECES) do
-        local normalized = normalize(piece)
-        if n == normalized or n == "vanguard" .. normalized
-            or n:find("vanguard" .. normalized, 1, true) then
-            return piece
-        end
-    end
-    return nil
-end
+local COLORS = Policy.Palettes
+local PIECES = Policy.Pieces
 
 local function hasCompleteTemplateSet(folder)
     for _, palette in ipairs(COLORS) do
@@ -35,8 +21,7 @@ local function hasCompleteTemplateSet(folder)
         if not variant then return false end
         for _, piece in ipairs(PIECES) do
             local mesh = variant:FindFirstChild(piece)
-            if not mesh or not mesh:IsA("MeshPart")
-                or mesh:FindFirstChildOfClass("SurfaceAppearance") == nil then
+            if not MeshKit.isRenderable(mesh) then
                 return false
             end
         end
@@ -50,39 +35,36 @@ local function extractPackage(owner, palette)
         "Missing uploaded VANGUARD model asset ID: " .. palette)
     local loaded = InsertService:LoadAsset(id)
     assert(loaded and loaded:IsA("Model"), "Roblox asset is not a Model package")
-    local selected = {}
-    -- Imported GLB package may contain nested Model instances. Only meshes
-    -- matching the original 7-part inventory are copied; no scripts, props
-    -- or creator-uploaded code can enter the playable game.
-    for _, item in ipairs(loaded:GetDescendants()) do
-        if item:IsA("MeshPart") then
-            local name = pieceName(item.Name)
-            if name then
-                assert(selected[name] == nil, "Duplicate imported mesh " .. name)
-                assert(item.MeshId ~= "", "Empty imported mesh data: " .. name)
-                assert(item:FindFirstChildOfClass("SurfaceAppearance") ~= nil,
-                    "Missing embedded PBR SurfaceAppearance on " .. name)
-                selected[name] = item
+    -- The loaded container stays outside Workspace. Even a creator-owned
+    -- package is untrusted: only validated and sanitized meshes cross over.
+    local success, extracted = pcall(function()
+        local selected = {}
+        for _, item in ipairs(loaded:GetDescendants()) do
+            if item:IsA("MeshPart") then
+                local name = Policy.identifyPiece(item.Name)
+                if name then
+                    assert(selected[name] == nil, "Duplicate imported mesh " .. name)
+                    assert(MeshKit.isRenderable(item),
+                        "Missing one or more PBR maps on " .. name)
+                    selected[name] = item
+                end
             end
         end
-    end
-    for _, name in ipairs(PIECES) do
-        assert(selected[name] ~= nil, "Missing imported VANGUARD mesh " .. name)
-    end
-    local paletteFolder = Instance.new("Folder")
-    paletteFolder.Name = palette
-    for _, name in ipairs(PIECES) do
-        local clone = selected[name]:Clone()
-        clone.Name = name
-        clone.Anchored = false
-        clone.Massless = true
-        clone.CanCollide = false
-        clone.CanTouch = false
-        clone.CanQuery = false
-        clone.Parent = paletteFolder
-    end
+        for _, name in ipairs(PIECES) do
+            assert(selected[name] ~= nil, "Missing imported VANGUARD mesh " .. name)
+        end
+        local paletteFolder = Instance.new("Folder")
+        paletteFolder.Name = palette
+        for _, name in ipairs(PIECES) do
+            local clone = MeshKit.cleanClone(selected[name])
+            clone.Name = name
+            clone.Parent = paletteFolder
+        end
+        return paletteFolder
+    end)
     loaded:Destroy()
-    paletteFolder.Parent = owner
+    if not success then error(extracted, 0) end
+    extracted.Parent = owner
 end
 
 -- Uploading/importing a PBR GLB can take seconds. NEVER block game
