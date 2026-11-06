@@ -389,6 +389,87 @@ local function gantryRigging(parent)
 end
 
 
+-- Dedicated overhead industrial fixtures add a legible light rhythm:
+-- frosted lenses, protective housings and visible structure at catwalks.
+-- NO real light instances or dynamic updates on the server. Nearby clients
+-- enable only their nearest lamps according to the graphics preset.
+local function industrialLightFixtures(parent)
+    local function fixture(name, position, size)
+        local shell = prop(parent, "LIGHTING / housing " .. name,
+            size + Vector3.new(0.42, 0.34, 0.42),
+            CFrame.new(position + Vector3.new(0, 0.19, 0)),
+            COLOR.ink, Enum.Material.Metal, "Core")
+        shell.CastShadow = false
+        local lens = prop(parent, "LIGHTING / diffuser " .. name,
+            size, CFrame.new(position), COLOR.paper,
+            Enum.Material.Glass, "Core")
+        lens.CastShadow = false
+        lens.Transparency = 0.10
+        lens:SetAttribute("IronYardLightFixture", true)
+        for _, side in ipairs({ -1, 1 }) do
+            local clip = prop(parent, "LIGHTING / cage " .. name .. ":" .. side,
+                Vector3.new(0.13, 0.16, size.Z + 0.22),
+                CFrame.new(position.X + side * (size.X * 0.46),
+                    position.Y - 0.09, position.Z),
+                COLOR.slate, Enum.Material.Metal, "Detail")
+            clip.CastShadow = false
+        end
+    end
+    -- Warehouse is open to daylight: lights are gentle accents, never
+    -- the sole source of illumination or a dark dynamic/night cycle.
+    for _, x in ipairs({ -19, 0, 19 }) do
+        for _, z in ipairs({ -9, 22, 50 }) do
+            fixture("warehouse " .. x .. ":" .. z,
+                Vector3.new(x, 20.1, z), Vector3.new(4.7, 0.17, 2.1))
+        end
+    end
+    for _, side in ipairs({ -1, 1 }) do
+        for _, z in ipairs({ -16, 16 }) do
+            fixture("catwalk " .. side .. ":" .. z,
+                Vector3.new(side * 118, 20.3, z),
+                Vector3.new(3.3, 0.15, 1.6))
+        end
+    end
+end
+
+-- Large, low-cost surface wear gives the industrial floor material scale.
+-- These decals are actual non-queryable thin parts and therefore cannot
+-- change bullet impacts, floor clearance, jump behavior or pathfinding.
+local function groundWear(parent)
+    local oil = Color3.fromRGB(54, 58, 54)
+    local dust = Color3.fromRGB(136, 126, 111)
+    for _, side in ipairs({ -1, 1 }) do
+        for index = 1, 8 do
+            local z = -127 + (index - 1) * 35
+            local x = side * (72 + index % 3 * 9)
+            local angle = (index % 4 - 1.5) * 0.09
+            local scuff = prop(parent, "WEAR / tire scuff " .. side .. ":" .. index,
+                Vector3.new(1.35, 0.014, 12 + index % 3 * 3),
+                CFrame.new(x, 0.023, z) * CFrame.Angles(0, angle, 0),
+                oil, Enum.Material.Concrete, "Detail")
+            scuff.Transparency = 0.36 + (index % 3) * 0.13
+            scuff.CastShadow = false
+            local companion = prop(parent, "WEAR / paired tire " .. side .. ":" .. index,
+                Vector3.new(0.72, 0.014, 10 + index % 3 * 3),
+                CFrame.new(x + side * 4.1, 0.024, z + 2)
+                    * CFrame.Angles(0, angle, 0),
+                oil, Enum.Material.Concrete, "Detail")
+            companion.Transparency = 0.56
+            companion.CastShadow = false
+        end
+    end
+    for i = 1, 12 do
+        local x = ((i * 71) % 230) - 115
+        local z = ((i * 53) % 270) - 135
+        local stain = prop(parent, "WEAR / settled freight dust " .. i,
+            Vector3.new(4 + i % 3 * 2, 0.014, 3.5 + i % 4),
+            CFrame.new(x, 0.025, z) * CFrame.Angles(0, i * 0.41, 0),
+            dust, Enum.Material.Concrete, "Detail")
+        stain.Transparency = 0.68
+        stain.CastShadow = false
+    end
+end
+
 function ArenaArt.build(arena)
     -- Internal folder identifier retained for the existing client LOD script.
     local previous = arena:FindFirstChild("NeonStrikeDecor")
@@ -419,6 +500,8 @@ function ArenaArt.build(arena)
     warehouseArchitecture(decor)
     catwalkSafety(decor)
     gantryRigging(decor)
+    industrialLightFixtures(decor)
+    groundWear(decor)
     silhouettes(decor)
 
     poster(decor, "SIGN / west logistics", Vector3.new(-142, 17, 134),
