@@ -9,6 +9,7 @@ local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
+local RoundStandings = require(script.Parent:WaitForChild("RoundStandings"))
 local MatchService = {}
 local started = false
 
@@ -23,6 +24,7 @@ local round = 0
 local winner = ""
 local winnerUserId = 0
 local lastPublishedSecond = nil
+local finalResult = nil
 
 local function scoreFor(player)
     local stats = player:FindFirstChild("leaderstats")
@@ -35,12 +37,15 @@ end
 
 local lastStandingsPayload = nil
 
-local function rankedStandings()
+local function currentStandings()
     local entries = {}
     for _, player in ipairs(Players:GetPlayers()) do
+        local stats = player:FindFirstChild("leaderstats")
+        local deaths = stats and stats:FindFirstChild("Deaths")
         table.insert(entries, {
             name = player.DisplayName,
             eliminations = scoreFor(player),
+            deaths = deaths and deaths:IsA("IntValue") and deaths.Value or 0,
             bot = false,
             userId = player.UserId,
             sortKey = player.UserId,
@@ -49,24 +54,18 @@ local function rankedStandings()
     for _, bot in ipairs(BotService.getScores()) do
         table.insert(entries, bot)
     end
-    table.sort(entries, function(a, b)
-        if a.eliminations ~= b.eliminations then
-            return a.eliminations > b.eliminations
-        end
-        if a.bot ~= b.bot then return not a.bot end
-        return a.sortKey < b.sortKey
-    end)
-    local standings = {}
-    for i = 1, math.min(3, #entries) do
-        local candidate = entries[i]
-        standings[i] = {
-            name = candidate.name,
-            eliminations = candidate.eliminations,
-            bot = candidate.bot,
-            userId = candidate.userId,
-        }
+    return RoundStandings.build(entries, round)
+end
+
+local function rankedStandings()
+    -- Never recalculate the podium during RESULTS: late joins and departures
+    -- cannot rewrite the winner or another player's final placement.
+    local result = phase == "RESULTS" and finalResult or currentStandings()
+    local topThree = {}
+    for i = 1, math.min(3, #result.standings) do
+        topThree[i] = result.standings[i]
     end
-    return HttpService:JSONEncode(standings)
+    return HttpService:JSONEncode(topThree)
 end
 
 local function publishStandings()
@@ -96,36 +95,6 @@ local function transition(nextPhase, seconds, result, winningUserId)
     publish(math.ceil(seconds))
 end
 
-local function leader()
-    local best = -1
-    local selectedName = nil
-    local selectedPlayer = nil
-    local tied = false
-    for _, player in ipairs(Players:GetPlayers()) do
-        local score = scoreFor(player)
-        if score > best then
-            best = score
-            selectedName = player.DisplayName
-            selectedPlayer = player
-            tied = false
-        elseif score == best then
-            selectedPlayer = nil
-            tied = true
-        end
-    end
-    local botName, botScore, botsTied = BotService.getLeader()
-    if botName and botScore > best then
-        best = botScore
-        selectedName = botName
-        selectedPlayer = nil
-        tied = botsTied
-    elseif botName and botScore == best then
-        tied = true
-        selectedPlayer = nil
-    end
-    return selectedName, best, tied, selectedPlayer
-end
-
 local function resetRoundScores()
     for _, player in ipairs(Players:GetPlayers()) do
         local stats = player:FindFirstChild("leaderstats")
@@ -145,6 +114,8 @@ local function startRound()
         transition("WAITING", 0)
         return
     end
+    finalResult = nil
+    Workspace:SetAttribute("IronYardFinalStandings", "")
     resetRoundScores()
     CombatAwards.resetRound()
     WeaponService.resetRound()
@@ -155,19 +126,19 @@ local function startRound()
 end
 
 local function endRound()
-    local name, topScore, tied, winningPlayer = leader()
-    local result = "DRAW"
-    local resultUserId = 0
-    if name and not tied and topScore > 0 then
-        result = name
-        -- Capture immutable winner identity for the results screen. The
-        -- display name is cosmetic and may collide with another player's.
+    finalResult = currentStandings()
+    -- One authoritative, self-contained snapshot for the whole lobby.
+    -- Writing it BEFORE switching phases lets clients render a consistent
+    -- podium even under delayed or reordered attribute replication.
+    Workspace:SetAttribute("IronYardFinalStandings", HttpService:JSONEncode(finalResult))
+    if finalResult.winnerUserId > 0 then
+        local winningPlayer = Players:GetPlayerByUserId(finalResult.winnerUserId)
         if winningPlayer and winningPlayer.Parent then
-            resultUserId = winningPlayer.UserId
             CombatAwards.recordVictory(winningPlayer)
         end
     end
-    transition("RESULTS", RESULTS_SECONDS, result, resultUserId)
+    transition("RESULTS", RESULTS_SECONDS,
+        finalResult.winner, finalResult.winnerUserId)
 end
 
 local function tick()
@@ -194,7 +165,8 @@ local function tick()
             startRound()
         end
     elseif phase == "LIVE" then
-        local _, topScore = leader()
+        local standings = currentStandings().standings
+        local topScore = standings[1] and standings[1].eliminations or 0
         if topScore >= ELIMINATIONS_TO_WIN or remaining <= 0 then
             endRound()
         end
