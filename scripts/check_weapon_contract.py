@@ -113,7 +113,8 @@ def main():
     tactics = source("src/server/BotTactics.luau")
     for key in (
         "local function coverApproachClear(bot, destination, params)",
-        "if candidate and coverApproachClear(bot, candidate, params) then",
+        "and coverApproachClear(bot, candidate, params) then",
+        "BotCoverPlan.rejected(bot.failedCoverGoal",
         "if now < (bot.coverGoalUntil or 0) then",
         "BotCombatResponse.shouldTakeCover(healthRatio,",
     ):
@@ -122,7 +123,7 @@ def main():
         "local function chooseDetour(bot, goal)",
         "local function walkableCandidate(bot, raw, params)",
         "Capsule clearance does not imply the FLOOR exists",
-        "math.min(7, flat.Magnitude), math.min(14, flat.Magnitude)",
+        "for _, lookahead in ipairs({ 7, 14, 22, 30 }) do",
         "floor.Normal.Y < 0.68",
         "Planner.offsets(bot.strafeSign, attempt)",
         "directRouteClear(bot, grounded, params)",
@@ -135,7 +136,7 @@ def main():
         has(navigation, needle, "Ground-checked detours and bounded path retries")
     has(bot, "bot.pathFailures = 0", "Reset failure backoff on changed enemy")
     for needle in ("local waitingForRoute = bot.navMode", "local waitedLongEnough",
-                   'bot.navMode == "DIRECT" and bot.stuckRecoveries % 3 == 0'):
+                   'oldMode == "DIRECT" and bot.stuckRecoveries % 3 == 0'):
         has(bot, needle, "No repeated jumps while waiting for a valid path")
     for needle in ("local function observeRecentHit(bot, now)",
                    "BotCombatResponse.reaction(localDirection.X, -localDirection.Z,",
