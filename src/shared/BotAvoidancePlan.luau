@@ -26,4 +26,19 @@ function Planner.retryDelay(failures)
     return math.min(4.2, 0.9 + count * 0.55)
 end
 
+-- A newly obstructed waypoint only invalidates the route when the
+-- obstruction is ahead of (or is) the current waypoint.
+function Planner.blockedAhead(blockedIndex, currentIndex)
+    return type(blockedIndex) == "number" and blockedIndex % 1 == 0
+        and blockedIndex >= 1 and type(currentIndex) == "number"
+        and currentIndex % 1 == 0 and currentIndex >= 1
+        and blockedIndex >= currentIndex
+end
+
+function Planner.targetChanged(waypointGoalDistance, threshold)
+    return type(waypointGoalDistance) == "number"
+        and waypointGoalDistance == waypointGoalDistance
+        and waypointGoalDistance > threshold
+end
+
 return Planner

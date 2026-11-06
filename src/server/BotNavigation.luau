@@ -108,7 +108,23 @@ local function chooseDetour(bot, goal)
     return nil
 end
 
+local function releaseActivePath(bot)
+    if bot.pathBlockedConnection then
+        bot.pathBlockedConnection:Disconnect()
+        bot.pathBlockedConnection = nil
+    end
+    bot.activePath = nil
+    bot.blockedWaypoint = nil
+end
+
+local function abandonWaypoints(bot)
+    releaseActivePath(bot)
+    bot.waypoints = nil
+    bot.waypointIndex = 1
+end
+
 function BotNavigation.invalidate(bot)
+    releaseActivePath(bot)
     bot.pathRevision = (bot.pathRevision or 0) + 1
     bot.pathing = false
     bot.pathStartedAt = nil
@@ -130,7 +146,16 @@ local function followWaypoints(bot)
         point = waypoints[bot.waypointIndex]
     end
     if not point then
-        bot.waypoints = nil
+        abandonWaypoints(bot)
+        return false
+    end
+    if Planner.blockedAhead(bot.blockedWaypoint, bot.waypointIndex) then
+        -- Roblox detected a fresh obstacle across the remaining path. Abort
+        -- the obsolete route instead of walking the NPC into its blocker.
+        abandonWaypoints(bot)
+        bot.pathFailures = (bot.pathFailures or 0) + 1
+        bot.nextPathAt = math.max(bot.nextPathAt or 0,
+            os.clock() + Planner.retryDelay(bot.pathFailures))
         return false
     end
     bot.humanoid:MoveTo(point.Position)
@@ -196,15 +221,20 @@ function BotNavigation.steer(bot, goal, isCurrent)
         bot.pathRevision = (bot.pathRevision or 0) + 1
         bot.pathing = false
         bot.pathGoal = nil
+        abandonWaypoints(bot)
         bot.pathFailures = (bot.pathFailures or 0) + 1
         bot.nextPathAt = now + Planner.retryDelay(bot.pathFailures)
     end
 
-    local goalChanged = bot.pathGoal and (goal - bot.pathGoal).Magnitude > GOAL_REPATH_DISTANCE
+    local goalChanged = bot.pathGoal
+        and Planner.targetChanged((goal - bot.pathGoal).Magnitude, GOAL_REPATH_DISTANCE)
     if goalChanged then
+        -- A path computed for a previous moving opponent is unsafe to reuse.
+        -- Drop its waypoint queue and Blocked listener before searching anew.
         bot.pathRevision = (bot.pathRevision or 0) + 1
         bot.pathing = false
         bot.pathGoal = nil
+        abandonWaypoints(bot)
         bot.nextPathAt = math.max(bot.nextPathAt or 0, now + 0.2)
     end
     if bot.pathing or now < (bot.nextPathAt or 0)
@@ -222,6 +252,7 @@ function BotNavigation.steer(bot, goal, isCurrent)
 
     local start = bot.root.Position
     task.spawn(function()
+        local computedPath = nil
         local ok, waypoints = pcall(function()
             local path = PathfindingService:CreatePath({
                 AgentRadius = 2,
@@ -230,6 +261,7 @@ function BotNavigation.steer(bot, goal, isCurrent)
                 AgentJumpHeight = 8,
                 WaypointSpacing = 6,
             })
+            computedPath = path
             path:ComputeAsync(start, goal)
             if path.Status ~= Enum.PathStatus.Success then return nil end
             return path:GetWaypoints()
@@ -239,12 +271,20 @@ function BotNavigation.steer(bot, goal, isCurrent)
         bot.pathStartedAt = nil
         if ok and waypoints and #waypoints > 1
             and (bot.root.Position - start).Magnitude <= 24 then
+            abandonWaypoints(bot)
             bot.waypoints = waypoints
             bot.waypointIndex = 2
+            bot.activePath = computedPath
+            bot.pathBlockedConnection = computedPath.Blocked:Connect(function(blockedIndex)
+                if isCurrent() and bot.pathRevision == revision
+                    and Planner.blockedAhead(blockedIndex, bot.waypointIndex) then
+                    bot.blockedWaypoint = blockedIndex
+                end
+            end)
             bot.detourGoal = nil
             bot.pathFailures = 0
         else
-            bot.waypoints = nil
+            abandonWaypoints(bot)
             bot.pathFailures = (bot.pathFailures or 0) + 1
             bot.nextPathAt = math.max(bot.nextPathAt,
                 os.clock() + Planner.retryDelay(bot.pathFailures))
