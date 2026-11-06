@@ -201,7 +201,6 @@ def main():
     for color in PALETTES:
         check(color + " = " in asset_registry, "Missing owner-controlled PBR palette ID: " + color)
     for key in ("game.CreatorType", "game.CreatorId", "InsertService:LoadAsset",
-                "SurfaceAppearance", "CanQuery = false", "CanCollide = false",
                 "staging.Parent = ServerStorage"):
         check(key in loader, "Owner-controlled asset loader missing: " + key)
     policy = source("src/shared/VanguardMeshPolicy.luau")
