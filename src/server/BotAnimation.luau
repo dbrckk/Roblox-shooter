@@ -32,7 +32,6 @@ function BotAnimation.step(bot, now, targeting)
     local reloading = bot.reloadUntil > now
     bot.reloadBlend = Motion.smooth(bot.reloadBlend or 0, reloading and 1 or 0, dt, 10)
     bot.airBlend = Motion.smooth(bot.airBlend or 0, airborne and 1 or 0, dt, 8)
-    local smoothing = 1 - math.exp(-dt * 8)
     -- Each landing gets a short weighted compression rather than an instant
     -- return to the standing pose. A hit adds torso and shoulder flinch.
     if bot.wasAirborne and not airborne then bot.landedAt = now end

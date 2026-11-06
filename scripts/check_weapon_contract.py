@@ -182,8 +182,17 @@ def main():
     botAnimation = source("src/server/BotAnimation.luau")
     for key in ("bot.wasAirborne", "bot.landedAt", "bot.lastDamageAt",
                 "bot.defensiveBlend", "strafeLean", "local hitRoll = hit * hitSide",
-                "local hitPitch = hit * hitFront"):
-        has(botAnimation, key, "Bot reactions and combat locomotion")
+                "local hitPitch = hit * hitFront",
+                "Motion.weights(planar.X, planar.Z,",
+                "Motion.smooth(bot.forwardBlend or 0, forward",
+                "Motion.smooth(bot.lateralBlend or 0, lateral",
+                "Motion.gaitPhase(", "local sideStep =", "local braking ="):
+        has(botAnimation, key, "Directional R6 bot combat poses")
+    for key in ("BotMotionProfile.interval(distance)",
+                "BotAnimation.step(bot, now, bot.isAiming == true)",
+                "task.wait(1 / 30)", "playDeathStagger(bot)",
+                "local function playDeathStagger(bot)"):
+        has(bot, key, "Decoupled 15Hz pose clock and animated defeat")
     awards = source("src/server/CombatAwards.luau")
     awards_ui = source("src/client/CombatAwards.client.luau")
     score = source("src/server/ScoreService.luau")
