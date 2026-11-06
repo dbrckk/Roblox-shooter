@@ -19,6 +19,7 @@ local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
 local BotMotionProfile = require(shared:WaitForChild("BotMotionProfile"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
+local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local folder = nil
 local slots = {}
 local roundKills = {}
@@ -579,6 +580,7 @@ local function shoot(bot, target, aimPoint, dt)
         hitModel:SetAttribute("IronYardLastHitTime", Workspace:GetServerTimeNow())
     end
     if before > 0 and humanoid.Health <= 0 then
+        DeathNotice.record(hitModel, "[BOT] " .. bot.name, "VX", ray.Instance.Name == "Head")
         bot.kills += 1
         roundKills[bot.slot] = bot.kills
         remotes.KillFeed:FireAllClients({

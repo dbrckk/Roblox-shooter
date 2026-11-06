@@ -133,3 +133,11 @@ Les 16 barrières de béton autour des conteneurs, les 16 roadblocks au centre, 
 ## Fiabilisation de l'activation PBR — novembre 2026
 
 Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sept noms exacts par coloris, MeshId réel et quatre cartes PBR non vides sur chacune des 28 pièces. `VanguardMeshKit` nettoie **tous les descendants non autorisés** des MeshParts clonés afin d'empêcher l'introduction de scripts ou de composants étrangers dans les bots. Les chemins d'import automatique via InsertService, de pose sur les personnages et d'installation manuelle dans Studio utilisent le même niveau de validation. Le kit déjà présent n'est remplacé par la commande Studio que si tous les 28 composants ont validé leurs textures. Les anciens bots procéduraux restent actifs en cas d'asset inaccessible ou incomplet. La production du GLB 1K est prête, mais **les quatre IDs du registre sont encore à zéro** ; Open Cloud + permissions créateur et vérification Roblox restent indispensables pour que les MeshParts apparaissent en partie.
+
+
+## 6 novembre 2026 — présentation de la mort et du redéploiement
+
+- [x] Source des éliminations humaines écrite côté serveur après dégâts létaux confirmés : tirs raycast, grenaille, couteaux et bots. Aucune autorité client sur la cause de la mort.
+- [x] Carte PC/Android de défaite avec tireur, arme, headshot et compte à rebours de redéploiement ; causes environnementales sans faux tireur ; réception tardive des attributs prise en charge.
+- [x] Carte cachée à la réapparition et durant le podium officiel. Nettoyage des abonnements entre personnages.
+- [ ] Vérifier dans Roblox Studio et sur Android : affichage lors de morts rapides, temps de retour Roblox réel, chevauchements du HUD et latence réseau. La CI ne peut pas certifier le rendu en jeu.

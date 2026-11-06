@@ -9,6 +9,7 @@ local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
+local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local WeaponService = {}
 
 local remotes = nil
@@ -198,6 +199,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         and (targetPlayer ~= nil or targetCharacter:GetAttribute("IsArenaBot") == true) then
         local stats = attacker:FindFirstChild("leaderstats")
         local kills = stats and stats:FindFirstChild("Eliminations")
+        DeathNotice.record(targetCharacter, attacker.DisplayName, weaponId, headshot)
         if kills then kills.Value += 1 end
         CombatAwards.recordElimination(attacker, headshot)
         remotes.KillFeed:FireAllClients({
@@ -384,6 +386,7 @@ local function firePelletWeapon(player, weaponId, config, direction)
                 killed = killed, distance = entry.distance,
             })
             if killed then
+                DeathNotice.record(entry.model, player.DisplayName, weaponId, entry.headshots > 0)
                 local stats = player:FindFirstChild("leaderstats")
                 local score = stats and stats:FindFirstChild("Eliminations")
                 if score then score.Value += 1 end
