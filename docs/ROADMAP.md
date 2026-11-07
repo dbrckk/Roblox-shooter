@@ -320,3 +320,14 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Changement ECO/BAL/HIGH actualisant les paramètres sur les spots locaux existants, sans accumuler de nouvelles instances.
 - [x] Tests des coordonnées face aux murs originaux, des niveaux d'éclairage et des budgets ; contrats de sécurité des géométries dans la CI.
 - [ ] Vérification de rendu Roblox Studio/Android : façade intérieure sur les 2 côtés, lisibilité des trois quais, collision des projectiles sur les mêmes murs, angle des lights, 30/60 FPS et comportement LOD.
+
+
+## 7 novembre 2026 — surfaces de conteneurs et asphalte, fidélité native
+
+- [x] Habillage de **8 conteneurs existants** à partir des coordonnées exactes des collisions MapService ; bandes de sécurité peintes lisibles, oxydation translucide au bas des flancs et quatre coins renforcés haut/bas, sans ajouter de collision.
+- [x] Ajout de bandes de maintenance métalliques DiamondPlate sur les toitures, visibles depuis les plateformes élevées, et de repères de sécurité sur les deux portes d'extrémité.
+- [x] **12 réparations d'asphalte** dans les voies de circulation latérales, chacune bordée d'un joint discret ; matériaux Roblox natifs, aucune texture ni ID payant.
+- [x] Réutilisation du dossier décor NeonStrikeDecor et du marquage NeonArtTier : sections principales en Core, usure, détails de toiture et patches en Detail, retirés localement à distance en ECO/mobile.
+- [x] Aucun collider ni raycast serveur ajouté : tous les panneaux sont ancrés avec CanCollide=false, CanQuery=false, CanTouch=false, CastShadow=false ; tests de coordonnées, dimensions et intégration à la CI.
+- [ ] Tester le rendu en Studio/Android : bandes visibles de 20–90 studs, décalage avec les nervures et portes, plaques sur toiture, patine sur les peintures existantes, patches près des obstacles et frame pacing avec 4 bots.
+- [ ] Remplacer à terme les matériaux natifs par des textures PBR réellement publiées et configurées ; les cartes sources produites ne sont pas encore activées dans le jeu.

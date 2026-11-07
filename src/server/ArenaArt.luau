@@ -3,6 +3,7 @@
 -- raycasts, movement, or PathfindingService and are locally culled on mobile.
 local Lighting = game:GetService("Lighting")
 local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))
+local FreightSurfaceArt = require(script.Parent:WaitForChild("FreightSurfaceArt"))
 local ArenaArt = {}
 local COLOR = {
     wall = Color3.fromRGB(136, 135, 125),
@@ -621,6 +622,7 @@ function ArenaArt.build(arena)
     gantryRigging(decor)
     industrialLightFixtures(decor)
     groundWear(decor)
+    FreightSurfaceArt.decorate(decor)
     silhouettes(decor)
 
     poster(decor, "SIGN / west logistics", Vector3.new(-142, 17, 134),

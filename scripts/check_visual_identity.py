@@ -116,6 +116,26 @@ def main():
     cladding_plan = source("src/shared/WarehouseCladdingPlan.luau")
     for needle in ("function Plan.sidePanels()", "function Plan.bulkheadPanels()"):
         check(needle in cladding_plan, "Cladding layout must be testable")
+    # All extra surfaces are purely cosmetic, with no second bullet collider.
+    freight_art = source("src/server/FreightSurfaceArt.luau")
+    freight_plan = source("src/shared/FreightSurfacePlan.luau")
+    for needle in ('local FreightSurfaceArt = require(script.Parent:WaitForChild("FreightSurfaceArt"))',
+                   "FreightSurfaceArt.decorate(decor)"):
+        check(needle in art, "Freight and asphalt appearance wiring missing: " + needle)
+    for needle in ('function FreightSurfaceArt.decorate(decor)',
+                   'Plan.containers()', 'Plan.repairs()',
+                   'p.CanCollide = false', 'p.CanQuery = false',
+                   'p.CanTouch = false', 'p.CastShadow = false',
+                   'p:SetAttribute("NeonArtTier", tier)',
+                   '"freight corner casting "',
+                   '"freight painted stripe "',
+                   '"freight roof service runner "',
+                   '"yard asphalt patch "'):
+        check(needle in freight_art, "Freight structural surface or physics contract missing: " + needle)
+    for needle in ('function Plan.containers()', 'function Plan.repairs()',
+                   'column * 100', 'row * 103',
+                   '15 + ((row + column + 6) % 3) * 6'):
+        check(needle in freight_plan, "Freight art must match server container grid: " + needle)
     check('Instance.new("SpotLight")' not in art
           and 'Instance.new("PointLight")' not in art,
           "Replicated arena art must never instantiate dynamic fixtures")

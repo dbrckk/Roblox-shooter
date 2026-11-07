@@ -72,3 +72,10 @@ Studio and Android acceptance: verify four physical extractors and moving vapor,
 Eight large stamped interior metal panels (four on each 72-stud warehouse wall) now have graphite uprights, pressed folds, low-opacity patina, rivets and kickplates. The existing solid walls retain all collision, bullets and wall-running; the added cladding is anchored, non-queryable, non-colliding, non-shadow-casting and Detail-tier-cullable where appropriate. The north bulkhead gains three clearly marked SEALED freight berths, never fake openings. Local ceiling SpotLights now distinguish warm warehouse task light from restrained cool catwalk light. Pure EnvironmentProfile clamps per-light strength and reach, with no lighting at ECO and fewer nearest lamps on mobile. Graphics changes retune live fixtures instead of spawning duplicates.
 
 Studio / Android acceptance: inspect seams for clipping with main collider walls, support weld/texture variants, check wallrun/tap targets and bullet feedback against panel surfaces, ensure dock faces appear sealed, compare silhouettes and grade ECO/BAL/HIGH at noon, check performance with 4 bots and 568x320 viewport. These native Roblox materials are not a claim of imported PBR textures.
+
+
+## Container side panels, casting corners and repaired asphalt — 7 November 2026
+
+Eight MapService-matched freight container bodies gain painted side identification bands, bottom oxidation, dark ISO-inspired upper/lower corner fittings, DiamondPlate maintenance roof strips and safety markings on both doors. Twelve road-repair panels with shallow seams appear near lateral circulation routes. Everything uses original native Roblox materials; the existing collider bodies remain the only hit and player-motion surfaces. Cosmetic geometry shares the NeonStrikeDecor folder and detail-tier LOD. No external PBR asset IDs are assumed available.
+
+Studio/Android acceptance: inspect eight box variants, verify the stripes and plates do not obscure serials, inspect roof lines from catwalks, confirm correct stopping points of bullets and navigation, and test 30/60 FPS Android in ECO/BAL/HIGH after switching preset mid-game.
