@@ -78,6 +78,8 @@ def main():
         check(needle in art, "Missing non-colliding industrial illumination or ground wear: " + needle)
     for needle in ("function EnvironmentProfile.get(",
                    "function EnvironmentProfile.activeFixtureIndices(",
+                   "function EnvironmentProfile.activeExhaustIndices(",
+                   "exhausts = 0", "exhausts = 1", "exhausts = 4",
                    "lamps = 0", "lamps = 2", "lamps = 8"):
         check(needle in profile, "Missing bounded graphics quality policy: " + needle)
     for needle in ("Lighting.ExposureCompensation = settings.exposure",
@@ -88,6 +90,14 @@ def main():
                    "lamp.Shadows = false",
                    'player:GetAttributeChangedSignal("IronYardGraphicsPreset")'):
         check(needle in clientLighting, "Client-only preset-aware lighting is missing: " + needle)
+    for needle in ('base:SetAttribute("IronYardExhaustVent", true)',
+                   '"ROOF / louver blade "'):
+        check(needle in art, "Missing non-colliding rooftop exhaust identity")
+    local exhaust = source("src/client/ExhaustAmbient.client.luau")
+    for needle in ("Profile.activeExhaustIndices(", 'puff.CanQuery = false',
+                   'puff.CanCollide = false', "Debris:AddItem(puff,",
+                   'part:GetAttribute("IronYardExhaustVent") == true'):
+        check(needle in exhaust, "Missing local-only exhaust/culling protection")
     check('Instance.new("SpotLight")' not in art
           and 'Instance.new("PointLight")' not in art,
           "Replicated arena art must never instantiate dynamic fixtures")

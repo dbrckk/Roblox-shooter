@@ -395,16 +395,31 @@ local function warehouseRoof(parent)
         end
     end
 
-    -- Two extraction housings give the upper skyline a believable purpose.
-    for _, z in ipairs({ -3, 43 }) do
-        local base = prop(parent, "ROOF / extraction duct " .. z,
-            Vector3.new(3.1, 2.5, 3.1),
-            CFrame.new(-20, 25.8, z), COLOR.steel, Enum.Material.Metal, "Core")
-        base.CastShadow = false
-        local cap = prop(parent, "ROOF / louver hood " .. z,
-            Vector3.new(4.2, 0.34, 4.2),
-            CFrame.new(-20, 27.2, z), COLOR.ink, Enum.Material.Metal, "Detail")
-        cap.CastShadow = false
+    -- Four industrial rooftop exhausts have readable slatted silhouettes.
+    -- Their opaque parts are decoration only. A stable core-tagged base is
+    -- used by client-side air movement even if detail LOD is culled.
+    for _, side in ipairs({ -1, 1 }) do
+        for _, z in ipairs({ -3, 43 }) do
+            local id = tostring(side) .. ":" .. tostring(z)
+            local x = side * 20
+            local base = prop(parent, "ROOF / extraction duct " .. id,
+                Vector3.new(3.1, 2.5, 3.1),
+                CFrame.new(x, 25.8, z), COLOR.steel, Enum.Material.Metal, "Core")
+            base.CastShadow = false
+            base:SetAttribute("IronYardExhaustVent", true)
+            local cap = prop(parent, "ROOF / louver hood " .. id,
+                Vector3.new(4.2, 0.34, 4.2),
+                CFrame.new(x, 27.2, z), COLOR.ink, Enum.Material.Metal, "Detail")
+            cap.CastShadow = false
+            for blade = -1, 1 do
+                local louver = prop(parent, "ROOF / louver blade " .. id .. ":" .. blade,
+                    Vector3.new(3.2, 0.16, 0.41),
+                    CFrame.new(x, 26.9, z + blade * 0.83)
+                        * CFrame.Angles(math.rad(-17), 0, 0),
+                    COLOR.slate, Enum.Material.Metal, "Detail")
+                louver.CastShadow = false
+            end
+        end
     end
 end
 

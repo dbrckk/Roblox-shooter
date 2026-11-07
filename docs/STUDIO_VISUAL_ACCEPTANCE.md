@@ -58,3 +58,10 @@ Live verification: shoot at 2–5 studs, repeat multi-target shotgun kills, chec
 Bots now play a short three-stage non-ragdoll R6 defeat: impact reaction, folding fall, and final settle within 0.91 seconds. The model's overhead name/health plate is hidden at death. Before the sequence starts all body parts become non-colliding and non-queryable, and the dead root anchors in place until the existing 2.5-second despawn. Local client dust appears only after a one-time downcast finds actual nearby floor: ECO 1 puff, balanced touch 2, high touch 3, high desktop 4. Existing cosmetic and armor welds remain attached; no physics ragdolls, gameplay remotes or asset IDs are introduced.
 
 Studio/Android acceptance: confirm all three poses render correctly on the R6 mesh/armor variants, with varying hit directions, elevated catwalks and absence of floor; verify no bullet/character collision with dead bots, that labels disappear immediately, and that old delayed pose stages do not run on new-round respawns. Test ECO/BAL/HIGH with 4 bots and record frame time before claiming production polish.
+
+
+## Rooftop extractor ambience and fixture cleanup — 7 November 2026
+
+Four slatted, non-colliding roof exhaust structures use a stable server-authored marker on each core duct. Local client software generates small pale rising vapor wisps from the nearest ducts. They are short-lived, semi-transparent, anchored, non-queryable, and never block bullets or NPC vision. The EnvironmentProfile caps the live emitter count to 0 ECO, 1 balanced mobile, 2 high mobile / balanced desktop and 4 high desktop. Each emitter has a preset-bound emission interval; no per-frame physics, replicated particles or uploaded image assets are needed. The existing local fixture list now prunes orphaned fixtures on streamed-out/rebuilt scenery.
+
+Studio and Android acceptance: verify four physical extractors and moving vapor, a readable silhouette against bright daylight, no obstruction of targets from the roof/catwalk, correct LOD at 95/128/180 studs, switching between graphics presets during play, mobile frame time with four active bots, and absence of stale SpotLights on round changes.

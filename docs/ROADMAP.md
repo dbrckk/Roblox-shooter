@@ -298,3 +298,14 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Gestion des changements de manche avec tâches temporisées qui refusent d'animer un modèle détruit ; aucune nouvelle remote ni modification de gameplay.
 - [x] Tests de durée, direction, invalides, budget mobile et contrats d'intégration ajoutés à la CI.
 - [ ] Valider l'effet dans Roblox Studio sur Android, notamment catwalks, armures R6, angle du corps, durée de visibilité et passage des tirs à travers un bot mort.
+
+
+## 7 novembre 2026 — ambiance industrielle visible, contrôlée sur Android
+
+- [x] Quatre groupes d'extraction sur le toit principal, avec des lames de ventilation métalliques réellement visibles ; toute la géométrie est décorative, sans raycast ni collision.
+- [x] Marquage des bases d'extracteurs à l'aide d'un attribut serveur stable ; animation de vapeur émise exclusivement côté client, au-dessus des conduits, sans texture externe ni réseau supplémentaire.
+- [x] Sélection des plus proches émissions selon les présélections graphiques : aucune en ECO, **1** en BALANCED mobile, **2** en QUALITY mobile, **2** sur PC BALANCED et **4** sur PC QUALITY.
+- [x] Particules très transparentes et à vie courte (moins de 1,3 s), désactivées hors distance ; aucune modification des hitboxes, de la visibilité serveur, de la navigation ou des dégâts.
+- [x] Nettoyage des anciens luminaires locaux lorsque leurs pièces sont supprimées ou remplacées, pour éviter l'accumulation après de longues sessions.
+- [x] Régressions sur budgets, classement des sources, valeurs invalides et protections des éléments cosmétiques en CI.
+- [ ] Validation visuelle dans Roblox Studio/Android : quatre vents, visibilité des joueurs en face de l'échappement, clipping des louvers, ECO/BAL/HIGH, 30/60 FPS et température du téléphone.

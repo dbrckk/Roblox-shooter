@@ -98,14 +98,19 @@ local function updateFixtures()
 
     local current = {}
     local distances = {}
-    for _, entry in ipairs(fixtures) do
-        if entry.part:IsDescendantOf(decor) then
-            table.insert(current, entry)
-            table.insert(distances, (entry.part.Position - camera.CFrame.Position).Magnitude)
-        elseif entry.lamp then
-            entry.lamp:Destroy()
-            entry.lamp = nil
+    -- Clean up streamed-out or replaced fixtures instead of accumulating
+    -- stale entries during long sessions and arena reloads.
+    for i = #fixtures, 1, -1 do
+        local entry = fixtures[i]
+        if not entry.part:IsDescendantOf(decor) then
+            if entry.lamp then entry.lamp:Destroy() end
+            registered[entry.part] = nil
+            table.remove(fixtures, i)
         end
+    end
+    for _, entry in ipairs(fixtures) do
+        table.insert(current, entry)
+        table.insert(distances, (entry.part.Position - camera.CFrame.Position).Magnitude)
     end
     local selected = Profile.activeFixtureIndices(distances,
         player:GetAttribute("IronYardGraphicsPreset"), touch)

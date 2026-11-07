@@ -19,4 +19,23 @@ local nils = P.activeFixtureIndices({20, 30}, "ECO", false)
 assert(next(nils) == nil, "No lamps active on Eco")
 local invalid = P.activeFixtureIndices({0/0, -1, 20}, "QUALITY", false)
 assert(invalid[3] and not invalid[1] and not invalid[2], "Reject malformed distances")
-print("IRON YARD bright readable daylight, mobile ambient limits and nearest-lamp budgets: OK")
+local smokeEco = P.get("ECO", true)
+assert(smokeEco.exhausts == 0, "ECO emits no rooftop vapor")
+assert(P.get("BALANCED", true).exhausts == 1, "Mobile balanced has one source")
+assert(P.get("QUALITY", true).exhausts == 2, "High mobile has two sources")
+assert(P.get("QUALITY", false).exhausts == 4, "High desktop has four sources")
+assert(P.get("QUALITY", false).exhaustInterval >= 0.65,
+    "Source emission is rate-capped on desktop")
+local nearestVents = P.activeExhaustIndices({110, 32, 50, 60}, "BALANCED", true)
+assert(nearestVents[2] and not nearestVents[1] and not nearestVents[3],
+    "Balanced mobile selects only the closest rooftop exhaust")
+local highVents = P.activeExhaustIndices({32, 90, 150, 60}, "QUALITY", true)
+assert(highVents[1] and highVents[4] and not highVents[2] and not highVents[3],
+    "High mobile only selects two in-range exhausts")
+local ecoVents = P.activeExhaustIndices({5, 3}, "ECO", false)
+assert(next(ecoVents) == nil, "ECO must allocate zero vapor geometry")
+local malformedVents = P.activeExhaustIndices({0/0, math.huge, -4, 40}, "QUALITY", false)
+assert(malformedVents[4] and not malformedVents[1]
+    and not malformedVents[2] and not malformedVents[3],
+    "Nonfinite and negative vent distances are rejected")
+print("IRON YARD bright industrial atmosphere, lamps and budgeted local exhaust: OK")
