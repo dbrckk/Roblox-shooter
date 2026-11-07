@@ -135,9 +135,15 @@ def main():
     ):
         has(navigation, needle, "Ground-checked detours and bounded path retries")
     has(bot, "bot.pathFailures = 0", "Reset failure backoff on changed enemy")
-    for needle in ("local waitingForRoute = bot.navMode", "local waitedLongEnough",
+    for needle in ("BotMovementProgress.step(",
+                   "bot.navSteeringGoal", "bot.stuckMonitorGoal",
                    'oldMode == "DIRECT" and bot.stuckRecoveries % 3 == 0'):
-        has(bot, needle, "No repeated jumps while waiting for a valid path")
+        has(bot, needle, "Actual waypoint progress and bounded stuck recovery")
+    for needle in ("bot.navSteeringGoal = point.Position",
+                   "bot.navSteeringGoal = detour",
+                   "bot.navSteeringGoal = candidate",
+                   "bot.navSteeringGoal = goal"):
+        has(navigation, needle, "Active navigation goal feeds physics recovery")
     for needle in ("local function observeRecentHit(bot, now)",
                    "BotCombatResponse.reaction(localDirection.X, -localDirection.Z,",
                    "bot.recentThreatOrigin and now < (bot.suppressedUntil or 0)",

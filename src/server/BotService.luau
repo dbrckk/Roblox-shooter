@@ -18,6 +18,7 @@ local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
 local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
 local BotMotionProfile = require(shared:WaitForChild("BotMotionProfile"))
+local BotMovementProgress = require(shared:WaitForChild("BotMovementProgress"))
 local BotEngagementPlan = require(shared:WaitForChild("BotEngagementPlan"))
 local BotTargetSelection = require(shared:WaitForChild("BotTargetSelection"))
 local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
@@ -375,8 +376,8 @@ local function createBot(slot)
         isAiming = false,
         nextAnimationAt = 0,
         animationAt = os.clock(),
-        lastPosition = root.Position,
-        stuckSince = 0,
+        stuckMonitor = nil,
+        stuckMonitorGoal = nil,
         requestedGoal = nil,
         stuckRecoveries = 0,
     }
@@ -667,7 +668,6 @@ local function updateBot(bot, dt)
     end
 
     local currentPosition = bot.root.Position
-    local moved = (currentPosition - bot.lastPosition).Magnitude
     local targetRoot = nil
     if target then
         local _, root = targetInfo(target)
@@ -693,45 +693,44 @@ local function updateBot(bot, dt)
     -- The render-oriented 15Hz/8Hz pose loop below animates independently
     -- from the 5Hz tactical decisions. No extra raycasts/path requests.
     bot.isAiming = phase == "LIVE" and aimPoint ~= nil
-    local goal = bot.requestedGoal
-    local farFromGoal = goal and (Vector3.new(goal.X, 0, goal.Z)
-        - Vector3.new(currentPosition.X, 0, currentPosition.Z)).Magnitude > 7
+    -- Measure real progress toward the currently issued path waypoint or
+    -- detour, not just any 0.3-stud displacement. A bot scraping sideways
+    -- along a wall must not be misclassified as successfully navigating.
+    local steering = bot.navSteeringGoal
+    local distanceToSteering = steering
+        and (currentPosition - steering).Magnitude or 0
+    local changedSteering = steering and bot.stuckMonitorGoal
+        and (steering - bot.stuckMonitorGoal).Magnitude or math.huge
     local movingIntent = phase == "LIVE" or phase == "COUNTDOWN"
-    local waitingForRoute = bot.navMode == "WAIT"
-    -- A valid path can take several seconds to compute. Waiting is not the
-    -- same thing as being stuck; don't repeatedly cancel ComputeAsync and
-    -- command a jump into the wall while the route is still pending.
-    local waitedLongEnough = not waitingForRoute
-        or now - (bot.navModeSince or now) > 4.5
-    if movingIntent and farFromGoal and moved < 0.3 and waitedLongEnough then
-        if bot.stuckSince == 0 then
-            bot.stuckSince = now
-        elseif now - bot.stuckSince > 2.3 then
-            if bot.medicalGoalActive then
-                SupplyService.reportBotStuck(bot)
-            end
-            -- Remember the blocked cover before any reset. Do not let an
-            -- AI reclaim the same unreachable retreat goal next tick.
-            local stuckCover = bot.coverGoal
-            local oldMode = bot.navMode
-            BotNavigation.invalidate(bot)
-            bot.stuckRecoveries += 1
-            -- Only occasional unobstructed direct movement merits a jump.
-            if oldMode == "DIRECT" and bot.stuckRecoveries % 3 == 0 then
-                bot.humanoid.Jump = true
-            end
-            if bot.stuckRecoveries % 2 == 0 then
-                bot.strafeSign = -bot.strafeSign
-                BotTactics.reset(bot)
-            end
-            BotTactics.rejectStuckCover(bot, stuckCover, now)
-            bot.stuckSince = now
-        end
-    else
-        bot.stuckSince = 0
-        if moved >= 0.3 then bot.stuckRecoveries = 0 end
+    local nextMonitor, stalled, madeProgress
+    if movingIntent then
+        nextMonitor, stalled, madeProgress = BotMovementProgress.step(
+            bot.stuckMonitor, now, distanceToSteering, changedSteering,
+            bot.navMode, now - (bot.navModeSince or now), bot.pathing)
     end
-    bot.lastPosition = currentPosition
+    bot.stuckMonitor = nextMonitor
+    bot.stuckMonitorGoal = steering
+    if madeProgress then bot.stuckRecoveries = 0 end
+    if stalled then
+        if bot.medicalGoalActive then
+            SupplyService.reportBotStuck(bot)
+        end
+        -- Cover failure quarantine takes precedence over a fresh tactical
+        -- search. Invalidating an async path never teleports or jumps through
+        -- geometry; the navigation service resamples bounded safe routes.
+        local stuckCover = bot.coverGoal
+        local oldMode = bot.navMode
+        BotNavigation.invalidate(bot)
+        bot.stuckRecoveries += 1
+        if oldMode == "DIRECT" and bot.stuckRecoveries % 3 == 0 then
+            bot.humanoid.Jump = true
+        end
+        if bot.stuckRecoveries % 2 == 0 then
+            bot.strafeSign = -bot.strafeSign
+            BotTactics.reset(bot)
+        end
+        BotTactics.rejectStuckCover(bot, stuckCover, now)
+    end
 
     if phase == "LIVE" and target and aimPoint then
         shoot(bot, target, aimPoint, math.max(dt, config.ThinkInterval))
@@ -819,7 +818,8 @@ function BotService.resetRound()
             bot.reloadUntil = 0
             bot.target = nil
             bot.requestedGoal = nil
-            bot.stuckSince = 0
+            bot.stuckMonitor = nil
+            bot.stuckMonitorGoal = nil
             bot.stuckRecoveries = 0
             bot.detourAttempts = 0
             bot.pathFailures = 0

@@ -139,6 +139,7 @@ function BotNavigation.invalidate(bot)
     bot.detourGoal = nil
     bot.detourUntil = 0
     bot.nextDetourAt = 0
+    bot.navSteeringGoal = nil
 end
 
 local function followWaypoints(bot)
@@ -162,6 +163,7 @@ local function followWaypoints(bot)
             os.clock() + Planner.retryDelay(bot.pathFailures))
         return false
     end
+    bot.navSteeringGoal = point.Position
     bot.humanoid:MoveTo(point.Position)
     if point.Action == Enum.PathWaypointAction.Jump then
         bot.humanoid.Jump = true
@@ -179,6 +181,7 @@ local function followDetour(bot, goal, now)
         if expired or arrived or goalMoved or not directRouteClear(bot, detour) then
             bot.detourGoal = nil
         else
+            bot.navSteeringGoal = detour
             bot.humanoid:MoveTo(detour)
             setMode(bot, "AVOID")
             return true
@@ -192,6 +195,7 @@ local function followDetour(bot, goal, now)
     bot.detourGoal = candidate
     bot.detourTarget = goal
     bot.detourUntil = now + DETOUR_HOLD_SECONDS
+    bot.navSteeringGoal = candidate
     bot.humanoid:MoveTo(candidate)
     setMode(bot, "AVOID")
     return true
@@ -203,6 +207,7 @@ function BotNavigation.steer(bot, goal, isCurrent)
     if directRouteClear(bot, goal) then
         if bot.waypoints or bot.pathing then BotNavigation.invalidate(bot) end
         bot.detourGoal = nil
+        bot.navSteeringGoal = goal
         bot.humanoid:MoveTo(goal)
         setMode(bot, "DIRECT")
         return
@@ -215,6 +220,9 @@ function BotNavigation.steer(bot, goal, isCurrent)
     elseif not followDetour(bot, goal, now) then
         -- Never charge directly into cover known to block the full capsule.
         -- The next verified path/detour, not an attempted collision, moves us.
+        -- Keep the requested (blocked) goal available for stall monitoring.
+        -- The MoveTo itself remains stopped until an actual route is found.
+        bot.navSteeringGoal = goal
         bot.humanoid:MoveTo(bot.root.Position)
         setMode(bot, "WAIT")
     end

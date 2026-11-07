@@ -201,3 +201,12 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Raycasts IA cohérents avec la géométrie physique (`RespectCanCollide`), sans intervention dans les hitboxes du FPS.
 - [x] Tests de stratégie de repli et vérification complète Rojo/Luau dans la CI.
 - [ ] Scénarios Studio et Android : coins de conteneur, couverture après blessure, comportement de rechargement et coût CPU de quatre bots.
+
+
+## 7 novembre 2026 — déblocage fondé sur les vrais waypoints
+
+- [x] Moniteur de progression relatif au point MoveTo effectivement commandé, pour détecter un bot qui glisse latéralement le long d'un mur sans avancer vers son objectif.
+- [x] Critère de déblocage : progression minimale 1,15 stud sur 2,8 s, avec réinitialisation sur changement de waypoint/arrivée.
+- [x] Protection du calcul de chemin asynchrone et fenêtre de grâce de 4,5 s dans l'état WAIT ; conservation des exclusions de couverture et de station médicale quand le blocage est réel.
+- [x] Régression Luau exécutable et adaptation des contrats statiques de navigation intégrées à GitHub Actions.
+- [ ] Mesures Roblox Studio/Android à obtenir : taux de bots coincés, fréquence des changements PATH/WAIT/AVOID, coûts serveur et fluidité du déplacement physique.
