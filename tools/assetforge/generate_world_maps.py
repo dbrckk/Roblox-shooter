@@ -125,6 +125,23 @@ def make_material(name, cfg, out, size):
                 255,
             ))
 
+    # A repeated tangent-space normal map must agree on both opposite
+    # pixel borders as well as in the underlying height field. Discrete
+    # derivatives can otherwise create a thin specular join on Roblox.
+    for axis in (0, 1):
+        for other in range(size):
+            if axis == 0:
+                a = other * size
+                b = a + size - 1
+            else:
+                a = other
+                b = (size - 1) * size + other
+            for channel in range(3):
+                i, j = 4 * a + channel, 4 * b + channel
+                value = (normals[i] + normals[j] + 1) // 2
+                normals[i] = value
+                normals[j] = value
+
     hashes = {}
     for channel, rgba in pixels.items():
         scans = bytearray()
