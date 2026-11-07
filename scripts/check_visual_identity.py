@@ -96,8 +96,8 @@ def main():
     exhaust = source("src/client/ExhaustAmbient.client.luau")
     for needle in ("Profile.activeExhaustIndices(", 'puff.CanQuery = false',
                    'puff.CanCollide = false', "Debris:AddItem(puff,",
-                   'part:GetAttribute("IronYardExhaustVent") == true'):
-        check(needle in exhaust, "Missing local-only exhaust/culling protection")
+                   'part:GetAttribute("IronYardExhaustVent") ~= true'):
+        check(needle in exhaust, "Missing local-only exhaust/culling protection: " + needle)
     check('Instance.new("SpotLight")' not in art
           and 'Instance.new("PointLight")' not in art,
           "Replicated arena art must never instantiate dynamic fixtures")
