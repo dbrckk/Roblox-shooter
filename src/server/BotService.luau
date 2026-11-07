@@ -399,6 +399,10 @@ local function createBot(slot)
         kills = roundKills[slot] or 0,
         deaths = 0,
         lastShotAt = -math.huge,
+        lastAnimationFacing = root.CFrame.LookVector,
+        lastAnimationVelocity = root.AssemblyLinearVelocity,
+        turnBlend = 0,
+        reversalBlend = 0,
         walkBlend = 0,
         forwardBlend = 0,
         lateralBlend = 0,
@@ -918,6 +922,10 @@ function BotService.resetRound()
             bot.root.AssemblyAngularVelocity = Vector3.zero
             bot.model:PivotTo(CFrame.new(SpawnService.selectSafeSpawn(bot.model)))
             bot.lastAnimationPosition = bot.root.Position
+            bot.lastAnimationFacing = bot.root.CFrame.LookVector
+            bot.lastAnimationVelocity = bot.root.AssemblyLinearVelocity
+            bot.turnBlend = 0
+            bot.reversalBlend = 0
             bot.gaitPhase = 0
             bot.walkBlend = 0
             bot.forwardBlend = 0

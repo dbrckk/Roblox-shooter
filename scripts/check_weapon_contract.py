@@ -224,8 +224,15 @@ def main():
                 "Motion.weights(planar.X, planar.Z,",
                 "Motion.smooth(bot.forwardBlend or 0, forward",
                 "Motion.smooth(bot.lateralBlend or 0, lateral",
-                "Motion.gaitPhase(", "local sideStep =", "local braking ="):
+                "Motion.gaitPhase(", "local sideStep =", "local braking =",
+                "Motion.turnSignal(previousFacing.X, previousFacing.Z,",
+                "Motion.reversalSignal(previousVelocity.X, previousVelocity.Z,",
+                "local pivot = (bot.turnBlend or 0)"):
         has(botAnimation, key, "Directional R6 bot combat poses")
+    for key in ("bot.lastAnimationFacing = bot.root.CFrame.LookVector",
+                "bot.lastAnimationVelocity = bot.root.AssemblyLinearVelocity",
+                "bot.turnBlend = 0", "bot.reversalBlend = 0"):
+        has(bot, key, "Respawn clears local turn and braking pose inertia")
     for key in ("BotMotionProfile.interval(distance)",
                 "BotAnimation.step(bot, now, bot.isAiming == true)",
                 "task.wait(1 / 30)", "playDeathStagger(bot)",

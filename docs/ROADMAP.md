@@ -249,3 +249,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Réutilisation des raycasts de navigation habituels ; pas de travail de physique supplémentaire par balle ni de trajet à travers la géométrie.
 - [x] Tests Luau supplémentaires et vérifications des contrats de combat intégrés au build.
 - [ ] Vérifier en Studio et Android l'efficacité des changements de cible, le mouvement entre les rafales et les animations physiques avant déploiement Roblox privé.
+
+
+## 7 novembre 2026 — animation des rotations et inversions réelles
+
+- [x] Torse, tête, épaules et jambes réagissent à une vraie rotation de chassis, même sans déplacement horizontal.
+- [x] Inversion constatée dans la vitesse physique : freinage dynamique, amplitude de foulée réduite et pose des pieds plus cohérente.
+- [x] Lissage des transitions compatible avec l'animation 15 Hz de proximité / 8 Hz distante, sans nouvelle animation importée ni Part réseau.
+- [x] Nettoyage des impulsions de rotation à chaque nouvelle manche, sans inertie visuelle persistante après téléportation de spawn.
+- [x] Tests Luau et contrats statiques adaptés, exécution automatique par GitHub Actions.
+- [ ] Valider visuellement sous Studio/Android les accessoires soudés, les demis-tours et les rotations, puis calibrer les amplitudes selon la perception en jeu.

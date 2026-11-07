@@ -20,6 +20,44 @@ function Motion.weights(localX, localZ, travelledSpeed, maxSpeed, grounded)
         math.clamp(x / velocity, -1, 1)
 end
 
+-- Turn intensity from the real change in facing, not the target's unseen
+-- coordinates. Positive values indicate a rightward turn from world -Z to +X.
+-- Angular rate is normalized, so 8Hz distant rigs and 15Hz nearby rigs
+-- receive comparable turns without instantaneous upper-body snapping.
+function Motion.turnSignal(previousX, previousZ, currentX, currentZ, dt)
+    local values = { previousX, previousZ, currentX, currentZ, dt }
+    for _, n in ipairs(values) do
+        if type(n) ~= "number" or n ~= n or math.abs(n) == math.huge then
+            return 0
+        end
+    end
+    if dt <= 0 or previousX * previousX + previousZ * previousZ < 0.0001
+        or currentX * currentX + currentZ * currentZ < 0.0001 then
+        return 0
+    end
+    local cross = previousX * currentZ - previousZ * currentX
+    local dot = previousX * currentX + previousZ * currentZ
+    return math.clamp(math.atan2(cross, dot)
+        / (math.max(dt, 0.025) * 6), -1, 1)
+end
+
+-- Body-velocity reversal is a separate transition from chassis rotation.
+-- It is used for a short planted-foot braking pose after an actual dodge.
+function Motion.reversalSignal(previousX, previousZ, currentX, currentZ)
+    local values = { previousX, previousZ, currentX, currentZ }
+    for _, n in ipairs(values) do
+        if type(n) ~= "number" or n ~= n or math.abs(n) == math.huge then
+            return 0
+        end
+    end
+    local before = previousX * previousX + previousZ * previousZ
+    local after = currentX * currentX + currentZ * currentZ
+    if before < 16 or after < 16 then return 0 end
+    local alignment = (previousX * currentX + previousZ * currentZ)
+        / math.sqrt(before * after)
+    return math.clamp((-alignment - 0.15) / 0.85, 0, 1)
+end
+
 function Motion.gaitPhase(previousPhase, travelledDistance)
     local distance = math.clamp(tonumber(travelledDistance) or 0, 0, 10)
     return ((previousPhase or 0) + distance * 0.80) % (math.pi * 2)
