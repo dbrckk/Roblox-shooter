@@ -93,7 +93,7 @@ def main():
     for needle in ('base:SetAttribute("IronYardExhaustVent", true)',
                    '"ROOF / louver blade "'):
         check(needle in art, "Missing non-colliding rooftop exhaust identity")
-    local exhaust = source("src/client/ExhaustAmbient.client.luau")
+    exhaust = source("src/client/ExhaustAmbient.client.luau")
     for needle in ("Profile.activeExhaustIndices(", 'puff.CanQuery = false',
                    'puff.CanCollide = false', "Debris:AddItem(puff,",
                    'part:GetAttribute("IronYardExhaustVent") == true'):
