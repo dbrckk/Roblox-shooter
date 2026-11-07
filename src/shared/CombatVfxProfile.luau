@@ -52,12 +52,30 @@ end
 
 -- Shooter-side 3D confirmation is only emitted on validated server damage.
 function Profile.hitFeedback(preset, touch, distance, headshot, killed)
-    if not Profile.budget(preset, touch, distance) then return nil end
+    if type(distance) ~= "number" or distance ~= distance
+        or distance < 0 or distance == math.huge
+        or not Profile.budget(preset, touch, distance) then return nil end
+    -- Melee-range hits must not obscure the reticle on an Android display.
+    local close = distance < 7
     return {
-        duration = killed and 0.24 or (headshot and 0.20 or 0.16),
-        sparks = (touch and 1 or 2) + (killed and 1 or 0),
-        radius = headshot and 0.26 or 0.19,
+        duration = killed and 0.26 or (headshot and 0.20 or 0.16),
+        sparks = close and 1 or ((touch and 1 or 2) + (killed and 1 or 0)),
+        radius = (killed and 0.31 or (headshot and 0.26 or 0.19))
+            * (close and 0.62 or 1),
     }
+end
+
+function Profile.hitPriority(headshot, killed)
+    return killed and 3 or (headshot and 2 or 1)
+end
+
+-- A real shotgun kill must override a body-hit glint from the same volley.
+function Profile.shouldDisplayHit(now, lastAt, lastPriority, priority)
+    if type(now) ~= "number" or now ~= now or math.abs(now) == math.huge
+        or type(lastAt) ~= "number" or lastAt ~= lastAt
+        or type(priority) ~= "number" or priority < 1 then return false end
+    if now < lastAt then return false end
+    return now - lastAt >= 0.11 or priority > (lastPriority or 0)
 end
 
 function Profile.pelletVisualCount(preset, touch, distance)
@@ -68,9 +86,13 @@ function Profile.pelletVisualCount(preset, touch, distance)
 end
 
 function Profile.tracer(distance)
-    local d = math.clamp(tonumber(distance) or 0, 0, 1500)
+    if type(distance) ~= "number" or distance ~= distance
+        or math.abs(distance) == math.huge then return nil end
+    local d = math.clamp(distance, 0, 1500)
     if d < 0.10 then return nil end
-    return { length = math.min(29, d), duration = math.clamp(d / 2400, 0.045, 0.15) }
+    -- Short tracers now travel: no static laser bar filling the whole ray.
+    return { length = math.min(29, d * 0.36),
+        duration = math.clamp(d / 2400, 0.045, 0.15) }
 end
 
 return Profile

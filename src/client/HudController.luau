@@ -150,6 +150,25 @@ function HudController:_buildCrosshair()
 	hitMarker.Visible = false
 	hitMarker.Parent = self.gui
 	self.hitMarker = hitMarker
+
+    -- A subtitle beneath the crosshair never obscures the target.
+    local elimination = Instance.new("TextLabel")
+    elimination.Name = "EliminationConfirmation"
+    elimination.AnchorPoint = Vector2.new(0.5, 0.5)
+    elimination.Position = UDim2.new(0.5, 0, 0.5, 53)
+    elimination.Size = UDim2.fromOffset(230, 28)
+    elimination.BackgroundTransparency = 1
+    elimination.Font = Enum.Font.GothamBold
+    elimination.TextSize = 16
+    elimination.TextColor3 = Color3.fromRGB(241, 198, 125)
+    elimination.TextStrokeTransparency = 0.35
+    elimination.TextStrokeColor3 = Color3.fromRGB(24, 28, 28)
+    elimination.Text = ""
+    elimination.TextTransparency = 1
+    elimination.Visible = false
+    elimination.Parent = self.gui
+    self.eliminationConfirmation = elimination
+    self.eliminationToken = 0
 end
 
 function HudController:_buildHealthBar()
@@ -590,28 +609,45 @@ function HudController:setScoped(scoped)
 end
 
 function HudController:showHitFeedback(message)
-	self.hitToken += 1
-	local token = self.hitToken
+    self.hitToken += 1
+    local token = self.hitToken
+    local killed = message.killed == true
+    local headshot = message.headshot == true
+    local color = killed and Color3.fromRGB(247, 189, 105)
+        or (headshot and Color3.fromRGB(255, 226, 153)
+            or Color3.fromRGB(255, 255, 255))
 
-	local color = Color3.fromRGB(255, 255, 255)
-	if message.headshot then
-		color = Color3.fromRGB(255, 226, 153)
-	elseif message.killed then
-		color = Color3.fromRGB(255, 106, 106)
-	end
+    -- Compact X: the giant K blocked point-blank targets.
+    self.hitMarker.Text = "×"
+    self.hitMarker.TextColor3 = color
+    self.hitMarker.TextTransparency = 0
+    self.hitMarker.Visible = true
+    self.hitMarker.Size = UDim2.fromOffset(
+        killed and 100 or (headshot and 100 or 82),
+        killed and 60 or (headshot and 60 or 46))
 
-	self.hitMarker.Text = message.killed and "K" or "x"
-	self.hitMarker.TextColor3 = color
-	self.hitMarker.TextTransparency = 0
-	self.hitMarker.Visible = true
-	self.hitMarker.Size = UDim2.fromOffset(message.headshot and 112 or 86, message.headshot and 64 or 48)
+    if killed then
+        self.eliminationToken += 1
+        local eliminationToken = self.eliminationToken
+        local confirmation = self.eliminationConfirmation
+        confirmation.Text = headshot and "HEADSHOT ELIMINATION" or "ELIMINATED"
+        confirmation.TextColor3 = color
+        confirmation.TextTransparency = 0
+        confirmation.Visible = true
+        task.delay(0.85, function()
+            if self.eliminationToken == eliminationToken then
+                confirmation.Visible = false
+                confirmation.TextTransparency = 1
+            end
+        end)
+    end
 
-	task.delay(0.14, function()
-		if self.hitToken == token then
-			self.hitMarker.TextTransparency = 1
-			self.hitMarker.Visible = false
-		end
-	end)
+    task.delay(killed and 0.35 or 0.16, function()
+        if self.hitToken == token then
+            self.hitMarker.TextTransparency = 1
+            self.hitMarker.Visible = false
+        end
+    end)
 end
 
 return HudController

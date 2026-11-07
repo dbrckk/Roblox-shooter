@@ -44,3 +44,10 @@ All four corner cranes have locally animated trolleys, suspended cables, load sp
 After **actual server-authoritative damage**, only the attacker's client receives a short 3D impact glint at the confirmed contact point, differing for ordinary hits, headshots and eliminations. The shotgun sends up to three other *world surface only* contacts in the existing tracer event; ECO draws one tiny extra pellet flash, balanced mobile two, and quality up to three. No character impact coordinate goes to other clients through the pellet event. The shooter's immediate central tracer remains predicted and is not duplicated by the server's visual confirmation.
 
 **Studio/Android acceptance:** shoot at concrete, metal, and wood from close/medium range in ECO, BAL, and HIGH; verify no hit confirmations on protected players or behind cover; compare headshots and eliminations; verify no floating glint around moving fighters; record performance with four bots shooting concurrently.
+
+
+## Short-range combat clarity and elimination feedback — 7 November 2026
+
+At point-blank range the tracer is a small moving segment occupying 36% of its path rather than a static full-distance laser. Confirmed hit glints below 7 studs use smaller geometry and one spark. Real fatal confirmations can supersede body-hit glints fired earlier in the same shotgun volley. The center marker no longer displays a giant K: a temporary ELIMINATED / HEADSHOT ELIMINATION subtitle appears below the aiming point. Ordinary hit feedback cannot clear it prematurely.
+
+Live verification: shoot at 2–5 studs, repeat multi-target shotgun kills, check ECO/BAL/HIGH at 568×320 and 915×412, ensure medal/killfeed do not overlap, and measure mobile frame time with four bots. Effects remain local and non-queryable.

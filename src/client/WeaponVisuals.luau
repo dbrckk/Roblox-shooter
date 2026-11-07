@@ -513,8 +513,12 @@ function WeaponVisuals:drawConfirmedHit(position, headshot, killed)
         headshot == true, killed == true)
     if not settings then return end
     local now = os.clock()
-    if now - (self.lastConfirmedHitFxAt or -math.huge) < 0.11 then return end
+    local priority = CombatVfxProfile.hitPriority(headshot == true, killed == true)
+    if not CombatVfxProfile.shouldDisplayHit(now,
+        self.lastConfirmedHitFxAt or -math.huge,
+        self.lastConfirmedHitFxPriority or 0, priority) then return end
     self.lastConfirmedHitFxAt = now
+    self.lastConfirmedHitFxPriority = priority
 
     local color = killed and Color3.fromRGB(247, 189, 105)
         or (headshot and Color3.fromRGB(255, 229, 151)

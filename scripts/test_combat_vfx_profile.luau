@@ -33,4 +33,23 @@ eq(Vfx.pelletVisualCount("ECO", true, 30), 1, "One ECO pellet")
 eq(Vfx.pelletVisualCount("BALANCED", true, 30), 2, "Two mobile pellets")
 eq(Vfx.pelletVisualCount("QUALITY", true, 30), 3, "Three high mobile pellets")
 eq(Vfx.pelletVisualCount("BALANCED", true, 200), 0, "Far pellet culling")
-print("IRON YARD confirmed hit, shotgun world spread, and VFX budgets: OK")
+local nearTracer = Vfx.tracer(3)
+assert(nearTracer and nearTracer.length > 0.1 and nearTracer.length < 1.5,
+    "Close-range tracer must move rather than fill the whole ray")
+assert(Vfx.tracer(12).length < 6, "Short tracer stays compact")
+eq(Vfx.tracer(180).length, 29, "Long tracer retains cap")
+eq(Vfx.tracer(0/0), nil, "Reject NaN ray length")
+eq(Vfx.tracer(math.huge), nil, "Reject infinite ray length")
+local closeHit = Vfx.hitFeedback("BALANCED", true, 3, true, true)
+assert(closeHit and closeHit.radius < killHit.radius and closeHit.sparks == 1,
+    "Point-blank kills cannot overwhelm small phone screens")
+assert(Vfx.shouldDisplayHit(10, 9.7, 1, 1), "Separated body shots are visible")
+assert(not Vfx.shouldDisplayHit(10.04, 10, 1, 1),
+    "Overlapping body pellet glints are suppressed")
+assert(Vfx.shouldDisplayHit(10.04, 10, 1, 3),
+    "Confirmed elimination supersedes ordinary glint cooldown")
+assert(not Vfx.shouldDisplayHit(10.04, 10, 3, 2),
+    "Nonfatal headshot cannot obscure recent elimination")
+assert(Vfx.hitPriority(false, true) > Vfx.hitPriority(true, false),
+    "Fatal confirmation has highest priority")
+print("IRON YARD close-range traveling tracers, kill priority and mobile VFX: OK")

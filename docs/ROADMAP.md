@@ -278,3 +278,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] L'auteur d'un tir n'affiche pas deux fois son traceur central : prédiction locale conservée, confirmation serveur pour les impacts secondaires.
 - [x] Tests des budgets VFX et contrats de gameplay étendus dans la CI.
 - [ ] Vérifier dans Roblox Studio et Android : lisibilité des headshots, du shotgun sur métal/béton/bois, coûts GPU et durée des effets selon ECO/BAL/HIGH.
+
+
+## 7 novembre 2026 — combat rapproché et éliminations lisibles
+
+- [x] Traceurs à très courte distance : segment mobile sur 36 % du trajet au lieu d'une barre lumineuse immobile, longueur plafonnée à 29 studs.
+- [x] Le filtre des confirmations d'impact privilégie les éliminations réellement vérifiées, même lorsqu'un projectile de shotgun a déclenché un éclat dans les 110 ms précédentes.
+- [x] Réduction de l'échelle des éclats de touche à moins de 7 studs, avec un seul petit éclat au corps-à-corps.
+- [x] Confirmation HUD sous le viseur pendant 0,85 s et marqueur central compact ; les impacts normaux ultérieurs ne masquent pas prématurément le sous-titre.
+- [x] Régressions Luau sur distances, limites mobiles et priorité de confirmation, contrats de source et build Rojo.
+- [ ] Contrôler dans Studio/Android la lisibilité à 568×320, les duels à bout portant et les collisions visuelles avec les médailles existantes.

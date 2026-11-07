@@ -94,6 +94,7 @@ def main():
                  "message.kind == \"Ammo\"", "ammoByWeapon", "refreshTouchSelection"):
         has(client, name, "Client ammo/UI")
     for name in ("function HudController:setAmmo", "function HudController:_buildDamagePulse",
+                 'elimination.Name = "EliminationConfirmation"',
                  "self.scopeOverlay.Visible = scoped and isOptical"):
         has(hud, name, "HUD accessibility")
 
@@ -189,6 +190,9 @@ def main():
                 "for i = 1, budget.muzzleFins do",
                 "if budget.muzzleLight then"):
         has(viewmodel, key, "Material-aware client-only combat effects")
+    for key in ("CombatVfxProfile.hitPriority(headshot == true, killed == true)",
+                "CombatVfxProfile.shouldDisplayHit(now,"):
+        has(viewmodel, key, "Fatal confirmation overrides ordinary hit VFX cooldown")
     for key in ("function WeaponVisuals:drawConfirmedHit(",
                 "function WeaponVisuals:drawPelletImpacts(",
                 "CombatVfxProfile.hitFeedback(",
