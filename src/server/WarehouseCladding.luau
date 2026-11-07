@@ -3,6 +3,7 @@
 -- owned by MapService. No SurfaceAppearance/asset IDs are claimed here.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Plan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WarehouseCladdingPlan"))
+local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
 local Cladding = {}
 
 local P = {
@@ -42,10 +43,11 @@ local function sideWalls(folder)
 
         -- Large stamped sheets communicate their scale even when Detail
         -- tier is hidden on low-end phones.
-        panel(folder, "interior steel sheet " .. id,
+        local sheet = panel(folder, "interior steel sheet " .. id,
             Vector3.new(0.13, bay.height, bay.length),
             CFrame.new(bay.x, bay.y, bay.z),
             finish, Enum.Material.Metal, "Core")
+        WorldPbr.apply(sheet, "warehouse_steel")
         for _, y in ipairs({ 5.1, 10.1, 14.2 }) do
             panel(folder, "pressed fold " .. id .. ":" .. y,
                 Vector3.new(0.18, 0.15, bay.length - 0.50),
@@ -112,10 +114,11 @@ local function bulkhead(folder)
     -- These plated bays are visibly sealed, never fake passages.
     for _, bay in ipairs(Plan.bulkheadPanels()) do
         local finish = bay.bay == 2 and P.steel or P.zinc
-        panel(folder, "bulkhead pressed plate " .. bay.bay,
+        local plate = panel(folder, "bulkhead pressed plate " .. bay.bay,
             Vector3.new(bay.length, bay.height, 0.14),
             CFrame.new(bay.x, bay.y, bay.z),
             finish, Enum.Material.Metal, "Core")
+        WorldPbr.apply(plate, "warehouse_steel")
         for _, y in ipairs({ 4.4, 8.4, 11.8 }) do
             panel(folder, "bulkhead fold " .. bay.bay .. ":" .. y,
                 Vector3.new(bay.length - 0.6, 0.18, 0.15),

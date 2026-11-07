@@ -113,11 +113,13 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile tools/assetforge/*.py scripts/upload_vanguard_models.py
+          python3 -m py_compile tools/assetforge/*.py scripts/upload_vanguard_models.py scripts/upload_world_pbr_images.py
           python3 scripts/upload_vanguard_models.py --help > /dev/null
+          python3 scripts/upload_world_pbr_images.py --help > /dev/null
           python3 scripts/test_vanguard_upload_contract.py
           python3 scripts/test_audit_vanguard_glb.py
-          echo "Asset generation, GLB material parser and Open Cloud upload security checks passed."
+          python3 scripts/test_world_pbr_pipeline.py
+          echo "Model + world PBR map generation, integrity, upload security tests passed."
 
       - name: Verify visual identity and PBR palette consistency
         shell: bash

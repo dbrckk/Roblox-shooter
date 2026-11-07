@@ -331,3 +331,21 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Aucun collider ni raycast serveur ajouté : tous les panneaux sont ancrés avec CanCollide=false, CanQuery=false, CanTouch=false, CastShadow=false ; tests de coordonnées, dimensions et intégration à la CI.
 - [ ] Tester le rendu en Studio/Android : bandes visibles de 20–90 studs, décalage avec les nervures et portes, plaques sur toiture, patine sur les peintures existantes, patches près des obstacles et frame pacing avec 4 bots.
 - [ ] Remplacer à terme les matériaux natifs par des textures PBR réellement publiées et configurées ; les cartes sources produites ne sont pas encore activées dans le jeu.
+
+
+## 7 novembre 2026 — activation contrôlée des vrais matériaux PBR de l'arène
+
+- [x] Infrastructure Roblox MaterialVariant : acier des conteneurs, métal de l'entrepôt et asphalte, chacun avec quatre cartes PBR 1K prévues.
+- [x] Activation serveur uniquement quand les 12 images Roblox ont des IDs valides et un propriétaire vérifié ; le registre initial nul conserve les matériaux natifs.
+- [x] Application ciblée aux huit vrais conteneurs, au sol et aux grandes tôles de l'entrepôt, sans nouvelle hitbox ni navigation.
+- [ ] Générer et publier les images Roblox après autorisation Open Cloud, puis vérifier le chargement et les performances Android dans Studio.
+
+
+### Chaîne PBR 1K de l'arène — génération et import contrôlé
+
+- [x] Générateur Python déterministe : 12 PNG RGBA8 1K (3 matériaux × ColorMap/NormalMap/RoughnessMap/MetalnessMap), relief de tôles et grain d'asphalte, empreintes SHA256.
+- [x] Workflow GitHub Actions indépendant produisant archive/artifact des textures à partir du dépôt, sans clé Roblox ni crédits externes.
+- [x] Importeur Open Cloud Image : validation des CRC PNG et pixels RGBA8, 1024×1024, SHA256 et plafond 20 Mo ; uploads suivis par modération et propriétaire, checkpoint et activation seulement lorsque les 12 sont confirmés.
+- [x] Workflow d'import sûr par défaut en dry-run. Le véritable upload nécessite le secret ROBLOX_OPEN_CLOUD_ASSETS_KEY et le choix explicite publish_assets.
+- [x] Tests sur les images, les lots incomplets et la non-modification du registre en dry-run, intégrés au build Rojo.
+- [ ] Assets non encore uploadés dans Roblox : IDs nuls. Après publication autorisée, vérifier la résolution des MaterialVariant, l'apparence et la performance dans Studio et Android.

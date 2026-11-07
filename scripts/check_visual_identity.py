@@ -140,6 +140,40 @@ def main():
           and 'Instance.new("PointLight")' not in art,
           "Replicated arena art must never instantiate dynamic fixtures")
 
+    # Optional owner-controlled PBR maps are an atomic 12-image batch.
+    world_pbr = source("src/server/WorldPbrMaterials.luau")
+    world_policy = source("src/shared/WorldPbrPolicy.luau")
+    world_ids = source("src/shared/WorldPbrAssetIds.luau")
+    for needle in ("function WorldPbr.start()", "function WorldPbr.apply(",
+                   "game.CreatorType ~= Enum.CreatorType.User",
+                   "Policy.ready(Registry, game.CreatorId)",
+                   'Instance.new("MaterialVariant")',
+                   "variant.Parent = MaterialService"):
+        check(needle in world_pbr, "World PBR runtime missing: " + needle)
+    for needle in ("function Policy.ready(", "function Policy.variantName(",
+                   '"ColorMap"', '"NormalMap"', '"RoughnessMap"', '"MetalnessMap"'):
+        check(needle in world_policy, "Incomplete PBR map whitelist: " + needle)
+    check("sourceCommit" in world_ids and "ownerUserId" in world_ids,
+          "Missing owner-pinned PBR registry")
+    world_gen = source("tools/assetforge/generate_world_maps.py")
+    world_upload = source("scripts/upload_world_pbr_images.py")
+    for needle in ('"freight_steel"', '"warehouse_steel"', '"yard_asphalt"',
+                   '"ColorMap"', '"NormalMap"', '"RoughnessMap"', '"MetalnessMap"'):
+        check(needle in world_gen, "Missing original world PBR generator material: " + needle)
+        check(needle in world_upload, "World PBR uploader inventory mismatch: " + needle)
+    for needle in ("verify_png(raw)", 'manifest.get("resolution") == [1024, 1024]',
+                   'require(digest == expected.get("sha256")',
+                   "if args.dry_run:", "render_registry(", "ROBLOX_OPEN_CLOUD_ASSETS_KEY"):
+        check(needle in world_upload, "World PBR upload security preflight: " + needle)
+    for needle in ('WorldPbr.start()', 'WorldPbr.apply(base, "freight_steel")',
+                   'WorldPbr.apply(floor, "yard_asphalt")'):
+        check(needle in map_source, "Map collider PBR hook missing: " + needle)
+    for needle in ('WorldPbr.apply(sheet, "warehouse_steel")',
+                   'WorldPbr.apply(plate, "warehouse_steel")'):
+        check(needle in warehouse_cladding, "Warehouse PBR hook missing: " + needle)
+    for needle in ('WorldPbr.apply(p, "yard_asphalt")', 'p.CanQuery = false'):
+        check(needle in freight_art, "Cosmetic asphalt PBR hook unsafe: " + needle)
+
     # High-visibility native 3D upgrades are an honest playable fallback
     # while the real PBR asset registry is still unpopulated.
     for needle in (

@@ -1,0 +1,117 @@
+name: Upload IRON YARD world PBR images (owner-authorized)
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_run_id:
+        description: "Successful world-pbr-assets run ID; leave blank for latest"
+        type: string
+        default: ""
+        required: false
+      creator_user_id:
+        description: "Confirmed Roblox user creator ID"
+        type: string
+        default: "9774173158"
+        required: true
+      publish_assets:
+        description: "Upload 12 Images to Roblox and commit verified IDs (requires Assets key)"
+        type: boolean
+        default: false
+        required: true
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: world-pbr-owner-images
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout trusted runtime and upload scripts
+        uses: actions/checkout@v4
+
+      - name: Download successful original 1K asset build
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN_ID: ${{ inputs.asset_run_id }}
+        run: |
+          set -euo pipefail
+          run_id="$INPUT_RUN_ID"
+          if [[ -z "$run_id" ]]; then
+            run_id="$(gh run list --workflow world-pbr-assets.yml --limit 20 \
+              --json databaseId,conclusion \
+              --jq '[.[] | select(.conclusion == "success")][0].databaseId')"
+          fi
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "No successful world PBR build found"; exit 1; }
+          [[ "$(gh run view "$run_id" --json conclusion --jq .conclusion)" == "success" ]] || exit 1
+          source_sha="$(gh run view "$run_id" --json headSha --jq .headSha)"
+          [[ "$source_sha" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          echo "SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
+          mkdir -p build/world-pbr
+          gh run download "$run_id" --name world-pbr-textures-1k --dir build/world-pbr
+          test -f build/world-pbr/manifest.json
+          echo "Using verified original world material build $run_id" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate all twelve 1K PBR PNG payloads
+        shell: bash
+        env:
+          CREATOR_ID: ${{ inputs.creator_user_id }}
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/upload_world_pbr_images.py
+          python3 scripts/upload_world_pbr_images.py \
+            --assets build/world-pbr \
+            --owner-user-id "$CREATOR_ID" \
+            --source-commit "$SOURCE_SHA" \
+            --registry build/world-pbr-checkpoint.json \
+            --module src/shared/WorldPbrAssetIds.luau \
+            --dry-run
+
+      - name: Confirm owner-authorized Open Cloud image upload
+        if: ${{ inputs.publish_assets }}
+        shell: bash
+        env:
+          CREATOR_ID: ${{ inputs.creator_user_id }}
+          ROBLOX_OPEN_CLOUD_ASSETS_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_ASSETS_KEY }}
+        run: |
+          set -euo pipefail
+          python3 scripts/upload_world_pbr_images.py \
+            --assets build/world-pbr \
+            --owner-user-id "$CREATOR_ID" \
+            --source-commit "$SOURCE_SHA" \
+            --registry build/world-pbr-checkpoint.json \
+            --module src/shared/WorldPbrAssetIds.luau
+          echo "Twelve Roblox Image uploads confirmed and committed to local registry." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Save partial processing checkpoint for safe recovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-pbr-upload-checkpoint
+          path: build/world-pbr-checkpoint.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Commit owner-verified image IDs
+        if: ${{ inputs.publish_assets }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/shared/WorldPbrAssetIds.luau
+          if git diff --cached --quiet; then
+            echo "No changed world PBR IDs" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "assets(world): activate approved original 1K PBR texture IDs"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+          echo "Verified image IDs committed. Rojo build will check PBR registry." >> "$GITHUB_STEP_SUMMARY"

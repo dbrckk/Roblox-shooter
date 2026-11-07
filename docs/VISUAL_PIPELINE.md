@@ -44,3 +44,13 @@ AssetForge now produces original 1024×1024 albedo/normal/roughness/metalness te
 ## Owner-controlled runtime asset activation (not yet published)
 
 `src/shared/VanguardAssetIds.luau` keeps every uploaded model ID at zero by default. `src/server/VanguardAssetLoader.luau` only calls `InsertService:LoadAsset` after all four IDs have been verified and the running experience's creator user ID equals the registry owner. It selects only the known seven MeshParts per palette, confirms embedded SurfaceAppearance, disables cosmetic collision/query/touch and stages the complete kit atomically. On any partial/missing/unapproved import, the source's procedural avatar remains active. No owner credentials or arbitrary client asset IDs are used by the game.
+
+
+## World surface PBR integration — 7 November 2026
+
+Three 4-channel tiled MaterialVariant materials (freight steel, warehouse steel, yard asphalt) are now connected to the authoritative container and floor colliders and to existing warehouse wall cladding. Activation requires twelve positive numerical Roblox image IDs for the exact game creator and a pinned 40-character source commit. Without complete approved assets the original native art is retained unchanged. Material variants change visual shading only: there are no new hitboxes, server raycasts, player collisions or gameplay effects. This is distinct from the preexisting VANGUARD PBR character MeshPart pipeline. True Roblox texture upload and live Android validation are still necessary.
+
+
+### World surface PBR upload — controlled, not yet live
+
+The World PBR workflow generates twelve original 1024×1024 RGBA8 PNGs (freight steel, warehouse metal, yard asphalt × Color, Normal, Roughness, Metalness). The manifest includes SHA-256 and size per image. The generation job saves an inspectable archive and GitHub release, without uploading anything to Roblox. A separate default-dry-run owner upload checks real PNG CRCs, inflated scanline sizes and manifest hashes. Only when explicitly authorized with an Open Cloud Assets key can it upload twelve Image assets, wait for approved ownership and commit the complete runtime registry. Nothing from this workflow is considered visually active until a creator-owned published experience can resolve the textures. New clones keep the existing native Roblox materials and gameplay unaffected.

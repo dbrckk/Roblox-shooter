@@ -1,0 +1,58 @@
+name: Build original IRON YARD world PBR maps
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/assetforge/generate_world_maps.py"
+      - ".github/workflows/world-pbr-assets.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  world-materials:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout original world materials
+        uses: actions/checkout@v4
+
+      - name: Generate twelve original 1K PNG texture maps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/assetforge/generate_world_maps.py --size 1024 --out build/world-pbr
+          python3 scripts/upload_world_pbr_images.py \
+            --assets build/world-pbr \
+            --owner-user-id 9774173158 \
+            --source-commit "$GITHUB_SHA" \
+            --registry build/world-pbr-checkpoint.json \
+            --module src/shared/WorldPbrAssetIds.luau \
+            --dry-run
+          echo '### World surface PBR' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Three independently authored industrial 1K material sets, each with Color/Normal/Roughness/Metalness PNG maps.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Dry-run only: no Roblox image upload and no activated asset IDs.' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Preserve verified PNGs and hashes
+        uses: actions/upload-artifact@v4
+        with:
+          name: world-pbr-textures-1k
+          path: build/world-pbr/
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Preserve source archive in a GitHub release
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          (cd build && zip -q -r world-pbr-1k.zip world-pbr)
+          tag="iron-yard-world-pbr-${GITHUB_SHA:0:12}"
+          gh release create "$tag" build/world-pbr-1k.zip \
+            --title "IRON YARD world PBR source ${GITHUB_SHA:0:7}" \
+            --notes "Original 1K four-channel maps for freight steel, warehouse steel and yard asphalt. Source textures only; NOT uploaded Roblox image IDs or published game." \
+            --prerelease
+          echo "Source archive: https://github.com/${GITHUB_REPOSITORY}/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"

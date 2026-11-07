@@ -3,6 +3,7 @@
 -- MapService remains sole owner of bullet/movement collision.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Plan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FreightSurfacePlan"))
+local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
 local FreightSurfaceArt = {}
 
 local COLORS = {
@@ -32,6 +33,9 @@ local function skin(folder, name, size, cf, color, material, tier, transparency)
     p.TopSurface = Enum.SurfaceType.Smooth
     p.BottomSurface = Enum.SurfaceType.Smooth
     p:SetAttribute("NeonArtTier", tier)
+    if string.find(name, "yard asphalt patch ", 1, true) == 1 then
+        WorldPbr.apply(p, "yard_asphalt")
+    end
     p.Parent = folder
     return p
 end

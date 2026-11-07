@@ -5,6 +5,7 @@ local Lighting = game:GetService("Lighting")
 local ArenaArt = require(script.Parent:WaitForChild("ArenaArt"))
 local IndustrialProps = require(script.Parent:WaitForChild("IndustrialProps"))
 local CoverArt = require(script.Parent:WaitForChild("CoverArt"))
+local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
 local MapService = {}
 local started = false
 
@@ -54,6 +55,7 @@ local function container(parent, name, x, z, h, paint)
     local base = part(parent, "CONTAINER / " .. name,
         Vector3.new(24, h, 22), Vector3.new(x, h / 2, z), paint, Enum.Material.Metal)
     base:SetAttribute("MantleTarget", true)
+    WorldPbr.apply(base, "freight_steel")
     -- Visible raised metal lip: decorative and deliberately excluded from raycasts.
     marking(parent, "CONTAINER / top rim " .. name, Vector3.new(24.2, 0.18, 22.2),
         Vector3.new(x, h + 0.10, z), P.dark)
@@ -102,8 +104,9 @@ local function highground(parent)
 end
 
 local function buildArena(folder)
-    part(folder, "TERMINAL / floor", Vector3.new(356, 2, 356),
+    local floor = part(folder, "TERMINAL / floor", Vector3.new(356, 2, 356),
         Vector3.new(0, -1, 0), P.asphalt, Enum.Material.Concrete)
+    WorldPbr.apply(floor, "yard_asphalt")
 
     for _, side in ipairs({ -1, 1 }) do
         climbWall(folder, "BOUNDARY / east-west " .. side,
@@ -207,6 +210,7 @@ end
 function MapService.start()
     if started then return end
     started = true
+    WorldPbr.start()
     -- Keep this internal folder identifier unchanged for compatibility with
     -- existing client LOD and other systems; it is not player-facing branding.
     local previous = Workspace:FindFirstChild("NeonStrikeArena")
