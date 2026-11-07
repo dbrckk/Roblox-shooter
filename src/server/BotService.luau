@@ -6,7 +6,6 @@ local Players = game:GetService("Players")
 local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TweenService = game:GetService("TweenService")
 
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local config = require(shared:WaitForChild("BotConfig"))
@@ -14,6 +13,7 @@ local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(true)
 local BotService = {}
 local BotVisuals = require(script.Parent:WaitForChild("BotVisuals"))
 local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
+local BotDeathAnimation = require(script.Parent:WaitForChild("BotDeathAnimation"))
 local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
 local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
@@ -302,28 +302,8 @@ local function visibleAimPoint(bot, model)
     return nil
 end
 
--- A short, visible stagger on defeat. The dead rig is cosmetic only:
--- weapon hitboxes become non-colliding below and are removed on schedule.
--- Animation updates stop immediately when Humanoid.Health reaches zero.
-local function playDeathStagger(bot)
-    local joints = bot.joints
-    if not joints then return end
-    local lean = math.clamp(bot.hitSide or 0, -1, 1)
-    local info = TweenInfo.new(0.38, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-    local poses = {
-        { joint = joints.root, pose = CFrame.new(0, -0.46, 0)
-            * CFrame.Angles(-0.72, 0, lean * 0.26) },
-        { joint = joints.leftShoulder, pose = CFrame.new(-1, 0.5, 0)
-            * CFrame.Angles(0.72, 0, -0.21) },
-        { joint = joints.rightShoulder, pose = CFrame.new(1, 0.5, 0)
-            * CFrame.Angles(0.58, 0, 0.24) },
-        { joint = joints.neck, pose = CFrame.new(0, 1, 0)
-            * CFrame.Angles(0.26, 0, -lean * 0.12) },
-    }
-    for _, entry in ipairs(poses) do
-        TweenService:Create(entry.joint, info, { C0 = entry.pose }):Play()
-    end
-end
+-- The staged defeat animation is owned by BotDeathAnimation, and runs
+-- only after the dead body is made non-blocking for players and projectiles.
 
 local function createBot(slot)
     local skill = config.Difficulties[slot]
@@ -430,9 +410,8 @@ local function createBot(slot)
         bot.deaths += 1
         BotNavigation.invalidate(bot)
         bot.joints.facing.Enabled = false
-        playDeathStagger(bot)
-        -- A defeated bot must not become invisible bullet-blocking cover.
-        -- Keep its visible body briefly for a readable elimination.
+        -- Disable collision and ray query FIRST so no death-frame corpse
+        -- can block bullets or the movement of a surviving combatant.
         for _, component in ipairs(model:GetDescendants()) do
             if component:IsA("BasePart") then
                 component.CanCollide = false
@@ -440,6 +419,7 @@ local function createBot(slot)
                 component.CanTouch = false
             end
         end
+        BotDeathAnimation.play(bot)
         task.delay(config.DespawnAfterDeath, function()
             if slots[slot] ~= bot then return end
             slots[slot] = nil

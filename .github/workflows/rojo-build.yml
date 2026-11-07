@@ -57,6 +57,7 @@ jobs:
           ./luau scripts/test_bot_sound_search.luau
           ./luau scripts/test_bot_medical_objective.luau
           ./luau scripts/test_bot_motion_profile.luau
+          ./luau scripts/test_bot_death_plan.luau
           ./luau scripts/test_combat_vfx_profile.luau
           ./luau scripts/test_environment_profile.luau
           ./luau scripts/test_cover_surface_plan.luau

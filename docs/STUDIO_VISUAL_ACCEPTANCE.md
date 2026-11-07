@@ -51,3 +51,10 @@ After **actual server-authoritative damage**, only the attacker's client receive
 At point-blank range the tracer is a small moving segment occupying 36% of its path rather than a static full-distance laser. Confirmed hit glints below 7 studs use smaller geometry and one spark. Real fatal confirmations can supersede body-hit glints fired earlier in the same shotgun volley. The center marker no longer displays a giant K: a temporary ELIMINATED / HEADSHOT ELIMINATION subtitle appears below the aiming point. Ordinary hit feedback cannot clear it prematurely.
 
 Live verification: shoot at 2–5 studs, repeat multi-target shotgun kills, check ECO/BAL/HIGH at 568×320 and 915×412, ensure medal/killfeed do not overlap, and measure mobile frame time with four bots. Effects remain local and non-queryable.
+
+
+## Staged NPC death poses and local dust — 7 November 2026
+
+Bots now play a short three-stage non-ragdoll R6 defeat: impact reaction, folding fall, and final settle within 0.91 seconds. The model's overhead name/health plate is hidden at death. Before the sequence starts all body parts become non-colliding and non-queryable, and the dead root anchors in place until the existing 2.5-second despawn. Local client dust appears only after a one-time downcast finds actual nearby floor: ECO 1 puff, balanced touch 2, high touch 3, high desktop 4. Existing cosmetic and armor welds remain attached; no physics ragdolls, gameplay remotes or asset IDs are introduced.
+
+Studio/Android acceptance: confirm all three poses render correctly on the R6 mesh/armor variants, with varying hit directions, elevated catwalks and absence of floor; verify no bullet/character collision with dead bots, that labels disappear immediately, and that old delayed pose stages do not run on new-round respawns. Test ECO/BAL/HIGH with 4 bots and record frame time before claiming production polish.

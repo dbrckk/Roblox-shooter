@@ -258,9 +258,24 @@ def main():
         has(bot, key, "Respawn clears local turn and braking pose inertia")
     for key in ("BotMotionProfile.interval(distance)",
                 "BotAnimation.step(bot, now, bot.isAiming == true)",
-                "task.wait(1 / 30)", "playDeathStagger(bot)",
-                "local function playDeathStagger(bot)"):
-        has(bot, key, "Decoupled 15Hz pose clock and animated defeat")
+                "task.wait(1 / 30)", "BotDeathAnimation.play(bot)"):
+        has(bot, key, "Decoupled 15Hz pose clock and staged defeat")
+    death = source("src/server/BotDeathAnimation.luau")
+    death_plan = source("src/shared/BotDeathPlan.luau")
+    death_fx = source("src/client/BotDeathFx.client.luau")
+    for needle in ("function BotDeathAnimation.play(bot)", "bot.root.Anchored = true",
+                   "identity.Enabled = false", "task.delay(elapsed, animateStage)"):
+        has(death, needle, "Bounded non-physics bot defeat stages")
+    for needle in ("function Plan.sequence(", "function Plan.duration(",
+                   "function Plan.dustBudget("):
+        has(death_plan, needle, "Pure deterministic fall pose and graphics budgets")
+    for needle in ('humanoid.Died:Connect(function()', "floor.Normal.Y < 0.65",
+                   "puff.CanQuery = false", "Debris:AddItem(puff,"):
+        has(death_fx, needle, "Local-only, grounded and bounded defeat dust")
+    require(bot.index("component.CanQuery = false") < bot.index("BotDeathAnimation.play(bot)"),
+            "Dead bot hitboxes must be removed before posing its body")
+    require("playDeathStagger(bot)" not in bot,
+            "Retired single-pose death tween must no longer run")
     awards = source("src/server/CombatAwards.luau")
     awards_ui = source("src/client/CombatAwards.client.luau")
     score = source("src/server/ScoreService.luau")

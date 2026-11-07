@@ -288,3 +288,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Confirmation HUD sous le viseur pendant 0,85 s et marqueur central compact ; les impacts normaux ultérieurs ne masquent pas prématurément le sous-titre.
 - [x] Régressions Luau sur distances, limites mobiles et priorité de confirmation, contrats de source et build Rojo.
 - [ ] Contrôler dans Studio/Android la lisibilité à 568×320, les duels à bout portant et les collisions visuelles avec les médailles existantes.
+
+
+## 7 novembre 2026 — séquence de mort premium des bots
+
+- [x] Remplacement de la simple pose de recul par une chorégraphie R6 non physique en trois étapes : impact, affaissement, stabilisation (~0,91 s), orientée par la dernière direction du dégât confirmée.
+- [x] Suppression immédiate de l'étiquette au-dessus des éliminés et des collisions/ray queries du modèle mort ; racine ancrée pendant l'animation et nettoyage à 2,5 secondes inchangé.
+- [x] Petite poussière de contact créée exclusivement côté client, après vérification ponctuelle du sol ; 1 à 4 parts selon la qualité graphique et distance de visibilité limitée.
+- [x] Gestion des changements de manche avec tâches temporisées qui refusent d'animer un modèle détruit ; aucune nouvelle remote ni modification de gameplay.
+- [x] Tests de durée, direction, invalides, budget mobile et contrats d'intégration ajoutés à la CI.
+- [ ] Valider l'effet dans Roblox Studio sur Android, notamment catwalks, armures R6, angle du corps, durée de visibilité et passage des tirs à travers un bot mort.

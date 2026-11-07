@@ -118,3 +118,14 @@ L'animation d'un dégât produit maintenant deux temps : un recul marqué au mom
 Les bots ont deux nouvelles poses défensives dépendant de leur mouvement **réel** : « low-ready » lorsqu'ils avancent vers une couverture validée, et « brace » lorsqu'ils sont près de leur objectif de couverture et se sont presque immobilisés. La pose ne simule pas la marche si le personnage est coincé, ne s'active pas en l'air, et revient à la pose normale après la défense. L'amplitude est volontairement réduite pour ne pas donner l'illusion d'un véritable crouch doté d'une hitbox plus petite. Lissage amorti des transitions et réinitialisation des poses à chaque manche ; aucune Part ou requête de navigation supplémentaire.
 
 Scénarios à valider sur Studio/Android : impact frontal et latéral, tirs reçus en rafale, recul de l'armure (welds), retraite sous suppression, arrivée en couverture, passage WAIT, sortie de couverture et coût de réplication des quatre bots. Tests de math Luau validant les bornes et signaux intégrés à la CI.
+
+
+## 7 novembre 2026 — éliminations des bots en trois phases
+
+La mort des bots n'utilise plus un simple recul rigide de 0,38 seconde. Un module serveur applique désormais des poses R6 successives de **recul**, **affaissement** et **stabilisation au sol** sur environ **0,91 seconde**, avec une orientation légèrement différente selon la dernière direction d'impact connue. Les six articulations principales sont interpolées par TweenService ; l'étiquette et la barre de vie au-dessus du bot disparaissent immédiatement.
+
+Le corps vaincu devient **non-collidable et non-queryable avant la première interpolation**, puis sa racine est ancrée à la position de la mort jusqu'au nettoyage existant (2,5 secondes). Il ne sert donc jamais de couverture fictive, ne pousse aucun joueur et ne modifie ni les dégâts ni les déplacements des bots vivants. Chaque phase vérifie que le modèle existe encore, pour ne pas ranimer un corps supprimé lors d'un changement de manche.
+
+Un effet local de poussière intervient près du sol après 0,64 seconde, uniquement lorsqu'un sol horizontal est réellement détecté sous le bot ; allocation maximale par élimination : **1 élément en ECO, 2 en BALANCED mobile, 3 en QUALITY mobile, 4 en QUALITY PC**. Aucun RemoteEvent, identifiant d'asset externe ou calcul physique par image ajouté. Les nouveaux modules pure Luau et leurs budgets sont couverts par la CI.
+
+QA Studio/Android : vérifier les décès latéraux, frontaux, sans impact associé, le terrain surélevé/catwalk, les articulations avec les armures soudées, la suppression du nom, les tirs au travers du modèle déjà mort et le remplacement entre manches. L'apparence physique de la chute doit être confirmée visuellement avant d'être considérée définitive.
