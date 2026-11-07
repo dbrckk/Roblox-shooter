@@ -117,6 +117,13 @@ function BotTactics.reset(bot)
     bot.engagementSampledAt = -math.huge
 end
 
+-- A verified burst can prompt an alternate strafe lane. No extra physics
+-- raycasts happen here; the next ordinary engagement tick tests the ground.
+function BotTactics.requestBurstReposition(bot, now)
+    bot.strafeSign = -bot.strafeSign
+    bot.engagementExpiresAt = now
+end
+
 -- Record an actual failed retreat before another tactical decision.
 function BotTactics.rejectStuckCover(bot, failedGoal, now)
     if not failedGoal then return end

@@ -269,7 +269,7 @@ local function getTargetModel(bot, limit)
     -- The chosen fighter and its verified coordinate must come from
     -- the SAME candidate; never inherit another fighter's observation.
     local best, seenPosition = BotTargetSelection.choose(
-        sightings, bot.target, now, bot.lastTargetSeenAt)
+        sightings, bot.target, now, bot.lastTargetSeenAt, bot.targetSwitchedAt)
     if best and seenPosition then
         bot.lastTargetSeenAt = now
         bot.lastKnownTargetPosition = seenPosition
@@ -340,6 +340,7 @@ local function createBot(slot)
         accent = appearance.accent,
         skill = skill,
         target = nil,
+        targetSwitchedAt = -math.huge,
         lastTargetSeenAt = 0,
         lastKnownTargetPosition = nil,
         investigationTurn = 0,
@@ -370,6 +371,8 @@ local function createBot(slot)
         engagementTarget = nil,
         engagementExpiresAt = 0,
         engagementSampledAt = -math.huge,
+        shotsSinceReposition = 0,
+        lastRepositionAt = -math.huge,
         reactionReadyAt = 0,
         nextFireAt = 0,
         ammoRemaining = config.MagazineSize,
@@ -589,6 +592,21 @@ local function shoot(bot, target, aimPoint, dt)
     local look = CFrame.lookAt(Vector3.zero, bot.aimDirection) * CFrame.Angles(errorPitch, errorYaw, 0)
     local rayDirection = look.LookVector
     bot.lastShotAt = now
+    bot.shotsSinceReposition += 1
+    local safeToReposition = bot.coverGoal == nil and bot.engagementGoal ~= nil
+        and bot.ammoRemaining > 2 and bot.stuckRecoveries == 0
+        and now >= (bot.reloadUntil or 0)
+        and now >= (bot.suppressedUntil or 0)
+    if BotEngagementPlan.shouldReposition(
+        bot.shotsSinceReposition, now, bot.lastRepositionAt,
+        direction.Magnitude,
+        bot.humanoid.Health / math.max(1, bot.humanoid.MaxHealth),
+        safeToReposition) then
+        bot.lastRepositionAt = now
+        bot.shotsSinceReposition = 0
+        bot.nextStrafeAt = now + 3.0
+        BotTactics.requestBurstReposition(bot, now)
+    end
     -- Just like players, firing immediately forfeits spawn protection.
     SpawnService.clearProtection(bot.model)
     -- Reuse the existing client audio channel; bots remain server-controlled.
@@ -673,6 +691,8 @@ local function updateBot(bot, dt)
     if target ~= bot.target then
         local previousTarget = bot.target
         bot.target = target
+        bot.targetSwitchedAt = now
+        bot.shotsSinceReposition = 0
         -- Preserve only verified old sightings. Forget dead opponents instead
         -- of investigating an already-confirmed elimination.
         if target then
@@ -862,6 +882,9 @@ function BotService.resetRound()
             bot.ammoRemaining = config.MagazineSize
             bot.reloadUntil = 0
             bot.target = nil
+            bot.targetSwitchedAt = -math.huge
+            bot.shotsSinceReposition = 0
+            bot.lastRepositionAt = -math.huge
             bot.requestedGoal = nil
             bot.stuckMonitor = nil
             bot.stuckMonitorGoal = nil

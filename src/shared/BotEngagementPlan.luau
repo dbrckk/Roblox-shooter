@@ -5,6 +5,8 @@ local Plan = {}
 Plan.GOAL_LIFETIME = 1.65
 Plan.TARGET_SHIFT = 14
 Plan.MIN_REPLAN_GAP = 0.70
+Plan.SHOTS_BEFORE_REPOSITION = 3
+Plan.MIN_REPOSITION_SECONDS = 2.8
 
 function Plan.mode(distance)
     if type(distance) ~= "number" or distance ~= distance then return "HOLD" end
@@ -48,6 +50,22 @@ function Plan.reuseGoal(now, expiresAt, targetShift, sampledAt)
     if now >= expiresAt then return false end
     return targetShift < Plan.TARGET_SHIFT
         or (type(sampledAt) == "number" and now - sampledAt < Plan.MIN_REPLAN_GAP)
+end
+
+-- Burst-based lateral repositioning is bounded by both shot count and
+-- elapsed time, so it cannot force re-paths every 5Hz AI think tick.
+function Plan.shouldReposition(shots, now, lastAt, distance, healthRatio, safeToMove)
+    if safeToMove ~= true or type(shots) ~= "number"
+        or shots ~= shots or shots < Plan.SHOTS_BEFORE_REPOSITION
+        or type(now) ~= "number" or now ~= now
+        or type(lastAt) ~= "number" or lastAt ~= lastAt
+        or type(distance) ~= "number" or distance ~= distance
+        or type(healthRatio) ~= "number" or healthRatio ~= healthRatio then
+        return false
+    end
+    return now - lastAt >= Plan.MIN_REPOSITION_SECONDS
+        and distance >= 20 and distance <= 105
+        and healthRatio >= 0.42
 end
 
 function Plan.aimReady(dotProduct, distance)

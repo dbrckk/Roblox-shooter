@@ -239,3 +239,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Protection contre les faux couples cible/position : une cible dite visible doit porter sa position associée.
 - [x] Régressions Luau et contrôle de contrat source dans le pipeline GitHub Actions.
 - [ ] Mesurer en jeu la fréquence des changements de cible et la capacité de riposte dans le dos, et tester l'absence de pistage invisible sur Android/Studio.
+
+
+## 7 novembre 2026 — duels FFA stables et repositionnement après rafale
+
+- [x] Engagement minimal de 1,35 s sur une cible visuellement confirmée, avec marge de sélection pour limiter les oscillations toutes les 0,2 s.
+- [x] Priorité immédiate conservée aux menaces urgentes visibles ; une cible cachée ne peut jamais exploiter le verrouillage.
+- [x] Repositionnement tactique après trois tirs acceptés : maximum une fois par 2,8 s, si la distance, la santé et les possibilités de mouvement s'y prêtent.
+- [x] Réutilisation des raycasts de navigation habituels ; pas de travail de physique supplémentaire par balle ni de trajet à travers la géométrie.
+- [x] Tests Luau supplémentaires et vérifications des contrats de combat intégrés au build.
+- [ ] Vérifier en Studio et Android l'efficacité des changements de cible, le mouvement entre les rafales et les animations physiques avant déploiement Roblox privé.

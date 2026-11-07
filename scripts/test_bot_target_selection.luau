@@ -52,4 +52,29 @@ model, pos = choose({
     {model="Invalid", distance=18, visible=true},
 }, nil, 11, 10)
 assert(model == nil and pos == nil, "Visible target requires a paired sighting")
-print("IRON YARD verified target memory, reaction to visible attacker, and fair LOS: OK")
+model, pos = choose({
+    {model="A", distance=40, visible=true, position="A"},
+    {model="B", distance=30, visible=true, position="B"},
+}, "A", 20.4, 20, 20)
+assert(model == "A" and pos == "A", "Target commitment resists tiny duel changes")
+model, pos = choose({
+    {model="A", distance=110, visible=true, position="A"},
+    {model="B", distance=15, visible=true, position="B"},
+}, "A", 20.4, 20, 20)
+assert(model == "B" and pos == "B", "Much closer visible threat breaks commitment")
+model, pos = choose({
+    {model="A", distance=40, visible=true, position="A"},
+    {model="B", distance=15, visible=true, position="B", threatMatch=true},
+}, "A", 20.4, 20, 20)
+assert(model == "B" and pos == "B", "Visible confirmed aggressor breaks commitment")
+model, pos = choose({
+    {model="A", memoryDistance=25, visible=false, position="hidden-live"},
+    {model="B", distance=60, visible=true, position="B"},
+}, "A", 20.4, 20, 20)
+assert(model == "B" and pos == "B", "A hidden incumbent never keeps visible foes locked out")
+model, pos = choose({
+    {model="A", distance=40, visible=true, position="A"},
+    {model="B", distance=10, visible=true, position="B"},
+}, "A", 21.6, 20, 20)
+assert(model == "A" and pos == "A", "Post-commitment margin still prevents tiny fluctuations")
+print("IRON YARD LOS, target commitment, switch urgency, and fair memory: OK")

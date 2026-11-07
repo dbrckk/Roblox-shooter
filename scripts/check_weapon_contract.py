@@ -139,6 +139,15 @@ def main():
     for needle in ("local distance = visible and entry.distance or entry.memoryDistance",
                    "if visible and entry.threatMatch == true then"):
         has(selection, needle, "No hidden live-distance scoring and visible-only retaliation")
+    for needle in ("bot.targetSwitchedAt = now",
+                   "bot.shotsSinceReposition += 1",
+                   "BotTactics.requestBurstReposition(bot, now)",
+                   "BotEngagementPlan.shouldReposition("):
+        has(bot, needle, "Bounded combat lane switching after accepted shots")
+    for needle in ("Selection.TARGET_COMMIT_SECONDS = 1.35",
+                   "highest < previousScore + advantage",
+                   "urgentVisibleAttacker = bestThreat and not previousThreat"):
+        has(selection, needle, "Combat target lock with urgent visible-threat bypass")
     for needle in ("memoryDistance = (bot.lastKnownTargetPosition - bot.root.Position).Magnitude",
                    "now - (bot.lastConfirmedThreatAt or -math.huge) <= 2.8",
                    "threatMatch = recentThreat"):

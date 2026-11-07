@@ -3,9 +3,15 @@
 local Selection = {}
 Selection.MEMORY_SECONDS = 2.2
 Selection.RECENT_ATTACKER_BONUS = 55
+Selection.TARGET_COMMIT_SECONDS = 1.35
+Selection.SWITCH_MARGIN = 15
+Selection.EMERGENCY_SWITCH_MARGIN = 25
 
-function Selection.choose(entries, previous, now, lastSeenAt)
+function Selection.choose(entries, previous, now, lastSeenAt, lastSwitchAt)
     local best, highest, verified = nil, -math.huge, nil
+    local previousScore, previousPosition, previousVisible = nil, nil, false
+    local previousThreat = false
+    local bestThreat = false
     for _, entry in ipairs(entries) do
         -- Hidden opponents MUST be scored against a previous verified
         -- sighting, never their current root distance (even if supplied
@@ -26,11 +32,33 @@ function Selection.choose(entries, previous, now, lastSeenAt)
                 if visible and entry.threatMatch == true then
                     value += Selection.RECENT_ATTACKER_BONUS
                 end
+                if entry.model == previous then
+                    previousScore = value
+                    previousPosition = visible and entry.position or nil
+                    previousVisible = visible
+                    previousThreat = visible and entry.threatMatch == true
+                end
                 if value > highest then
                     best, highest = entry.model, value
                     verified = visible and entry.position or nil
+                    bestThreat = visible and entry.threatMatch == true
                 end
             end
+        end
+    end
+    -- A brief target commitment prevents oscillating between two equally
+    -- visible fighters every 0.2 seconds, which would restart reaction time
+    -- and invalidate pathfinding repeatedly. New urgent visible threats can
+    -- still interrupt the commitment. Hidden memories never lock targeting.
+    if best ~= nil and best ~= previous and previousVisible and previousScore then
+        local early = type(now) == "number" and type(lastSwitchAt) == "number"
+            and now >= lastSwitchAt
+            and now - lastSwitchAt < Selection.TARGET_COMMIT_SECONDS
+        local advantage = early and Selection.EMERGENCY_SWITCH_MARGIN
+            or Selection.SWITCH_MARGIN
+        local urgentVisibleAttacker = bestThreat and not previousThreat
+        if not urgentVisibleAttacker and highest < previousScore + advantage then
+            return previous, previousPosition
         end
     end
     return best, verified
