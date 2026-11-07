@@ -22,6 +22,7 @@ local BotMovementProgress = require(shared:WaitForChild("BotMovementProgress"))
 local BotEngagementPlan = require(shared:WaitForChild("BotEngagementPlan"))
 local BotTargetSelection = require(shared:WaitForChild("BotTargetSelection"))
 local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
+local BotHearingService = require(script.Parent:WaitForChild("BotHearingService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local folder = nil
@@ -339,6 +340,9 @@ local function createBot(slot)
         medicalFailedId = nil,
         medicalFailedUntil = 0,
         medicalGoalActive = false,
+        soundGoal = nil,
+        soundHoldUntil = 0,
+        soundGoalActive = false,
         engagementGoal = nil,
         engagementTarget = nil,
         engagementExpiresAt = 0,
@@ -481,6 +485,13 @@ local function navigationGoal(bot, target, canSee)
                 or patrolGoal(bot)
         end
         bot.lastKnownTargetPosition = nil
+        -- Audible gunfire creates an approximate search area, not an enemy
+        -- target. Existing LOS checks still gate all bot shooting.
+        local sound = BotHearingService.investigationGoal(bot, now)
+        if sound then
+            bot.soundGoalActive = true
+            return sound
+        end
         return patrolGoal(bot)
     end
     local _, targetRoot = targetInfo(target)
@@ -557,6 +568,7 @@ local function shoot(bot, target, aimPoint, dt)
     -- Just like players, firing immediately forfeits spawn protection.
     SpawnService.clearProtection(bot.model)
     -- Reuse the existing client audio channel; bots remain server-controlled.
+    BotHearingService.record(bot.model, "AssaultRifle", origin)
     remotes.WeaponFx:FireAllClients({
         kind = "FireSound",
         shooterUserId = 0,
@@ -656,9 +668,12 @@ local function updateBot(bot, dt)
     local aimPoint = target and visibleAimPoint(bot, target) or nil
     if phase == "LIVE" or phase == "COUNTDOWN" then
         local wasMedical = bot.medicalGoalActive == true
+        local wasSound = bot.soundGoalActive == true
         bot.medicalGoalActive = false
+        bot.soundGoalActive = false
         local goal = navigationGoal(bot, target, aimPoint ~= nil)
-        if (bot.medicalGoalActive == true) ~= wasMedical then
+        if (bot.medicalGoalActive == true) ~= wasMedical
+            or (bot.soundGoalActive == true) ~= wasSound then
             -- Different intent must not reuse waypoints to obsolete goals.
             BotNavigation.invalidate(bot)
         end
@@ -836,6 +851,7 @@ function BotService.resetRound()
             bot.suppressedUntil = 0
             bot.recentThreatOrigin = nil
             SupplyService.resetBotGoal(bot)
+            BotHearingService.resetBot(bot)
             bot.model:SetAttribute("IronYardLastHitPosition", nil)
             bot.model:SetAttribute("IronYardLastHitTime", nil)
             BotTactics.reset(bot)

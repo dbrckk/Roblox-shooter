@@ -10,6 +10,7 @@ local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
+local BotHearingService = require(script.Parent:WaitForChild("BotHearingService"))
 local WeaponService = {}
 
 local remotes = nil
@@ -104,7 +105,9 @@ local function broadcastFireFx(player, weaponId, origin)
     if not remotes then
         return
     end
-
+    -- Only accepted server-owned shots reach this function. A client cannot
+    -- manufacture bot hearing with a free-standing cosmetic FX event.
+    BotHearingService.record(player.Character, weaponId, origin)
     remotes.WeaponFx:FireAllClients({
         kind = "FireSound",
         shooterUserId = player.UserId,
@@ -540,6 +543,7 @@ local function onFireWeapon(player, payload)
 end
 
 function WeaponService.resetRound()
+    BotHearingService.resetRound()
     -- Invalidate in-flight knives before new rounds can accept damage.
     weaponRoundEpoch += 1
     -- All combatants start the next round with full magazines and no

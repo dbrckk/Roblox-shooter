@@ -210,3 +210,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Protection du calcul de chemin asynchrone et fenêtre de grâce de 4,5 s dans l'état WAIT ; conservation des exclusions de couverture et de station médicale quand le blocage est réel.
 - [x] Régression Luau exécutable et adaptation des contrats statiques de navigation intégrées à GitHub Actions.
 - [ ] Mesures Roblox Studio/Android à obtenir : taux de bots coincés, fréquence des changements PATH/WAIT/AVOID, coûts serveur et fluidité du déplacement physique.
+
+
+## 7 novembre 2026 — recherche des tirs entendus
+
+- [x] Détection des seuls tirs réellement validés par le serveur ; aucun événement de perception émis directement par les clients.
+- [x] Enquête des bots sur une zone **approximative** quand aucune cible n'est visible et qu'une ancienne piste visuelle n'est plus pertinente.
+- [x] Portées différenciées par arme, mémoire sonore de 5,4 s plafonnée à 12 événements, fusion des rafales pour éviter la croissance CPU/mémoire.
+- [x] Stabilisation du déplacement sonore sur 1,8 s, respect de la navigation serveur, mémoire réinitialisée à la nouvelle manche.
+- [x] Tir strictement interdit sans observation visuelle : aucun tir ni dégât issu du son seul. Règles de sélection testées en Luau et branchées sur le build.
+- [ ] Tester en session multijoueur Studio/Android : bruit derrière couverture, réponses à la distance, FFA bots contre bots, durée de recherche et équilibrage.
