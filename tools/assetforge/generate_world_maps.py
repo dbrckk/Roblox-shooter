@@ -53,6 +53,36 @@ def sample(name, x, y, size, cfg):
     return raise_height, delta, rough, metal
 
 
+def seal_tile_edges(height, pixels, size, margin=12):
+    """Blend opposing texel borders so repeated material maps have no hard seam.
+
+    Apply to height and RGB/material channels BEFORE baking normals. A
+    symmetric edge strip avoids introducing a false directional gradient
+    into the normal map at the texture wrap.
+    """
+    band = min(margin, size // 8)
+    for axis in (0, 1):
+        for d in range(band):
+            mix = 0.5 * (1 - d / band) ** 2
+            for other in range(size):
+                if axis == 0:
+                    a = other * size + d
+                    b = other * size + (size - 1 - d)
+                else:
+                    a = d * size + other
+                    b = (size - 1 - d) * size + other
+                av, bv = height[a], height[b]
+                height[a] = av * (1 - mix) + bv * mix
+                height[b] = bv * (1 - mix) + av * mix
+                for channel in ("ColorMap", "RoughnessMap", "MetalnessMap"):
+                    data = pixels[channel]
+                    for component in range(3):
+                        i, j = a * 4 + component, b * 4 + component
+                        va, vb = data[i], data[j]
+                        data[i] = clamp(va * (1 - mix) + vb * mix)
+                        data[j] = clamp(vb * (1 - mix) + va * mix)
+
+
 def make_material(name, cfg, out, size):
     height = [0.0] * (size * size)
     pixels = {channel: bytearray(size * size * 4) for channel in CHANNELS}
@@ -74,14 +104,16 @@ def make_material(name, cfg, out, size):
             pixels["RoughnessMap"][p:p+4] = bytes((r, r, r, 255))
             pixels["MetalnessMap"][p:p+4] = bytes((m, m, m, 255))
 
+    seal_tile_edges(height, pixels, size)
+
     normals = pixels["NormalMap"]
     strength = 0.069 if name != "yard_asphalt" else 0.082
     for y in range(size):
-        north = max(0, y - 1) * size
-        south = min(size - 1, y + 1) * size
+        north = ((y - 1) % size) * size
+        south = ((y + 1) % size) * size
         for x in range(size):
-            left = max(0, x - 1)
-            right = min(size - 1, x + 1)
+            left = (x - 1) % size
+            right = (x + 1) % size
             dx = (height[y * size + left] - height[y * size + right]) * strength
             dy = (height[north + x] - height[south + x]) * strength
             length = math.sqrt(dx * dx + dy * dy + 1)

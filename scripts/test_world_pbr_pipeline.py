@@ -13,6 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools/assetforge"))
 import upload_world_pbr_images as uploader
 from generate_maps import write_png
+from generate_world_maps import MATERIALS as WORLD_MATERIALS, CHANNELS as WORLD_CHANNELS, make_material
 
 
 def check(flag, label):
@@ -41,6 +42,39 @@ def main():
                   "Source file manifest must pin real PNG bytes")
             check(raw[:8] == uploader.PNG_SIGNATURE,
                   "Expected genuine PNG, not a fake fixture")
+
+        # Validate opposite borders for each actual 64px generated map.
+        # Normal gradients must be periodic, not clamp-to-edge artifacts.
+        for material in WORLD_MATERIALS:
+            for channel in WORLD_CHANNELS:
+                raw = (short / (material + "_" + channel + ".png")).read_bytes()
+                pos = 8
+                chunks = []
+                while pos < len(raw):
+                    length = int.from_bytes(raw[pos:pos+4], "big")
+                    tag = raw[pos+4:pos+8]
+                    data = raw[pos+8:pos+8+length]
+                    pos += length + 12
+                    if tag == b"IDAT":
+                        chunks.append(data)
+                    if tag == b"IEND":
+                        break
+                pixels = zlib.decompress(b"".join(chunks))
+                stride = 1 + 64 * 4
+                for y in range(64):
+                    a = y * stride + 1
+                    b = a + 63 * 4
+                    check(max(abs(pixels[a+c] - pixels[b+c])
+                              for c in range(3)) <= 16,
+                          "Tileable texture has an obvious horizontal seam: "
+                          + material + "/" + channel)
+                for x in range(64):
+                    a = 1 + x * 4
+                    b = 63 * stride + 1 + x * 4
+                    check(max(abs(pixels[a+c] - pixels[b+c])
+                              for c in range(3)) <= 16,
+                          "Tileable texture has an obvious vertical seam: "
+                          + material + "/" + channel)
 
         # The uploader strictly rejects anything below 1024x1024.
         try:

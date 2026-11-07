@@ -349,3 +349,11 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Workflow d'import sûr par défaut en dry-run. Le véritable upload nécessite le secret ROBLOX_OPEN_CLOUD_ASSETS_KEY et le choix explicite publish_assets.
 - [x] Tests sur les images, les lots incomplets et la non-modification du registre en dry-run, intégrés au build Rojo.
 - [ ] Assets non encore uploadés dans Roblox : IDs nuls. Après publication autorisée, vérifier la résolution des MaterialVariant, l'apparence et la performance dans Studio et Android.
+
+
+## 7 novembre 2026 — continuité des textures PBR à répétition
+
+- [x] Audit des douze cartes PBR de l'environnement : la première version utilisait des normales aux bords clampées et des grains aléatoires non raccordés, pouvant former des coutures visibles quand Roblox répète le matériau.
+- [x] Réconciliation déterministe des deux bords de chaque carte Color/Roughness/Metalness et du relief avant calcul des normales ; normales calculées avec échantillonnage périodique, sans rupture artificielle sur les bords.
+- [x] Vérification automatique des bords des 12 PNG réels (4 canaux × 3 matériaux) à petite résolution, en plus des hashes SHA-256 et de l'inspection PNG 1K existantes.
+- [ ] La publication effective des 12 images nécessite la clé Open Cloud Assets du propriétaire et la modération Roblox ; aucune activation de PBR tant que les IDs approuvés ne sont pas enregistrés.
