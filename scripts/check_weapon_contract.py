@@ -219,8 +219,11 @@ def main():
         has(botTactics, needle, "Grounded, finite-duration search")
     botAnimation = source("src/server/BotAnimation.luau")
     for key in ("bot.wasAirborne", "bot.landedAt", "bot.lastDamageAt",
-                "bot.defensiveBlend", "strafeLean", "local hitRoll = hit * hitSide",
-                "local hitPitch = hit * hitFront",
+                "bot.defensiveBlend", "strafeLean",
+                "local hitRoll = (hit - rebound) * hitSide * 0.20",
+                "local hitPitch = (hit - rebound) * hitFront * 0.14",
+                "Motion.coverPose(bot.coverGoal ~= nil,",
+                "Motion.hitImpulse(now - (bot.lastDamageAt or -100))",
                 "Motion.weights(planar.X, planar.Z,",
                 "Motion.smooth(bot.forwardBlend or 0, forward",
                 "Motion.smooth(bot.lateralBlend or 0, lateral",
@@ -231,7 +234,8 @@ def main():
         has(botAnimation, key, "Directional R6 bot combat poses")
     for key in ("bot.lastAnimationFacing = bot.root.CFrame.LookVector",
                 "bot.lastAnimationVelocity = bot.root.AssemblyLinearVelocity",
-                "bot.turnBlend = 0", "bot.reversalBlend = 0"):
+                "bot.turnBlend = 0", "bot.reversalBlend = 0",
+                "bot.coverApproachBlend = 0", "bot.coverBraceBlend = 0"):
         has(bot, key, "Respawn clears local turn and braking pose inertia")
     for key in ("BotMotionProfile.interval(distance)",
                 "BotAnimation.step(bot, now, bot.isAiming == true)",

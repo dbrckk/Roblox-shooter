@@ -403,6 +403,8 @@ local function createBot(slot)
         lastAnimationVelocity = root.AssemblyLinearVelocity,
         turnBlend = 0,
         reversalBlend = 0,
+        coverApproachBlend = 0,
+        coverBraceBlend = 0,
         walkBlend = 0,
         forwardBlend = 0,
         lateralBlend = 0,
@@ -926,6 +928,8 @@ function BotService.resetRound()
             bot.lastAnimationVelocity = bot.root.AssemblyLinearVelocity
             bot.turnBlend = 0
             bot.reversalBlend = 0
+            bot.coverApproachBlend = 0
+            bot.coverBraceBlend = 0
             bot.gaitPhase = 0
             bot.walkBlend = 0
             bot.forwardBlend = 0

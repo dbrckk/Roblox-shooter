@@ -58,6 +58,37 @@ function Motion.reversalSignal(previousX, previousZ, currentX, currentZ)
     return math.clamp((-alignment - 0.15) / 0.85, 0, 1)
 end
 
+-- A confirmed impact produces a punch followed by a smaller opposite
+-- rebound. Both fade within half a second, with no hitbox motion.
+function Motion.hitImpulse(secondsSinceHit)
+    local age = tonumber(secondsSinceHit)
+    if not age or age ~= age or age < 0 or age == math.huge then
+        return 0, 0
+    end
+    local impact = math.max(0, 1 - age / 0.22)
+    impact *= impact
+    local rebound = math.max(0, 1 - math.abs(age - 0.30) / 0.16) * 0.30
+    return impact, rebound
+end
+
+-- Motion around cover is purely cosmetic. The walking rig is never shrunk
+-- or granted smaller hitboxes: a grounded bot approaches in low-ready, then
+-- braces once physically near its selected cover destination.
+function Motion.coverPose(hasCover, distance, travelledSpeed, defensive, grounded)
+    if not hasCover or not defensive or not grounded
+        or type(distance) ~= "number" or distance ~= distance or distance < 0
+        or distance == math.huge or type(travelledSpeed) ~= "number"
+        or travelledSpeed ~= travelledSpeed or travelledSpeed < 0
+        or travelledSpeed == math.huge then
+        return 0, 0
+    end
+    local moving = math.clamp((travelledSpeed - 2) / 10, 0, 1)
+    local approach = moving * math.clamp((distance - 5) / 16, 0, 1)
+    local brace = math.clamp((9 - distance) / 9, 0, 1)
+        * math.clamp(1 - travelledSpeed / 5, 0, 1)
+    return approach, brace
+end
+
 function Motion.gaitPhase(previousPhase, travelledDistance)
     local distance = math.clamp(tonumber(travelledDistance) or 0, 0, 10)
     return ((previousPhase or 0) + distance * 0.80) % (math.pi * 2)

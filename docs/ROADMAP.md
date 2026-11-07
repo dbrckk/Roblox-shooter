@@ -259,3 +259,12 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Nettoyage des impulsions de rotation à chaque nouvelle manche, sans inertie visuelle persistante après téléportation de spawn.
 - [x] Tests Luau et contrats statiques adaptés, exécution automatique par GitHub Actions.
 - [ ] Valider visuellement sous Studio/Android les accessoires soudés, les demis-tours et les rotations, puis calibrer les amplitudes selon la perception en jeu.
+
+
+## 7 novembre 2026 — animation d'impacts et appui derrière couverture
+
+- [x] Recul directionnel suivi d'un rebond opposé court (moins de 0,5 s), avec cohérence des épaules, du torse et de la tête.
+- [x] Transition « low-ready » lors de l'approche physique d'une couverture et posture d'appui quand le bot s'est effectivement arrêté près de celle-ci.
+- [x] Pas de hitbox réduite, d'effet de dégâts fictifs, de nouvelles Parts ni de requêtes physiques par image ; calculs dans la pose R6 existante.
+- [x] Réinitialisation des nouveaux états d'animation entre manches, tests Luau étendus et contrôles statiques ajustés.
+- [ ] Vérification Roblox Studio/Android impérative : perception visuelle des impacts et des couvertures, collisions des armures/accessoires, FPS sur mobile et équilibre du duel.

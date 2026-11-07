@@ -50,18 +50,25 @@ function BotAnimation.step(bot, now, targeting)
     bot.wasAirborne = airborne
     local landing = math.max(0, 1 - (now - (bot.landedAt or -100)) / 0.32)
     landing = landing * landing
-    local hit = math.max(0, 1 - (now - (bot.lastDamageAt or -100)) / 0.28)
-    hit = hit * hit
-    -- Impact side comes from a verified server ray, not an arbitrary
-    -- per-slot alternating lean. Preserve locomotion and reload blending.
+    -- Two-stage impact: a visible directional recoil and a short recovery
+    -- rebound. Only server-confirmed incoming damage sets the hit direction.
+    local hit, rebound = Motion.hitImpulse(now - (bot.lastDamageAt or -100))
     local hitSide = math.clamp(bot.hitSide or 0, -1, 1)
     local hitFront = math.clamp(bot.hitFront or 0, -1, 1)
-    local hitRoll = hit * hitSide * 0.14
-    local hitPitch = hit * hitFront * 0.09
+    local hitRoll = (hit - rebound) * hitSide * 0.20
+    local hitPitch = (hit - rebound) * hitFront * 0.14
     local defensive = (bot.coverGoal and (bot.ammoRemaining <= 0 or reloading))
         or now < (bot.suppressedUntil or 0)
     bot.defensiveBlend = Motion.smooth(bot.defensiveBlend or 0,
         defensive and 1 or 0, dt, 6)
+    local coverDistance = bot.coverGoal
+        and (bot.coverGoal - current).Magnitude or math.huge
+    local approach, brace = Motion.coverPose(bot.coverGoal ~= nil,
+        coverDistance, horizontalDistance / dt, defensive, not airborne)
+    bot.coverApproachBlend = Motion.smooth(bot.coverApproachBlend or 0,
+        approach, dt, 8)
+    bot.coverBraceBlend = Motion.smooth(bot.coverBraceBlend or 0,
+        brace, dt, 10)
     local strafeLean = (bot.lateralBlend or 0) * bot.walkBlend
     local forwardStride = (bot.forwardBlend or 0)
     local lateralStride = (bot.lateralBlend or 0)
@@ -91,6 +98,8 @@ function BotAnimation.step(bot, now, targeting)
     local aim = bot.aimBlend
     local reload = bot.reloadBlend
     local air = bot.airBlend
+    local coverApproach = bot.coverApproachBlend or 0
+    local coverBrace = bot.coverBraceBlend or 0
     local joints = bot.joints
     if not joints then return end
 
@@ -104,32 +113,38 @@ function BotAnimation.step(bot, now, targeting)
     -- Firing shoulder, supporting hand, reload dip and airborne recovery.
     joints.leftShoulder.C0 = CFrame.new(-1, 0.5, 0) *
         CFrame.Angles(stridePitch * (1 - aim) - aim * 0.55 + breath
-            + reload * 0.8 + magazineReach - air * 0.24 + hit * 0.34,
-            -aim * 0.28 + reload * 0.16 + pivot * 0.07, -aim * 0.15)
+            + reload * 0.8 + magazineReach - air * 0.24 + hit * 0.43
+            - rebound * 0.12 + coverApproach * 0.10 + coverBrace * 0.19,
+            -aim * 0.28 + reload * 0.16 + pivot * 0.07,
+            -aim * 0.15 - hitRoll * 0.50)
     joints.rightShoulder.C0 = CFrame.new(1, 0.5, 0) *
         CFrame.Angles(-stridePitch * (1 - aim) - aim * 0.48 - recoil + fireBrace
-            + reload * 0.17 - air * 0.2 + hit * 0.29,
-            aim * 0.04 - pivot * 0.065, aim * 0.1)
+            + reload * 0.17 - air * 0.2 + hit * 0.37
+            - rebound * 0.16 + coverApproach * 0.06 + coverBrace * 0.13,
+            aim * 0.04 - pivot * 0.065, aim * 0.1 + hitRoll * 0.42)
     joints.leftHip.C0 = CFrame.new(-0.5, -1, 0) *
         CFrame.Angles(-stridePitch - air * 0.38 - braking * 0.14
-            + bot.reversalBlend * 0.11,
+            + bot.reversalBlend * 0.11 + coverBrace * 0.12,
             -sideStep * 0.75 + pivot * 0.15,
             sway + sideStep * 0.30 - pivot * 0.07)
     joints.rightHip.C0 = CFrame.new(0.5, -1, 0) *
         CFrame.Angles(stridePitch + air * 0.28 - braking * 0.14
-            + bot.reversalBlend * 0.11,
+            + bot.reversalBlend * 0.11 + coverBrace * 0.12,
             sideStep * 0.75 - pivot * 0.15,
             -sway + sideStep * 0.30 + pivot * 0.07)
     joints.neck.C0 = CFrame.new(0, 1, 0) *
-        CFrame.Angles(-breath + air * 0.05 - hit * 0.13,
-            yaw + hitSide * hit * 0.065 - pivot * 0.085,
-            strafeLean * -0.055 - hitRoll * 0.3)
+        CFrame.Angles(-breath + air * 0.05 - hit * 0.17
+            + rebound * 0.04 - coverBrace * 0.045,
+            yaw + hitSide * hit * 0.082 - pivot * 0.085,
+            strafeLean * -0.055 - hitRoll * 0.33)
     joints.root.C0 = CFrame.new(0,
         breath * 0.25 + math.abs(step) * 0.032 - landing * 0.12
-            - bot.defensiveBlend * 0.12, 0) *
+            - bot.defensiveBlend * 0.10
+            - coverApproach * 0.035 - coverBrace * 0.075, 0) *
         CFrame.Angles(-forwardStride * bot.walkBlend * 0.075 - air * 0.055
-            + landing * 0.09 + hit * 0.11 + hitPitch
-            + bot.defensiveBlend * 0.095 + braking * 0.045,
+            + landing * 0.09 + hit * 0.14 - rebound * 0.065 + hitPitch
+            + bot.defensiveBlend * 0.075 + braking * 0.045
+            + coverApproach * 0.09 + coverBrace * 0.12,
             strafeLean * -0.035 + pivot * 0.09,
             sway * 0.35 - strafeLean * 0.10 + hitRoll
                 - pivot * 0.10)
