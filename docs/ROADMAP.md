@@ -357,3 +357,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Réconciliation déterministe des deux bords de chaque carte Color/Roughness/Metalness et du relief avant calcul des normales ; normales calculées avec échantillonnage périodique, sans rupture artificielle sur les bords.
 - [x] Vérification automatique des bords des 12 PNG réels (4 canaux × 3 matériaux) à petite résolution, en plus des hashes SHA-256 et de l'inspection PNG 1K existantes.
 - [ ] La publication effective des 12 images nécessite la clé Open Cloud Assets du propriétaire et la modération Roblox ; aucune activation de PBR tant que les IDs approuvés ne sont pas enregistrés.
+
+
+## 7 novembre 2026 — contrôle physique et aperçu inspectable des 12 cartes PBR
+
+- [x] Correction de la métallisation de la peinture des conteneurs : la couche peinte est majoritairement **diélectrique** (non métallique) ; les rares rayures et éclats dévoilent une surface métallique sous-jacente, avec leur propre rugosité ; zones d'oxydation mates.
+- [x] L'acier structurel reste métallique ; l'asphalte reste fortement rugueux et non métallique. Bords des textures raccordés et normales périodiques conservés.
+- [x] Nouvel audit Python **sans dépendance externe**, décodant les douze PNG réels : vérification SHA-256, CRC, dimensions, coutures, contraste, métallicité et rugosité propres à chaque matériau.
+- [x] Prévisualisation 4 colonnes × 3 lignes des cartes PBR sous forme d'un PNG inspectable dans chaque artifact et release GitHub, avec rapport JSON de métriques et convention de colonnes/lignes stable.
+- [x] Contrôle de qualité intégré **avant** tout téléchargement/activation de textures Roblox via le workflow propriétaire ; image de peinture artificiellement métallique même avec manifeste resigné rejetée par régression.
+- [ ] Le moteur Roblox n'appliquera les textures que lorsque le propriétaire aura réellement importé/modéré les 12 images et activé les ID sur le jeu publié ; validation Studio/Android non effectuée.

@@ -14,7 +14,7 @@ from pathlib import Path
 from generate_maps import clamp, hash_noise, write_png
 
 MATERIALS = {
-    "freight_steel": {"base": (124, 141, 142), "metal": 225, "rough": 128, "seed": 17},
+    "freight_steel": {"base": (124, 141, 142), "metal": 28, "rough": 172, "seed": 17},
     "warehouse_steel": {"base": (160, 159, 145), "metal": 222, "rough": 155, "seed": 43},
     "yard_asphalt": {"base": (115, 117, 110), "metal": 4, "rough": 230, "seed": 91},
 }
@@ -50,6 +50,21 @@ def sample(name, x, y, size, cfg):
         delta += -18 if oxide else 0
         rough = cfg["rough"] + (32 if oxide else 0) + grain * 7
         metal = cfg["metal"] - (145 if oxide else 0)
+        if name == "freight_steel":
+            # Painted cargo panels are DIELECTRIC, not polished bare steel.
+            # Sparse scratches and paint chips reveal metallic substrate;
+            # rust patches remain rough and almost nonmetallic.
+            chip = (hash_noise(x // 7, y // 9, seed + 113) > 247
+                and hash_noise(x // 31, y // 29, seed + 17) > 128)
+            exposed = (scratch or chip) and not oxide
+            if exposed:
+                metal = 223 + grain * 5
+                rough = 107 + grain * 9
+                delta += 16 if scratch else 25
+                raise_height -= 4 if chip else 2
+            elif oxide:
+                metal = 5
+                rough = cfg["rough"] + 35
     return raise_height, delta, rough, metal
 
 

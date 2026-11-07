@@ -79,3 +79,8 @@ Studio / Android acceptance: inspect seams for clipping with main collider walls
 Eight MapService-matched freight container bodies gain painted side identification bands, bottom oxidation, dark ISO-inspired upper/lower corner fittings, DiamondPlate maintenance roof strips and safety markings on both doors. Twelve road-repair panels with shallow seams appear near lateral circulation routes. Everything uses original native Roblox materials; the existing collider bodies remain the only hit and player-motion surfaces. Cosmetic geometry shares the NeonStrikeDecor folder and detail-tier LOD. No external PBR asset IDs are assumed available.
 
 Studio/Android acceptance: inspect eight box variants, verify the stripes and plates do not obscure serials, inspect roof lines from catwalks, confirm correct stopping points of bullets and navigation, and test 30/60 FPS Android in ECO/BAL/HIGH after switching preset mid-game.
+
+
+## Physically grounded world texture bake & visual gate — 7 November 2026
+
+Inspect the world source release preview.png (rows freight steel, warehouse steel, asphalt; columns ColorMap, NormalMap, RoughnessMap, MetalnessMap). Painted freight surfaces must look coated/matte rather than mirror-metallic. Scratches/chips should reveal isolated metallic substrate; warehouse sheets should read as steel, asphalt as matte aggregate. CI verifies original 1K 12-image PNG hashes, CRC, border continuity and physically distinct metallicity/roughness. After authorized Open Cloud image upload, validate actual Roblox MaterialVariants in Studio and Android for texture tiling, normal orientation, paint color and memory/performance. Do not label static-native fallback PBR.

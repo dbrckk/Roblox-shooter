@@ -64,7 +64,9 @@ jobs:
           CREATOR_ID: ${{ inputs.creator_user_id }}
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/upload_world_pbr_images.py
+          python3 -m py_compile scripts/upload_world_pbr_images.py tools/assetforge/audit_world_maps.py
+          python3 tools/assetforge/audit_world_maps.py \
+            --assets build/world-pbr --require-1k
           python3 scripts/upload_world_pbr_images.py \
             --assets build/world-pbr \
             --owner-user-id "$CREATOR_ID" \

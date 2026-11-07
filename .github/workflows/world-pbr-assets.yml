@@ -5,6 +5,7 @@ on:
   push:
     paths:
       - "tools/assetforge/generate_world_maps.py"
+      - "tools/assetforge/audit_world_maps.py"
       - ".github/workflows/world-pbr-assets.yml"
 
 permissions:
@@ -23,6 +24,11 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/assetforge/generate_world_maps.py --size 1024 --out build/world-pbr
+          python3 tools/assetforge/audit_world_maps.py \
+            --assets build/world-pbr \
+            --preview build/world-pbr/preview.png \
+            --report build/world-pbr/visual-qa.json \
+            --require-1k
           python3 scripts/upload_world_pbr_images.py \
             --assets build/world-pbr \
             --owner-user-id 9774173158 \
@@ -32,6 +38,8 @@ jobs:
             --dry-run
           echo '### World surface PBR' >> "$GITHUB_STEP_SUMMARY"
           echo 'Three independently authored industrial 1K material sets, each with Color/Normal/Roughness/Metalness PNG maps.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Visual QA: image continuity, painted steel dielectric / exposed chips, metal warehouse and asphalt roughness.' >> "$GITHUB_STEP_SUMMARY"
+          echo 'Contact sheet: preview.png (rows: freight, warehouse, asphalt; columns: color, normal, rough, metal).' >> "$GITHUB_STEP_SUMMARY"
           echo 'Dry-run only: no Roblox image upload and no activated asset IDs.' >> "$GITHUB_STEP_SUMMARY"
 
       - name: Preserve verified PNGs and hashes
@@ -51,8 +59,8 @@ jobs:
           set -euo pipefail
           (cd build && zip -q -r world-pbr-1k.zip world-pbr)
           tag="iron-yard-world-pbr-${GITHUB_SHA:0:12}"
-          gh release create "$tag" build/world-pbr-1k.zip \
+          gh release create "$tag" build/world-pbr-1k.zip build/world-pbr/preview.png \
             --title "IRON YARD world PBR source ${GITHUB_SHA:0:7}" \
-            --notes "Original 1K four-channel maps for freight steel, warehouse steel and yard asphalt. Source textures only; NOT uploaded Roblox image IDs or published game." \
+            --notes "Original 1K four-channel maps for painted freight steel, bare warehouse steel and asphalt, with strict PBR plausibility audit. preview.png has rows freight/warehouse/asphalt and columns color/normal/rough/metal. Source textures only; NOT uploaded Roblox image IDs or published game." \
             --prerelease
           echo "Source archive: https://github.com/${GITHUB_REPOSITORY}/releases/tag/$tag" >> "$GITHUB_STEP_SUMMARY"

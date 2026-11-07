@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "tools/assetforge"))
 import upload_world_pbr_images as uploader
 from generate_maps import write_png
-from generate_world_maps import MATERIALS as WORLD_MATERIALS, CHANNELS as WORLD_CHANNELS, make_material
+from generate_world_maps import MATERIALS as WORLD_MATERIALS, CHANNELS as WORLD_CHANNELS
 
 
 def check(flag, label):
@@ -76,6 +76,30 @@ def main():
                           "Tileable texture has an obvious vertical seam: "
                           + material + "/" + channel)
 
+        # A true decoded visual/physical material audit, not only integrity.
+        preview = short / "preview.png"
+        report = short / "visual-qa.json"
+        audit_cmd = [sys.executable,
+                     str(ROOT / "tools/assetforge/audit_world_maps.py"),
+                     "--assets", str(short)]
+        audited = subprocess.run(audit_cmd + ["--preview", str(preview),
+                       "--report", str(report)], capture_output=True,
+                       text=True, check=False)
+        check(audited.returncode == 0 and preview.is_file()
+              and report.is_file(), "Real PNG PBR preview/quality gate failed: "
+              + audited.stderr)
+        visual = json.loads(report.read_text(encoding="utf-8"))
+        check(visual["preview"]["rows"] == list(uploader.MATERIALS)
+              and visual["preview"]["columns"] == list(uploader.CHANNELS),
+              "Contact sheet must label all twelve original channels")
+        check(visual["materials"]["freight_steel"]["MetalnessMap"]["average"] < 70
+              and visual["materials"]["freight_steel"]["MetalnessMap"]["above170"] > 0,
+              "Freight paint requires nonmetallic coating plus authentic chips")
+        check(visual["materials"]["warehouse_steel"]["MetalnessMap"]["average"] > 145,
+              "Bare structural steel must remain metallic")
+        check(visual["materials"]["yard_asphalt"]["RoughnessMap"]["average"] > 180,
+              "Road asphalt must remain visibly rough")
+
         # The uploader strictly rejects anything below 1024x1024.
         try:
             uploader.inspect_assets(short)
@@ -83,6 +107,22 @@ def main():
             pass
         else:
             raise AssertionError("A small prototype must never be uploaded")
+
+        # Even a hash-updated, structurally valid image must not pass the
+        # visual gate if painted cargo steel is falsely 100% metallic.
+        fake = short / "freight_steel_MetalnessMap.png"
+        row = b"\x00" + b"\xe1\xe1\xe1\xff" * 64
+        write_png(fake, 64, 64, row * 64)
+        tampered = json.loads((short / "manifest.json").read_text(encoding="utf-8"))
+        tampered["files"]["freight_steel"]["MetalnessMap"] = {
+            "sha256": hashlib.sha256(fake.read_bytes()).hexdigest(),
+            "bytes": len(fake.read_bytes()),
+        }
+        (short / "manifest.json").write_text(json.dumps(tampered), encoding="utf-8")
+        invalid = subprocess.run(audit_cmd, text=True,
+                                 capture_output=True, check=False)
+        check(invalid.returncode != 0 and "dielectric" in invalid.stderr,
+              "Physical plausibility audit must reject a metallic paint forgery")
 
         # Produce flat real 1K PNG fixture bytes without expensive full 1K
         # high-frequency normal generation in the everyday CI regression.
