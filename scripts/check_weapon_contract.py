@@ -63,6 +63,12 @@ def main():
         has(server, needle, "Server authority")
     require(server.index("local function randomSpread") < server.index("local function fireRaycastWeapon"),
             "Local spread helper must precede raycast closure")
+    for needle in ("hitPosition = raycastResult.Position",
+                   "hitPosition = entry.hitPosition",
+                   "pelletImpacts = pelletImpacts",
+                   "#extraWorldImpacts < 3",
+                   "if humanoid.Health < oldHealth then"):
+        has(server, needle, "Server-confirmed hit and bounded shotgun pellet VFX")
     has(match, "WeaponService.resetRound()", "Per-round magazine reset")
     for token in ('nextGlobalFireAt = 0', 'if now < (state.nextGlobalFireAt or 0)',
                   'state.nextGlobalFireAt = WeaponConfig.nextGlobalFireAt(weaponId, now)'):
@@ -183,6 +189,15 @@ def main():
                 "for i = 1, budget.muzzleFins do",
                 "if budget.muzzleLight then"):
         has(viewmodel, key, "Material-aware client-only combat effects")
+    for key in ("function WeaponVisuals:drawConfirmedHit(",
+                "function WeaponVisuals:drawPelletImpacts(",
+                "CombatVfxProfile.hitFeedback(",
+                "CombatVfxProfile.pelletVisualCount("):
+        has(viewmodel, key, "Client-only confirmed damage and shotgun glints")
+    for key in ("visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)",
+                "visuals:drawPelletImpacts(message.pelletImpacts)",
+                "if message.shooterUserId ~= player.UserId then"):
+        has(client, key, "Server-authored hit UI with no duplicate local tracer")
     for key in ("visuals:drawLocalMuzzleFlash()",
                 "visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)",
                 "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)"):

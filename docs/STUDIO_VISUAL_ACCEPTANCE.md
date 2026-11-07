@@ -37,3 +37,10 @@ The new `TouchLayout` operates on the actual safe-area GUI frame size, not hardc
 All four corner cranes have locally animated trolleys, suspended cables, load spreaders and an amber safety beacon. Geometry is *server-created but purely decorative*: `CanCollide=false`, `CanTouch=false`, `CanQuery=false`. The shared `GantryMotion` is deterministic and limited to ±5.6 studs of trolley travel and ±0.7 studs of lift. The client updates 15 Hz on touch devices, 24 Hz on desktop. Motion is disabled in ECO and culled beyond 185 studs in BALANCED / 285 studs in HIGH. Tiny point lights exist **only locally** for HIGH-quality clients within 150 studs, so the server pays no animation/network cost.
 
 **Verify in Studio/Android:** compare scene motion under ECO/BAL/HIGH; check frame pacing near all four cranes and from catwalks, correct crane/pulley/cable motion, restore to rest when out of range, and ensure tracer/damage/nav rays cross the invisible decorative parts as before. A successful Rojo build does not validate physics or the resulting composition visually.
+
+
+## Confirmed damage VFX / shotgun pellets — 7 November 2026
+
+After **actual server-authoritative damage**, only the attacker's client receives a short 3D impact glint at the confirmed contact point, differing for ordinary hits, headshots and eliminations. The shotgun sends up to three other *world surface only* contacts in the existing tracer event; ECO draws one tiny extra pellet flash, balanced mobile two, and quality up to three. No character impact coordinate goes to other clients through the pellet event. The shooter's immediate central tracer remains predicted and is not duplicated by the server's visual confirmation.
+
+**Studio/Android acceptance:** shoot at concrete, metal, and wood from close/medium range in ECO, BAL, and HIGH; verify no hit confirmations on protected players or behind cover; compare headshots and eliminations; verify no floating glint around moving fighters; record performance with four bots shooting concurrently.

@@ -1071,6 +1071,9 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
 
 	if message.kind == "Hit" then
         hud:showHitFeedback(message)
+        if typeof(message.hitPosition) == "Vector3" then
+            visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)
+        end
     elseif message.kind == "Ammo" and typeof(message.weaponId) == "string"
         and typeof(message.capacity) == "number" and typeof(message.loaded) == "number" then
         ammoByWeapon[message.weaponId] = {
@@ -1093,7 +1096,6 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
 	if message.kind == "FireSound" and message.shooterUserId ~= player.UserId and typeof(message.origin) == "Vector3" then
 		visuals:playFireSound(message.weaponId, message.origin)
     elseif message.kind == "PlayerTracer"
-        and message.shooterUserId ~= player.UserId
         and typeof(message.origin) == "Vector3"
         and typeof(message.direction) == "Vector3"
         and typeof(message.length) == "number" then
@@ -1102,11 +1104,18 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         local direction = message.direction
         if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 220
             and direction.Magnitude > 0.01 and fullLength > 0.1 then
-            visuals:drawTracer(message.origin, direction.Unit, fullLength, Color3.fromRGB(240, 213, 165))
-            visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)
-            if typeof(message.impactNormal) == "Vector3" then
-                visuals:drawImpact(message.origin + direction.Unit * fullLength,
-                    message.impactNormal, message.impactMaterial)
+            -- Prediction already shows the shooter's central tracer and mark.
+            -- A server confirmation must not double that visual/audio.
+            if message.shooterUserId ~= player.UserId then
+                visuals:drawTracer(message.origin, direction.Unit, fullLength, Color3.fromRGB(240, 213, 165))
+                visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)
+                if typeof(message.impactNormal) == "Vector3" then
+                    visuals:drawImpact(message.origin + direction.Unit * fullLength,
+                        message.impactNormal, message.impactMaterial)
+                end
+            end
+            if typeof(message.pelletImpacts) == "table" then
+                visuals:drawPelletImpacts(message.pelletImpacts)
             end
         end
     elseif message.kind == "BotTracer"

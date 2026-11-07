@@ -268,3 +268,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Pas de hitbox réduite, d'effet de dégâts fictifs, de nouvelles Parts ni de requêtes physiques par image ; calculs dans la pose R6 existante.
 - [x] Réinitialisation des nouveaux états d'animation entre manches, tests Luau étendus et contrôles statiques ajustés.
 - [ ] Vérification Roblox Studio/Android impérative : perception visuelle des impacts et des couvertures, collisions des armures/accessoires, FPS sur mobile et équilibre du duel.
+
+
+## 7 novembre 2026 — impacts confirmés et dispersion visuelle du shotgun
+
+- [x] Éclat 3D local du contact uniquement pour le tireur, après réduction effective des points de vie vérifiée par le serveur ; variantes corps/tête/élimination.
+- [x] Le shotgun affiche aussi un maximum de trois impacts supplémentaires sur le décor à partir de raycasts serveur réels : un effet en ECO, deux sur mobile BALANCED et trois en QUALITY.
+- [x] Aucun nouvel événement réseau, aucune position d'adversaire caché diffusée, ni modification des dégâts, hitboxes ou cadence.
+- [x] L'auteur d'un tir n'affiche pas deux fois son traceur central : prédiction locale conservée, confirmation serveur pour les impacts secondaires.
+- [x] Tests des budgets VFX et contrats de gameplay étendus dans la CI.
+- [ ] Vérifier dans Roblox Studio et Android : lisibilité des headshots, du shotgun sur métal/béton/bois, coûts GPU et durée des effets selon ECO/BAL/HIGH.

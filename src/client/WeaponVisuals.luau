@@ -499,6 +499,106 @@ function WeaponVisuals:_trackImpactMark(mark, cap)
     end
 end
 
+-- A short 3D glint appears only on the shooter's client when the server
+-- confirms REAL damage. This does not change hitboxes or expose positions
+-- to other players, and uses no additional remotes or uploaded assets.
+function WeaponVisuals:drawConfirmedHit(position, headshot, killed)
+    if typeof(position) ~= "Vector3" then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local settings = CombatVfxProfile.hitFeedback(
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled,
+        (camera.CFrame.Position - position).Magnitude,
+        headshot == true, killed == true)
+    if not settings then return end
+    local now = os.clock()
+    if now - (self.lastConfirmedHitFxAt or -math.huge) < 0.11 then return end
+    self.lastConfirmedHitFxAt = now
+
+    local color = killed and Color3.fromRGB(247, 189, 105)
+        or (headshot and Color3.fromRGB(255, 229, 151)
+            or Color3.fromRGB(204, 231, 218))
+    local toward = camera.CFrame.Position - position
+    if toward.Magnitude < 0.1 then return end
+    local direction = toward.Unit
+    local center = position + direction * 0.12
+    local core = Instance.new("Part")
+    core.Name = "IronYardConfirmedHit"
+    configurePart(core)
+    core.Shape = Enum.PartType.Ball
+    core.Material = MATERIAL_NEON
+    core.Color = color
+    core.Size = Vector3.new(settings.radius, settings.radius, settings.radius)
+    core.Transparency = 0.08
+    core.CFrame = CFrame.new(center)
+    core.Parent = workspace
+    TweenService:Create(core, TweenInfo.new(settings.duration), {
+        Size = Vector3.new(settings.radius * 1.9,
+            settings.radius * 1.9, settings.radius * 1.9),
+        Transparency = 1,
+    }):Play()
+    Debris:AddItem(core, settings.duration + 0.03)
+
+    for i = 1, settings.sparks do
+        local streak = Instance.new("Part")
+        streak.Name = "IronYardHitSpark"
+        configurePart(streak)
+        streak.Material = MATERIAL_NEON
+        streak.Color = color
+        streak.Transparency = 0.18
+        streak.Size = Vector3.new(0.025, 0.025, settings.radius * 2.4)
+        local angle = (i - 1) * math.pi / math.max(2, settings.sparks)
+        streak.CFrame = CFrame.lookAt(center, center + direction)
+            * CFrame.Angles(0, 0, angle)
+        streak.Parent = workspace
+        TweenService:Create(streak, TweenInfo.new(settings.duration), {
+            Transparency = 1,
+            Size = Vector3.new(0.018, 0.018, settings.radius * 0.5),
+        }):Play()
+        Debris:AddItem(streak, settings.duration + 0.03)
+    end
+end
+
+-- At most three accepted world pellet contacts. Unlike full impacts, these
+-- glints never leave marks and allocate at most 1/2/3 local parts according
+-- to ECO/BALANCED/QUALITY on the receiving device.
+function WeaponVisuals:drawPelletImpacts(impacts)
+    if typeof(impacts) ~= "table" then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    local preset = Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset")
+    local touch = UserInputService.TouchEnabled
+    local drawn = 0
+    for i = 1, math.min(#impacts, 3) do
+        local info = impacts[i]
+        if typeof(info) == "table" and typeof(info.position) == "Vector3"
+            and typeof(info.normal) == "Vector3" and info.normal.Magnitude > 0.9 then
+            local maxCount = CombatVfxProfile.pelletVisualCount(
+                preset, touch, (camera.CFrame.Position - info.position).Magnitude)
+            if drawn < maxCount then
+                local profile = CombatVfxProfile.surface(info.material)
+                local dot = Instance.new("Part")
+                dot.Name = "IronYardShotgunPellet"
+                configurePart(dot)
+                dot.Shape = Enum.PartType.Ball
+                dot.Material = profile.sparks and MATERIAL_NEON or MATERIAL_SMOOTH
+                dot.Color = rgb(profile.debris)
+                dot.Size = Vector3.new(0.12, 0.12, 0.12)
+                dot.Transparency = 0.12
+                dot.CFrame = CFrame.new(info.position + info.normal.Unit * 0.09)
+                dot.Parent = workspace
+                TweenService:Create(dot, TweenInfo.new(0.18), {
+                    Transparency = 1,
+                    Size = Vector3.new(0.34, 0.34, 0.34),
+                }):Play()
+                Debris:AddItem(dot, 0.21)
+                drawn += 1
+            end
+        end
+    end
+end
+
 function WeaponVisuals:drawImpact(position, normal, materialName)
     if typeof(position) ~= "Vector3" or typeof(normal) ~= "Vector3"
         or normal.Magnitude < 0.9 then return end

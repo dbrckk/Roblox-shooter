@@ -118,7 +118,7 @@ end
 
 -- Spectator effects use server raycasts, never client-submitted hit data.
 -- Send at most ONE trace for an accepted shot, including pellet weapons.
-local function broadcastTrace(player, weaponId, origin, direction, range, result)
+local function broadcastTrace(player, weaponId, origin, direction, range, result, pelletImpacts)
     local isWorldImpact = false
     if result then
         local humanoid = getHumanoidFromHit(result.Instance)
@@ -133,6 +133,7 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
         length = result and (result.Position - origin).Magnitude or range,
         impactNormal = isWorldImpact and result.Normal or nil,
         impactMaterial = isWorldImpact and result.Material.Name or nil,
+        pelletImpacts = pelletImpacts,
     })
 end
 
@@ -187,9 +188,15 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         targetCharacter:SetAttribute("IronYardLastHitTime", workspace:GetServerTimeNow())
     end
 
+    if targetHumanoid.Health >= healthBefore then
+        sendFeedback(attacker, { kind = "Miss", weaponId = weaponId })
+        return false
+    end
+
     sendFeedback(attacker, {
         kind = "Hit",
         weaponId = weaponId,
+        hitPosition = raycastResult.Position,
         targetName = targetPlayer and targetPlayer.DisplayName or targetCharacter.Name,
         damage = damage,
         headshot = headshot,
@@ -336,6 +343,9 @@ local function firePelletWeapon(player, weaponId, config, direction)
     broadcastFireFx(player, weaponId, origin)
     local firstDirection = nil
     local firstResult = nil
+    -- A small set of actual world contacts adds readable shotgun spread.
+    -- Humanoid impacts are never broadcast in this payload.
+    local extraWorldImpacts = {}
 
     for _ = 1, config.pellets do
         local pelletDirection = randomSpread(direction, config.spreadDegrees)
@@ -346,13 +356,22 @@ local function firePelletWeapon(player, weaponId, config, direction)
         end
         if ray then
             local humanoid, model = getHumanoidFromHit(ray.Instance)
+            if pelletDirection ~= firstDirection and not humanoid
+                and #extraWorldImpacts < 3 then
+                table.insert(extraWorldImpacts, {
+                    position = ray.Position,
+                    normal = ray.Normal,
+                    material = ray.Material.Name,
+                })
+            end
             if humanoid and humanoid.Health > 0 and model ~= character then
                 local opponent = Players:GetPlayerFromCharacter(model)
                 if (opponent or model:GetAttribute("IsArenaBot") == true)
                     and not SpawnService.isProtected(model) then
                     local entry = victims[humanoid]
                     if not entry then
-                        entry = { model = model, player = opponent, damage = 0, headshots = 0, distance = config.range }
+                        entry = { model = model, player = opponent, damage = 0,
+                            headshots = 0, distance = config.range, hitPosition = nil }
                         victims[humanoid] = entry
                     end
                     local headshot = ray.Instance.Name == "Head"
@@ -360,14 +379,18 @@ local function firePelletWeapon(player, weaponId, config, direction)
                     local falloff = math.clamp(1 - distance / config.range * 0.55, 0.45, 1)
                     entry.damage += (headshot and config.headshotDamage or config.damage) * falloff
                     if headshot then entry.headshots += 1 end
-                    entry.distance = math.min(entry.distance, distance)
+                    if distance < entry.distance then
+                        entry.distance = distance
+                        entry.hitPosition = ray.Position
+                    end
                 end
             end
         end
     end
 
     if firstDirection then
-        broadcastTrace(player, weaponId, origin, firstDirection, config.range, firstResult)
+        broadcastTrace(player, weaponId, origin, firstDirection, config.range,
+            firstResult, #extraWorldImpacts > 0 and extraWorldImpacts or nil)
     end
 
     local anyHit = false
@@ -381,13 +404,16 @@ local function firePelletWeapon(player, weaponId, config, direction)
                 entry.model:SetAttribute("IronYardLastHitTime", workspace:GetServerTimeNow())
             end
             local killed = oldHealth > 0 and humanoid.Health <= 0
-            anyHit = true
-            sendFeedback(player, {
-                kind = "Hit", weaponId = weaponId,
-                targetName = entry.player and entry.player.DisplayName or entry.model.Name,
-                damage = damage, headshot = entry.headshots > 0,
-                killed = killed, distance = entry.distance,
-            })
+            if humanoid.Health < oldHealth then
+                anyHit = true
+                sendFeedback(player, {
+                    kind = "Hit", weaponId = weaponId,
+                    hitPosition = entry.hitPosition,
+                    targetName = entry.player and entry.player.DisplayName or entry.model.Name,
+                    damage = damage, headshot = entry.headshots > 0,
+                    killed = killed, distance = entry.distance,
+                })
+            end
             if killed then
                 DeathNotice.record(entry.model, player.DisplayName, weaponId, entry.headshots > 0)
                 local stats = player:FindFirstChild("leaderstats")

@@ -50,6 +50,23 @@ function Profile.budget(preset, touch, distance)
     return level
 end
 
+-- Shooter-side 3D confirmation is only emitted on validated server damage.
+function Profile.hitFeedback(preset, touch, distance, headshot, killed)
+    if not Profile.budget(preset, touch, distance) then return nil end
+    return {
+        duration = killed and 0.24 or (headshot and 0.20 or 0.16),
+        sparks = (touch and 1 or 2) + (killed and 1 or 0),
+        radius = headshot and 0.26 or 0.19,
+    }
+end
+
+function Profile.pelletVisualCount(preset, touch, distance)
+    if not Profile.budget(preset, touch, distance) then return 0 end
+    if preset == "ECO" then return 1 end
+    if touch and preset ~= "QUALITY" then return 2 end
+    return 3
+end
+
 function Profile.tracer(distance)
     local d = math.clamp(tonumber(distance) or 0, 0, 1500)
     if d < 0.10 then return nil end
