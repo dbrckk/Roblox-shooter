@@ -220,24 +220,42 @@ local function getTargetModel(bot, limit)
         if SpawnService.isProtected(model) then return end
         local humanoid, root, head = targetInfo(model)
         if not humanoid or not root or not head then return end
-        local distance = (root.Position - bot.root.Position).Magnitude
-        if distance > limit then return end
-        -- Only server-verified head/torso LOS authorizes a new sighting.
+        -- Server LOS is the only way to obtain a fresh fighting distance.
+        -- A hidden opponent's current root position must never affect
+        -- selection, even indirectly through a distance score.
         local direction = head.Position - origin
-        local ray = Workspace:Raycast(origin, direction, params)
-        local visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
-        if not visible then
-            local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
-            if torso then
-                ray = Workspace:Raycast(origin, torso.Position - origin, params)
-                visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
+        local visible = false
+        if direction.Magnitude <= limit then
+            local ray = Workspace:Raycast(origin, direction, params)
+            visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
+            if not visible then
+                local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
+                if torso then
+                    ray = Workspace:Raycast(origin, torso.Position - origin, params)
+                    visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
+                end
             end
         end
+        local distance = nil
+        local memoryDistance = nil
+        if visible then
+            distance = (root.Position - bot.root.Position).Magnitude
+            if distance > limit then return end
+        elseif model == bot.target and bot.lastKnownTargetPosition then
+            memoryDistance = (bot.lastKnownTargetPosition - bot.root.Position).Magnitude
+        else
+            return
+        end
+        local recentThreat = visible and bot.recentThreatOrigin ~= nil
+            and now - (bot.lastConfirmedThreatAt or -math.huge) <= 2.8
+            and (root.Position - bot.recentThreatOrigin).Magnitude <= 18
         table.insert(sightings, {
             model = model,
             distance = distance,
+            memoryDistance = memoryDistance,
             visible = visible,
             position = visible and root.Position or nil,
+            threatMatch = recentThreat,
         })
     end
 
@@ -331,6 +349,7 @@ local function createBot(slot)
         hitFront = 0,
         suppressedUntil = 0,
         recentThreatOrigin = nil,
+        lastConfirmedThreatAt = -math.huge,
         coverGoal = nil,
         coverGoalUntil = 0,
         failedCoverGoal = nil,
@@ -441,6 +460,7 @@ local function observeRecentHit(bot, now)
     bot.hitFront = reaction.hitFront
     bot.suppressedUntil = reaction.suppressedUntil
     bot.recentThreatOrigin = origin
+    bot.lastConfirmedThreatAt = now
     bot.lastDamageAt = now
     -- A hit briefly disrupts aim, without disabling combat or granting
     -- the AI knowledge of the shooter behind an occluding wall.
@@ -860,6 +880,7 @@ function BotService.resetRound()
             bot.hitFront = 0
             bot.suppressedUntil = 0
             bot.recentThreatOrigin = nil
+            bot.lastConfirmedThreatAt = -math.huge
             SupplyService.resetBotGoal(bot)
             BotHearingService.resetBot(bot)
             bot.model:SetAttribute("IronYardLastHitPosition", nil)

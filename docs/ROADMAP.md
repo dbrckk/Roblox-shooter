@@ -230,3 +230,12 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Annulation immédiate de l'enquête à l'acquisition d'un adversaire et remise à zéro entre manches ; aucun ciblage à partir du bruit seul.
 - [x] Régressions Luau de phase/durée/expiration intégrées à GitHub Actions et documentation QA ajoutée.
 - [ ] Test en Roblox Studio et sur Android des chemins réels dans l'entrepôt, de la précision sonore, de l'équilibre FFA et de l'absence d'omniscience.
+
+
+## 7 novembre 2026 — acquisition de cibles et réaction aux agressions
+
+- [x] Les cibles non visibles ne sont plus évaluées à partir de leur distance actuelle cachée ; seule la dernière position serveur réellement observée est utilisable pendant 2,2 s.
+- [x] Sur un tir reçu et confirmé, bonus temporaire (2,8 s) au candidat visible proche de l'origine du tir ; aucun bonus à une cible invisible.
+- [x] Protection contre les faux couples cible/position : une cible dite visible doit porter sa position associée.
+- [x] Régressions Luau et contrôle de contrat source dans le pipeline GitHub Actions.
+- [ ] Mesurer en jeu la fréquence des changements de cible et la capacité de riposte dans le dos, et tester l'absence de pistage invisible sur Android/Studio.

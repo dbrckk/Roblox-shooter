@@ -86,3 +86,10 @@ Après avoir entendu un tir accepté par le serveur, un bot n'essaye plus unique
 Le centre sonore est quantifié (12 studs) puis décalé par bot : aucune information exacte sur le tireur n'est conservée pour l'enquête. Ce système ne peut pas créer une cible de tir, et les anciennes protections de vision directe restent obligatoires pour causer des dégâts.
 
 Tests Studio/Android obligatoires : sonar éloigné (bot ne doit pas abandonner trop tôt), plusieurs tirs, arrivée à la cellule centrale, obstacles de l'entrepôt, recherche des deux flancs, vraie ligne de visée avant de tirer, temps CPU des quatre bots et retour à la patrouille après 17 s.
+
+
+## 7 novembre 2026 — cibles visibles, distance fiable et riposte
+
+Correction de l'omniscience indirecte : la distance actuelle d'une cible derrière un mur n'entre plus dans le score de sélection. Seule une **position précédemment confirmée par rayon serveur**, mémorisée pour 2,2 s, peut conserver une cible cachée. Un nouveau tir exige toujours un rayon direct vers le personnage et un alignement suffisamment stable de l'arme. Après avoir subi un dégât réel, le bot tient compte pendant 2,8 s des adversaires **actuellement visibles** se trouvant à moins de 18 studs du point de tir serveur enregistré ; cela lui permet de privilégier l'agresseur probable dans une mêlée, sans identifier ou cibler magiquement un attaquant invisible. La réaction naturelle du bot, les erreurs de visée et les cadences d'arme restent en place.
+
+QA Studio : tirer dans le dos du bot depuis une position visible, puis se cacher derrière un conteneur, changer plusieurs fois de cible, vérifier qu'il ne suit pas la distance du personnage caché, comparer les quatre niveaux de difficulté et confirmer que les bots ne tirent jamais à travers le décor. Les tests Luau couvrent les candidats masqués, le classement du tireur visible, les positions associées et la durée des souvenirs.

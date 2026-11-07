@@ -135,6 +135,14 @@ def main():
     ):
         has(navigation, needle, "Ground-checked detours and bounded path retries")
     has(bot, "bot.pathFailures = 0", "Reset failure backoff on changed enemy")
+    selection = source("src/shared/BotTargetSelection.luau")
+    for needle in ("local distance = visible and entry.distance or entry.memoryDistance",
+                   "if visible and entry.threatMatch == true then"):
+        has(selection, needle, "No hidden live-distance scoring and visible-only retaliation")
+    for needle in ("memoryDistance = (bot.lastKnownTargetPosition - bot.root.Position).Magnitude",
+                   "now - (bot.lastConfirmedThreatAt or -math.huge) <= 2.8",
+                   "threatMatch = recentThreat"):
+        has(bot, needle, "Attacker response uses only server-confirmed visible evidence")
     for needle in ("BotMovementProgress.step(",
                    "bot.navSteeringGoal", "bot.stuckMonitorGoal",
                    'oldMode == "DIRECT" and bot.stuckRecoveries % 3 == 0'):

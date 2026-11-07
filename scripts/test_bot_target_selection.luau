@@ -7,15 +7,15 @@ local model, pos = choose({
 }, nil, 10, 0)
 assert(model == "Near" and pos == "near", "Selection must pair its own sighting")
 model, pos = choose({
-    {model="Old", distance=28, visible=false, position="hidden-live"},
+    {model="Old", distance=1, memoryDistance=28, visible=false, position="hidden-live"},
 }, "Old", 11.8, 10)
 assert(model == "Old" and pos == nil, "Hidden live coordinates must never propagate")
 model, pos = choose({
-    {model="Old", distance=28, visible=false, position="hidden-live"},
+    {model="Old", distance=1, memoryDistance=28, visible=false, position="hidden-live"},
 }, "Old", 12.3, 10)
 assert(model == nil and pos == nil, "Sighting expires after 2.2 seconds")
 model, pos = choose({
-    {model="Old", distance=20, visible=false, position="hidden"},
+    {model="Old", distance=1, memoryDistance=20, visible=false, position="hidden"},
     {model="New", distance=80, visible=true, position="new"},
 }, "Old", 11, 10)
 assert(model == "New" and pos == "new", "Fresh visible fighter outranks hidden memory")
@@ -29,4 +29,27 @@ model, pos = choose({
     {model="Good", distance=40, visible=true, position="good"},
 }, nil, 11, 10)
 assert(model == "Good" and pos == "good", "Invalid distance rejected")
-print("IRON YARD verified target memory and per-fighter sighting identity: OK")
+model, pos = choose({
+    {model="Hidden", distance=1, visible=false, position="cheat"},
+}, "Hidden", 11, 10)
+assert(model == nil and pos == nil, "Hidden live distance must not be used for memory")
+model, pos = choose({
+    {model="Old", distance=1, memoryDistance=96, visible=false, position="hidden-live"},
+}, "Old", 11, 10)
+assert(model == "Old" and pos == nil, "Memory uses verified past range only")
+model, pos = choose({
+    {model="A", distance=22, visible=true, position="A"},
+    {model="B", distance=55, visible=true, position="B", threatMatch=true},
+}, "A", 11, 10)
+assert(model == "B" and pos == "B", "Visible recent aggressor outranks passive incumbent")
+model, pos = choose({
+    {model="Hidden", distance=1, memoryDistance=45, visible=false,
+        position="unverified", threatMatch=true},
+    {model="Visible", distance=90, visible=true, position="seen"},
+}, "Hidden", 11, 10)
+assert(model == "Visible" and pos == "seen", "Threat bonus never boosts an unseen fighter")
+model, pos = choose({
+    {model="Invalid", distance=18, visible=true},
+}, nil, 11, 10)
+assert(model == nil and pos == nil, "Visible target requires a paired sighting")
+print("IRON YARD verified target memory, reaction to visible attacker, and fair LOS: OK")
