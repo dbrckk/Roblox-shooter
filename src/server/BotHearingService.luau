@@ -2,6 +2,8 @@
 -- Audio events are NOT targets, cannot authorize shots and are never client-authored.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Hearing = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotHearingPlan"))
+local Search = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotSoundSearchPlan"))
+local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local Service = {}
 local events = {}
 local sequence = 0
@@ -49,54 +51,109 @@ function Service.record(shooter, weaponId, position)
     end
 end
 
+local function stopSearch(bot)
+    bot.soundGoal = nil
+    bot.soundCenter = nil
+    bot.soundSearchPhase = nil
+    bot.soundSearchStartedAt = 0
+    bot.soundPhaseStartedAt = 0
+    bot.soundGoalActive = false
+end
+
+local function assignLeg(bot, now)
+    if not bot.soundCenter then return nil end
+    -- No unbounded retry or navmesh spam: at most three grounding searches
+    -- whenever a phase begins (never every 0.2-second bot think step).
+    for phase = bot.soundSearchPhase, Search.PHASE_COUNT do
+        local goal = BotTactics.soundSearchGoal(bot, bot.soundCenter, phase)
+        if goal then
+            bot.soundSearchPhase = phase
+            bot.soundPhaseStartedAt = now
+            bot.soundGoal = goal
+            return goal
+        end
+    end
+    stopSearch(bot)
+    return nil
+end
+
+function Service.stopSearch(bot)
+    stopSearch(bot)
+end
+
+function Service.reportBotStuck(bot)
+    if not bot.soundSearchPhase then return end
+    -- The same waypoint monitor used for medical and cover goals moves a
+    -- blocked hearing search on to its next sweep instead of wall-walking.
+    bot.soundSearchPhase += 1
+    bot.soundGoal = nil
+    if bot.soundSearchPhase > Search.PHASE_COUNT then stopSearch(bot) end
+end
+
 function Service.investigationGoal(bot, now)
     if not bot or not bot.model or not bot.root or not bot.model.Parent
-        or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+        or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return nil end
+    local root = bot.root.Position
+
+    if bot.soundSearchPhase then
+        if bot.soundGoal then
+            local phase, changed, finished = Search.advance(bot.soundSearchPhase,
+                bot.soundSearchStartedAt, bot.soundPhaseStartedAt,
+                now, (bot.soundGoal - root).Magnitude)
+            if finished then
+                stopSearch(bot)
+            elseif changed then
+                bot.soundSearchPhase = phase
+                bot.soundGoal = nil
+                return assignLeg(bot, now)
+            else
+                return bot.soundGoal
+            end
+        else
+            if now - (bot.soundSearchStartedAt or now) >= Search.MAX_SECONDS then
+                stopSearch(bot)
+            else
+                return assignLeg(bot, now)
+            end
+        end
+        -- A completed search cannot restart from the same event. Later
+        -- confirmed shots may still open a new finite search.
         return nil
     end
-    local root = bot.root.Position
-    if bot.soundGoal and now < (bot.soundHoldUntil or 0)
-        and (bot.soundGoal - root).Magnitude > Hearing.MIN_INVESTIGATION_DISTANCE then
-        return bot.soundGoal
-    end
+
     local candidates = {}
     for _, event in ipairs(events) do
-        local distance = (event.position - root).Magnitude
         table.insert(candidates, {
             id = event.id,
             age = now - event.time,
             radius = event.radius,
-            distance = distance,
+            distance = (event.position - root).Magnitude,
             own = event.shooter == bot.model,
         })
     end
-    local chosen = Hearing.choose(candidates, now)
-    if not chosen then
-        bot.soundGoal = nil
-        return nil
-    end
+    local chosen = Hearing.choose(candidates, now, bot.soundLastHandledId or 0)
+    if not chosen then return nil end
     for _, event in ipairs(events) do
         if event.id == chosen then
+            -- Convert to a rough acoustic cell, never retain the exact
+            -- shooter position in a bot's state or targeting system.
             local x = Hearing.approximateAxis(event.position.X, bot.slot, "X")
             local z = Hearing.approximateAxis(event.position.Z, bot.slot, "Z")
             if not x or not z then return nil end
-            local area = Vector3.new(x, root.Y, z)
-            if (area - root).Magnitude <= Hearing.MIN_INVESTIGATION_DISTANCE then
-                bot.soundGoal = nil
-                return nil
-            end
-            bot.soundGoal = area
-            bot.soundHoldUntil = now + Hearing.GOAL_HOLD_SECONDS
-            return area
+            bot.soundLastHandledId = chosen
+            bot.soundCenter = Vector3.new(x, root.Y, z)
+            bot.soundSearchPhase = 1
+            bot.soundSearchStartedAt = now
+            bot.soundPhaseStartedAt = now
+            return assignLeg(bot, now)
         end
     end
     return nil
 end
 
 function Service.resetBot(bot)
-    bot.soundGoal = nil
-    bot.soundHoldUntil = 0
-    bot.soundGoalActive = false
+    stopSearch(bot)
+    bot.soundLastHandledId = 0
 end
 
 function Service.resetRound()

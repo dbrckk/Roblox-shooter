@@ -220,3 +220,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Stabilisation du déplacement sonore sur 1,8 s, respect de la navigation serveur, mémoire réinitialisée à la nouvelle manche.
 - [x] Tir strictement interdit sans observation visuelle : aucun tir ni dégât issu du son seul. Règles de sélection testées en Luau et branchées sur le build.
 - [ ] Tester en session multijoueur Studio/Android : bruit derrière couverture, réponses à la distance, FFA bots contre bots, durée de recherche et équilibrage.
+
+
+## 7 novembre 2026 — recherche sonore autour de la dernière zone entendue
+
+- [x] Enquête en trois étapes : zone sonore approximative, flanc gauche, flanc droit, avec destinations validées au sol et navigation serveur.
+- [x] Poursuite d'une enquête déjà ouverte malgré l'expiration des événements sonores, limitée globalement à 17 s ; chaque étape possède un délai strict.
+- [x] Véritable blocage de waypoint : passage à l'étape suivante ; dernière ID événementielle ignorée pour empêcher les boucles sans nouvelles preuves.
+- [x] Annulation immédiate de l'enquête à l'acquisition d'un adversaire et remise à zéro entre manches ; aucun ciblage à partir du bruit seul.
+- [x] Régressions Luau de phase/durée/expiration intégrées à GitHub Actions et documentation QA ajoutée.
+- [ ] Test en Roblox Studio et sur Android des chemins réels dans l'entrepôt, de la précision sonore, de l'équilibre FFA et de l'absence d'omniscience.

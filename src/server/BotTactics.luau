@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BotCombatResponse = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCombatResponse"))
 local BotEngagementPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotEngagementPlan"))
 local BotCoverPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCoverPlan"))
+local BotSoundSearchPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotSoundSearchPlan"))
 
 local BotTactics = {}
 local COVER_HOLD_SECONDS = 2.4
@@ -191,6 +192,38 @@ function BotTactics.defensiveGoal(bot, knownPosition, now)
         bot.strafeSign = -bot.strafeSign
     end
     return selectCover(bot, knownPosition, now)
+end
+
+-- Three small acoustic search positions around a COARSE sound cell.
+-- Physical geometry, floor, edges and height are validated by the server.
+-- The asynchronous navigator can path around cover when the direct lane is
+-- blocked; a failed leg advances after its bounded timeout.
+function BotTactics.soundSearchGoal(bot, center, phase)
+    if typeof(center) ~= "Vector3" then return nil end
+    local current = bot.root.Position
+    local flat = Vector3.new(center.X - current.X, 0, center.Z - current.Z)
+    local forward
+    if flat.Magnitude > 0.25 then
+        forward = flat.Unit
+    else
+        local look = bot.root.CFrame.LookVector
+        local planar = Vector3.new(look.X, 0, look.Z)
+        forward = planar.Magnitude > 0.25 and planar.Unit or Vector3.new(0, 0, -1)
+    end
+    local sideways = Vector3.new(-forward.Z, 0, forward.X)
+    local params = environmentParams(bot)
+    local possible = nil
+    for _, offset in ipairs(BotSoundSearchPlan.offsets(phase, bot.strafeSign)) do
+        local raw = center + forward * offset.forward + sideways * offset.lateral
+        local grounded = groundedGoal(bot, raw, params)
+        if grounded then
+            -- Prefer immediate walkability; when cover blocks the approach,
+            -- let BotNavigation attempt a server-owned path instead.
+            if coverApproachClear(bot, grounded, params) then return grounded end
+            possible = possible or grounded
+        end
+    end
+    return possible
 end
 
 -- Bounded investigation after a formerly visible target is lost.

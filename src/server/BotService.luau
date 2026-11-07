@@ -341,7 +341,11 @@ local function createBot(slot)
         medicalFailedUntil = 0,
         medicalGoalActive = false,
         soundGoal = nil,
-        soundHoldUntil = 0,
+        soundCenter = nil,
+        soundSearchPhase = nil,
+        soundSearchStartedAt = 0,
+        soundPhaseStartedAt = 0,
+        soundLastHandledId = 0,
         soundGoalActive = false,
         engagementGoal = nil,
         engagementTarget = nil,
@@ -651,6 +655,9 @@ local function updateBot(bot, dt)
         bot.target = target
         -- Preserve only verified old sightings. Forget dead opponents instead
         -- of investigating an already-confirmed elimination.
+        if target then
+            BotHearingService.stopSearch(bot)
+        end
         if not target and previousTarget then
             local previousHumanoid = previousTarget:FindFirstChildOfClass("Humanoid")
             if not previousHumanoid or previousHumanoid.Health <= 0 then
@@ -729,6 +736,9 @@ local function updateBot(bot, dt)
     if stalled then
         if bot.medicalGoalActive then
             SupplyService.reportBotStuck(bot)
+        end
+        if bot.soundGoalActive then
+            BotHearingService.reportBotStuck(bot)
         end
         -- Cover failure quarantine takes precedence over a fresh tactical
         -- search. Invalidating an async path never teleports or jumps through

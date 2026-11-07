@@ -22,12 +22,14 @@ function Hearing.radius(weaponId)
     return RADII[weaponId]
 end
 
-function Hearing.choose(entries, now)
+function Hearing.choose(entries, now, afterId)
     if not finite(now) then return nil end
     local best, bestScore = nil, math.huge
     for _, sound in ipairs(entries) do
         local distance, age, radius = sound.distance, sound.age, sound.radius
         if sound.id ~= nil and sound.own ~= true
+            and (afterId == nil or (type(sound.id) == "number"
+                and sound.id > afterId))
             and finite(distance) and distance >= Hearing.MIN_INVESTIGATION_DISTANCE
             and finite(age) and age >= 0 and age <= Hearing.LIFETIME
             and finite(radius) and distance <= radius then

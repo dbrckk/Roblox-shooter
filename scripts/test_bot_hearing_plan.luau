@@ -25,4 +25,8 @@ assert(H.approximateAxis(20, 2, "Z") ~= H.approximateAxis(20, 2, "X"),
     "Different spatial axes cannot always produce the same exact target")
 assert(H.approximateAxis(999, 1, "X") <= 153, "Stay inside known arena envelope")
 assert(H.approximateAxis(0/0, 1, "X") == nil)
+assert(H.choose({{id=5, distance=33, age=1, radius=125}}, 4, 5) == nil,
+    "Already investigated sound cannot start again")
+assert(H.choose({{id=6, distance=33, age=1, radius=125}}, 4, 5) == 6,
+    "New accepted shot can trigger a later investigation")
 print("IRON YARD server-accepted gunshot hearing and bounded audible investigations: OK")
