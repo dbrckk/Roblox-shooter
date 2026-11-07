@@ -83,6 +83,8 @@ def main():
                    "lamps = 0", "lamps = 2", "lamps = 8"):
         check(needle in profile, "Missing bounded graphics quality policy: " + needle)
     for needle in ("Lighting.ExposureCompensation = settings.exposure",
+                   'Profile.fixtureStyle(role,',
+                   'tuneLocalSpot(entry.lamp, entry.part)',
                    "Lighting.EnvironmentDiffuseScale",
                    "bloom.Enabled = settings.bloom",
                    "Profile.activeFixtureIndices(distances,",
@@ -98,6 +100,22 @@ def main():
                    'puff.CanCollide = false', "Debris:AddItem(puff,",
                    'part:GetAttribute("IronYardExhaustVent") ~= true'):
         check(needle in exhaust, "Missing local-only exhaust/culling protection: " + needle)
+    warehouse_cladding = source("src/server/WarehouseCladding.luau")
+    for needle in ("WarehouseCladding.decorate(decor)",
+                   'local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))',
+                   'lens:SetAttribute("IronYardLightRole", role)'):
+        check(needle in art, "Warehouse cladding / lighting role integration missing: " + needle)
+    for needle in ('function Cladding.decorate(decor)',
+                   '"CLADDING / "', 'p.CanCollide = false',
+                   'p.CanQuery = false', 'p.CanTouch = false',
+                   'p.CastShadow = false',
+                   'p:SetAttribute("NeonArtTier", tier or "Detail")',
+                   'Plan.sidePanels()', 'Plan.bulkheadPanels()',
+                   'WarehouseBerthSerial'):
+        check(needle in warehouse_cladding, "Warehouse material safety/detail missing: " + needle)
+    cladding_plan = source("src/shared/WarehouseCladdingPlan.luau")
+    for needle in ("function Plan.sidePanels()", "function Plan.bulkheadPanels()"):
+        check(needle in cladding_plan, "Cladding layout must be testable")
     check('Instance.new("SpotLight")' not in art
           and 'Instance.new("PointLight")' not in art,
           "Replicated arena art must never instantiate dynamic fixtures")

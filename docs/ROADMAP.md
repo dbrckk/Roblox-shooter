@@ -309,3 +309,14 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Nettoyage des anciens luminaires locaux lorsque leurs pièces sont supprimées ou remplacées, pour éviter l'accumulation après de longues sessions.
 - [x] Régressions sur budgets, classement des sources, valeurs invalides et protections des éléments cosmétiques en CI.
 - [ ] Validation visuelle dans Roblox Studio/Android : quatre vents, visibilité des joueurs en face de l'échappement, clipping des louvers, ECO/BAL/HIGH, 30/60 FPS et température du téléphone.
+
+
+## 7 novembre 2026 — habillage métallique des murs et éclairage ciblé
+
+- [x] Remplacement visuel des faces internes uniformes de l'entrepôt par **8 grandes plaques de métal embouti** avec plis, renforts verticaux, plinthes, rivets et patine légère, toutes positionnées à l'intérieur des murs de collision existants.
+- [x] Façade de la cloison nord complétée avec **3 quais intérieurs clairement indiqués « SEALED »** ; aucune fausse ouverture, collision, cover ou chemin de navigation.
+- [x] Nouvelles articulations des matériaux en métal zinc / acier graphite / oxydation contrôlée. Les éléments Core conservent les volumes principaux en ECO ; les détails mineurs profitent du LOD existant.
+- [x] Luminaires de l'entrepôt plus chauds, éclairage des passerelles plus neutre/froid ; chaque rôle est piloté par un profil pure Luau, avec limites d'intensité et de portée, sans lampes supplémentaires.
+- [x] Changement ECO/BAL/HIGH actualisant les paramètres sur les spots locaux existants, sans accumuler de nouvelles instances.
+- [x] Tests des coordonnées face aux murs originaux, des niveaux d'éclairage et des budgets ; contrats de sécurité des géométries dans la CI.
+- [ ] Vérification de rendu Roblox Studio/Android : façade intérieure sur les 2 côtés, lisibilité des trois quais, collision des projectiles sur les mêmes murs, angle des lights, 30/60 FPS et comportement LOD.

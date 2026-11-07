@@ -77,15 +77,25 @@ end
 for _, descendant in ipairs(decor:GetDescendants()) do register(descendant) end
 decor.DescendantAdded:Connect(register)
 
+local function tuneLocalSpot(lamp, part)
+    -- Warehouse: restrained warm task lighting for material relief.
+    -- Catwalk: neutral-cool work lamps preserving enemy silhouettes.
+    local role = part:GetAttribute("IronYardLightRole")
+    local style = Profile.fixtureStyle(role,
+        player:GetAttribute("IronYardGraphicsPreset"), touch)
+    if not style then return end
+    lamp.Color = Color3.fromRGB(style.red, style.green, style.blue)
+    lamp.Angle = style.angle
+    lamp.Range = style.range
+    lamp.Brightness = style.brightness
+end
+
 local function createLocalSpot(part)
     local lamp = Instance.new("SpotLight")
     lamp.Name = "IronYardLocalSpot"
     lamp.Face = Enum.NormalId.Bottom
-    lamp.Color = Color3.fromRGB(255, 229, 184)
-    lamp.Angle = 100
-    lamp.Range = 29
-    lamp.Brightness = 0.73
     lamp.Shadows = false
+    tuneLocalSpot(lamp, part)
     lamp.Parent = part
     return lamp
 end
@@ -117,6 +127,9 @@ local function updateFixtures()
     for index, entry in ipairs(current) do
         if selected[index] then
             if not entry.lamp then entry.lamp = createLocalSpot(entry.part) end
+            -- Refresh in place after ECO/BAL/QUALITY changes: no light
+            -- accumulation and no stale brightness when settings change.
+            tuneLocalSpot(entry.lamp, entry.part)
             entry.lamp.Enabled = true
         elseif entry.lamp then
             entry.lamp.Enabled = false

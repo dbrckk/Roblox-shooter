@@ -43,6 +43,28 @@ function EnvironmentProfile.get(preset, isTouch)
     return isTouch and PRESETS.MOBILE or PRESETS.DESKTOP
 end
 
+-- Fixture light temperature is specific to the real arena role, not a
+-- global color filter. ECO remains unlit and mobile lamps stay inexpensive.
+-- Returned values are pure, so they can be verified without Roblox Studio.
+function EnvironmentProfile.fixtureStyle(role, preset, isTouch)
+    local settings = EnvironmentProfile.get(preset, isTouch)
+    if settings.lamps == 0 then return nil end
+    if role == "CATWALK" then
+        return {
+            brightness = isTouch and 0.55 or 0.68,
+            range = isTouch and 22 or 27,
+            angle = 105,
+            red = 222, green = 233, blue = 238,
+        }
+    end
+    return {
+        brightness = isTouch and 0.69 or 0.82,
+        range = isTouch and 26 or 31,
+        angle = 100,
+        red = 255, green = 225, blue = 181,
+    }
+end
+
 -- Both local lamps and rooftop exhaust vapor select only the nearest
 -- visible sources. Stable ordering avoids frame-to-frame allocation spikes.
 local function nearestIndices(distances, limit, range)

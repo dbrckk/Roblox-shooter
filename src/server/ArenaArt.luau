@@ -2,6 +2,7 @@
 -- Core collision geometry is owned by MapService. These details cannot block
 -- raycasts, movement, or PathfindingService and are locally culled on mobile.
 local Lighting = game:GetService("Lighting")
+local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))
 local ArenaArt = {}
 local COLOR = {
     wall = Color3.fromRGB(136, 135, 125),
@@ -508,7 +509,7 @@ end
 -- NO real light instances or dynamic updates on the server. Nearby clients
 -- enable only their nearest lamps according to the graphics preset.
 local function industrialLightFixtures(parent)
-    local function fixture(name, position, size)
+    local function fixture(name, position, size, role)
         local shell = prop(parent, "LIGHTING / housing " .. name,
             size + Vector3.new(0.42, 0.34, 0.42),
             CFrame.new(position + Vector3.new(0, 0.19, 0)),
@@ -520,6 +521,7 @@ local function industrialLightFixtures(parent)
         lens.CastShadow = false
         lens.Transparency = 0.10
         lens:SetAttribute("IronYardLightFixture", true)
+        lens:SetAttribute("IronYardLightRole", role)
         for _, side in ipairs({ -1, 1 }) do
             local clip = prop(parent, "LIGHTING / cage " .. name .. ":" .. side,
                 Vector3.new(0.13, 0.16, size.Z + 0.22),
@@ -534,14 +536,15 @@ local function industrialLightFixtures(parent)
     for _, x in ipairs({ -19, 0, 19 }) do
         for _, z in ipairs({ -9, 22, 50 }) do
             fixture("warehouse " .. x .. ":" .. z,
-                Vector3.new(x, 20.1, z), Vector3.new(4.7, 0.17, 2.1))
+                Vector3.new(x, 20.1, z), Vector3.new(4.7, 0.17, 2.1),
+                "WAREHOUSE")
         end
     end
     for _, side in ipairs({ -1, 1 }) do
         for _, z in ipairs({ -16, 16 }) do
             fixture("catwalk " .. side .. ":" .. z,
                 Vector3.new(side * 118, 20.3, z),
-                Vector3.new(3.3, 0.15, 1.6))
+                Vector3.new(3.3, 0.15, 1.6), "CATWALK")
         end
     end
 end
@@ -612,6 +615,7 @@ function ArenaArt.build(arena)
     containerDetails(decor)
     cornerCranes(decor)
     warehouseArchitecture(decor)
+    WarehouseCladding.decorate(decor)
     warehouseRoof(decor)
     catwalkSafety(decor)
     gantryRigging(decor)

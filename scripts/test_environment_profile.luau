@@ -38,4 +38,20 @@ local malformedVents = P.activeExhaustIndices({0/0, math.huge, -4, 40}, "QUALITY
 assert(malformedVents[4] and not malformedVents[1]
     and not malformedVents[2] and not malformedVents[3],
     "Nonfinite and negative vent distances are rejected")
-print("IRON YARD bright industrial atmosphere, lamps and budgeted local exhaust: OK")
+local warehouse = P.fixtureStyle("WAREHOUSE", "QUALITY", false)
+local catwalk = P.fixtureStyle("CATWALK", "QUALITY", false)
+assert(warehouse.red > warehouse.blue and catwalk.blue > catwalk.red,
+    "Warm warehouse lights differ from cool catwalk fixtures")
+assert(warehouse.brightness <= 0.85 and catwalk.brightness <= 0.85,
+    "Lighting strength must not wash out opponents")
+assert(warehouse.range <= 32 and catwalk.range <= 32,
+    "Fixture radius must not illuminate the whole warehouse")
+local mobileWarm = P.fixtureStyle("WAREHOUSE", "BALANCED", true)
+assert(mobileWarm.range < warehouse.range
+    and mobileWarm.brightness < warehouse.brightness,
+    "Mobile illumination is more limited than desktop")
+assert(P.fixtureStyle("WAREHOUSE", "ECO", true) == nil,
+    "ECO must never allocate dynamic fixture light")
+assert(P.fixtureStyle("CATWALK", "ECO", false) == nil,
+    "ECO desktop must also avoid dynamic fixture light")
+print("IRON YARD bright industrial atmosphere, colored task lights and exhaust: OK")
