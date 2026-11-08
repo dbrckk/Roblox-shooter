@@ -1,5 +1,14 @@
 # IRON YARD — Roblox FPS tactique compétitif
 
+## Pilotage du projet — audit et nouvelle feuille de route
+
+- **[Audit global du jeu et des risques — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md)** : inventaire vérifié du code, gameplay, sécurité, IA, interfaces, assets, performances, progression, publication et limites de validation.
+- **[Feuille de route V2 vers la version publique premium](docs/ROADMAP_V2_PUBLIC.md)** : priorités critiques, lots finis et mesurables, conditions de validation, dépendances Roblox et ordre exact des prochains développements.
+- [Ancien journal de progression](docs/ROADMAP.md) : archive chronologique des travaux précédents, non utilisée pour prioriser les nouvelles fonctionnalités.
+
+Le retour utilisateur valide l'état fonctionnel courant ; les prochaines itérations suivent **L0.1 (anti-spam des remotes) puis L0.2 (pathfinding réellement borné)**, avant de poursuivre l'UX et les grandes améliorations premium. Le build GitHub et l'import d'assets ne doivent jamais être confondus avec une publication Roblox.
+
+
 FPS Roblox indépendant, utilisant **RIVALS** (duels et progression), **Hypershot** (fluidité) et **Arsenal** (rythme) comme références de game design. Aucun script, asset, carte ni interface propriétaire de ces jeux n'a été copié.
 
 ## Base technique

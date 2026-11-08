@@ -1,5 +1,8 @@
 # IRON YARD — production
 
+> **Historique des améliorations déjà réalisées.** Ce fichier conserve les décisions et les travaux antérieurs. Pour les priorités et critères de livraison actuels, consulter **[ROADMAP V2 — version publique premium](ROADMAP_V2_PUBLIC.md)**. La justification technique et les blocages confirmés sont dans **[l'audit global du 8 novembre 2026](AUDIT_GLOBAL_2026-11-08.md)**.
+
+
 ## Référence
 RIVALS pour la boucle d'affrontements, Hypershot pour la réactivité, Arsenal pour la variété d'armes. Recréation indépendante, pas de copie d'expérience Roblox.
 
