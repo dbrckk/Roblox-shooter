@@ -198,3 +198,13 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Les bots sans créneau poursuivent les déviations sûres ou attendent, sans déclencher une nouvelle requête. Si deux ComputeAsync restent bloqués dans le moteur, le serveur cesse d'en lancer d'autres jusqu'à leur retour : compromis explicite sécurité/performance contre reprise automatique.
 - [x] Tests de concurrence incluant expiration logique, maintien des créneaux physiques et libération tardive ; contrôle statique anti-régression.
 - [ ] Vérifier en Studio la durée maximale de ComputeAsync et le comportement des quatre bots lorsque deux appels restent durablement bloqués ; aucune annulation Roblox n'est simulée.
+
+
+### L2.1 — accueil et premier engagement (8 novembre 2026)
+
+- [x] Carte d'objectif FFA synchronisée avec le score limite réel du serveur (au lieu d'un 15 codé en dur).
+- [x] Première aide non bloquante spécifique au PC (WASD, souris, clic) ou à Android (joystick gauche, visée droite, FIRE), présentée seulement si aucun tir n'a encore été émis.
+- [x] Après un premier tir, une seule aide de survie/couverture et recharge est affichée si la manche est toujours active et si le joueur n'a pas déjà éliminé un adversaire ; aucun HUD de tutoriel permanent.
+- [x] Aucun contrôle verrouillé, aucune requête réseau supplémentaire, aucun effet sur les dégâts ou les scores. La première action est suivie uniquement par un attribut local PlayerGui.
+- [x] Tests purs du texte d'objectif, des deux profils d'entrée, de la progression du guide et de l'arrêt après élimination.
+- [ ] Tester en jeu sur Android petit écran, notamment la superposition avec le HUD et la compréhension en moins d'une minute.

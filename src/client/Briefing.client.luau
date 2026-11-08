@@ -3,6 +3,8 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Guide = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FirstMatchGuide"))
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -57,6 +59,7 @@ local title = makeText("ObjectiveTitle", 5, 14, Color3.fromRGB(247, 238, 217))
 local subtitle = makeText("ObjectiveDetails", 30, 12, Color3.fromRGB(214, 212, 194))
 local token = 0
 local playedIntro = false
+local hintToken = 0
 
 local function setCardVisible(visible)
     panel.Visible = visible
@@ -87,6 +90,27 @@ local function display(a, b, timeout)
     end
 end
 
+-- One short, non-blocking follow-up after the first actual shot.
+-- The client increments the attribute only when a live FireWeapon is sent.
+local function firstShotHint()
+    if not playedIntro or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    if (playerGui:GetAttribute("IronYardFirstShots") or 0) < 1 then return end
+    hintToken += 1
+    if hintToken > 1 then return end
+    local stats = player:FindFirstChild("leaderstats")
+    local kills = stats and stats:FindFirstChild("Eliminations")
+    local text = Guide.hint(UserInputService.TouchEnabled, 1, kills and kills.Value or 0)
+    if text then
+        -- Let the objective card finish; this cue never blocks input.
+        task.delay(8.5, function()
+            if Workspace:GetAttribute("NeonMatchPhase") == "LIVE"
+                and hintToken == 1 then
+                display("STAY ALIVE   /   TAKE COVER", text, 5)
+            end
+        end)
+    end
+end
+
 local function onPhaseChanged()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     if phase == "COUNTDOWN" then
@@ -95,7 +119,14 @@ local function onPhaseChanged()
     elseif phase == "LIVE" then
         if not playedIntro then
             playedIntro = true
-            display("MISSION   /   FREE FOR ALL", "FIRST TO 15 ELIMINATIONS", 8)
+            display("MISSION   /   FREE FOR ALL",
+                Guide.objective(Workspace:GetAttribute("NeonMatchScoreLimit")), 8)
+            task.delay(8.5, function()
+                if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE"
+                    or hintToken > 0 then return end
+                local hint = Guide.hint(UserInputService.TouchEnabled, 0, 0)
+                if hint then display("FIRST ENGAGEMENT   /   CONTROLS", hint, 5) end
+            end)
         else
             token += 1
             setCardVisible(false)
@@ -107,4 +138,5 @@ local function onPhaseChanged()
 end
 
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(onPhaseChanged)
+playerGui:GetAttributeChangedSignal("IronYardFirstShots"):Connect(firstShotHint)
 onPhaseChanged()

@@ -836,6 +836,10 @@ local function fireWeapon(weaponId)
 		origin = ray.Origin,
 		direction = ray.Direction.Unit,
 	})
+    -- Local onboarding only; never used as authoritative score or hit data.
+    if not playerGui:GetAttribute("IronYardFirstShots") then
+        playerGui:SetAttribute("IronYardFirstShots", 1)
+    end
 end
 
 local function quickThrowKnife()
