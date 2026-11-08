@@ -306,10 +306,10 @@ def main():
     killFeed = source("src/client/KillFeed.client.luau")
     tacticalHud = source("src/client/TacticalHud.client.luau")
     progressionHud = source("src/client/ProgressionHud.client.luau")
-    for needle in ("function Layout.compute(width, height)", "function Layout.check(width, height, buttons)",
+    for needle in ("function Layout.compute(width, height, preset)", "function Layout.check(width, height, buttons)",
                    "Overlapping touch buttons", "Invalid/hidden touch button"):
         has(touchLayout, needle, "Android layout geometry and guards")
-    for needle in ('touchGui.IgnoreGuiInset = false', "TouchLayout.compute(viewport.X, viewport.Y)",
+    for needle in ('touchGui.IgnoreGuiInset = false', "TouchLayout.compute(viewport.X, viewport.Y, preset)",
                    'touchRoot:GetPropertyChangedSignal("AbsoluteSize")',
                    'updateTouchVisibility = function()', 'touchGui.Enabled = enabled',
                    'heldFireInput = nil -- stops any running automatic-fire loop'):
