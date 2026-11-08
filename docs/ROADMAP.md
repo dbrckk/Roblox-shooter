@@ -390,3 +390,14 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Tests d'identité et dimensions, orientations invalides rejetées, suivi de deux chariots maximum, contrôle statique et build via la CI.
 - [ ] Vérification dans Roblox Studio et sur Android : alignement de la carrosserie et des détails hors enveloppe de collision, visée et tirs près de la cabine et des fourches, silhouette de loin, FPS et streaming.
 - [ ] Revoir séparément les colliders simplifiés des machines si leur volume visuel crée une couverture trompeuse lors du jeu réel : pas de modification silencieuse de navigation ou de collisions pour cette évolution.
+
+
+## 8 novembre 2026 — habillage structurel des deux grandes passerelles
+
+- [x] Les deux grandes plateformes de chargement sont habillées par **12 panneaux de tôle antidérapante (DiamondPlate)**, avec variation légère de nuances acier et réservations au droit des anciennes grilles de drainage.
+- [x] Ajout d'un châssis périphérique en acier graphite, de poutres sous plancher, de liserés de sécurité visibles de loin et de repères au sol **WEST / LOADING 01** et **EAST / LOADING 02**.
+- [x] Les **dix marches des deux accès** reçoivent un habillage antidérapant et un nez de marche de sécurité jaune, exactement posé sur les collisions de chaque marche.
+- [x] Toutes les pièces sont construites depuis les **2 plateformes et 10 escaliers réels** de MapService : aucune duplication de coordonnées centrales, aucune fausse surface de marche ou collision de projectile.
+- [x] Art ancré, non-queryable, non-collisionnant, sans ombre, avec niveaux Core/Detail compatibles avec le LOD mobile existant ; pas de lights/Remote/logic d'animation supplémentaires.
+- [x] Tests Luau des 12 objets de gameplay, de dimensions et noms invalides, de la séparation des 6 tôles, et garde-fous de build CI.
+- [ ] Valider dans Studio et Android la cohérence des nuances, des grilles et rampes déjà présentes, le contraste des bandes jaunes, les surfaces de déplacement, et le frame pacing avec quatre bots.

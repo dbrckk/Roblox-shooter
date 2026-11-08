@@ -199,6 +199,34 @@ def main():
         check(needle in native_props,
               "Native forklift PBR-fallback detail or physics safety missing: " + needle)
 
+    # Two full-size elevated decks and ten stair skins must follow the
+    # real gameplay colliders, not second coordinates or new player hitboxes.
+    catwalk_plan = source("src/shared/CatwalkDeckPlan.luau")
+    catwalk_art = source("src/server/CatwalkDeckArt.luau")
+    for needle in ('function Plan.forCollider(', 'function Plan.deckStrips()',
+                   '"CATWALK / loading platform -1"',
+                   '"CATWALK / loading platform 1"',
+                   '"^CATWALK / access stair (%-?1):([1-5])$"',
+                   "math.huge"):
+        check(needle in catwalk_plan,
+              "Catwalk exact collider whitelist or art budget missing: " + needle)
+    for needle in ('local CatwalkDeckArt = require(script.Parent:WaitForChild("CatwalkDeckArt"))',
+                   "CatwalkDeckArt.decorate(decor, arena)"):
+        check(needle in art, "Catwalk deck renderer not integrated: " + needle)
+    for needle in ('function Art.decorate(decor, arena)',
+                   'Plan.forCollider(collider.Name,',
+                   'collider.Size.X, collider.Size.Y, collider.Size.Z',
+                   'p.CanCollide = false', 'p.CanQuery = false',
+                   'p.CanTouch = false', 'p.CastShadow = false',
+                   'p:SetAttribute("NeonArtTier", tier)',
+                   '"diamondplate deck "', '"deck end girder "',
+                   '"deck orientation stencil "', '"stair diamondplate "',
+                   '"stair warning nose "', "decks ~= 2 or steps ~= 10"):
+        check(needle in catwalk_art,
+              "Catwalk native metal skins or physics contract missing: " + needle)
+    check('Instance.new("SpotLight")' not in catwalk_art,
+          "Catwalk decking must not add realtime server lights")
+
     # Production forklift visuals follow authoritative colliders, not a
     # second set of hardcoded coordinates; styles and art remain nonblocking.
     forklift_plan = source("src/shared/ForkliftVisualPlan.luau")
