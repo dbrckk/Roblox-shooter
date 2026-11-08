@@ -5,6 +5,7 @@ local Debris = game:GetService("Debris")
 
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
+local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
@@ -252,6 +253,7 @@ local function cancelReload(state, weaponId)
 end
 
 local function reloadWeapon(player, weaponId)
+    if not RemoteGuard.allow(player, "ReloadWeapon") then return end
     if typeof(weaponId) ~= "string" then return end
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     local state = getState(player)
@@ -523,6 +525,7 @@ local function fireKnife(player, weaponId, config, direction)
 end
 
 local function onEquipWeapon(player, weaponId)
+    if not RemoteGuard.allow(player, "EquipWeapon") then return end
     if typeof(weaponId) ~= "string" or not WeaponConfig.isValid(weaponId) then
         return
     end
@@ -536,6 +539,7 @@ local function onEquipWeapon(player, weaponId)
 end
 
 local function onFireWeapon(player, payload)
+    if not RemoteGuard.allow(player, "FireWeapon") then return end
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
         return
     end

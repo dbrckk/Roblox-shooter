@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Profile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotPerfProfile"))
 local Remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
 local Service = {}
+local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 
 local viewer = nil
 local state = nil
@@ -50,6 +51,7 @@ function Service.start()
     started = true
     local remote = Remotes.getRemotes(true).PerformanceDiagnostics
     remote.OnServerEvent:Connect(function(player, command)
+        if not RemoteGuard.allow(player, "Diagnostics") then return end
         if not authorized(player) or (command ~= "start" and command ~= "stop") then
             return
         end

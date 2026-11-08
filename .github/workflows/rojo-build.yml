@@ -74,6 +74,7 @@ jobs:
           ./luau scripts/test_round_standings.luau
           ./luau scripts/test_weapon_cadence.luau
           ./luau scripts/test_safe_planar_input.luau
+          ./luau scripts/test_remote_rate_policy.luau
           ./luau scripts/test_spawn_safety.luau
           ./luau scripts/test_supply_rules.luau
 
@@ -146,6 +147,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check_movement_contract.py
+          python3 scripts/check_remote_rate_contract.py
           python3 scripts/check_bot_navigation_budget.py
           python3 scripts/check_bot_los_budget.py
           python3 scripts/check_bot_perf_contract.py

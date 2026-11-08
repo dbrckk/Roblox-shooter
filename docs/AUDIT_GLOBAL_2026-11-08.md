@@ -161,3 +161,10 @@ PASS pour poursuivre le développement sur main et conserver le FFA existant.
 NON VÉRIFIÉ pour métriques Android/PC, vrai Roblox DataStore et rendu des assets importés.
 NON LIVRÉ pour publication de l'expérience et modes de duel/équipe.
 PROCHAINE SOURCE DE VÉRITÉ : docs/ROADMAP_V2_PUBLIC.md.
+
+
+## Complément d'audit — 8 novembre 2026, durcissement exécuté
+
+L0.1 de la roadmap V2 a été implémenté dans les handlers WeaponService, MovementService et BotPerfService. Le module serveur RemoteGuard applique des limites par joueur et type d'événement avec un algorithme token-bucket pur (RemoteRatePolicy). Les requêtes de visée, tirs et mouvement conservent leur validation serveur existante. Les commandes d'arrêt de boost/wallrun disposent d'un budget de priorité séparé ; l'actualisation de direction est soumise à un sous-budget et les répétitions de sprint n'entraînent plus de réplication de l'état. Le panneau PERF conserve sa vérification d'identité propriétaire.
+
+Régressions ajoutées en CI : test Luau des quotas et de leur rétablissement, contrôle d'intégration Python des différents RemoteEvents et des refus précoces. Les nouveaux budgets ne remplacent pas la vérification physique dans Roblox Studio sous charge, nécessaire avant d'annoncer l'audit sécurité terminé sur réseau réel. Prochain lot L0.2 : traiter les vrais ComputeAsync orphelins après expiration, actuellement seulement libérés au niveau logique.

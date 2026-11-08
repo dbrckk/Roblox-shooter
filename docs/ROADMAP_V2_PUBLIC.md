@@ -46,10 +46,13 @@ Priorité explicite : fiabilité > fonctionnement réel > sécurité > architect
 ### LOT 0 — Figer une base de livraison fiable (P0-A, P0-B, P0-C)
 
 **L0.1 — remotes et protection du serveur, autonome**
+**État : protections contre rafales et répétitions intégrées côté serveur le 8 novembre 2026 ; reste la validation en réseau réel.**
 - Inventorier tous les RemoteEvents et callbacks : EquipWeapon, FireWeapon, ReloadWeapon, SetSprinting, MovementAction, diagnostics et autres.
 - Appliquer une validation structurée et des budgets bornés par joueur et type d'action, particulièrement aux changements d'équipement/sprint et aux actions haute fréquence, sans créer de latence artificielle sur des commandes valides.
 - Vérifier les refus sur morts, changements de manche, disparition de Character, NaN, infini, payloads excessifs et attaques par spam.
 - Ajouter tests Luau purs de rate-limit et contrôle d'intégration. Ne jamais donner au client l'autorité sur dégâts, vitesse, soins ou XP.
+- **Livré :** limiteurs à jetons par joueur et RemoteEvent (src/shared/RemoteRatePolicy.luau, src/server/RemoteGuard.luau), protection précoce des handlers tirs/équipement/rechargement/sprint/déplacements/diagnostics. Rafales d'updates boost/wallrun bornées séparément ; arrêt du boost et du wallrun traité via un canal indépendant pour ne pas rester coincé en accélération. Répétition du même état sprint neutralisée, et changement de sprint d'un personnage mort rejeté. scripts/test_remote_rate_policy.luau vérifie saturation, équité, rejet des valeurs invalides, récupération ; scripts/check_remote_rate_contract.py valide les appels réels.
+- **Contrôle moteur restant :** vérifier en Studio deux clients sous rafales et latence que les ordres d'arrêt sont pris en compte, les tirs normaux passent à cadence normale et aucun état UI ne se désynchronise. La validation statique/CI n'atteste pas d'une épreuve d'attaque réseau réel.
 
 **L0.2 — calculs de chemin des bots, autonome**
 - Corriger l'ambiguïté actuelle : expiration d'un ticket à 5,8 s ne signifie pas arrêt effectif de ComputeAsync. Éviter toute accumulation réelle et empêcher les callbacks anciens de restaurer des trajectoires périmées.

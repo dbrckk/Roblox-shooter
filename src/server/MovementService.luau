@@ -6,6 +6,7 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local SafePlanarInput = require(shared:WaitForChild("SafePlanarInput"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
+local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 
 local MovementService = {}
 
@@ -588,42 +589,50 @@ local function onCharacterAdded(player, character)
 end
 
 local function onSprintingChanged(player, isSprinting)
+    if not RemoteGuard.allow(player, "SetSprinting") then return end
 	if typeof(isSprinting) ~= "boolean" then
 		return
 	end
 
+    local character = getCharacterParts(player)
+    if not character then return end
 	local state = getState(player)
+    if state.sprinting == isSprinting then return end
 	state.sprinting = isSprinting
 	applyMovement(player)
 	sendMovementState(player, state)
 end
 
 local function onMovementAction(player, payload)
-	if typeof(payload) ~= "table" or typeof(payload.action) ~= "string" then
-		return
-	end
+    -- Even malformed requests consume the ordinary player's event budget.
+    -- The separate stop lane allows releasing boost/wallrun immediately
+    -- when high-frequency movement updates are temporarily throttled.
+    local action = typeof(payload) == "table" and payload.action or nil
+    if not RemoteGuard.movement(player, action) then return end
+	if typeof(payload) ~= "table" or typeof(action) ~= "string"
+        or #action > 24 then return end
 
-	if payload.action == "Slide" then
+	if action == "Slide" then
 		requestSlide(player, payload)
-	elseif payload.action == "SlideJump" then
+	elseif action == "SlideJump" then
 		requestSlideJump(player, payload)
-	elseif payload.action == "BoostStart" then
+	elseif action == "BoostStart" then
 		setBoosting(player, payload, true)
-	elseif payload.action == "BoostStop" then
+	elseif action == "BoostStop" then
 		setBoosting(player, payload, false)
-	elseif payload.action == "BoostUpdate" then
+	elseif action == "BoostUpdate" then
 		updateBoostDirection(player, payload)
-	elseif payload.action == "BoostJump" then
+	elseif action == "BoostJump" then
 		setBoosting(player, payload, true)
-	elseif payload.action == "StartWallRun" then
+	elseif action == "StartWallRun" then
 		requestStartWallRun(player, payload)
-	elseif payload.action == "WallRunUpdate" then
+	elseif action == "WallRunUpdate" then
 		updateWallRunDirection(player, payload)
-	elseif payload.action == "WallJump" then
+	elseif action == "WallJump" then
 		requestWallJump(player, payload)
-	elseif payload.action == "Mantle" then
+	elseif action == "Mantle" then
 		requestMantle(player, payload)
-	elseif payload.action == "StopWallRun" then
+	elseif action == "StopWallRun" then
 		endWallRun(player)
 	end
 end
