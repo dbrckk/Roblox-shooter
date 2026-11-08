@@ -2,6 +2,7 @@
 -- Decorative pieces are non-colliding and non-queryable. MapService owns
 -- their coarse gameplay colliders so pathfinding and authoritative raycasts
 -- are consistent regardless of graphics detail/LOD.
+local PalletVisualPlan = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("PalletVisualPlan"))
 local IndustrialProps = {}
 
 local C = {
@@ -172,32 +173,115 @@ local function forklift(folder, label, x, z, yaw, coat)
     sticker(folder, serial, "FY-" .. label, C.charcoal)
 end
 
-local function palletStacks(folder, id, x, z, coat)
-    local center = CFrame.new(x, 0, z)
-    local function item(name, size, pos, color, mat, tier)
-        return prop(folder, "PALLET / " .. id .. " / " .. name,
+-- Three visible cargo families, applied only to the five authoritative
+-- 9x3.7x9 pallet colliders. Styling follows the real collider CFrame.
+local function palletStacks(folder, collider, plan)
+    local id = plan.label
+    local center = collider.CFrame * CFrame.new(0, -collider.Size.Y * 0.5, 0)
+    local function item(name, size, pos, color, mat, tier, transparency)
+        local p = prop(folder, "PALLET / " .. id .. " / " .. name,
             size, center * CFrame.new(pos), color, mat, tier)
+        if transparency then p.Transparency = transparency end
+        return p
     end
-    -- The collision crate in MapService is authoritative; decorative crate
-    -- divisions below follow its general physical envelope.
+
+    local coat = plan.style == "TIMBER_CRATE" and C.rust
+        or (plan.style == "WRAPPED_FREIGHT" and C.cream or C.olive)
+    local parcelMaterial = plan.style == "TIMBER_CRATE" and Enum.Material.WoodPlanks
+        or (plan.style == "WRAPPED_FREIGHT" and Enum.Material.SmoothPlastic
+            or Enum.Material.Metal)
+
     for _, side in ipairs({ -1, 1 }) do
-        item("wood runners " .. side, Vector3.new(9.4, 0.27, 1.2),
-            Vector3.new(0, 0.22, side * 3.65), C.rust, Enum.Material.WoodPlanks, "Detail")
+        item("wood runners " .. side, Vector3.new(8.9, 0.25, 1.0),
+            Vector3.new(0, 0.22, side * 3.63),
+            C.rust, Enum.Material.WoodPlanks, "Detail")
     end
-    item("lower pallet", Vector3.new(9.4, 0.28, 9.3),
-        Vector3.new(0, 0.46, 0), C.rust, Enum.Material.WoodPlanks, "Core")
+    item("lower pallet", Vector3.new(8.85, 0.28, 8.9),
+        Vector3.new(0, 0.46, 0),
+        C.rust, Enum.Material.WoodPlanks, "Core")
     for row = 1, 2 do
         for column = 1, 2 do
-            item("parcel " .. row .. "." .. column, Vector3.new(4.3, 1.32, 4.3),
-                Vector3.new((column == 1 and -2.2 or 2.2), 1.32 + (row - 1) * 1.44,
-                    (row == 1 and -2.2 or 2.2)),
-                coat, Enum.Material.WoodPlanks, "Core")
+            item("parcel " .. row .. "." .. column,
+                Vector3.new(4.3, 1.32, 4.3),
+                Vector3.new(column == 1 and -2.2 or 2.2,
+                    1.32 + (row - 1) * 1.44,
+                    row == 1 and -2.2 or 2.2),
+                coat, parcelMaterial, "Core")
         end
     end
-    for _, side in ipairs({ -1, 1 }) do
-        item("cargo strap " .. side, Vector3.new(0.28, 3.15, 9.1),
-            Vector3.new(side * 2.15, 2.1, 0), C.dark, Enum.Material.SmoothPlastic, "Detail")
+
+    if plan.style == "TIMBER_CRATE" then
+        -- Solid export crates: timber corner bracing and crossed side
+        -- frames, not a stack of unrelated generic boxes.
+        for _, side in ipairs({ -1, 1 }) do
+            for _, face in ipairs({ -1, 1 }) do
+                item("timber corner " .. side .. ":" .. face,
+                    Vector3.new(0.30, 3.1, 0.30),
+                    Vector3.new(side * 4.12, 2.06, face * 4.12),
+                    C.dark, Enum.Material.WoodPlanks, "Core")
+            end
+        end
+        local function diagonal(a, b, side, index)
+            local delta = b - a
+            prop(folder, "PALLET / " .. id .. " / timber diagonal " .. side .. ":" .. index,
+                Vector3.new(0.24, 0.16, delta.Magnitude),
+                center * CFrame.lookAt((a + b) * 0.5, b),
+                C.cream, Enum.Material.WoodPlanks, "Detail")
+        end
+        for _, face in ipairs({ -1, 1 }) do
+            diagonal(Vector3.new(-3.8, 0.85, face * 4.23),
+                Vector3.new(3.8, 3.22, face * 4.23), face, 1)
+            diagonal(Vector3.new(3.8, 0.85, face * 4.23),
+                Vector3.new(-3.8, 3.22, face * 4.23), face, 2)
+        end
+    elseif plan.style == "WRAPPED_FREIGHT" then
+        -- Tight translucent shrink-wrap around a real group of parcels.
+        -- Very light shading; no fog wall or misleading solid shape.
+        for _, side in ipairs({ -1, 1 }) do
+            item("shrinkwrap side " .. side, Vector3.new(0.07, 2.89, 8.35),
+                Vector3.new(side * 4.34, 2.06, 0),
+                C.cream, Enum.Material.SmoothPlastic, "Detail", 0.70)
+            item("shrinkwrap end " .. side, Vector3.new(8.35, 2.89, 0.07),
+                Vector3.new(0, 2.06, side * 4.34),
+                C.cream, Enum.Material.SmoothPlastic, "Detail", 0.70)
+            item("cargo strap " .. side, Vector3.new(0.20, 3.11, 0.15),
+                Vector3.new(side * 2.00, 2.02, -4.39),
+                C.dark, Enum.Material.SmoothPlastic, "Core")
+        end
+    else
+        -- Steel cage: readable graphite uprights, crossbars and amber
+        -- handling details; no new pathfinding, collision or bullet cover.
+        for _, side in ipairs({ -1, 1 }) do
+            for _, face in ipairs({ -1, 1 }) do
+                item("cage upright " .. side .. ":" .. face,
+                    Vector3.new(0.25, 3.12, 0.25),
+                    Vector3.new(side * 4.23, 2.05, face * 4.23),
+                    C.charcoal, Enum.Material.Metal, "Core")
+            end
+            item("cage upper rail " .. side,
+                Vector3.new(8.46, 0.22, 0.20),
+                Vector3.new(0, 3.37, side * 4.25),
+                C.slate, Enum.Material.Metal, "Core")
+            item("cage lower rail " .. side,
+                Vector3.new(8.46, 0.18, 0.20),
+                Vector3.new(0, 1.00, side * 4.25),
+                C.dark, Enum.Material.Metal, "Detail")
+            item("amber cargo stripe " .. side,
+                Vector3.new(8.02, 0.30, 0.09),
+                Vector3.new(0, 1.72, side * 4.35),
+                C.safety, Enum.Material.SmoothPlastic, "Detail")
+        end
     end
+
+    -- Every unit gets a readable freight ID, on a facade of the actual
+    -- collision volume; marker remains on ECO even if microdetail is culled.
+    local plate = item("freight identity plate",
+        Vector3.new(3.8, 0.82, 0.11),
+        Vector3.new(0, 2.40, -4.39),
+        C.cream, Enum.Material.Metal, "Core")
+    local category = plan.style == "TIMBER_CRATE" and "EXPORT"
+        or (plan.style == "WRAPPED_FREIGHT" and "SEALED" or "EQUIPMENT")
+    sticker(folder, plate, id .. " / " .. category, C.charcoal)
 end
 
 function IndustrialProps.build(arena)
@@ -209,14 +293,21 @@ function IndustrialProps.build(arena)
     forklift(folder, "12", -72, -115, math.rad(10), C.safety)
     forklift(folder, "27", 72, 115, math.rad(180), C.olive)
 
-    for i, position in ipairs({
-        Vector2.new(0, -128),
-        Vector2.new(-100, 52),
-        Vector2.new(100, 52),
-        Vector2.new(-100, -55),
-        Vector2.new(100, -55),
-    }) do
-        palletStacks(folder, tostring(i), position.X, position.Y, i % 2 == 0 and C.cream or C.rust)
+    -- Read the actual collision volumes instead of duplicating five
+    -- hard-coded world positions that can silently drift from MapService.
+    local palletCount = 0
+    for _, collider in ipairs(arena:GetChildren()) do
+        if collider:IsA("BasePart") then
+            local plan = PalletVisualPlan.forCollider(
+                collider.Name, collider.Size.X, collider.Size.Y, collider.Size.Z)
+            if plan then
+                palletStacks(folder, collider, plan)
+                palletCount += 1
+            end
+        end
+    end
+    if palletCount ~= 5 then
+        warn("[IRON YARD] Freight facade count mismatch: " .. tostring(palletCount))
     end
 end
 

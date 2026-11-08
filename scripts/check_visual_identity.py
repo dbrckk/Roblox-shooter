@@ -199,6 +199,27 @@ def main():
         check(needle in native_props,
               "Native forklift PBR-fallback detail or physics safety missing: " + needle)
 
+    # Distinctive pallet cargo must follow actual server collision bodies.
+    # Additional cargo can only be visual: no new query, touch or collisions.
+    pallet_plan = source("src/shared/PalletVisualPlan.luau")
+    for needle in ('function Plan.forCollider(', '"TIMBER_CRATE"',
+                   '"WRAPPED_FREIGHT"', '"STEEL_CAGE"',
+                   'value == value', 'math.huge'):
+        check(needle in pallet_plan,
+              "Pallet model placement/variation safety missing: " + needle)
+    for needle in ('PalletVisualPlan.forCollider(', 'collider:IsA("BasePart")',
+                   'collider.Size.X, collider.Size.Y, collider.Size.Z',
+                   'palletStacks(folder, collider, plan)',
+                   'collider.CFrame * CFrame.new(0, -collider.Size.Y * 0.5, 0)',
+                   '"timber diagonal "', '"shrinkwrap side "',
+                   '"cage upright "', '"freight identity plate"',
+                   'p.CanCollide = false', 'p.CanTouch = false',
+                   'p.CanQuery = false'):
+        check(needle in native_props,
+              "Pallet 3D styling or collision contract missing: " + needle)
+    check("Vector2.new(0, -128)" not in native_props,
+          "Pallet art must not duplicate map coordinates")
+
     # All surface replacements are visibly attached to ACTUAL colliders and
     # never author additional bullet or movement collision volumes.
     cover = source("src/server/CoverArt.luau")

@@ -84,3 +84,8 @@ Studio/Android acceptance: inspect eight box variants, verify the stripes and pl
 ## Physically grounded world texture bake & visual gate — 7 November 2026
 
 Inspect the world source release preview.png (rows freight steel, warehouse steel, asphalt; columns ColorMap, NormalMap, RoughnessMap, MetalnessMap). Painted freight surfaces must look coated/matte rather than mirror-metallic. Scratches/chips should reveal isolated metallic substrate; warehouse sheets should read as steel, asphalt as matte aggregate. CI verifies original 1K 12-image PNG hashes, CRC, border continuity and physically distinct metallicity/roughness. After authorized Open Cloud image upload, validate actual Roblox MaterialVariants in Studio and Android for texture tiling, normal orientation, paint color and memory/performance. Do not label static-native fallback PBR.
+
+
+## Pallet cargo visual variety — 8 November 2026
+
+Five existing 9×3.7×9 physically authoritative pallet-stack colliders now own three distinguishable original visual treatments: cross-braced timber export crates, translucent shrink-wrapped sealed cargo, and olive/graphite steel cage equipment. Every stack includes a readable freight code. Source positions and orientations are computed directly from actual MapService colliders, never duplicated coordinates. Every new Part is anchored, CanCollide=false, CanTouch=false, CanQuery=false, tagged with Core/Detail and handled by existing client art LOD. No new cover, bullet blocks, remote events, game logic, external assets, paid resources or extra realtime loops. Studio/Android visual, obstacle and FPS verification is still required.

@@ -367,3 +367,14 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Prévisualisation 4 colonnes × 3 lignes des cartes PBR sous forme d'un PNG inspectable dans chaque artifact et release GitHub, avec rapport JSON de métriques et convention de colonnes/lignes stable.
 - [x] Contrôle de qualité intégré **avant** tout téléchargement/activation de textures Roblox via le workflow propriétaire ; image de peinture artificiellement métallique même avec manifeste resigné rejetée par régression.
 - [ ] Le moteur Roblox n'appliquera les textures que lorsque le propriétaire aura réellement importé/modéré les 12 images et activé les ID sur le jeu publié ; validation Studio/Android non effectuée.
+
+
+## 8 novembre 2026 — cinq palettes de fret : trois silhouettes 3D réellement distinctes
+
+- [x] Remplacement du traitement visuel uniforme des cinq palettes de fret par trois familles à forte lisibilité : **caisses export en bois croisillonné**, **colis filmés/cerclés** et **module de fret en cage métallique**.
+- [x] Les cinq groupes ne sont plus positionnés à partir d'une seconde liste de coordonnées figées : les décors sont créés directement depuis les **cinq colliders autoritaires** de MapService, en reprenant leur CFrame et dimensions.
+- [x] Plaques d'identification visibles sur chaque cargo ; une silhouette Core persistante en ECO, et petits renforts/transparences de film supprimés à distance par le LOD Android existant.
+- [x] Toute la géométrie additionnelle est ancrée, non traversante pour les raycasts, sans collision, touch ou nouvelle Remote ; aucun art ne peut changer les couvertures, le déplacement ou l'IA.
+- [x] Tests Luau des cinq identifiants, trois styles, dimensions réelles de colliders, variantes invalides ; contrôle statique de l'intégration et build Rojo.
+- [ ] Vérifier visuellement dans Roblox Studio/Android : silhouettes distinctes à 20-80 studs, faces de cargo, rotations, alignement de collision, ombres, contraste des labels et budget sur mobile.
+- [ ] Les modèles 3D importés et textures PBR restent bloqués par les identifiants Roblox propriétaires, le rendu 3D natif est un fallback jouable et non un modèle importé.
