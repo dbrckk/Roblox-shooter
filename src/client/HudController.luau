@@ -3,6 +3,8 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TouchLayout"))
+local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
+local FeedbackPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatFeedbackPolicy"))
 
 local HudController = {}
 HudController.__index = HudController
@@ -76,6 +78,9 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.options = options or {}
 	self.currentWeaponId = "AssaultRifle"
 	self.hitToken = 0
+    self.lastConfirmedHudHitAt = -math.huge
+    self.lastConfirmedHudHitPriority = 0
+    self.damageReadoutToken = 0
 	self.settingsOpen = false
 	self.baseFov = self.options.baseFov or DEFAULT_FOV
 	self.mouseSensitivity = self.options.mouseSensitivity or DEFAULT_SENSITIVITY
@@ -177,6 +182,25 @@ function HudController:_buildCrosshair()
     elimination.Parent = self.gui
     self.eliminationConfirmation = elimination
     self.eliminationToken = 0
+
+    -- Single reused label: confirmed health loss or spawn shield only.
+    -- No per-shot BillboardGui, sounds, debris, or UI object allocation.
+    local readout = Instance.new("TextLabel")
+    readout.Name = "DamageReadout"
+    readout.AnchorPoint = Vector2.new(0.5, 0.5)
+    readout.Position = UDim2.new(0.5, 0, 0.5, -48)
+    readout.Size = UDim2.fromOffset(200, 25)
+    readout.BackgroundTransparency = 1
+    readout.Font = Enum.Font.GothamBold
+    readout.TextSize = 15
+    readout.TextColor3 = Color3.fromRGB(227, 234, 218)
+    readout.TextStrokeColor3 = Color3.fromRGB(22, 27, 27)
+    readout.TextStrokeTransparency = 0.32
+    readout.TextXAlignment = Enum.TextXAlignment.Center
+    readout.TextTransparency = 1
+    readout.Visible = false
+    readout.Parent = self.gui
+    self.damageReadout = readout
 end
 
 function HudController:_buildHealthBar()
@@ -644,16 +668,48 @@ function HudController:setScoped(scoped)
     self.crosshair.Visible = not (scoped and isOptical)
 end
 
+local function showDamageReadout(self, content, color, duration)
+    local label = self.damageReadout
+    self.damageReadoutToken += 1
+    local token = self.damageReadoutToken
+    label.Text = content
+    label.TextColor3 = color
+    label.TextTransparency = 0
+    label.Visible = true
+    task.delay(duration, function()
+        if self.damageReadoutToken == token and label.Parent then
+            label.TextTransparency = 1
+            label.Visible = false
+        end
+    end)
+end
+
+function HudController:showProtectedFeedback()
+    -- Avoid replacing a recently confirmed elimination with a weaker shield
+    -- indicator from another pellet or a lagged hit notification.
+    if os.clock() - self.lastConfirmedHudHitAt < 0.24 then return end
+    showDamageReadout(self, FeedbackPolicy.readout("Protected"),
+        Color3.fromRGB(172, 208, 226), 0.48)
+end
+
 function HudController:showHitFeedback(message)
-    self.hitToken += 1
-    local token = self.hitToken
     local killed = message.killed == true
     local headshot = message.headshot == true
+    local priority = CombatVfxProfile.hitPriority(headshot, killed)
+    local now = os.clock()
+    if not CombatVfxProfile.shouldDisplayHit(now,
+        self.lastConfirmedHudHitAt, self.lastConfirmedHudHitPriority, priority) then
+        return
+    end
+    self.lastConfirmedHudHitAt = now
+    self.lastConfirmedHudHitPriority = priority
+    self.hitToken += 1
+    local token = self.hitToken
     local color = killed and Color3.fromRGB(247, 189, 105)
         or (headshot and Color3.fromRGB(255, 226, 153)
             or Color3.fromRGB(255, 255, 255))
 
-    -- Compact X: the giant K blocked point-blank targets.
+    -- Only actual server-confirmed hits emit the X and damage text.
     self.hitMarker.Text = "×"
     self.hitMarker.TextColor3 = color
     self.hitMarker.TextTransparency = 0
@@ -661,6 +717,11 @@ function HudController:showHitFeedback(message)
     self.hitMarker.Size = UDim2.fromOffset(
         killed and 100 or (headshot and 100 or 82),
         killed and 60 or (headshot and 60 or 46))
+
+    local readoutText = FeedbackPolicy.readout("Hit", message.damage, headshot)
+    if readoutText then
+        showDamageReadout(self, readoutText, color, killed and 0.78 or 0.48)
+    end
 
     if killed then
         self.eliminationToken += 1

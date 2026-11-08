@@ -219,3 +219,15 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Le briefing remplace temporairement la carte de score dans la zone haute, sans recouvrir la sélection d'armes. L'ouverture de SET masque la mission et élève le panneau de réglages devant les autres interfaces.
 - [x] Contrôle d'intégration du HUD et vérification CI ajoutés. Les tirs, dégâts, mouvement et score ne changent pas.
 - [ ] Valider dans Roblox sur Android la compatibilité effective avec le joystick/saut natifs, les encoches et la lecture sur plusieurs tailles d'écran ; la compilation ne simule pas le moteur graphique.
+
+ 
+### L2.3 — confirmations de combat fiables, à faible coût (8 novembre 2026)
+
+- [x] Tout tir confirmé affiche désormais dans le HUD un seul nombre compact de dégâts réellement soustraits au Humanoid, non la valeur théorique de l'arme. Un tir qui tue une cible à 9 PV affiche 9 DMG même si l'arme inflige normalement 24 dégâts. Le serveur reste autoritaire.
+- [x] Les headshots affichent HEADSHOT et une priorité supérieure aux touches classiques ; les éliminations l'emportent sur les autres retours de la même volée de shotgun, avec le budget temporel existant de CombatVfxProfile.
+- [x] Un tir ayant touché un adversaire protégé à la réapparition indique SPAWN SHIELD (sans marqueur trompeur ni transmission de nom/position). Les retours protégés sont plafonnés à un message toutes les 0,45 secondes par tireur.
+- [x] Les RemoteEvents Miss étaient transmis à chaque tir infructueux mais n'avaient aucun consommateur client : suppression de ces transmissions inutiles. Les messages Hit, Ammo, OutOfAmmo, médailles et effets spectateurs sont conservés ; aucun changement au rythme ni aux dégâts.
+- [x] Readout compact réutilisé au-dessus du viseur, sans créer de nouvel objet GUI par tir ; délais de masquage bornés. Filtre des valeurs non finies.
+- [x] Tests Luau des dégâts réellement perdus, des boucliers et d'une baseline théorique des 5 armes pour une cible à 100 PV ; contrôle d'intégration des flux serveur/client en CI.
+- [ ] Confirmer en jeu sur Android/PC les confirmations visuelles, la lisibilité pendant l'ADS, le cas shotgun multicibles, le respawn protégé et le débit réseau. Les TTK théoriques ne mesurent ni les dispersions ni le taux de réussite.
+- [ ] Ajuster statistiquement l'équilibrage des armes après des sessions réelles ; ne pas altérer les valeurs sans référence d'usage.

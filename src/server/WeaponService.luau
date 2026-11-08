@@ -5,6 +5,7 @@ local Debris = game:GetService("Debris")
 
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
+local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 
@@ -102,6 +103,16 @@ local function sendFeedback(player, message)
     end
 end
 
+-- Repeated fire against a protected player must not flood the owner with
+-- 8-9 shield notifications/second on an automatic rifle.
+local function sendProtected(player, weaponId)
+    local state = getState(player)
+    local now = os.clock()
+    if now < (state.nextProtectedNoticeAt or 0) then return end
+    state.nextProtectedNoticeAt = now + 0.45
+    sendFeedback(player, { kind = "Protected", weaponId = weaponId })
+end
+
 local function broadcastFireFx(player, weaponId, origin)
     if not remotes then
         return
@@ -142,22 +153,10 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
         return false
     end
-    if not raycastResult then
-        sendFeedback(attacker, {
-            kind = "Miss",
-            weaponId = weaponId,
-        })
-        return false
-    end
+    if not raycastResult then return false end
 
     local targetHumanoid, targetCharacter = getHumanoidFromHit(raycastResult.Instance)
-    if not targetHumanoid or targetHumanoid.Health <= 0 then
-        sendFeedback(attacker, {
-            kind = "Miss",
-            weaponId = weaponId,
-        })
-        return false
-    end
+    if not targetHumanoid or targetHumanoid.Health <= 0 then return false end
 
     if targetCharacter == attacker.Character then
         return false
@@ -166,7 +165,6 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
     -- Only the match's combatants can be hurt by public fire requests.
     if not targetPlayer and targetCharacter:GetAttribute("IsArenaBot") ~= true then
-        sendFeedback(attacker, { kind = "Miss", weaponId = weaponId })
         return false
     end
     if targetPlayer == attacker then
@@ -175,7 +173,9 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 
     -- Avoid spawn-camping. Server-only protection is removed when its owner fires.
     if SpawnService.isProtected(targetCharacter) then
-        sendFeedback(attacker, { kind = "Miss", weaponId = weaponId })
+        -- A confirmed hit on a protected opponent is not a miss.
+        -- Do not leak target positions or names in this feedback.
+        sendProtected(attacker, weaponId)
         return false
     end
     local headshot = raycastResult.Instance.Name == "Head"
@@ -189,17 +189,14 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         targetCharacter:SetAttribute("IronYardLastHitTime", workspace:GetServerTimeNow())
     end
 
-    if targetHumanoid.Health >= healthBefore then
-        sendFeedback(attacker, { kind = "Miss", weaponId = weaponId })
-        return false
-    end
+    if targetHumanoid.Health >= healthBefore then return false end
 
     sendFeedback(attacker, {
         kind = "Hit",
         weaponId = weaponId,
         hitPosition = raycastResult.Position,
         targetName = targetPlayer and targetPlayer.DisplayName or targetCharacter.Name,
-        damage = damage,
+        damage = FeedbackPolicy.actualDamage(healthBefore, targetHumanoid.Health),
         headshot = headshot,
         killed = healthBefore > 0 and targetHumanoid.Health <= 0,
         distance = origin and (raycastResult.Position - origin).Magnitude or 0,
@@ -348,6 +345,7 @@ local function firePelletWeapon(player, weaponId, config, direction)
     -- A small set of actual world contacts adds readable shotgun spread.
     -- Humanoid impacts are never broadcast in this payload.
     local extraWorldImpacts = {}
+    local struckShield = false
 
     for _ = 1, config.pellets do
         local pelletDirection = randomSpread(direction, config.spreadDegrees)
@@ -369,7 +367,9 @@ local function firePelletWeapon(player, weaponId, config, direction)
             if humanoid and humanoid.Health > 0 and model ~= character then
                 local opponent = Players:GetPlayerFromCharacter(model)
                 if (opponent or model:GetAttribute("IsArenaBot") == true)
-                    and not SpawnService.isProtected(model) then
+                    and SpawnService.isProtected(model) then
+                    struckShield = true
+                elseif (opponent or model:GetAttribute("IsArenaBot") == true) then
                     local entry = victims[humanoid]
                     if not entry then
                         entry = { model = model, player = opponent, damage = 0,
@@ -412,7 +412,8 @@ local function firePelletWeapon(player, weaponId, config, direction)
                     kind = "Hit", weaponId = weaponId,
                     hitPosition = entry.hitPosition,
                     targetName = entry.player and entry.player.DisplayName or entry.model.Name,
-                    damage = damage, headshot = entry.headshots > 0,
+                    damage = FeedbackPolicy.actualDamage(oldHealth, humanoid.Health),
+                    headshot = entry.headshots > 0,
                     killed = killed, distance = entry.distance,
                 })
             end
@@ -430,7 +431,11 @@ local function firePelletWeapon(player, weaponId, config, direction)
             end
         end
     end
-    if not anyHit then sendFeedback(player, { kind = "Miss", weaponId = weaponId }) end
+    -- Empty misses have no client consumer. Do not send one remote per
+    -- unconfirmed pellet/shot; report protected hits only when no real damage.
+    if not anyHit and struckShield then
+        sendProtected(player, weaponId)
+    end
 end
 
 local function createKnifeVisual(origin, direction)
@@ -514,13 +519,8 @@ local function fireKnife(player, weaponId, config, direction)
             knife:Destroy()
         end
 
-        if launchedEpoch == weaponRoundEpoch and player.Character == character
-            and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
-            sendFeedback(player, {
-                kind = "Miss",
-                weaponId = weaponId,
-            })
-        end
+        -- The projectile expired without contact; no unused Miss event.
+        -- Existing authoritative Ammo and Hit feedback are unaffected.
     end)
 end
 

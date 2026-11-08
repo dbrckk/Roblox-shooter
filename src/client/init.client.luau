@@ -1079,6 +1079,9 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
         if typeof(message.hitPosition) == "Vector3" then
             visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)
         end
+    elseif message.kind == "Protected" then
+        -- Confirmed collision with an active spawn shield; not a missed shot.
+        hud:showProtectedFeedback()
     elseif message.kind == "Ammo" and typeof(message.weaponId) == "string"
         and typeof(message.capacity) == "number" and typeof(message.loaded) == "number" then
         ammoByWeapon[message.weaponId] = {

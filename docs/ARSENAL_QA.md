@@ -44,3 +44,13 @@ for IRON YARD. No copyrighted source assets from RIVALS or Arsenal were cloned.
 - Bot tracers and remote-player tracers include authoritative impact normals and material names when hitting world cover. Metal, wood and concrete produce small short-lived chips; humanoid impacts do not create wall sparks.
 - Android clients use at most two chips at 100 studs; desktop clients use up to four at 185 studs. All effects are non-colliding, non-queryable, non-touching and Debris-cleaned; no extra gameplay network remotes.
 - **Studio acceptance:** test 2 humans + 4 bots, automatic fire against steel/concrete/wood, shotgun traffic, spectator view, first-person wall occlusion, and mobile frame pacing. Predictions do not establish server damage authority. The Rojo/Luau CI is not a runtime playtest.
+
+ 
+## Authoritative hit readout and protected respawns — 8 November 2026
+
+- The shooter's existing WeaponFeedback RemoteEvent now displays an economical on-screen DAMAGE readout only for confirmed loss of server-side Humanoid health. Overkill is never exaggerated: a 24-damage shot against 9 HP reports 9 DMG. The same pure rule clamps invalid/huge values.
+- A real collision with a player/bot still within the temporary 2.5-second server spawn shield produces SPAWN SHIELD instead of silently appearing to be a bad aim. This does not register a hit, score, leak opponent names/positions, or change damage. Protection notifications are capped at once per shooter per 0.45 s.
+- Dead/missing/world impacts, protected defenders and other shots that do not apply damage no longer send unused Miss remotes. Existing tracer, ammo, hit, award and kill-feed remotes are unaffected.
+- Shotgun pellets continue to aggregate damage per target on the server and send one confirmed Hit per damaged target. Existing priority gating prevents weaker same-volley hits from hiding a confirmed elimination; the HUD uses one reusable label, no per-shot GUI objects.
+- Baseline theoretical 100-HP zero-spread body/headshots: AR-24 5/3, pistol 3/1, B-8 1/1 if all eight pellets land point-blank, sniper 2/1, knife 1/1. This is NOT a live TTK/playtest measurement; shotgun spread/falloff, reaction and reload matter.
+- **Studio / mobile acceptance:** fire into cover, protected and unprotected players, bots, and empty space. Check shield text only on protected fighter contact; fire AR continuously and verify no non-damage remote flood. Confirm a 9-HP target displays 9 DMG on lethal AR shot. Confirm headshot, simultaneous shotgun multi-target kill, knife projectile, respawn and scoped sniper. Check readability and no input obstruction at 568x320 and 915x412. This change does not claim a Roblox engine test.
