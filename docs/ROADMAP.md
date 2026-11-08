@@ -401,3 +401,13 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Art ancré, non-queryable, non-collisionnant, sans ombre, avec niveaux Core/Detail compatibles avec le LOD mobile existant ; pas de lights/Remote/logic d'animation supplémentaires.
 - [x] Tests Luau des 12 objets de gameplay, de dimensions et noms invalides, de la séparation des 6 tôles, et garde-fous de build CI.
 - [ ] Valider dans Studio et Android la cohérence des nuances, des grilles et rampes déjà présentes, le contraste des bandes jaunes, les surfaces de déplacement, et le frame pacing avec quatre bots.
+
+
+## 8 novembre 2026 — couvertures de combat identifiables et whitelist stricte
+
+- [x] Contrôle de l'inventaire **32 couvertures réellement construites** : 16 barrières en béton des huit conteneurs, 13 blocs routiers placés par la règle trigonométrique de la carte, 2 barrières latérales et le poste d'emballage central.
+- [x] Correction du plan d'habillage : seuls des noms, indices et dimensions de colliders MapService exactement correspondants sont acceptés. L'ancien test trop permissif a été remplacé par une régression exhaustive des vrais colliders et des cas invalides (NaN, infinis, tailles non conformes, fausses entrées).
+- [x] Trois finitions différenciées : joint de dilatation moulé sur béton, **plaque antichoc DiamondPlate** sur barricades métalliques et **trois nervures de chargement** sur couvertures cargo.
+- [x] **16 identifications de zone**, une par groupe de béton, cinq roadblocks sélectionnés et trois couverts centraux, matérialisées par des plaques Core avec inscription SurfaceGui visible depuis le côté de référence.
+- [x] Tous les ajouts sont purement visuels, CanCollide=false, CanQuery=false, CanTouch=false, sans nouvelle physique, IA ni réseau ; petits détails marqués Detail et masquables à distance sur Android.
+- [ ] Vérification réelle à faire dans Roblox Studio/Android : plaquettes lisibles, orientation des noms depuis les 2 itinéraires, contours des barricades cohérents avec l'obstacle qui arrête réellement les tirs, 30/60 FPS et budget mémoire.

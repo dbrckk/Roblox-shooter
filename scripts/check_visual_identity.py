@@ -299,6 +299,29 @@ def main():
     for needle in ('"CAST_CONCRETE"', '"ARMED_ROADBLOCK"', '"CARGO_BARRIER"',
                    "function CoverSurfacePlan.forCollider("):
         check(needle in cover_plan, "Missing deterministic combat cover style: " + needle)
+    # Only 32 real combat covers receive decoration: 16 container barriers,
+    # 13 live radial roadblocks and the three warehouse/vault covers.
+    # Wayfinding must be bounded, legible and nonphysical on Android.
+    for needle in ('function roadblockExists(index)', 'index > 16',
+                   'math.cos(angle)', 'math.sin(angle)',
+                   'dimension(x, 13)', 'dimension(y, 5.5)',
+                   '"^COVER / concrete barrier (%-?%d+):(%-?%d+):(%-?%d+)$"',
+                   '"^COVER / movable roadblock (%d+)$"',
+                   'marked = flank == 1', 'marked = index % 3 == 1',
+                   'serial = marked and serial or nil'):
+        check(needle in cover_plan,
+              "Authoritative combat-cover whitelist or signage budget missing: " + needle)
+    for needle in ('local function stencil(plate, message)',
+                   '"CoverFreightIdentification"',
+                   'surface.Face = Enum.NormalId.Front',
+                   '"cast expansion seam "', '"diamondplate strike shield "',
+                   '"cargo shutter rib "', '"freight serial plate"',
+                   'if plan.serial then', 'return part'):
+        check(needle in cover,
+              "Combat cover distinctive skins and ID decals missing: " + needle)
+    check('Instance.new("PointLight")' not in cover
+          and 'Instance.new("SpotLight")' not in cover,
+          "Cover facades must not add server-side real-time lights")
     lod_source = source("src/client/BotLOD.client.luau")
     check('"IronYardCoverSkins"' in lod_source,
           "Cover detail must have mobile visibility culling")

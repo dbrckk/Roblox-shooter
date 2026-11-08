@@ -39,6 +39,28 @@ local function panel(folder, collider, suffix, offset, size, color, material, ti
     part.CastShadow = false
     part:SetAttribute("NeonArtTier", tier)
     part.Parent = folder
+    return part
+end
+
+local function stencil(plate, message)
+    -- One short freight code on the forward face of important covers.
+    -- No global BillboardGui, replicated updates or touch interactions.
+    local surface = Instance.new("SurfaceGui")
+    surface.Name = "CoverFreightIdentification"
+    surface.Face = Enum.NormalId.Front
+    surface.CanvasSize = Vector2.new(430, 120)
+    surface.LightInfluence = 0.3
+    surface.Parent = plate
+
+    local label = Instance.new("TextLabel")
+    label.Name = "CargoCode"
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.TextScaled = true
+    label.TextColor3 = Color3.fromRGB(47, 55, 53)
+    label.Text = message
+    label.Parent = surface
 end
 
 local function dress(folder, collider, plan)
@@ -64,6 +86,26 @@ local function dress(folder, collider, plan)
                 Vector3.new(0.3, y * 0.77, 0.16),
                 paint.metal, Enum.Material.Metal, "Core")
         end
+        -- Style-specific surface language, always attached to a real solid
+        -- cover. These overlays are invisible to physical and weapon rays.
+        if plan.style == "CAST_CONCRETE" then
+            panel(folder, collider, "cast expansion seam " .. side,
+                Vector3.new(x * 0.21, 0, face + side * 0.13),
+                Vector3.new(0.14, y * 0.72, 0.06),
+                paint.inset, Enum.Material.Concrete, "Detail")
+        elseif plan.style == "ARMED_ROADBLOCK" then
+            panel(folder, collider, "diamondplate strike shield " .. side,
+                Vector3.new(0, y * 0.12, face + side * 0.13),
+                Vector3.new(x * 0.52, y * 0.38, 0.085),
+                paint.metal, Enum.Material.DiamondPlate, "Core")
+        elseif plan.style == "CARGO_BARRIER" then
+            for rib = 1, 3 do
+                panel(folder, collider, "cargo shutter rib " .. side .. ":" .. rib,
+                    Vector3.new(0, (rib - 2) * y * 0.24, face + side * 0.12),
+                    Vector3.new(x - 1.2, 0.16, 0.09),
+                    paint.metal, Enum.Material.Metal, "Detail")
+            end
+        end
         -- Retain a strong two-color silhouette after distant cosmetic LOD.
         for i = 1, plan.stripeCount do
             local at = (i - (plan.stripeCount + 1) * 0.5)
@@ -79,6 +121,17 @@ local function dress(folder, collider, plan)
         Vector3.new(0, y * 0.5 - 0.055, 0),
         Vector3.new(x - 0.14, 0.19, z - 0.13),
         paint.metal, Enum.Material.Metal, "Core")
+
+    -- Sixteen strategically placed identifiers across 32 actual covers:
+    -- one per concrete freight cluster, selected roadblocks, and the three
+    -- warehouse obstacles. Front faces -Z, independent of collider yaw.
+    if plan.serial then
+        local plate = panel(folder, collider, "freight serial plate",
+            Vector3.new(x * 0.24, y * 0.31, -plan.surfaceOffset - 0.24),
+            Vector3.new(math.min(5.0, x * 0.50), 0.86, 0.14),
+            Color3.fromRGB(234, 227, 198), Enum.Material.Metal, "Core")
+        stencil(plate, plan.serial)
+    end
 end
 
 function CoverArt.build(arena)
