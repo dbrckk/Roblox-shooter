@@ -100,7 +100,7 @@ def main():
 
     navigation = source("src/server/BotNavigation.luau")
     has(navigation, "if directRouteClear(bot, goal, params) then", "Capsule collision probe")
-    has(navigation, "requestMove(bot, bot.root.Position, now, bot.navMode ~= "WAIT")",
+    has(navigation, 'requestMove(bot, bot.root.Position, now, bot.navMode ~= "WAIT")',
         "Bots must not walk into a confirmed obstructed direct route")
     require("bot.humanoid:MoveTo(goal)" in navigation,
             "Unobstructed bot routes must still move directly")
