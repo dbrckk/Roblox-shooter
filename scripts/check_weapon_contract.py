@@ -99,8 +99,8 @@ def main():
         has(hud, name, "HUD accessibility")
 
     navigation = source("src/server/BotNavigation.luau")
-    has(navigation, "if directRouteClear(bot, goal) then", "Capsule collision probe")
-    has(navigation, "bot.humanoid:MoveTo(bot.root.Position)",
+    has(navigation, "if directRouteClear(bot, goal, params) then", "Capsule collision probe")
+    has(navigation, "requestMove(bot, bot.root.Position, now, bot.navMode ~= "WAIT")",
         "Bots must not walk into a confirmed obstructed direct route")
     require("bot.humanoid:MoveTo(goal)" in navigation,
             "Unobstructed bot routes must still move directly")
@@ -127,7 +127,7 @@ def main():
     ):
         has(tactics, key, "Reachable defensive cover and bounded resampling")
     for needle in (
-        "local function chooseDetour(bot, goal)",
+        "local function chooseDetour(bot, goal, params)",
         "local function walkableCandidate(bot, raw, params)",
         "Capsule clearance does not imply the FLOOR exists",
         "for _, lookahead in ipairs({ 7, 14, 22, 30 }) do",
