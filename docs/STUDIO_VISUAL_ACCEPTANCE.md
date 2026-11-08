@@ -114,3 +114,10 @@ The client now groups all Detail-tier Parts of the three existing decorative fol
 ## Four grounded sector markings — 8 November 2026
 
 The exterior freight circulation lanes now feature exactly four broad paint stencils (sector 01–04) with readable east/west and north/south navigation labels. They use four thin Core parts with static top-face SurfaceGui, are permanently noncolliding, nonqueryable, non-touching and shadowless, and contain no gameplay objectives, real-time lights, new server movement or additional network traffic. Inspect from first-person camera across mobile ECO/BAL/QUALITY and desktop, check contrast and clipping at 568x320 and 915x412, and verify forklifts and containers do not obscure them. Floor stamping is not equivalent to published PBR assets.
+
+
+## Server bot navigation workload gate — 8 November 2026
+
+With four real bots active, the server now permits at most two outstanding asynchronous PathfindingService ComputeAsync requests and staggers new starts by 0.18 s. Tokens are released by each completed callback, invalid or timed-out routes cannot replace newer goals, and hung tickets expire after 5.8 s. Existing 5 Hz bot decisions, movement collision capsule checks, ground and catwalk-edge probes, cover tactics and path-blocked listener remain authoritative. Stable Humanoid MoveTo destinations are coalesced and refreshed at most every 1.15 s; any large goal change or entry into WAIT still sends an immediate command. RaycastParams are reused within each single navigation decision.
+
+Live Studio validation is required: test four bots pursuing crossing players, tight container corners, catwalk edges, blocked paths and successive target switching; confirm no starvation and no 'frozen in place' NPC under load. Inspect pathfinding/server frame-time and MoveTo calls, and capture mobile FPS with four bots firing. CI validates limits and integration, not real engine performance.

@@ -5,9 +5,11 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Planner = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotAvoidancePlan"))
+local Budget = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotPathBudget"))
 
 local BotNavigation = {}
 local rnd = Random.new()
+local pathBudget = Budget.new()
 local WAYPOINT_REACH = 4.5
 local GOAL_REPATH_DISTANCE = 20
 local PATH_COMPUTE_TIMEOUT = 5.0
@@ -23,6 +25,19 @@ local function setMode(bot, mode)
     bot.navModeSince = os.clock()
     if bot.model and bot.model.Parent then
         bot.model:SetAttribute("IronYardNavMode", mode)
+    end
+end
+
+-- Reissue a changed MoveTo target immediately, but do not reset Roblox
+-- Humanoid movement on every 0.2-second bot thinking step when unchanged.
+local function requestMove(bot, goal, now, force)
+    local moved = bot.lastMoveGoal and (goal - bot.lastMoveGoal).Magnitude
+        or math.huge
+    local age = now - (bot.lastMoveIssuedAt or -math.huge)
+    if force or Budget.shouldIssueMove(moved, age) then
+        bot.humanoid:MoveTo(goal)
+        bot.lastMoveGoal = goal
+        bot.lastMoveIssuedAt = now
     end
 end
 
@@ -90,13 +105,12 @@ local function walkableCandidate(bot, raw, params)
     return grounded
 end
 
-local function chooseDetour(bot, goal)
+local function chooseDetour(bot, goal, params)
     local origin = bot.root.Position
     local vector = Vector3.new(goal.X - origin.X, 0, goal.Z - origin.Z)
     if vector.Magnitude < 2 then return nil end
     local ahead = vector.Unit
     local right = Vector3.new(-ahead.Z, 0, ahead.X)
-    local params = environmentParams(bot)
     local attempt = bot.detourAttempts or 0
     bot.detourAttempts = attempt + 1
     -- At most six grounded candidates, each checked with the same five
@@ -140,9 +154,11 @@ function BotNavigation.invalidate(bot)
     bot.detourUntil = 0
     bot.nextDetourAt = 0
     bot.navSteeringGoal = nil
+    bot.lastMoveGoal = nil
+    bot.lastMoveIssuedAt = nil
 end
 
-local function followWaypoints(bot)
+local function followWaypoints(bot, now)
     local waypoints = bot.waypoints
     if not waypoints or #waypoints == 0 then return false end
     local point = waypoints[bot.waypointIndex]
@@ -164,25 +180,25 @@ local function followWaypoints(bot)
         return false
     end
     bot.navSteeringGoal = point.Position
-    bot.humanoid:MoveTo(point.Position)
+    requestMove(bot, point.Position, now)
     if point.Action == Enum.PathWaypointAction.Jump then
         bot.humanoid.Jump = true
     end
     return true
 end
 
-local function followDetour(bot, goal, now)
+local function followDetour(bot, goal, now, params)
     local detour = bot.detourGoal
     if detour then
         local expired = now >= (bot.detourUntil or 0)
         local arrived = (bot.root.Position - detour).Magnitude <= 3.5
         local goalMoved = bot.detourTarget
             and (goal - bot.detourTarget).Magnitude > GOAL_REPATH_DISTANCE
-        if expired or arrived or goalMoved or not directRouteClear(bot, detour) then
+        if expired or arrived or goalMoved or not directRouteClear(bot, detour, params) then
             bot.detourGoal = nil
         else
             bot.navSteeringGoal = detour
-            bot.humanoid:MoveTo(detour)
+            requestMove(bot, detour, now)
             setMode(bot, "AVOID")
             return true
         end
@@ -190,13 +206,13 @@ local function followDetour(bot, goal, now)
     if now < (bot.nextDetourAt or 0) then return false end
 
     bot.nextDetourAt = now + DETOUR_RECHECK_SECONDS
-    local candidate = chooseDetour(bot, goal)
+    local candidate = chooseDetour(bot, goal, params)
     if not candidate then return false end
     bot.detourGoal = candidate
     bot.detourTarget = goal
     bot.detourUntil = now + DETOUR_HOLD_SECONDS
     bot.navSteeringGoal = candidate
-    bot.humanoid:MoveTo(candidate)
+    requestMove(bot, candidate, now)
     setMode(bot, "AVOID")
     return true
 end
@@ -204,26 +220,30 @@ end
 function BotNavigation.steer(bot, goal, isCurrent)
     if bot.humanoid.Health <= 0 or not bot.root.Parent then return end
     local now = os.clock()
-    if directRouteClear(bot, goal) then
+    -- Shared environmental filter within this single steer decision:
+    -- avoid allocating extra RaycastParams/character ignore arrays while
+    -- evaluating detours against the same static collision geometry.
+    local params = environmentParams(bot)
+    if directRouteClear(bot, goal, params) then
         if bot.waypoints or bot.pathing then BotNavigation.invalidate(bot) end
         bot.detourGoal = nil
         bot.navSteeringGoal = goal
-        bot.humanoid:MoveTo(goal)
+        requestMove(bot, goal, now)
         setMode(bot, "DIRECT")
         return
     end
 
     -- Retain a valid path while an asynchronous replacement is computing.
-    local moving = followWaypoints(bot)
+    local moving = followWaypoints(bot, now)
     if moving then
         setMode(bot, "PATH")
-    elseif not followDetour(bot, goal, now) then
+    elseif not followDetour(bot, goal, now, params) then
         -- Never charge directly into cover known to block the full capsule.
         -- The next verified path/detour, not an attempted collision, moves us.
         -- Keep the requested (blocked) goal available for stall monitoring.
         -- The MoveTo itself remains stopped until an actual route is found.
         bot.navSteeringGoal = goal
-        bot.humanoid:MoveTo(bot.root.Position)
+        requestMove(bot, bot.root.Position, now, bot.navMode ~= "WAIT")
         setMode(bot, "WAIT")
     end
 
@@ -263,6 +283,13 @@ function BotNavigation.steer(bot, goal, isCurrent)
         return
     end
 
+    -- Hard server-wide cap: only two concurrent ComputeAsync operations
+    -- from the four bots, and never two path starts in the same burst.
+    -- Denied bots keep verified detour/waypoint movement and retry at the
+    -- normal bounded AI tick. No change to path safety or goal selection.
+    local ticket = Budget.claim(pathBudget, now)
+    if not ticket then return end
+
     bot.pathing = true
     bot.pathStartedAt = now
     bot.lastComputeAt = now
@@ -287,7 +314,10 @@ function BotNavigation.steer(bot, goal, isCurrent)
             if path.Status ~= Enum.PathStatus.Success then return nil end
             return path:GetWaypoints()
         end)
-        if not isCurrent() or bot.pathRevision ~= revision then return end
+        local leaseValid = Budget.valid(pathBudget, ticket, os.clock())
+        Budget.release(pathBudget, ticket)
+        if not leaseValid or not isCurrent()
+            or bot.pathRevision ~= revision then return end
         bot.pathing = false
         bot.pathStartedAt = nil
         if ok and waypoints and #waypoints > 1

@@ -430,3 +430,14 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Un seul Part natif ancré par zone, avec SurfaceGui au-dessus du sol, sans BillboardGui, point lumineux, physique, requête de tir ni faux objectif de gameplay.
 - [x] Contrôle pur et testable des quatre positions x = ±52, z = ±112, à distance des conteneurs et des deux chariots. Les marquages restent volontairement Core pour être lisibles même en ECO sur Android.
 - [ ] Confirmer dans Roblox Studio/Android que les noms restent lisibles depuis un personnage R6, ne sont ni masqués par les chariots ni trompeurs sur le sens des itinéraires ; vérifier l'impact mémoire, pixels couverts et compatibilité des options d'accessibilité.
+
+
+## 8 novembre 2026 — plafonnement des calculs de trajectoire IA et des MoveTo répétés
+
+- [x] Analyse des quatre bots : la boucle tactique reste à 5 Hz, les animations 15 Hz près des joueurs / 8 Hz à distance ; principale source de charge évitable identifiée dans le lancement simultané de ComputeAsync et le renvoi de MoveTo identiques.
+- [x] Nouveau module pur BotPathBudget partagé par les quatre bots : au plus **2 requêtes ComputeAsync en cours**, départs espacés d'au moins **0,18 seconde**, tickets expirant après 5,8 s pour empêcher une requête bloquée de monopoliser la planification. Les anciens résultats invalides ne peuvent pas modifier un itinéraire actif.
+- [x] Contrôle d'admission avant de marquer bot.pathing : un bot qui attend son créneau continue à se déplacer sur les anciens waypoints ou vers une déviation sûre, avec reprise au tick tactique suivant.
+- [x] Commandes Humanoid:MoveTo regroupées : nouvelle destination émise immédiatement si sa position évolue d'au moins 1,25 studs ; sinon, rafraîchissement toutes les 1,15 seconde, avant le délai d'expiration moteur. Un ordre STOP est forcé lors de l'entrée en mode WAIT.
+- [x] Un seul RaycastParams créé par décision de navigation et réutilisé pour les vérifications du parcours direct et des déviations de la même décision ; maintien des 5 sondes de dégagement du personnage, des 4 sondes de sol et du filtre RespectCanCollide.
+- [x] Tests Luau des bornes, tickets concurrents et orphelins, expiration, retour d'un créneau, revalidation de MoveTo et valeurs invalides ; contrôle d'intégration statique et compilation Rojo.
+- [ ] Mesurer en session multi-bots Roblox Studio : nombre réel de ComputeAsync/secondes, temps CPU pathfinding, nombre de MoveTo/secondes, réaction aux obstacles et temps de sortie d'un blocage ; comparer les FPS client Android/PC avant/après. La validation CI ne constitue pas une mesure de performances en jeu.
