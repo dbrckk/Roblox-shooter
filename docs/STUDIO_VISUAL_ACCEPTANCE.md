@@ -104,3 +104,13 @@ Both real 64×3×52 loading-platform colliders now have six full-area native Dia
 ## Readable cover silhouettes and authoritative whitelist — 8 November 2026
 
 Exactly sixteen container concrete barriers, thirteen existing radial roadblocks and three warehouse/vault cover colliders may receive new facade pieces. The old prefix-only match was deliberately narrowed to actual MapService names and collider dimensions, refusing invalid/absent radial numbers and invalid sizes. Concrete gains expansion seams, metal roadblocks acquire DiamondPlate strike shields, and cargo covers receive three pressed steel shutter ribs. Sixteen strategically placed freight identity placards remain Core and readable on Android (one per freight cluster, five selected roadblocks, three central obstacles). Added surfaces are anchored, non-colliding, non-touching, non-queryable and cast no shadows; minor faces are LOD Detail and no new lights are allocated. Roblox Studio/Android acceptance must compare the true gameplay collider vs the visible armored face, confirm label orientation, mobile readability and four-bot frame pacing before calling the scene polished.
+
+
+## Spatially grouped decoration LOD — 8 November 2026
+
+The client now groups all Detail-tier Parts of the three existing decorative folders into fixed 48-stud horizontal cells. Conservative three-dimensional group bounds (with an 8-stud margin for locally animated gantry details) let the client hide/show all of a distant/near group only on its state transition; groups crossing the threshold still run precise per-part hysteresis based on squared distance. New or streamed-in parts trigger safe rebuild and reapplication. Previous ECO/BALANCED/QUALITY distances and every Core/hitbox part remain unchanged. Test in Android Studio live with four bots while moving quickly between the main warehouse, catwalks and corner gantries, switching presets while close to an LOD threshold. Monitor art pop-in, scan cadence, frame pacing and memory. No measured FPS improvement is claimed from CI alone.
+
+
+## Four grounded sector markings — 8 November 2026
+
+The exterior freight circulation lanes now feature exactly four broad paint stencils (sector 01–04) with readable east/west and north/south navigation labels. They use four thin Core parts with static top-face SurfaceGui, are permanently noncolliding, nonqueryable, non-touching and shadowless, and contain no gameplay objectives, real-time lights, new server movement or additional network traffic. Inspect from first-person camera across mobile ECO/BAL/QUALITY and desktop, check contrast and clipping at 568x320 and 915x412, and verify forklifts and containers do not obscure them. Floor stamping is not equivalent to published PBR assets.

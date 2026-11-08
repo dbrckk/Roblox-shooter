@@ -60,6 +60,8 @@ jobs:
           ./luau scripts/test_bot_death_plan.luau
           ./luau scripts/test_combat_vfx_profile.luau
           ./luau scripts/test_environment_profile.luau
+          ./luau scripts/test_art_lod_policy.luau
+          ./luau scripts/test_yard_wayfinding_plan.luau
           ./luau scripts/test_warehouse_cladding_plan.luau
           ./luau scripts/test_freight_surface_plan.luau
           ./luau scripts/test_pallet_visual_plan.luau

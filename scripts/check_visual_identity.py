@@ -174,6 +174,26 @@ def main():
     for needle in ('WorldPbr.apply(p, "yard_asphalt")', 'p.CanQuery = false'):
         check(needle in freight_art, "Cosmetic asphalt PBR hook unsafe: " + needle)
 
+    # Large Core ground marks give four readable zone identities without
+    # duplicating combat objectives, physical floors, or dynamic lighting.
+    zone_art = source("src/server/YardWayfindingArt.luau")
+    zone_plan = source("src/shared/YardWayfindingPlan.luau")
+    for needle in ('local YardWayfindingArt = require(script.Parent:WaitForChild("YardWayfindingArt"))',
+                   "YardWayfindingArt.decorate(decor)"):
+        check(needle in art, "Missing freight sector wayfinding integration: " + needle)
+    for needle in ('function Art.decorate(folder)', 'Plan.zones()',
+                   'part.CanCollide = false', 'part.CanQuery = false',
+                   'part.CanTouch = false', 'part.CastShadow = false',
+                   'part:SetAttribute("NeonArtTier", "Core")',
+                   '"YardSectorStamp"', 'label.Text = "SECTOR "'):
+        check(needle in zone_art, "Ground zone art must remain core and nonphysical: " + needle)
+    for needle in ('function Plan.zones()', '"01"', '"02"', '"03"', '"04"',
+                   'x = -52', 'x = 52', 'z = -112', 'z = 112'):
+        check(needle in zone_plan, "Four authored freight sector stamps missing: " + needle)
+    check('Instance.new("SpotLight")' not in zone_art
+          and 'Instance.new("PointLight")' not in zone_art,
+          "Wayfinding must not add runtime illumination")
+
     # High-visibility native 3D upgrades are an honest playable fallback
     # while the real PBR asset registry is still unpopulated.
     for needle in (
@@ -351,14 +371,31 @@ def main():
     for preset in ("ECO", "BALANCED", "QUALITY"):
         check('"' + preset + '"' in hud,
               "Graphics option missing in client HUD: " + preset)
-    # BALANCED is intentionally the fallback branch of the LOD selector;
-    # only ECO and QUALITY need explicit comparisons.
+    # Pure LOD policy retains prior ECO/BAL/QUALITY limits and protects
+    # Core silhouettes while sector groups avoid unnecessary per-part work.
+    lod_policy = source("src/shared/ArtLODPolicy.luau")
     for preset in ("ECO", "QUALITY"):
-        check('"' + preset + '"' in lod,
-              "Graphics option missing in client LOD: " + preset)
-    check("else:" not in lod, "Luau LOD selector must use Lua syntax")
-    check("artHideBeyond = isTouch and 110 or 195" in lod,
-          "Missing default balanced LOD distance")
+        check('"' + preset + '"' in lod_policy,
+              "Graphics preset missing in shared art LOD policy: " + preset)
+    check("else:" not in lod and "else:" not in lod_policy,
+          "Luau LOD policy must use valid Lua syntax")
+    check("art = isTouch and 110 or 195" in lod_policy,
+          "Missing original balanced art distance")
+    for needle in ('function Policy.limits(', 'function Policy.cellKey(',
+                   'function Policy.extendBounds(', 'function Policy.classify(',
+                   'function Policy.hiddenSquared(',
+                   'Policy.MotionMargin = 8', 'Policy.CellSize = 48',
+                   'return "HIDE"', 'return "SHOW"', 'return "MIXED"'):
+        check(needle in lod_policy,
+              "Missing conservative client art sector policy: " + needle)
+    for needle in ('ArtLOD.limits(', 'ArtLOD.cellKey(',
+                   'ArtLOD.extendBounds(', 'ArtLOD.classify(',
+                   'ArtLOD.hiddenSquared(', 'getDetailGroups(folder)',
+                   'applyGroupState(group, mode == "HIDE")',
+                   'item.LocalTransparencyModifier = hidden and 1 or 0',
+                   'group.lastMode = mode'):
+        check(needle in lod,
+              "Client spatial LOD integration missing: " + needle)
     for name in ("IronYardGraphicsPreset", "NeonArtTier"):
         check(name in lod, "Visual detail budget mismatch: " + name)
     check("function WeaponVisuals:drawImpact(" in effects,

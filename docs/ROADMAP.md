@@ -411,3 +411,22 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] **16 identifications de zone**, une par groupe de béton, cinq roadblocks sélectionnés et trois couverts centraux, matérialisées par des plaques Core avec inscription SurfaceGui visible depuis le côté de référence.
 - [x] Tous les ajouts sont purement visuels, CanCollide=false, CanQuery=false, CanTouch=false, sans nouvelle physique, IA ni réseau ; petits détails marqués Detail et masquables à distance sur Android.
 - [ ] Vérification réelle à faire dans Roblox Studio/Android : plaquettes lisibles, orientation des noms depuis les 2 itinéraires, contours des barricades cohérents avec l'obstacle qui arrête réellement les tirs, 30/60 FPS et budget mémoire.
+
+
+## 8 novembre 2026 — optimisation LOD spatial pour Android et PC
+
+- [x] Audit du script BotLOD : les anciens détails des trois dossiers (décor, fret, couvertures) recalculaient chaque seconde une distance 3D sur chaque Part, même hors du champ de jeu visible.
+- [x] Nouveau plan Luau pur ArtLODPolicy : regroupement des éléments Detail en cellules X/Z de 48 studs, bornes 3D conservatrices, classification HIDE / SHOW / MIXED par secteur et hystérésis exacte par objet à la frontière.
+- [x] Les groupes entièrement cachés ou entièrement visibles ne déclenchent plus de calcul de distance individuel tant que leur statut ne change pas. Les groupes MIXED conservent les tests précis avec distance au carré (sans racine carrée).
+- [x] Marges conservatrices de 8 studs pour couvrir les mouvements locaux des portiques ; toute apparition/disparition de Part invalide le cache et réapplique l'état aux nouveaux éléments issus du streaming.
+- [x] Les seuils ECO/BALANCED/QUALITY et les seuils distincts des bots restent identiques ; aucune pièce Core ni collision ni géométrie serveur n'est masquée/modifiée.
+- [x] Tests des seuils existants, cellules négatives, groupes proches/éloignés/frontière, NaN/infini et hystérésis ; contrôle statique et intégration CI.
+- [ ] Mesurer en pratique le gain CPU et les appels de visibilité sur Android pendant une traversée complète, avec les trois profils graphiques et quatre bots actifs. La compilation ne prouve pas un gain de FPS.
+
+
+## 8 novembre 2026 — repérage immédiat dans les quatre voies de fret
+
+- [x] Quatre nouveaux marquages au sol de grand format : SECTOR 01 à 04 et identification de l'orientation dans les voies de fret (OUEST/EST, NORD/SUD).
+- [x] Un seul Part natif ancré par zone, avec SurfaceGui au-dessus du sol, sans BillboardGui, point lumineux, physique, requête de tir ni faux objectif de gameplay.
+- [x] Contrôle pur et testable des quatre positions x = ±52, z = ±112, à distance des conteneurs et des deux chariots. Les marquages restent volontairement Core pour être lisibles même en ECO sur Android.
+- [ ] Confirmer dans Roblox Studio/Android que les noms restent lisibles depuis un personnage R6, ne sont ni masqués par les chariots ni trompeurs sur le sens des itinéraires ; vérifier l'impact mémoire, pixels couverts et compatibilité des options d'accessibilité.

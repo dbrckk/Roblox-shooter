@@ -1,30 +1,25 @@
--- NEON STRIKE / client-only visual LOD for high-frequency mobile combat.
+-- IRON YARD / client-only sector-accelerated visual LOD for mobile combat.
 -- Hiding tiny details locally has no effect on server hitboxes, damage or navigation.
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ArtLOD = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ArtLODPolicy"))
 
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
-local hideDetailBeyond = isTouch and 65 or 120
-local unhideDetailBefore = hideDetailBeyond - 12
-local artHideBeyond = isTouch and 110 or 195
-local artUnhideBefore = artHideBeyond - 16
+local hideDetailBeyond = 0
+local unhideDetailBefore = 0
+local artHideBeyond = 0
+local artUnhideBefore = 0
 
 local function updateGraphicsLimits()
-    local preset = player:GetAttribute("IronYardGraphicsPreset")
-    if preset == "ECO" then
-        hideDetailBeyond = 38
-        artHideBeyond = 70
-    elseif preset == "QUALITY" then
-        hideDetailBeyond = isTouch and 112 or 170
-        artHideBeyond = isTouch and 165 or 245
-    else
-        hideDetailBeyond = isTouch and 65 or 120
-        artHideBeyond = isTouch and 110 or 195
-    end
-    unhideDetailBefore = hideDetailBeyond - 12
-    artUnhideBefore = artHideBeyond - 16
+    local limits = ArtLOD.limits(
+        player:GetAttribute("IronYardGraphicsPreset"), isTouch)
+    hideDetailBeyond = limits.botHide
+    unhideDetailBefore = limits.botShow
+    artHideBeyond = limits.artHide
+    artUnhideBefore = limits.artShow
 end
 player:GetAttributeChangedSignal("IronYardGraphicsPreset"):Connect(updateGraphicsLimits)
 updateGraphicsLimits()
@@ -61,16 +56,20 @@ local function updateModel(model)
 end
 
 
+-- Server-authored visual art is static except for gantries moving
+-- locally by at most 5.6 studs. Spatial sectors provide conservative
+-- whole-group visibility decisions; only horizon sectors need individual
+-- distance tests. Core silhouettes and gameplay parts are never included.
 local artCache = setmetatable({}, { __mode = "k" })
 local artFolders = { "NeonStrikeDecor", "FreightLandmarks", "IronYardCoverSkins" }
 
-local function getDetailParts(folder)
+local function getDetailGroups(folder)
     local entry = artCache[folder]
     if not entry then
-        entry = { parts = {}, dirty = true }
+        entry = { groups = {}, dirty = true }
         artCache[folder] = entry
         folder.DescendantAdded:Connect(function(item)
-            if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
+            if item:IsA("BasePart") then
                 entry.dirty = true
             end
         end)
@@ -81,15 +80,41 @@ local function getDetailParts(folder)
         end)
     end
     if entry.dirty then
-        entry.parts = {}
+        local byKey = {}
+        local groups = {}
         for _, item in ipairs(folder:GetDescendants()) do
-            if item:IsA("BasePart") and item:GetAttribute("NeonArtTier") == "Detail" then
-                table.insert(entry.parts, item)
+            if item:IsA("BasePart")
+                and item:GetAttribute("NeonArtTier") == "Detail" then
+                local position = item.Position
+                local key = ArtLOD.cellKey(position.X, position.Z)
+                if key then
+                    local group = byKey[key]
+                    if not group then
+                        group = { parts = {}, bounds = {}, lastMode = nil }
+                        byKey[key] = group
+                        table.insert(groups, group)
+                    end
+                    if ArtLOD.extendBounds(group.bounds, position) then
+                        table.insert(group.parts, item)
+                    end
+                end
             end
         end
+        entry.groups = groups
         entry.dirty = false
     end
-    return entry.parts
+    return entry.groups
+end
+
+local function applyGroupState(group, hidden)
+    -- Apply on group-mode transition, including after streaming rebuilds:
+    -- previous per-part LocalTransparencyModifier values may be stale.
+    for _, item in ipairs(group.parts) do
+        if item.Parent then
+            rendered[item] = hidden
+            item.LocalTransparencyModifier = hidden and 1 or 0
+        end
+    end
 end
 
 local function updateArt()
@@ -100,16 +125,31 @@ local function updateArt()
     for _, name in ipairs(artFolders) do
         local folder = arena:FindFirstChild(name)
         if folder then
-            for _, item in ipairs(getDetailParts(folder)) do
-                if item.Parent then
-                    local distance = (item.Position - position).Magnitude
-                    local wasHidden = rendered[item] or false
-                    local hidden = (wasHidden and distance > artUnhideBefore) or distance > artHideBeyond
-                    if hidden ~= wasHidden then
-                        rendered[item] = hidden
-                        item.LocalTransparencyModifier = hidden and 1 or 0
+            for _, group in ipairs(getDetailGroups(folder)) do
+                local mode = ArtLOD.classify(group.bounds, position,
+                    artHideBeyond, artUnhideBefore)
+                if mode == "HIDE" or mode == "SHOW" then
+                    if mode ~= group.lastMode then
+                        applyGroupState(group, mode == "HIDE")
+                    end
+                else
+                    -- Only groups crossing the current art visibility
+                    -- horizon need accurate individual 3D distances.
+                    for _, item in ipairs(group.parts) do
+                        if item.Parent then
+                            local offset = item.Position - position
+                            local distanceSquared = offset:Dot(offset)
+                            local wasHidden = rendered[item] or false
+                            local hidden = ArtLOD.hiddenSquared(distanceSquared,
+                                wasHidden, artHideBeyond, artUnhideBefore)
+                            if hidden ~= wasHidden then
+                                rendered[item] = hidden
+                                item.LocalTransparencyModifier = hidden and 1 or 0
+                            end
+                        end
                     end
                 end
+                group.lastMode = mode
             end
         end
     end
