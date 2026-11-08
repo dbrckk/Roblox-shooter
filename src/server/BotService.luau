@@ -225,14 +225,19 @@ local function getTargetModel(bot, limit)
         -- selection, even indirectly through a distance score.
         local direction = head.Position - origin
         local visible = false
+        local visibleAimPoint = nil
         if direction.Magnitude <= limit then
             local ray = Workspace:Raycast(origin, direction, params)
             visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
-            if not visible then
+            if visible then
+                visibleAimPoint = head.Position
+            else
                 local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
                 if torso then
-                    ray = Workspace:Raycast(origin, torso.Position - origin, params)
+                    local torsoPoint = torso.Position
+                    ray = Workspace:Raycast(origin, torsoPoint - origin, params)
                     visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
+                    if visible then visibleAimPoint = torsoPoint end
                 end
             end
         end
@@ -255,6 +260,7 @@ local function getTargetModel(bot, limit)
             memoryDistance = memoryDistance,
             visible = visible,
             position = visible and root.Position or nil,
+            aimPoint = visible and visibleAimPoint or nil,
             threatMatch = recentThreat,
         })
     end
@@ -268,13 +274,16 @@ local function getTargetModel(bot, limit)
 
     -- The chosen fighter and its verified coordinate must come from
     -- the SAME candidate; never inherit another fighter's observation.
-    local best, seenPosition = BotTargetSelection.choose(
+    local best, seenPosition, aimPoint = BotTargetSelection.choose(
         sightings, bot.target, now, bot.lastTargetSeenAt, bot.targetSwitchedAt)
     if best and seenPosition then
         bot.lastTargetSeenAt = now
         bot.lastKnownTargetPosition = seenPosition
     end
-    return best
+    -- A hidden remembered opponent may still be followed briefly, but
+    -- never inherits a live firing coordinate. The visual aim target is
+    -- always paired with its own verified head/torso acquisition ray.
+    return best, aimPoint
 end
 
 local function rayParams(ignore)
@@ -285,22 +294,6 @@ local function rayParams(ignore)
     return params
 end
 
-local function visibleAimPoint(bot, model)
-    local _, _, head = targetInfo(model)
-    if not head then return nil end
-    local aimFrom = bot.head.Position
-    local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
-    for _, p in ipairs({head, torso or head}) do
-        local direction = p.Position - aimFrom
-        if direction.Magnitude <= config.MaximumSightDistance then
-            local hit = Workspace:Raycast(aimFrom, direction, rayParams(bot.model))
-            if hit and hit.Instance:IsDescendantOf(model) then
-                return p.Position
-            end
-        end
-    end
-    return nil
-end
 
 -- The staged defeat animation is owned by BotDeathAnimation, and runs
 -- only after the dead body is made non-blocking for players and projectiles.
@@ -566,7 +559,8 @@ local function shoot(bot, target, aimPoint, dt)
     local alignment = bot.aimDirection.Unit:Dot(direction.Unit)
     if not BotEngagementPlan.aimReady(alignment, direction.Magnitude) then return end
     -- Do not spend ammo firing through the cover between head and muzzle.
-    local muzzleBlock = Workspace:Raycast(origin, direction, rayParams(bot.model))
+    local shotParams = rayParams(bot.model)
+    local muzzleBlock = Workspace:Raycast(origin, direction, shotParams)
     if not muzzleBlock or not muzzleBlock.Instance:IsDescendantOf(target) then return end
     -- Reloading is serviced in updateBot even while the opponent is hidden.
     if bot.ammoRemaining <= 0 or bot.reloadUntil > now then return end
@@ -603,7 +597,7 @@ local function shoot(bot, target, aimPoint, dt)
         weaponId = "AssaultRifle",
         origin = origin,
     })
-    local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, rayParams(bot.model))
+    local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, shotParams)
     -- The impact material is sampled only when a static/world object was hit.
     local traceModel = ray and ray.Instance:FindFirstAncestorOfClass("Model")
     local traceHumanoid = traceModel and traceModel:FindFirstChildOfClass("Humanoid")
@@ -673,7 +667,10 @@ local function updateBot(bot, dt)
     if phase == "LIVE" then
         SupplyService.tryHealBot(bot.model)
     end
-    local target = phase == "LIVE" and getTargetModel(bot, config.MaximumSightDistance) or nil
+    local target, aimPoint = nil, nil
+    if phase == "LIVE" then
+        target, aimPoint = getTargetModel(bot, config.MaximumSightDistance)
+    end
     if target ~= bot.target then
         local previousTarget = bot.target
         bot.target = target
@@ -698,7 +695,6 @@ local function updateBot(bot, dt)
         BotNavigation.invalidate(bot)
     end
 
-    local aimPoint = target and visibleAimPoint(bot, target) or nil
     if phase == "LIVE" or phase == "COUNTDOWN" then
         local wasMedical = bot.medicalGoalActive == true
         local wasSound = bot.soundGoalActive == true

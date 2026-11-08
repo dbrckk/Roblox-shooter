@@ -8,6 +8,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
+local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local TouchLayout = require(shared:WaitForChild("TouchLayout"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
@@ -1126,7 +1127,16 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         local cameraNow = workspace.CurrentCamera
         -- Do not allocate tracer/muzzle parts for shots beyond the local
         -- view distance (especially expensive with four simultaneous bots).
+        -- The same graphics budget already limits impact debris and muzzle
+        -- flashes. Apply it to remote bot tracers too: ECO/BALANCED Android
+        -- should not allocate streak Parts for distant firefights.
+        local visualDistance = cameraNow
+            and (cameraNow.CFrame.Position - message.origin).Magnitude or math.huge
+        local botFxBudget = CombatVfxProfile.budget(
+            player:GetAttribute("IronYardGraphicsPreset"),
+            UserInputService.TouchEnabled, visualDistance)
         if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 195
+            and botFxBudget
             and message.direction.Magnitude > 0.01 and distance > 1 then
             local accent = typeof(message.color) == "Color3" and message.color or nil
             visuals:drawTracer(message.origin, message.direction.Unit, distance, accent)

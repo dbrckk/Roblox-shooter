@@ -77,4 +77,43 @@ model, pos = choose({
     {model="B", distance=10, visible=true, position="B"},
 }, "A", 21.6, 20, 20)
 assert(model == "A" and pos == "A", "Post-commitment margin still prevents tiny fluctuations")
+-- The third returned value is the *exact* head/torso point that passed
+-- the already performed LOS ray for this selected candidate.
+-- Hidden memory may never provide a point that allows firing.
+local selected, lastSeen, aim = choose({
+    {model="A", distance=30, visible=true, position="A-root",
+        aimPoint="A-head"},
+    {model="B", distance=50, visible=true, position="B-root",
+        aimPoint="B-torso"},
+}, nil, 40, 0)
+assert(selected == "A" and lastSeen == "A-root" and aim == "A-head",
+    "Selection pairs the same fighter with their own ray-verified head aim")
+selected, lastSeen, aim = choose({
+    {model="A", distance=40, visible=true, position="A-root",
+        aimPoint="A-torso"},
+    {model="B", distance=33, visible=true, position="B-root",
+        aimPoint="B-head"},
+}, "A", 40.3, 40.0, 40.0)
+assert(selected == "A" and lastSeen == "A-root" and aim == "A-torso",
+    "Target commitment must also return incumbent's own verified body point")
+selected, lastSeen, aim = choose({
+    {model="A", distance=90, visible=true, position="A-root",
+        aimPoint="A-head"},
+    {model="B", distance=18, visible=true, position="B-root",
+        aimPoint="B-torso", threatMatch=true},
+}, "A", 40.3, 40.0, 40.0)
+assert(selected == "B" and lastSeen == "B-root" and aim == "B-torso",
+    "Urgent switch must not keep previous target's gun aim coordinate")
+selected, lastSeen, aim = choose({
+    {model="A", distance=0.1, memoryDistance=15, visible=false,
+        position="A-live-should-not-leak", aimPoint="A-hidden-head"},
+}, "A", 40.3, 40.0, 40.0)
+assert(selected == "A" and lastSeen == nil and aim == nil,
+    "Recent memory cannot grant hidden head/torso aim coordinates")
+selected, lastSeen, aim = choose({
+    {model="A", distance=28, visible=true, position="A-root",
+        aimPoint=nil},
+}, nil, 40, 0)
+assert(selected == "A" and lastSeen == "A-root" and aim == nil,
+    "Missing verified aim never becomes a guessed firing coordinate")
 print("IRON YARD LOS, target commitment, switch urgency, and fair memory: OK")

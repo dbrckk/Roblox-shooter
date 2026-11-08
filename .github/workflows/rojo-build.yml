@@ -146,6 +146,7 @@ jobs:
           set -euo pipefail
           python3 scripts/check_movement_contract.py
           python3 scripts/check_bot_navigation_budget.py
+          python3 scripts/check_bot_los_budget.py
 
       - name: Verify persistent DataStore progression contracts
         shell: bash

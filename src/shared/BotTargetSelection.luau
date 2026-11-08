@@ -8,8 +8,8 @@ Selection.SWITCH_MARGIN = 15
 Selection.EMERGENCY_SWITCH_MARGIN = 25
 
 function Selection.choose(entries, previous, now, lastSeenAt, lastSwitchAt)
-    local best, highest, verified = nil, -math.huge, nil
-    local previousScore, previousPosition, previousVisible = nil, nil, false
+    local best, highest, verified, verifiedAim = nil, -math.huge, nil, nil
+    local previousScore, previousPosition, previousAim, previousVisible = nil, nil, nil, false
     local previousThreat = false
     local bestThreat = false
     for _, entry in ipairs(entries) do
@@ -35,12 +35,14 @@ function Selection.choose(entries, previous, now, lastSeenAt, lastSwitchAt)
                 if entry.model == previous then
                     previousScore = value
                     previousPosition = visible and entry.position or nil
+                    previousAim = visible and entry.aimPoint or nil
                     previousVisible = visible
                     previousThreat = visible and entry.threatMatch == true
                 end
                 if value > highest then
                     best, highest = entry.model, value
                     verified = visible and entry.position or nil
+                    verifiedAim = visible and entry.aimPoint or nil
                     bestThreat = visible and entry.threatMatch == true
                 end
             end
@@ -58,9 +60,9 @@ function Selection.choose(entries, previous, now, lastSeenAt, lastSwitchAt)
             or Selection.SWITCH_MARGIN
         local urgentVisibleAttacker = bestThreat and not previousThreat
         if not urgentVisibleAttacker and highest < previousScore + advantage then
-            return previous, previousPosition
+            return previous, previousPosition, previousAim
         end
     end
-    return best, verified
+    return best, verified, verifiedAim
 end
 return Selection

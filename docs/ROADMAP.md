@@ -441,3 +441,14 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Un seul RaycastParams créé par décision de navigation et réutilisé pour les vérifications du parcours direct et des déviations de la même décision ; maintien des 5 sondes de dégagement du personnage, des 4 sondes de sol et du filtre RespectCanCollide.
 - [x] Tests Luau des bornes, tickets concurrents et orphelins, expiration, retour d'un créneau, revalidation de MoveTo et valeurs invalides ; contrôle d'intégration statique et compilation Rojo.
 - [ ] Mesurer en session multi-bots Roblox Studio : nombre réel de ComputeAsync/secondes, temps CPU pathfinding, nombre de MoveTo/secondes, réaction aux obstacles et temps de sortie d'un blocage ; comparer les FPS client Android/PC avant/après. La validation CI ne constitue pas une mesure de performances en jeu.
+
+
+## 8 novembre 2026 — vérification de visibilité IA mutualisée et effets de combat mobiles
+
+- [x] Audit des trajectoires de tir : la boucle tactique à 5 Hz vérifiait les têtes/torses pour choisir une cible, puis relançait ces mêmes raycasts dans visibleAimPoint. Le raycast de départ du canon était et reste une vérification de sécurité séparée.
+- [x] getTargetModel produit désormais une position de tir uniquement si le rayon de la tête ou du torse a réellement rencontré le candidat. Le sélectionneur conserve le couple cible/position visible/point de visée, y compris lorsque la règle de fidélité à la cible choisit un adversaire précédent.
+- [x] Une mémoire d'ennemi masqué reste possible pour enquêter, mais la troisième valeur de visée est nil : aucun tir ne doit exploiter la position actuelle d'un adversaire caché ou un point de visée appartenant à un autre.
+- [x] Suppression de la seconde passe de raycasts tête/torse ; réduction du coût par décision de combat et réutilisation des paramètres de filtrage des deux raycasts de tirs, dont la vérification anti-traversée de mur depuis la bouche de canon.
+- [x] Les effets des tirs d'autres bots côté client suivent désormais les budgets déjà existants du profil graphique : ECO 70 studs, BALANCED Android 115, QUALITY Android 145, BALANCED PC 160, QUALITY PC jusqu'à 195. Les tirs, dégâts et effets personnels prédits ne sont pas bridés.
+- [x] Tests de non-divulgation des cibles masquées, association des points de visée lors d'un changement de cible, budget VFX, contrôle d'intégration statique et CI complète.
+- [ ] Mesurer le débit réel des raycasts serveur, les changements de cible, les animations, le coût des effets et les FPS en partie avec quatre bots dans Roblox Studio/Android. Ce code évite des opérations redondantes, mais les gains n'ont pas été chronométrés dans le moteur.

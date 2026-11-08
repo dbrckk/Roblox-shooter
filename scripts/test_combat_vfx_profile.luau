@@ -13,6 +13,21 @@ eq(Vfx.budget("ECO", false, 300), nil, "eco rejects distant impacts")
 eq(Vfx.budget("QUALITY", true, 130).fragments, 3, "quality mobile effects")
 eq(Vfx.budget("QUALITY", true, 150), nil, "mobile effects are distance culled")
 eq(Vfx.budget("QUALITY", false, 185).fragments, 4, "quality desktop effects")
+-- The same budgets now gate all nonlocal bot tracer/flash geometry.
+-- Local predicted player tracers and server damage remain unaffected.
+assert(Vfx.budget("ECO", true, 70) ~= nil
+    and Vfx.budget("ECO", true, 71) == nil,
+    "ECO remote bot tracers must cull past 70 studs")
+assert(Vfx.budget("BALANCED", true, 115) ~= nil
+    and Vfx.budget("BALANCED", true, 116) == nil,
+    "Balanced Android remote bot tracers capped at 115 studs")
+assert(Vfx.budget("QUALITY", true, 145) ~= nil
+    and Vfx.budget("QUALITY", true, 146) == nil,
+    "Quality Android remote bot tracers capped at 145 studs")
+assert(Vfx.budget("BALANCED", false, 160) ~= nil
+    and Vfx.budget("BALANCED", false, 161) == nil,
+    "Balanced desktop remote tracer cap")
+
 eq(Vfx.budget("QUALITY", false, 185).muzzleLight, true, "desktop optional flash light")
 eq(Vfx.budget("BALANCED", true, 40).muzzleLight, false, "mobile no local pointlight")
 eq(Vfx.budget("BALANCED", true, 40).marks, 16, "mobile mark cap")
