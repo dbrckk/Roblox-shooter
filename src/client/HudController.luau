@@ -1,6 +1,8 @@
 local StarterGui = game:GetService("StarterGui")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TouchLayout"))
 
 local HudController = {}
 HudController.__index = HudController
@@ -9,6 +11,7 @@ local DEFAULT_FOV = 70
 local DEFAULT_SENSITIVITY = 1
 local GRAPHICS_PRESETS = { "ECO", "BALANCED", "QUALITY" }
 local GRAPHICS_LABELS = { "ECO", "BAL", "HIGH" }
+local TOUCH_SIZE_LABELS = { "SMALL", "MED", "LARGE" }
 
 local function makeCorner(parent, radius)
 	local corner = Instance.new("UICorner")
@@ -68,6 +71,7 @@ function HudController.new(player, gui, WeaponConfig, options)
 
 	self.player = player
 	self.gui = gui
+    self.defaultDisplayOrder = gui.DisplayOrder
 	self.WeaponConfig = WeaponConfig
 	self.options = options or {}
 	self.currentWeaponId = "AssaultRifle"
@@ -75,6 +79,10 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.settingsOpen = false
 	self.baseFov = self.options.baseFov or DEFAULT_FOV
 	self.mouseSensitivity = self.options.mouseSensitivity or DEFAULT_SENSITIVITY
+    self.touchSizeIndex = 2
+    if UserInputService.TouchEnabled then
+        self.player:SetAttribute("IronYardTouchSizePreset", TouchLayout.PRESETS[self.touchSizeIndex])
+    end
     self.graphicsIndex = UserInputService.TouchEnabled and 2 or 3
     self.player:SetAttribute("IronYardGraphicsPreset", GRAPHICS_PRESETS[self.graphicsIndex])
 	self.healthConnections = {}
@@ -349,7 +357,14 @@ function HudController:_buildScopeOverlay()
 end
 
 function HudController:_buildSettingsMenu()
-	local button = makeButton(self.gui, "SettingsButton", "M SETTINGS", UDim2.new(1, -138, 0, 18), UDim2.fromOffset(118, 34))
+    local touch = UserInputService.TouchEnabled
+    local settingsRect = TouchLayout.SETTINGS_BUTTON
+    local button = makeButton(self.gui, "SettingsButton",
+        touch and "SET" or "M SETTINGS",
+        touch and UDim2.fromOffset(settingsRect.x, settingsRect.y)
+            or UDim2.new(1, -138, 0, 18),
+        touch and UDim2.fromOffset(settingsRect.w, settingsRect.h)
+            or UDim2.fromOffset(118, 34))
 	self.settingsButton = button
 
 	local panel = Instance.new("Frame")
@@ -403,6 +418,20 @@ function HudController:_buildSettingsMenu()
 		end
 	end)
 
+    if touch then
+        -- MouseDeltaSensitivity is mouse-only: mobile users receive a
+        -- real touch-button size control instead of a misleading slider.
+        self.touchSizeValueLabel = self:_makeStepper(panel, "BUTTON SIZE",
+            UDim2.fromOffset(22, 132), 1, #TouchLayout.PRESETS, 1, function()
+                return TOUCH_SIZE_LABELS[self.touchSizeIndex]
+            end, function(delta)
+                self.touchSizeIndex = math.clamp(self.touchSizeIndex + delta,
+                    1, #TouchLayout.PRESETS)
+                self.player:SetAttribute("IronYardTouchSizePreset",
+                    TouchLayout.PRESETS[self.touchSizeIndex])
+                self:_refreshSettingsText()
+            end)
+    else
 	self.sensitivityValueLabel = self:_makeStepper(panel, "MOUSE SENS", UDim2.fromOffset(22, 132), 0.3, 2.5, 0.1, function()
 		return string.format("%.1f", self.mouseSensitivity)
 	end, function(delta)
@@ -412,6 +441,7 @@ function HudController:_buildSettingsMenu()
 			self.options.onMouseSensitivityChanged(self.mouseSensitivity)
 		end
 	end)
+    end
 
     self.graphicsValueLabel = self:_makeStepper(panel, "GRAPHICS",
         UDim2.fromOffset(22, 192), 1, 3, 1, function()
@@ -481,6 +511,9 @@ function HudController:_refreshSettingsText()
     end
     if self.graphicsValueLabel then
         self.graphicsValueLabel.Text = GRAPHICS_LABELS[self.graphicsIndex]
+    end
+    if self.touchSizeValueLabel then
+        self.touchSizeValueLabel.Text = TOUCH_SIZE_LABELS[self.touchSizeIndex]
     end
 end
 
@@ -565,6 +598,9 @@ end
 function HudController:setSettingsOpen(open)
 	self.settingsOpen = open
 	self.settingsPanel.Visible = open
+    -- Settings modal must render above the match HUD and results screens.
+    self.gui.DisplayOrder = open and 50 or self.defaultDisplayOrder
+    self.player:WaitForChild("PlayerGui"):SetAttribute("IronYardSettingsOpen", open)
 
 	if self.options.onSettingsOpenChanged then
 		self.options.onSettingsOpenChanged(open)

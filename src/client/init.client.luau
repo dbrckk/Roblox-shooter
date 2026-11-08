@@ -1293,7 +1293,11 @@ if UserInputService.TouchEnabled then
     local function layoutControls()
         local viewport = touchRoot.AbsoluteSize
         if viewport.X < 300 or viewport.Y < 260 then return end
-        local positions = TouchLayout.compute(viewport.X, viewport.Y)
+        local preset = player:GetAttribute("IronYardTouchSizePreset")
+        if preset ~= "COMPACT" and preset ~= "STANDARD" and preset ~= "LARGE" then
+            preset = "STANDARD"
+        end
+        local positions = TouchLayout.compute(viewport.X, viewport.Y, preset)
         local valid, reason = TouchLayout.check(viewport.X, viewport.Y, positions)
         if not valid then
             warn("[IRON YARD] Touch controls are out of safe bounds: " .. tostring(reason))
@@ -1306,6 +1310,7 @@ if UserInputService.TouchEnabled then
         end
     end
     touchRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutControls)
+    player:GetAttributeChangedSignal("IronYardTouchSizePreset"):Connect(layoutControls)
     task.defer(layoutControls)
 
     refreshTouchSelection()

@@ -208,3 +208,14 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Aucun contrôle verrouillé, aucune requête réseau supplémentaire, aucun effet sur les dégâts ou les scores. La première action est suivie uniquement par un attribut local PlayerGui.
 - [x] Tests purs du texte d'objectif, des deux profils d'entrée, de la progression du guide et de l'arrêt après élimination.
 - [ ] Tester en jeu sur Android petit écran, notamment la superposition avec le HUD et la compréhension en moins d'une minute.
+
+
+### L2.2 — ergonomie mobile : tailles tactiles et priorités de l'interface (8 novembre 2026)
+
+- [x] Sur Android, le réglage MOUSE SENS (qui ne commandait pas la caméra tactile native) est remplacé par BUTTON SIZE : SMALL, MED (défaut) et LARGE. La souris PC conserve sa sensibilité.
+- [x] TouchLayout applique un facteur de taille au même ensemble de dix boutons, uniquement lors du redimensionnement ou du changement de préférence locale, sans calcul par image.
+- [x] Trente-six configurations automatisées (trois tailles sur douze dimensions de 300×260 à 1920×1080) vérifient la géométrie, les cibles tactiles d'au moins 28 pixels, l'absence de chevauchement entre boutons et le dégagement du bouton SET.
+- [x] SET est compact, placé en haut à gauche sous la zone de score et à l'écart de la sélection d'armes.
+- [x] Le briefing remplace temporairement la carte de score dans la zone haute, sans recouvrir la sélection d'armes. L'ouverture de SET masque la mission et élève le panneau de réglages devant les autres interfaces.
+- [x] Contrôle d'intégration du HUD et vérification CI ajoutés. Les tirs, dégâts, mouvement et score ne changent pas.
+- [ ] Valider dans Roblox sur Android la compatibilité effective avec le joystick/saut natifs, les encoches et la lecture sur plusieurs tailles d'écran ; la compilation ne simule pas le moteur graphique.

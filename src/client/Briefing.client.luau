@@ -19,7 +19,9 @@ playerGui:SetAttribute("IronYardBriefingOpen", false)
 local panel = Instance.new("Frame")
 panel.Name = "MissionCard"
 panel.AnchorPoint = Vector2.new(0.5, 0)
-panel.Position = UDim2.new(0.5, 0, 0, 94)
+-- Replace the scoreboard in the top safe lane instead of overlapping
+-- weapon-selection buttons that begin below y=82 on compact devices.
+panel.Position = UDim2.new(0.5, 0, 0, 8)
 panel.Size = UDim2.new(0.9, 0, 0, 58)
 panel.BackgroundColor3 = Color3.fromRGB(37, 45, 44)
 panel.BackgroundTransparency = 0.10
@@ -67,6 +69,7 @@ local function setCardVisible(visible)
 end
 
 local function display(a, b, timeout)
+    if playerGui:GetAttribute("IronYardSettingsOpen") == true then return end
     token += 1
     local current = token
     title.Text = a
@@ -139,4 +142,10 @@ end
 
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(onPhaseChanged)
 playerGui:GetAttributeChangedSignal("IronYardFirstShots"):Connect(firstShotHint)
+playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
+    if playerGui:GetAttribute("IronYardSettingsOpen") == true then
+        token += 1
+        setCardVisible(false)
+    end
+end)
 onPhaseChanged()

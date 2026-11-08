@@ -7,7 +7,8 @@ gui.Name = "NeonStrikeMatchHud"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = false
 gui.DisplayOrder = 20
-gui.Parent = player:WaitForChild("PlayerGui")
+local playerGui = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local top = Instance.new("Frame")
 top.Name = "MatchPanel"
@@ -51,6 +52,9 @@ local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 
 
 local eliminations = nil
 local function update()
+    -- The first-match mission occupies this exact top lane temporarily,
+    -- never stack both cards over the mobile weapon selection.
+    top.Visible = playerGui:GetAttribute("IronYardBriefingOpen") ~= true
     local phase = Workspace:GetAttribute("NeonMatchPhase") or "WAITING"
     local count = Workspace:GetAttribute("NeonMatchRound") or 0
     local seconds = Workspace:GetAttribute("NeonMatchTimeLeft") or 0
@@ -96,6 +100,7 @@ player.ChildAdded:Connect(function(child)
     end
 end)
 
+playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(update)
 for _, name in ipairs({ "NeonMatchPhase", "NeonMatchRound", "NeonMatchTimeLeft", "NeonMatchWinner", "NeonMatchScoreLimit", "NeonBotCount" }) do
     Workspace:GetAttributeChangedSignal(name):Connect(update)
 end
