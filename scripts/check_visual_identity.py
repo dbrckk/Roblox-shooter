@@ -211,7 +211,7 @@ def main():
                    'collider.Size.X, collider.Size.Y, collider.Size.Z',
                    'palletStacks(folder, collider, plan)',
                    'collider.CFrame * CFrame.new(0, -collider.Size.Y * 0.5, 0)',
-                   '"timber diagonal "', '"shrinkwrap side "',
+                   '" / timber diagonal "', '"shrinkwrap side "',
                    '"cage upright "', '"freight identity plate"',
                    'p.CanCollide = false', 'p.CanTouch = false',
                    'p.CanQuery = false'):
