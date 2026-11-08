@@ -15,7 +15,7 @@ for needle in (
     'require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotPathBudget"))',
     "local pathBudget = Budget.new()",
     "local ticket = Budget.claim(pathBudget, now)",
-    "if not ticket then return end",
+    'if not ticket then\n        BotPerfService.count("pathDeferred")\n        return\n    end',
     "local leaseValid = Budget.valid(pathBudget, ticket, os.clock())",
     "Budget.release(pathBudget, ticket)",
     "if not leaseValid or not isCurrent()",
