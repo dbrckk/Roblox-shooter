@@ -8,6 +8,7 @@ local BotEngagementPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitF
 local BotCoverPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCoverPlan"))
 local BotSoundSearchPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotSoundSearchPlan"))
 
+local BotPerfService = require(script.Parent:WaitForChild("BotPerfService"))
 local BotTactics = {}
 local COVER_HOLD_SECONDS = 2.4
 local EDGE_LIMIT = 163
@@ -32,6 +33,7 @@ local function groundedGoal(bot, proposed, params)
     -- Test from the bot's walking plane. Avoid marching off a catwalk
     -- or into the top of a high container.
     local castFrom = Vector3.new(proposed.X, bot.root.Position.Y + 4, proposed.Z)
+    BotPerfService.count("tacticsRay")
     local hit = Workspace:Raycast(castFrom, Vector3.new(0, -10, 0), params)
     if not hit or hit.Normal.Y < 0.65 then return nil end
     local ground = hit.Position + Vector3.new(0, 3.4, 0)
@@ -48,6 +50,7 @@ local function coverApproachClear(bot, destination, params)
     -- candidate when a freight wall blocks any of the three walking lanes.
     for _, lateral in ipairs({ Vector3.zero, side, -side }) do
         local origin = current + lateral + Vector3.new(0, -0.65, 0)
+        BotPerfService.count("tacticsRay")
         if Workspace:Raycast(origin, direction, params) then return false end
     end
     -- A walkable endpoint alone is insufficient if there is a catwalk gap.
@@ -55,6 +58,7 @@ local function coverApproachClear(bot, destination, params)
     -- retreat steps over short drops and exposed catwalk edges.
     for _, fraction in ipairs({ 0.25, 0.5, 0.75 }) do
         local sample = current + direction * fraction
+        BotPerfService.count("tacticsRay")
         local surface = Workspace:Raycast(
             Vector3.new(sample.X, current.Y + 4, sample.Z),
             Vector3.new(0, -11, 0), params)
@@ -89,6 +93,7 @@ local function selectCover(bot, seenPosition, now)
             and coverApproachClear(bot, candidate, params) then
             local sightFrom = seenPosition + Vector3.new(0, 1.0, 0)
             local sightTo = candidate + Vector3.new(0, 1.0, 0)
+            BotPerfService.count("tacticsRay")
             local shield = Workspace:Raycast(sightFrom, sightTo - sightFrom, params) ~= nil
             local score = BotCoverPlan.score(shield,
                 (candidate - current).Magnitude, (i % 2 == bot.slot % 2))

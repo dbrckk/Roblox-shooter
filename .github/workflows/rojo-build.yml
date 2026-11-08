@@ -49,6 +49,7 @@ jobs:
           ./luau scripts/test_gantry_motion.luau
           ./luau scripts/test_bot_avoidance.luau
           ./luau scripts/test_bot_path_budget.luau
+          ./luau scripts/test_bot_perf_profile.luau
           ./luau scripts/test_bot_movement_progress.luau
           ./luau scripts/test_bot_combat_response.luau
           ./luau scripts/test_bot_cover_plan.luau
@@ -147,6 +148,7 @@ jobs:
           python3 scripts/check_movement_contract.py
           python3 scripts/check_bot_navigation_budget.py
           python3 scripts/check_bot_los_budget.py
+          python3 scripts/check_bot_perf_contract.py
 
       - name: Verify persistent DataStore progression contracts
         shell: bash

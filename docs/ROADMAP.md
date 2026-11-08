@@ -452,3 +452,16 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Les effets des tirs d'autres bots côté client suivent désormais les budgets déjà existants du profil graphique : ECO 70 studs, BALANCED Android 115, QUALITY Android 145, BALANCED PC 160, QUALITY PC jusqu'à 195. Les tirs, dégâts et effets personnels prédits ne sont pas bridés.
 - [x] Tests de non-divulgation des cibles masquées, association des points de visée lors d'un changement de cible, budget VFX, contrôle d'intégration statique et CI complète.
 - [ ] Mesurer le débit réel des raycasts serveur, les changements de cible, les animations, le coût des effets et les FPS en partie avec quatre bots dans Roblox Studio/Android. Ce code évite des opérations redondantes, mais les gains n'ont pas été chronométrés dans le moteur.
+
+
+## 8 novembre 2026 — mesures réelles des quatre bots, sans debug public
+
+- [x] Instrumentation conditionnelle des raycasts de sélection de cible et de feu, de la navigation et des tactiques, des tentatives navmesh acceptées ou différées, des commandes MoveTo, des décisions IA et de l'animation des rigs.
+- [x] Nouveau profil pur BotPerfProfile : compteurs et temps de fonctionnement agrégés en fenêtres de **5 secondes** (nombre par seconde, durée moyenne et maximum échantillonné en millisecondes), réinitialisés sans stockage permanent.
+- [x] Le serveur ne chronomètre les décisions et poses **que pendant l'ouverture d'une session de diagnostic autorisée**. Aucun journal ni nouvelle boucle per-frame pour les joueurs ordinaires.
+- [x] PerformanceDiagnostics : RemoteEvent sécurisé par vérification serveur de game.CreatorId pour les expériences **appartenant à un utilisateur**, et autorisé dans Studio pour les testeurs. Un observateur unique, contrôle des seules commandes start/stop et snapshots envoyés uniquement à celui-ci ; aucune position de joueur transmise.
+- [x] Panneau mobile/PC discret PERF **visible uniquement par le propriétaire ou dans Studio**. Appuyer pour capturer les FPS du client et consulter le débit de raycasts, le navmesh, MoveTo, les fréquences d'IA et de pose, les temps moyens/pics ; appuyer à nouveau pour désactiver.
+- [x] Tests Luau du regroupement, des valeurs invalides et du retour à zéro ; contrôle statique de la sécurité du RemoteEvent, des points de comptage et du build.
+- [ ] Une vraie partie Roblox est nécessaire pour remplir ces mesures. Aucune valeur FPS/CPU mesurée n'est annoncée par la CI : l'outil est **prêt à mesurer**, pas une simulation de test moteur.
+- [ ] Sur Android : lancer IRON YARD depuis le compte Roblox propriétaire, toucher PERF en haut à gauche, attendre au moins **5 secondes** avec quatre bots actifs, faire une capture d'écran ; recommencer en arène chargée avec tirs et en tournant rapidement la caméra. Comparez ECO, BALANCED et QUALITY.
+- [ ] Si l'expérience est détenue par **un groupe Roblox**, le panneau n'est pas encore activé pour les membres du groupe ; employer Studio ou ajouter une authentification de groupe explicite et sûre.

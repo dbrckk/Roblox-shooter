@@ -21,6 +21,8 @@ SpawnService.start()
 -- They otherwise block AI line-of-sight and distort combat feedback.
 MovementService.start()
 WeaponService.start()
+local BotPerfService = require(script:WaitForChild("BotPerfService"))
+BotPerfService.start()
 local BotService = require(script:WaitForChild("BotService"))
 BotService.start()
 local MatchService = require(script:WaitForChild("MatchService"))

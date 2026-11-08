@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Planner = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotAvoidancePlan"))
+local BotPerfService = require(script.Parent:WaitForChild("BotPerfService"))
 local Budget = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotPathBudget"))
 
 local BotNavigation = {}
@@ -36,6 +37,7 @@ local function requestMove(bot, goal, now, force)
     local age = now - (bot.lastMoveIssuedAt or -math.huge)
     if force or Budget.shouldIssueMove(moved, age) then
         bot.humanoid:MoveTo(goal)
+        BotPerfService.count("moveIssued")
         bot.lastMoveGoal = goal
         bot.lastMoveIssuedAt = now
     end
@@ -68,6 +70,7 @@ local function directRouteClear(bot, goal, cachedParams)
     local low = Vector3.new(0, -1.2, 0)
     local high = Vector3.new(0, 1.1, 0)
     for _, offset in ipairs({ low, low + side, low - side, high + side, high - side }) do
+        BotPerfService.count("navRay")
         if Workspace:Raycast(origin + offset, flat, params) then
             return false
         end
@@ -81,6 +84,7 @@ local function directRouteClear(bot, goal, cachedParams)
         local distance = math.min(lookahead, flat.Magnitude)
         local sample = origin + direction * distance
         local downFrom = Vector3.new(sample.X, origin.Y + 4.5, sample.Z)
+        BotPerfService.count("navRay")
         local floor = Workspace:Raycast(downFrom, Vector3.new(0, -12, 0), params)
         if not floor or floor.Normal.Y < 0.68
             or math.abs(floor.Position.Y + 3.4 - origin.Y) > MAX_GROUND_DELTA then
@@ -96,6 +100,7 @@ local function walkableCandidate(bot, raw, params)
     end
     -- Grounding rejects roof tops, drops, voids and different catwalk heights.
     local castFrom = Vector3.new(raw.X, bot.root.Position.Y + 4.5, raw.Z)
+    BotPerfService.count("navRay")
     local hit = Workspace:Raycast(castFrom, Vector3.new(0, -12, 0), params)
     if not hit or hit.Normal.Y < 0.68 then return nil end
     local grounded = hit.Position + Vector3.new(0, 3.4, 0)
@@ -288,7 +293,12 @@ function BotNavigation.steer(bot, goal, isCurrent)
     -- Denied bots keep verified detour/waypoint movement and retry at the
     -- normal bounded AI tick. No change to path safety or goal selection.
     local ticket = Budget.claim(pathBudget, now)
-    if not ticket then return end
+    if not ticket then
+        BotPerfService.count("pathDeferred")
+        return
+    end
+    BotPerfService.count("pathStarted")
+    local pathSample = BotPerfService.begin()
 
     bot.pathing = true
     bot.pathStartedAt = now
@@ -314,6 +324,8 @@ function BotNavigation.steer(bot, goal, isCurrent)
             if path.Status ~= Enum.PathStatus.Success then return nil end
             return path:GetWaypoints()
         end)
+        BotPerfService.count("pathFinished")
+        BotPerfService.measure("pathMs", pathSample)
         local leaseValid = Budget.valid(pathBudget, ticket, os.clock())
         Budget.release(pathBudget, ticket)
         if not leaseValid or not isCurrent()

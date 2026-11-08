@@ -23,6 +23,7 @@ local BotEngagementPlan = require(shared:WaitForChild("BotEngagementPlan"))
 local BotTargetSelection = require(shared:WaitForChild("BotTargetSelection"))
 local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
 local BotHearingService = require(script.Parent:WaitForChild("BotHearingService"))
+local BotPerfService = require(script.Parent:WaitForChild("BotPerfService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local folder = nil
@@ -227,6 +228,7 @@ local function getTargetModel(bot, limit)
         local visible = false
         local visibleAimPoint = nil
         if direction.Magnitude <= limit then
+            BotPerfService.count("targetRay")
             local ray = Workspace:Raycast(origin, direction, params)
             visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
             if visible then
@@ -235,6 +237,7 @@ local function getTargetModel(bot, limit)
                 local torso = model:FindFirstChild("Torso") or model:FindFirstChild("UpperTorso")
                 if torso then
                     local torsoPoint = torso.Position
+                    BotPerfService.count("targetRay")
                     ray = Workspace:Raycast(origin, torsoPoint - origin, params)
                     visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
                     if visible then visibleAimPoint = torsoPoint end
@@ -560,11 +563,13 @@ local function shoot(bot, target, aimPoint, dt)
     if not BotEngagementPlan.aimReady(alignment, direction.Magnitude) then return end
     -- Do not spend ammo firing through the cover between head and muzzle.
     local shotParams = rayParams(bot.model)
+    BotPerfService.count("muzzleRay")
     local muzzleBlock = Workspace:Raycast(origin, direction, shotParams)
     if not muzzleBlock or not muzzleBlock.Instance:IsDescendantOf(target) then return end
     -- Reloading is serviced in updateBot even while the opponent is hidden.
     if bot.ammoRemaining <= 0 or bot.reloadUntil > now then return end
     bot.ammoRemaining -= 1
+    BotPerfService.count("botShot")
     bot.nextFireAt = now + bot.skill.cooldown * rng:NextNumber(0.86, 1.18)
 
     local errorYaw = math.rad(rng:NextNumber(-bot.skill.aimErrorDegrees, bot.skill.aimErrorDegrees))
@@ -597,6 +602,7 @@ local function shoot(bot, target, aimPoint, dt)
         weaponId = "AssaultRifle",
         origin = origin,
     })
+    BotPerfService.count("shotRay")
     local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, shotParams)
     -- The impact material is sampled only when a static/world object was hit.
     local traceModel = ray and ray.Instance:FindFirstAncestorOfClass("Model")
@@ -660,6 +666,7 @@ local function updateBot(bot, dt)
     local now = os.clock()
     if now < bot.nextThinkAt then return end
     bot.nextThinkAt = now + config.ThinkInterval
+    local thinkSample = BotPerfService.begin()
     serviceReload(bot, now)
     observeRecentHit(bot, now)
 
@@ -782,6 +789,8 @@ local function updateBot(bot, dt)
     if phase == "LIVE" and target and aimPoint then
         shoot(bot, target, aimPoint, math.max(dt, config.ThinkInterval))
     end
+    BotPerfService.count("think")
+    BotPerfService.measure("thinkMs", thinkSample)
 end
 
 local function reconcile()
@@ -975,7 +984,10 @@ function BotService.start()
                         distance = math.min(distance, (root.Position - bot.root.Position).Magnitude)
                     end
                     bot.nextAnimationAt = now + BotMotionProfile.interval(distance)
+                    local poseSample = BotPerfService.begin()
                     BotAnimation.step(bot, now, bot.isAiming == true)
+                    BotPerfService.count("pose")
+                    BotPerfService.measure("poseMs", poseSample)
                 end
             end
             task.wait(1 / 30)

@@ -13,6 +13,7 @@ local REMOTES = {
 	WeaponFeedback = "RemoteEvent",
 	WeaponFx = "RemoteEvent",
     KillFeed = "RemoteEvent",
+    PerformanceDiagnostics = "RemoteEvent",
 }
 
 local function getOrCreateRemote(folder, remoteName, className, shouldCreate)
