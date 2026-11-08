@@ -468,3 +468,8 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [ ] Une vraie partie Roblox est nécessaire pour remplir ces mesures. Aucune valeur FPS/CPU mesurée n'est annoncée par la CI : l'outil est **prêt à mesurer**, pas une simulation de test moteur.
 - [ ] Sur Android : lancer IRON YARD depuis le compte Roblox propriétaire, toucher PERF en haut à gauche, attendre au moins **5 secondes** avec quatre bots actifs, faire une capture d'écran ; recommencer en arène chargée avec tirs et en tournant rapidement la caméra. Comparez ECO, BALANCED et QUALITY.
 - [ ] Si l'expérience est détenue par **un groupe Roblox**, le panneau n'est pas encore activé pour les membres du groupe ; employer Studio ou ajouter une authentification de groupe explicite et sûre.
+
+
+## 8 novembre 2026 — correction stricte de concurrence des trajectoires
+
+Le quota de deux appels ComputeAsync compte désormais les appels réellement en cours : un délai de 5,8 s invalide le résultat tardif mais ne libère plus un slot occupé par le moteur. Le slot est libéré uniquement par la fin du callback asynchrone. Cette règle évite les dépassements silencieux du plafond en cas de requêtes longues ; si deux appels restent bloqués, les bots conservent leur comportement de secours sans générer de nouvelles requêtes. Tests de concurrence et de libération tardive ajoutés. Mesures Studio encore nécessaires.

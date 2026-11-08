@@ -189,3 +189,12 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - Déploiement privé : docs/PRIVATE_ROBLOX_PUBLISHING.md
 - Contrat de sauvegarde : docs/PROGRESSION_PERSISTENCE.md
 - Références de jeux utilisées seulement pour principes : https://www.roblox.com/games/17625359962/RIVALS ; https://www.roblox.com/games/286090429/Arsenal
+
+
+### L0.2 — correction de la limite physique des calculs IA (8 novembre 2026)
+
+- [x] Correction d'une limite trompeuse : l'ancienne expiration de ticket après 5,8 secondes permettait de lancer un troisième ComputeAsync alors que deux requêtes moteur pouvaient toujours être en cours. Les tickets ne sont plus supprimés par l'écoulement du temps ; seule la fin réelle de l'appel asynchrone libère un créneau.
+- [x] La validité d'un résultat reste limitée à 5,8 secondes : les réponses tardives ou appartenant à une révision de trajectoire dépassée sont ignorées. Les deux slots maximum restent une borne sur les requêtes physiques en cours, même si un bot abandonne son calcul après 5 secondes.
+- [x] Les bots sans créneau poursuivent les déviations sûres ou attendent, sans déclencher une nouvelle requête. Si deux ComputeAsync restent bloqués dans le moteur, le serveur cesse d'en lancer d'autres jusqu'à leur retour : compromis explicite sécurité/performance contre reprise automatique.
+- [x] Tests de concurrence incluant expiration logique, maintien des créneaux physiques et libération tardive ; contrôle statique anti-régression.
+- [ ] Vérifier en Studio la durée maximale de ComputeAsync et le comportement des quatre bots lorsque deux appels restent durablement bloqués ; aucune annulation Roblox n'est simulée.

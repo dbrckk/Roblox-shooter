@@ -18,6 +18,7 @@ for needle in (
     'if not ticket then\n        BotPerfService.count("pathDeferred")\n        return\n    end',
     "local leaseValid = Budget.valid(pathBudget, ticket, os.clock())",
     "Budget.release(pathBudget, ticket)",
+
     "if not leaseValid or not isCurrent()",
     "or bot.pathRevision ~= revision then return end",
     "function BotNavigation.invalidate(bot)",
@@ -54,6 +55,8 @@ assert nav.index("Budget.release(pathBudget, ticket)") < nav.index(
 )
 for needle in (
     "Budget.MAX_IN_FLIGHT = 2",
+    "function Budget.inFlight(state)",
+    "if active >= Budget.MAX_IN_FLIGHT then return nil end",
     "Budget.MIN_START_GAP = 0.18",
     "Budget.LEASE_SECONDS = 5.8",
     "Budget.MOVE_REFRESH_SECONDS = 1.15",
@@ -67,3 +70,10 @@ assert "BotAnimation.step(bot, now, bot.isAiming == true)" in service, (
     "Existing visible bot animations must remain untouched"
 )
 print("IRON YARD capped navmesh, unchanged collision probes and MoveTo coalescing: OK")
+
+assert "reap(state, now)" not in budget, (
+    "Expired logical tickets must never release still-running engine calls"
+)
+assert "state.leases[token] = nil" in budget.split("function Budget.release", 1)[1], (
+    "Only actual asynchronous completion may release a running slot"
+)
