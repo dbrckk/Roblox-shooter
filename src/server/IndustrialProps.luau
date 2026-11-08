@@ -2,7 +2,10 @@
 -- Decorative pieces are non-colliding and non-queryable. MapService owns
 -- their coarse gameplay colliders so pathfinding and authoritative raycasts
 -- are consistent regardless of graphics detail/LOD.
-local PalletVisualPlan = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("PalletVisualPlan"))
+local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+local PalletVisualPlan = require(Shared:WaitForChild("PalletVisualPlan"))
+local ForkliftVisualPlan = require(Shared:WaitForChild("ForkliftVisualPlan"))
+local ForkliftDetailArt = require(script.Parent:WaitForChild("ForkliftDetailArt"))
 local IndustrialProps = {}
 
 local C = {
@@ -54,8 +57,11 @@ local function sticker(parent, part, words, primary)
     title.Parent = gui
 end
 
-local function forklift(folder, label, x, z, yaw, coat)
-    local cf = CFrame.new(x, 0, z) * CFrame.Angles(0, yaw, 0)
+local function forklift(folder, collider, plan)
+    local label = plan.label
+    local coat = collider.Color
+    local cf = collider.CFrame * CFrame.new(0, -collider.Size.Y * 0.5, 0)
+        * CFrame.Angles(0, plan.yaw, 0)
     local function cube(name, size, offset, color, tier, material, shape)
         return prop(folder, "FORKLIFT / " .. label .. " / " .. name,
             size, cf * CFrame.new(offset), color, material, tier, shape)
@@ -171,6 +177,7 @@ local function forklift(folder, label, x, z, yaw, coat)
     local serial = cube("fleet insignia", Vector3.new(3.4, 1.2, 0.1),
         Vector3.new(0, 2.7, 5.13), C.cream, "Detail", Enum.Material.SmoothPlastic)
     sticker(folder, serial, "FY-" .. label, C.charcoal)
+    ForkliftDetailArt.decorate(folder, collider, plan)
 end
 
 -- Three visible cargo families, applied only to the five authoritative
@@ -290,14 +297,22 @@ function IndustrialProps.build(arena)
     local folder = Instance.new("Folder")
     folder.Name = "FreightLandmarks"
     folder.Parent = arena
-    forklift(folder, "12", -72, -115, math.rad(10), C.safety)
-    forklift(folder, "27", 72, 115, math.rad(180), C.olive)
-
     -- Read the actual collision volumes instead of duplicating five
     -- hard-coded world positions that can silently drift from MapService.
     local palletCount = 0
+    local forkliftCount = 0
+    local seenFleets = {}
     for _, collider in ipairs(arena:GetChildren()) do
         if collider:IsA("BasePart") then
+            local machine = ForkliftVisualPlan.forCollider(
+                collider.Name, collider.Size.X, collider.Size.Y, collider.Size.Z,
+                collider:GetAttribute("IronYardForkliftFleet"),
+                collider:GetAttribute("IronYardForkliftYaw"))
+            if machine and not seenFleets[machine.label] then
+                seenFleets[machine.label] = true
+                forklift(folder, collider, machine)
+                forkliftCount += 1
+            end
             local plan = PalletVisualPlan.forCollider(
                 collider.Name, collider.Size.X, collider.Size.Y, collider.Size.Z)
             if plan then
@@ -308,6 +323,9 @@ function IndustrialProps.build(arena)
     end
     if palletCount ~= 5 then
         warn("[IRON YARD] Freight facade count mismatch: " .. tostring(palletCount))
+    end
+    if forkliftCount ~= 2 then
+        warn("[IRON YARD] Forklift facade count mismatch: " .. tostring(forkliftCount))
     end
 end
 

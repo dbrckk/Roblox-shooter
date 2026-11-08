@@ -63,6 +63,7 @@ jobs:
           ./luau scripts/test_warehouse_cladding_plan.luau
           ./luau scripts/test_freight_surface_plan.luau
           ./luau scripts/test_pallet_visual_plan.luau
+          ./luau scripts/test_forklift_visual_plan.luau
           ./luau scripts/test_cover_surface_plan.luau
           ./luau scripts/test_vanguard_mesh_policy.luau
           ./luau scripts/test_round_standings.luau

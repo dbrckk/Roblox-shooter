@@ -89,3 +89,8 @@ Inspect the world source release preview.png (rows freight steel, warehouse stee
 ## Pallet cargo visual variety — 8 November 2026
 
 Five existing 9×3.7×9 physically authoritative pallet-stack colliders now own three distinguishable original visual treatments: cross-braced timber export crates, translucent shrink-wrapped sealed cargo, and olive/graphite steel cage equipment. Every stack includes a readable freight code. Source positions and orientations are computed directly from actual MapService colliders, never duplicated coordinates. Every new Part is anchored, CanCollide=false, CanTouch=false, CanQuery=false, tagged with Core/Detail and handled by existing client art LOD. No new cover, bullet blocks, remote events, game logic, external assets, paid resources or extra realtime loops. Studio/Android visual, obstacle and FPS verification is still required.
+
+
+## Two distinct forklift mechanical variants — 8 November 2026
+
+The freight/yardside forklifts now take their visual origin, paint, and fleet-marked orientation from the two actual MapService colliders rather than a second hardcoded position list. FREIGHT_LIFTER and YARD_HANDLER add original readable native metal mechanical features: anti-slip footwell, dashboards, cab guards, worklamp housings, and respectively a yellow hydraulic carriage with radiator fins, or olive counterweight with side engine louvers. All added geometry uses original native Roblox Parts, with CanCollide=false, CanQuery=false, CanTouch=false, CastShadow=false and existing Core/Detail client LOD. No new point lights, server animation, AI logic, or raycast geometry. Studio acceptance must check the still-coarse collider vs. visible front forks and cab; further gameplay cover changes need separate testing.

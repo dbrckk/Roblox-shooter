@@ -378,3 +378,15 @@ Les modèles importés sont maintenant vérifiés par `VanguardMeshPolicy` : sep
 - [x] Tests Luau des cinq identifiants, trois styles, dimensions réelles de colliders, variantes invalides ; contrôle statique de l'intégration et build Rojo.
 - [ ] Vérifier visuellement dans Roblox Studio/Android : silhouettes distinctes à 20-80 studs, faces de cargo, rotations, alignement de collision, ombres, contraste des labels et budget sur mobile.
 - [ ] Les modèles 3D importés et textures PBR restent bloqués par les identifiants Roblox propriétaires, le rendu 3D natif est un fallback jouable et non un modèle importé.
+
+
+## 8 novembre 2026 — deux chariots élévateurs mécaniques distincts, sans dérive des volumes physiques
+
+- [x] L'apparence des deux chariots dépend désormais des **vrais objets de collision** (position, orientation de la présentation, couleur de carrosserie, identifiant flotte) et non de coordonnées réécrites dans le module graphique.
+- [x] Identités de flotte 12 et 27 conservées et vérifiées, deux styles réellement différents : FREIGHT_LIFTER jaune et YARD_HANDLER olive, rejet des valeurs incohérentes dans un plan Luau pur.
+- [x] Cockpits plus riches (plancher antidérapant, tableau de bord, protections latérales et supérieures, boîtiers et lentilles de phares sans lumières dynamiques).
+- [x] Chariot jaune : tête de levage, collecteur hydraulique, radiateur protégé, ailettes et garde-boue ; chariot olive : contrepoids, arceau renforcé, capots d'entretien et ouïes latérales.
+- [x] Art supplémentaire uniquement ancré, non-collisionnant, non-queryable, sans effet physique ; niveaux Core/Detail adaptés au système LOD mobile existant.
+- [x] Tests d'identité et dimensions, orientations invalides rejetées, suivi de deux chariots maximum, contrôle statique et build via la CI.
+- [ ] Vérification dans Roblox Studio et sur Android : alignement de la carrosserie et des détails hors enveloppe de collision, visée et tirs près de la cabine et des fourches, silhouette de loin, FPS et streaming.
+- [ ] Revoir séparément les colliders simplifiés des machines si leur volume visuel crée une couverture trompeuse lors du jeu réel : pas de modification silencieuse de navigation ou de collisions pour cette évolution.

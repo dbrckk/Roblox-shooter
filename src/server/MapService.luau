@@ -144,13 +144,17 @@ local function buildArena(folder)
     -- Coarse solid silhouettes for freight props, never visual-only ghosts.
     -- The IndustrialProps module draws non-queryable detail around these bodies.
     for _, forklift in ipairs({
-        { x = -72, z = -115, paint = P.yellow },
-        { x = 72, z = 115, paint = P.olive },
+        { x = -72, z = -115, paint = P.yellow, fleet = "12", yaw = math.rad(10) },
+        { x = 72, z = 115, paint = P.olive, fleet = "27", yaw = math.pi },
     }) do
         local collision = part(folder, "INDUSTRIAL / forklift body",
             Vector3.new(8, 3.1, 11), Vector3.new(forklift.x, 1.55, forklift.z),
             forklift.paint, Enum.Material.Metal)
         collision:SetAttribute("MantleTarget", true)
+        -- Render identity lives ON the authoritative body collider.
+        -- Attributes do not affect bullet tests, movement or pathfinding.
+        collision:SetAttribute("IronYardForkliftFleet", forklift.fleet)
+        collision:SetAttribute("IronYardForkliftYaw", forklift.yaw)
     end
     for i, point in ipairs({
         Vector2.new(0, -128),

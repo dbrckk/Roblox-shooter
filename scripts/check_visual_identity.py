@@ -199,6 +199,40 @@ def main():
         check(needle in native_props,
               "Native forklift PBR-fallback detail or physics safety missing: " + needle)
 
+    # Production forklift visuals follow authoritative colliders, not a
+    # second set of hardcoded coordinates; styles and art remain nonblocking.
+    forklift_plan = source("src/shared/ForkliftVisualPlan.luau")
+    forklift_details = source("src/server/ForkliftDetailArt.luau")
+    for needle in ('function Plan.forCollider(', '"FREIGHT_LIFTER"',
+                   '"YARD_HANDLER"', "math.huge", "validNumber("):
+        check(needle in forklift_plan,
+              "Forklift plan whitelist/physical measurements missing: " + needle)
+    for needle in ('collision:SetAttribute("IronYardForkliftFleet", forklift.fleet)',
+                   'collision:SetAttribute("IronYardForkliftYaw", forklift.yaw)'):
+        check(needle in map_source, "Fleet ID and pose must come from colliders: " + needle)
+    for needle in ('ForkliftVisualPlan.forCollider(', 'ForkliftDetailArt.decorate(folder, collider, plan)',
+                   'forklift(folder, collider, machine)',
+                   'collider.CFrame * CFrame.new(0, -collider.Size.Y * 0.5, 0)',
+                   'collider:GetAttribute("IronYardForkliftFleet")',
+                   'collider:GetAttribute("IronYardForkliftYaw")',
+                   'forkliftCount ~= 2'):
+        check(needle in native_props,
+              "Forklift 3D alignment to live game colliders missing: " + needle)
+    check('forklift(folder, "12", -72' not in native_props
+          and 'forklift(folder, "27", 72' not in native_props,
+          "Forklift render cannot use duplicated world coordinates")
+    for needle in ('function DetailArt.decorate(folder, collider, plan)',
+                   '"operator diamondplate footwell"',
+                   '"work lamp housing "', '"freight lifting crosshead"',
+                   '"freight radiator fin "', '"yard cooling louver "',
+                   'p.CanCollide = false', 'p.CanQuery = false',
+                   'p.CanTouch = false', 'p.CastShadow = false',
+                   'p:SetAttribute("NeonArtTier", tier)'):
+        check(needle in forklift_details,
+              "Forklift mechanical detail or physics safety missing: " + needle)
+    check('Instance.new("PointLight")' not in forklift_details,
+          "Forklift detailing must not add global realtime light work")
+
     # Distinctive pallet cargo must follow actual server collision bodies.
     # Additional cargo can only be visual: no new query, touch or collisions.
     pallet_plan = source("src/shared/PalletVisualPlan.luau")
