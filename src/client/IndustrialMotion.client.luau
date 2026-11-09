@@ -112,9 +112,15 @@ decor.DescendantRemoving:Connect(function(item)
     if not parent or not parent:IsA("Model") then return end
     local rig = rigs[parent]
     if rig and rig.beacon == item then
-        -- ChildRemoved of the complete model is handled separately;
-        -- when only the beacon streams out, free the stale light at once.
+        -- The new beacon may already be parented while the old one is
+        -- leaving. Retry AFTER removal so FindFirstChild cannot bind back
+        -- to the departing Part. If the whole rig leaves, this is a no-op.
         retireRig(parent)
+        task.defer(function()
+            if parent:IsDescendantOf(decor) then
+                register(parent)
+            end
+        end)
     end
 end)
 decor.DescendantAdded:Connect(function(candidate)

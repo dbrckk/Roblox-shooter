@@ -403,3 +403,5 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Les abonnements à des attributs tardifs restent actifs pendant la vie du modèle ; pas de déconnexion/réinscription inutile lors d'un changement Mover true/false.
 - [x] Politique pure `needsRigReplacement`, cas de régression Luau et garde statique du vrai branchement client. Aucune modification de collisions, serveur, mouvements joueurs ou réseau.
 - [ ] Validation visuelle en Studio avec streaming activé (suppression/recréation de phares sous ECO et QUALITY, disparition/réapparition d'un modèle pendant un déplacement) et mesures FPS Android.
+
+- [x] Couverture supplémentaire du chevauchement de streaming : si le remplaçant est déjà présent avant la destruction de l'ancien phare, le client retente l'enregistrement après le retrait, sans recopier le Part sortant ; aucune action si le Model entier est parti.

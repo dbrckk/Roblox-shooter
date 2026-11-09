@@ -407,6 +407,8 @@ def main():
                    'local function retireRig(candidate)',
                    'decor.DescendantRemoving:Connect(function(item)',
                    'rig and rig.beacon == item',
+                   'if parent:IsDescendantOf(decor) then',
+                   'register(parent)',
                    'if rig.moving and candidate:IsDescendantOf(decor) then',
                    'Motion.sampleInterval(',
                    'local distanceSquared = offset:Dot(offset)',
