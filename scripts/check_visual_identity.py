@@ -396,6 +396,26 @@ def main():
                    'RunService.Heartbeat:Connect(', 'PointLight',
                    'distance < 150', 'local interval = UserInputService.TouchEnabled'):
         check(needle in industrialMotion, "Client-only crane animation missing: " + needle)
+    for needle in ('function GantryMotion.sampleInterval(', 
+                   'distanceSquared > cutoff * cutoff',
+                   'return touch and 1 / 15 or 1 / 24, true',
+                   'return touch and 1 / 5 or 1 / 8, true'):
+        check(needle in gantryMotion,
+              "Gantry motion adaptive client LOD budget disconnected: " + needle)
+    for needle in ('Motion.sampleInterval(',
+                   'local distanceSquared = offset:Dot(offset)',
+                   'rig.nextUpdateAt = now + period',
+                   'if not elapsed then elapsed = Workspace:GetServerTimeNow() end',
+                   'if not isTouch and quality == "QUALITY" and distance < 150 then',
+                   'rig.beacon:IsDescendantOf(model)',
+                   'if rig.moving then',
+                   'if modeChanged then rig.beacon.Transparency = 0.55 end'):
+        check(needle in industrialMotion,
+              "Gantry runtime must skip inactive expensive animation and lights: " + needle)
+    check('Instance.new("PointLight")' in industrialMotion,
+          "Nearby desktop QUALITY cranes retain visible amber lighting")
+    check("RemoteEvent" not in industrialMotion and "CanCollide =" not in industrialMotion,
+          "Client gantry LOD cannot change combat physics or create network workload")
     check("RunService" not in art and "TweenService" not in art,
           "Server should not drive per-frame cosmetic crane motion")
 
