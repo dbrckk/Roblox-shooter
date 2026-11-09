@@ -31,6 +31,8 @@ def main():
     match = read("src/server/MatchService.luau")
     startup = read("src/server/init.server.luau")
     ui = read("src/client/ProgressionHud.client.luau")
+    podium = read("src/client/RoundResults.client.luau")
+    readout = read("src/shared/CareerReadout.luau")
     doc = read("docs/PROGRESSION_PERSISTENCE.md")
     hud = read("src/client/CombatAwards.client.luau")
 
@@ -106,14 +108,26 @@ def main():
         "CombatAwards.recordVictory(winningPlayer)",
     ), "Winner identity and frozen result snapshot")
 
-    require("DataStoreService" not in ui, "HUD may not access Roblox DataStore")
-    require('IronYardProgressStatus' in ui, "HUD must announce saving state")
-    require("SAVE NOT CONFIRMED" in ui, "HUD must display failure")
-    require("STUDIO / SESSION ONLY" in ui, "Studio cannot pretend data is saved")
-    require("ONLINE" in ui, "No success indication for confirmed DataStore access")
-    contains(ui, ("IronYardSavedXP", "CAREER / SAVE PENDING",
-                  "CAREER / SAVED", "savedXP < xp"), "Confirmed-vs-pending career HUD")
-    require("CombatAward" in hud, "Session medal feedback must remain intact")
+    require("DataStoreService" not in ui and "DataStoreService" not in podium,
+            "Client display must never access a DataStore")
+    for client, scope in ((ui, "Career HUD"), (podium, "Results podium")):
+        contains(client, ('Shared:WaitForChild("CareerReadout")',
+                          'CareerReadout.save(', "IronYardSavedXP",
+                          "IronYardProgressStatus"), scope + " save-status wiring")
+    contains(readout, ("function Readout.save(status, xp, savedXP)",
+                       "function Readout.rank(xp, level)",
+                       "acknowledged == earned", "acknowledged < earned",
+                       "CAREER / SAVED", "XP SAVE PENDING",
+                       "STUDIO / SESSION ONLY", "SAVE NOT CONFIRMED",
+                       "CAREER / SYNCING..."), "Pure save-status policy")
+    require("saveLabel.Text = saveInfo.label" in podium,
+            "Round results must show the current save state")
+    require('player:GetAttributeChangedSignal(attr):Connect(render)' in podium,
+            "Podium must react when saved XP is acknowledged")
+    require("CareerReadout.rank(xp, level)" in ui and
+            "CareerReadout.rank(xp, level)" in podium,
+            "Both displays must share rank computation")
+    require("CombatAward" in hud, "Medal feedback must remain intact")
 
     contains(doc.lower(), ("updateasync", "idempotent", "45", "180", "studio",
                            "published experience", "not a transaction guarantee"),

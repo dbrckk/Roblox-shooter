@@ -4,7 +4,9 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local OperatorFinishes = require(Shared:WaitForChild("OperatorFinishes"))
+local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -85,8 +87,7 @@ fillCorner.Parent = fill
 
 local function safeCount(attribute)
     local value = player:GetAttribute(attribute)
-    if typeof(value) ~= "number" then return 0 end
-    return math.max(0, math.floor(value))
+    return CareerReadout.count(value)
 end
 
 local function update()
@@ -103,10 +104,9 @@ local function update()
         or (finish.name .. "  /  MAX FINISH")
     finishLabel.TextColor3 = Color3.fromRGB(
         finish.accent[1], finish.accent[2], finish.accent[3])
+    local rankInfo = CareerReadout.rank(xp, level)
     local nextLevel = 250 * level * level
-    local currentLevelXP = 250 * (level - 1) * (level - 1)
-    fill.Size = UDim2.fromScale(level >= 1000 and 1
-        or math.clamp((xp - currentLevelXP) / math.max(1, nextLevel - currentLevelXP), 0, 1), 1)
+    fill.Size = UDim2.fromScale(rankInfo.fraction, 1)
 
     title.Text = string.format("RANK %d    |    %d XP", level, xp)
     if level < 1000 then
@@ -114,27 +114,12 @@ local function update()
     else
         details.Text = string.format("%d KILLS   /   %d WINS   /   MAX RANK", kills, wins)
     end
-    if status == "ONLINE" then
-        if savedXP < xp then
-            statusLabel.Text = "CAREER / SAVE PENDING"
-            statusLabel.TextColor3 = Color3.fromRGB(229, 190, 112)
-        else
-            statusLabel.Text = "CAREER / SAVED"
-            statusLabel.TextColor3 = Color3.fromRGB(142, 201, 147)
-        end
-    elseif status == "LOADING" then
-        statusLabel.Text = "CAREER / LOADING..."
-        statusLabel.TextColor3 = Color3.fromRGB(229, 190, 112)
-    elseif status == "STUDIO" then
-        statusLabel.Text = "STUDIO / SESSION ONLY"
-        statusLabel.TextColor3 = Color3.fromRGB(229, 190, 112)
-    elseif status == "LOCKED" then
-        statusLabel.Text = "SAVE BUSY / RETRYING"
-        statusLabel.TextColor3 = Color3.fromRGB(244, 154, 104)
-    else
-        statusLabel.Text = "SAVE NOT CONFIRMED / RETRYING"
-        statusLabel.TextColor3 = Color3.fromRGB(244, 154, 104)
-    end
+    local saveInfo = CareerReadout.save(status, xp, savedXP)
+    statusLabel.Text = saveInfo.label
+    statusLabel.TextColor3 = saveInfo.tone == "saved"
+        and Color3.fromRGB(142, 201, 147)
+        or (saveInfo.tone == "pending" and Color3.fromRGB(229, 190, 112)
+            or Color3.fromRGB(244, 154, 104))
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local compact = UserInputService.TouchEnabled and phase == "LIVE"
     panel.Size = UDim2.fromOffset(205, compact and 27 or 96)
@@ -143,12 +128,7 @@ local function update()
     finishLabel.Visible = not compact
     track.Visible = not compact
     if compact then
-        if status ~= "ONLINE" then
-            title.Text = string.format("RANK %d  |  SAVE %s", level,
-                status == "LOADING" and "WAIT" or "OFFLINE")
-        elseif savedXP < xp then
-            title.Text = string.format("RANK %d  |  %d XP PENDING", level, xp)
-        end
+        title.Text = string.format("RANK %d  |  %s", level, saveInfo.compact)
     end
     panel.Visible = phase ~= "RESULTS"
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true

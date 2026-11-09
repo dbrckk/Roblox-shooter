@@ -73,3 +73,10 @@ A successful release may be retried after another server has already acquired th
 The server now publishes `IronYardSavedXP`, based only on the loaded persistent baseline and the last successfully acknowledged local `UpdateAsync` snapshot. `IronYardLifetimeXP` continues to show earned XP immediately. While the two differ, the career HUD explicitly displays **SAVE PENDING**, including a compact indicator during live mobile play; after a successful save it displays **SAVED**. LOADING, LOCKED, STUDIO and RETRYING states still warn independently. This is confirmation of a completed DataStore request, **not** a guarantee against every eventual Roblox outage or platform failure.
 
 When the player earns more XP during an in-flight save, only the snapshotted amount becomes confirmed; the newer XP remains pending. Failed writes never advance the confirmed counter. This state is ephemeral and does not change DataStore schema v1, player keys or reward amounts.
+
+
+## Match results show durable save state (9 November 2026)
+
+Before this change the RESULTS podium displayed lifetime XP while hiding the in-game career panel, leaving players unable to distinguish pending from saved XP. The results screen and active career HUD now share the standalone, CI-tested `src/shared/CareerReadout.luau` presentation policy. `CAREER / SAVED` appears only if the server reports ONLINE and confirmed `IronYardSavedXP` equals live `IronYardLifetimeXP`. Pending XP is the difference, not all earned XP. Replication may deliver attributes in either order; when saved totals temporarily exceed received totals, the UI says SYNCING and never indicates a confirmed save.
+
+The results screen refreshes on live save-status and saved-XP attribute changes and now shows XP **remaining** to the next rank. Studio and DataStore failures remain visibly unconfirmed. DataStore v1 keys, awards, authoritative server logic and gameplay are unchanged.

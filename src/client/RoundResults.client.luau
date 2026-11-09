@@ -5,7 +5,9 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local BuildInfo = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BuildInfo"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local BuildInfo = require(Shared:WaitForChild("BuildInfo"))
+local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -74,12 +76,14 @@ local personalLabel = label("MyResults", 14, UDim2.fromOffset(16, 99),
     UDim2.new(1, -32, 0, 29), bone)
 local xpLabel = label("EarnedXP", 13, UDim2.fromOffset(16, 131),
     UDim2.new(1, -32, 0, 24), amber)
-local progressLabel = label("Rank", 11, UDim2.fromOffset(16, 158),
-    UDim2.new(1, -32, 0, 22), muted)
+local progressLabel = label("Rank", 11, UDim2.fromOffset(16, 157),
+    UDim2.new(1, -32, 0, 18), muted)
+local saveLabel = label("CareerSaveState", 10, UDim2.fromOffset(16, 178),
+    UDim2.new(1, -32, 0, 16), muted)
 
 local track = Instance.new("Frame")
 track.Name = "CareerProgressTrack"
-track.Position = UDim2.fromOffset(37, 186)
+track.Position = UDim2.fromOffset(37, 200)
 track.Size = UDim2.new(1, -74, 0, 7)
 track.BackgroundColor3 = Color3.fromRGB(68, 77, 74)
 track.BorderSizePixel = 0
@@ -108,7 +112,7 @@ local countdown = label("NextRound", 11,
 
 local function safeCount(attr)
     local value = player:GetAttribute(attr)
-    return typeof(value) == "number" and math.max(0, math.floor(value)) or 0
+    return CareerReadout.count(value)
 end
 
 local function scoreValue(name)
@@ -160,8 +164,10 @@ local function render()
     local seconds = Workspace:GetAttribute("NeonMatchTimeLeft") or 0
     local xp = safeCount("IronYardLifetimeXP")
     local level = math.max(1, safeCount("IronYardProgressLevel"))
-    local nextXP = 250 * level * level
-    local baseXP = 250 * (level - 1) * (level - 1)
+    local rankInfo = CareerReadout.rank(xp, level)
+    local saveInfo = CareerReadout.save(
+        player:GetAttribute("IronYardProgressStatus"), xp,
+        safeCount("IronYardSavedXP"))
 
     title.Text = isWinner and "VICTORY" or ("ROUND " .. tostring(round) .. " COMPLETE")
     title.TextColor3 = isWinner and green or amber
@@ -190,10 +196,12 @@ local function render()
     end
     xpLabel.Text = string.format("+%d ROUND XP     /     %d CAREER XP",
         safeCount("IronYardRoundXP"), xp)
-    progressLabel.Text = level >= 1000 and "RANK 1000  |  MAX RANK"
-        or string.format("RANK %d  |  NEXT %d XP", level, nextXP)
-    fill.Size = UDim2.fromScale(level >= 1000 and 1
-        or math.clamp((xp - baseXP) / math.max(1, nextXP - baseXP), 0, 1), 1)
+    progressLabel.Text = rankInfo.maxed and "RANK 1000  |  MAX RANK"
+        or string.format("RANK %d  |  %d XP TO NEXT", rankInfo.rank, rankInfo.toNext)
+    saveLabel.Text = saveInfo.label
+    saveLabel.TextColor3 = saveInfo.tone == "saved" and green
+        or (saveInfo.tone == "pending" and amber or Color3.fromRGB(244, 154, 104))
+    fill.Size = UDim2.fromScale(rankInfo.fraction, 1)
 
     local top = snapshot and snapshot.standings or standings()
     for i = 1, 3 do
@@ -239,6 +247,7 @@ for _, attr in ipairs({
 end
 for _, attr in ipairs({
     "IronYardLifetimeXP", "IronYardProgressLevel", "IronYardRoundXP",
+    "IronYardSavedXP", "IronYardProgressStatus",
 }) do
     player:GetAttributeChangedSignal(attr):Connect(render)
 end

@@ -304,3 +304,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Zéro nouvel obstacle physique ou raycast, aucune lumière serveur, nouveau RemoteEvent ou boucle client ; l'intégration est effectuée dans `ArenaArt.build`.
 - [x] Tests Luau du plan et des rejets + vérification d'intégration CI et build Rojo.
 - [ ] Contrôle Studio et Android : lisibilité du panneau depuis les arrivées sud, absence de confusion avec une couverture physique, chevrons sans scintillement à l'approche, silhouette depuis les passerelles et coût GPU réel. Aucun FPS mesuré en CI.
+
+
+### L2.6 — affichage fiable des sauvegardes en fin de manche (9 novembre 2026)
+
+- [x] Ajout d'un indicateur réel SAVED / XP SAVE PENDING / LOADING / STUDIO / RETRYING à l'écran RESULTS, puisque le HUD carrière est caché pendant le podium. Les gains arrivant pendant un UpdateAsync restent affichés comme non sauvés.
+- [x] Les deux HUD utilisent la même politique Luau pure `CareerReadout` (sans RemoteEvent ni accès DataStore client). Une réplication hors ordre ne peut pas faire afficher SAVED si les compteurs reçus sont discordants.
+- [x] Affichage des XP restant pour atteindre le rang suivant, plutôt que du seuil cumulatif ambigu ; même pourcentage dans le HUD et le podium.
+- [x] Tests de politique pure et contrôle d'intégration CI, sans nouvelle instance graphique à chaque XP.
+- [ ] Tester les transitions d'autosave dans une session Roblox publique réelle avec Android/PC, victoire FFA et reconnexion.
