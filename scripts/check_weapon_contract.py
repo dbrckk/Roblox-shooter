@@ -181,7 +181,7 @@ def main():
     has(bot, "config.MagazineSize", "Bot finite ammunition")
     has(bot, "config.ReloadSeconds", "Bot reloading")
     for key in ("CombatVfxProfile.tracer(range)",
-                "function WeaponVisuals:_trackImpactMark(mark, cap)",
+                "function WeaponVisuals:_trackImpactMark(now, duration, cap)",
                 "function WeaponVisuals:drawLocalMuzzleFlash()",
                 "CombatVfxProfile.surface(materialName)",
                 "CombatVfxProfile.budget(preset, touch, distance)",
