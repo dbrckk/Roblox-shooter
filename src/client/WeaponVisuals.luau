@@ -76,6 +76,9 @@ function WeaponVisuals.new(WeaponConfig)
     self.impactMarks = {}
     self.nextImpactMarkUpdateAt = 0
     self.transientParts = {}
+    -- Track only live slots: pooled Parts persist, but inactive slots must
+    -- not be visited by every RenderStepped after the first firefight.
+    self.activeTransientIndices = {}
     -- A bounded list of remote emitters only. The local weapon's feedback
     -- has absolute priority and does not consume these slots.
     self.remoteSoundEmitters = {}
@@ -396,7 +399,7 @@ function WeaponVisuals:_render(deltaTime)
     end
     -- Sub-300ms effects need smooth animation. The existing render callback
     -- owns their lifecycle; no extra frame loop, task, Tween or Debris entry.
-    if #self.transientParts > 0 then
+    if next(self.activeTransientIndices) then
         self:_updateTransientFx(clock)
     end
 	local camera = workspace.CurrentCamera
@@ -493,9 +496,12 @@ function WeaponVisuals:_spawnTransient(spec)
     local cap = TransientFxPool.cap(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
         UserInputService.TouchEnabled)
-    local slot = TransientFxPool.claim(self.transientParts,
+    local slot, index = TransientFxPool.claim(self.transientParts,
         now, spec.duration, cap, spec.priority)
     if not slot then return false end
+    -- Recycled slots keep the same numeric identity even when a local
+    -- muzzle flash preempts lower-priority bot debris.
+    self.activeTransientIndices[index] = true
     local part = slot.part
     if not part then
         part = Instance.new("Part")
@@ -537,20 +543,24 @@ function WeaponVisuals:_updateTransientFx(now)
     local cap = TransientFxPool.cap(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
         UserInputService.TouchEnabled)
-    for index, slot in ipairs(self.transientParts) do
-        local part = slot.part
-        if part then
-            local t = TransientFxPool.progress(slot, now, index <= cap)
-            if t then
-                -- Original standard TweenInfo uses Quad.Out; tracers use Linear.
-                local blend = slot.linear and t or (1 - (1 - t) * (1 - t))
-                part.CFrame = slot.fromCFrame:Lerp(slot.toCFrame, blend)
-                part.Size = slot.fromSize:Lerp(slot.toSize, blend)
-                part.Transparency = slot.fromAlpha
-                    + (1 - slot.fromAlpha) * blend
-                if not part.Parent then part.Parent = workspace end
-            elseif part.Parent then
-                part.Parent = nil
+    for index in pairs(self.activeTransientIndices) do
+        local slot = self.transientParts[index]
+        local part = slot and slot.part
+        local t = slot and TransientFxPool.progress(slot, now, index <= cap)
+        if t and part then
+            -- Original standard TweenInfo uses Quad.Out; tracers use Linear.
+            local blend = slot.linear and t or (1 - (1 - t) * (1 - t))
+            part.CFrame = slot.fromCFrame:Lerp(slot.toCFrame, blend)
+            part.Size = slot.fromSize:Lerp(slot.toSize, blend)
+            part.Transparency = slot.fromAlpha
+                + (1 - slot.fromAlpha) * blend
+            if not part.Parent then part.Parent = workspace end
+        else
+            -- Expired or excluded by a reduced graphics cap: retire this
+            -- active index immediately. The pooled Part remains reusable.
+            self.activeTransientIndices[index] = nil
+            if part then
+                if part.Parent then part.Parent = nil end
                 if slot.light then slot.light.Enabled = false end
             end
         end
