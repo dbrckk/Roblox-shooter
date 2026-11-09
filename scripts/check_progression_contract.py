@@ -41,7 +41,9 @@ def main():
         'return Ledger.acquire(previous, record.token, timestamp, LEASE_SECONDS)',
         'return Ledger.commit(previous, record.token, snapshot, timestamp,',
         "local function acquire(player, record)",
-        "local function flush(player, record, release)",
+        "local flush -- acquisition may finish after a player has already left",
+        "flush = function(player, record, release)",
+        "if not flush(player, record, true) then",
         "store:UpdateAsync(keyFor(player), function(previous)",
         "local snapshot = cloneSnapshot(record.earned)",
         "record.triedAcquire = true",
@@ -71,6 +73,8 @@ def main():
         "data.lock = nil",
     ), "Pure idempotent DataStore ledger")
 
+    require("if release and data.lastSession" in ledger,
+            "Previously released sessions need idempotent acknowledgement after a new lease")
     require(data.count("store:UpdateAsync(") == 2,
             "Acquisition and every save must use UpdateAsync")
     for unsafe in ("store:SetAsync(", "store:IncrementAsync(", "GetDataStore("):
