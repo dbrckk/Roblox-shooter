@@ -294,3 +294,13 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Aucune nouvelle collision, interception de raycast, surface d'escalade ou obstacle IA : tous les éléments décoratifs sont `CanCollide=false`, `CanTouch=false`, `CanQuery=false`, `CastShadow=false` et participent au système `NeonArtTier` existant.
 - [x] Plan pur Luau testant les 4 colliders exacts, 28 panneaux, 12 plaques, limites des sections, rejet des dimensions/identités invalides. Contrôle d'intégration et build Rojo en CI.
 - [ ] Valider les quatre côtés dans Roblox Studio/Android, notamment contraste et lisibilité des plaques, recouvrement avec les anciens poteaux et enseignes, taille des éléments sur petit écran, absence de scintillement, FPS et mémoire à quatre bots. Aucune mesure réelle n'est revendiquée.
+
+
+### L1.2 — entrée monumentale de l'entrepôt et circulation lisible (9 novembre 2026)
+
+- [x] Création d'un **portail de fret industriel** dans la vraie ouverture sud de l'entrepôt : linteau, auvent métallique, deux piles, liseré ambre et grande plaque IRON YARD / FREIGHT PROCESSING. Cette identité reste lisible en ECO Android ; les contreventements/chevrons sont classés Detail pour le LOD existant.
+- [x] Trois lignes directrices sur l'asphalte indiquent l'entrée réellement praticable, sans fausse ouverture ni repère décoratif qui pourrait bloquer un tir.
+- [x] Le plan utilise exclusivement les **3 vrais colliders MapService** (murs ouest et est, cloison nord), avec vérification stricte de leurs dimensions, positions, orientations et noms ; sur changement de géométrie, aucun décor décalé n'est construit.
+- [x] Zéro nouvel obstacle physique ou raycast, aucune lumière serveur, nouveau RemoteEvent ou boucle client ; l'intégration est effectuée dans `ArenaArt.build`.
+- [x] Tests Luau du plan et des rejets + vérification d'intégration CI et build Rojo.
+- [ ] Contrôle Studio et Android : lisibilité du panneau depuis les arrivées sud, absence de confusion avec une couverture physique, chevrons sans scintillement à l'approche, silhouette depuis les passerelles et coût GPU réel. Aucun FPS mesuré en CI.

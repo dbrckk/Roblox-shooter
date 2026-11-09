@@ -117,6 +117,23 @@ def main():
                    'puff.CanCollide = false', "Debris:AddItem(puff,",
                    'part:GetAttribute("IronYardExhaustVent") ~= true'):
         check(needle in exhaust, "Missing local-only exhaust/culling protection: " + needle)
+    entrance = source("src/server/WarehouseEntranceArt.luau")
+    entrance_plan = source("src/shared/WarehouseEntrancePlan.luau")
+    for needle in ('local WarehouseEntranceArt = require(script.Parent:WaitForChild("WarehouseEntranceArt"))',
+                   'WarehouseEntranceArt.decorate(decor, arena)'):
+        check(needle in art, "Warehouse entrance visuals are not integrated")
+    for needle in ('function Entrance.decorate(decor, arena)',
+                   'Plan.layout(describe(west), describe(east), describe(rear))',
+                   'p.CanCollide = false', 'p.CanQuery = false',
+                   'p.CanTouch = false', 'p.CastShadow = false',
+                   'p:SetAttribute("NeonArtTier", tier or "Detail")',
+                   '"terminal nameplate"', '"directional chevron "'):
+        check(needle in entrance, "Warehouse entrance safety/wayfinding missing: " + needle)
+    for needle in ('function Plan.layout(west, east, rear)',
+                   '"WAREHOUSE / west wall"', '"WAREHOUSE / east wall"',
+                   '"WAREHOUSE / north bulkhead"', 'openingWidth = span',
+                   'lanes = lanes'):
+        check(needle in entrance_plan, "Warehouse entrance must derive from physical walls")
     warehouse_cladding = source("src/server/WarehouseCladding.luau")
     for needle in ("WarehouseCladding.decorate(decor)",
                    'local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))',
