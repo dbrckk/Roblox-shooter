@@ -183,3 +183,8 @@ With all four overhead gantries visible, test ECO, BALANCED and QUALITY on Andro
 ## Rapid streamed gantry beacon replacement (9 November 2026)
 
 With StreamingEnabled and camera near all four gantries, remove and recreate a crane's beacon Part within one animation interval while leaving its Model in the arena. Confirm the new beacon immediately takes over animation/light ownership (without waiting for another full model stream), and that a missing beacon never leaves a stale PointLight. Toggle Mover off/on and change GantryIndex while a crane is in motion: the model must return to its original pivot without accumulating a shift, then register cleanly. Repeat in ECO (no motion) and desktop QUALITY (local point light), as well as Android QUALITY (no dynamic light). These checks require Studio or a real game session; CI proves the helper and source integration only.
+
+
+## Idle transient-combat-FX slot retirement (9 November 2026)
+
+On low-end Android, fire continuously with four active bots until the 48-slot BALANCED or 72-slot QUALITY transient visual pool has filled. Stop firing and confirm all impacts, tracers and muzzle flashes disappear after their 0.5-second maximum lifetime without persistent world Parts or PointLights. The index-tracked RenderStepped updater should perform no pooled visual-Part iteration after all effects expire. Fire again to verify immediate reuse and own muzzle flash priority. While firing, switch QUALITY → ECO → BALANCED and check expired or over-cap Parts never remain parented. Compare true device idle/combat frametime, P95/P99 stutter, and memory against the previous build. CI verifies slot reuse and state transitions, not actual Android frame rates.
