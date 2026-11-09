@@ -163,3 +163,8 @@ Fire a full magazine at concrete, steel, warehouse cladding, and cover; verify t
 ## Pooled short-lived combat VFX (9 November 2026)
 
 Under sustained rifle fire and four bots, check muzzle flashes, metal sparks, wood/concrete fragments, shotgun pellet glints, tracer travel and dust for correct shape, color and smooth fade. ECO Android may hold at most 24 transient visual Parts, BALANCED 48, QUALITY 72; PC BALANCED 80, PC QUALITY 96. Verify local muzzle flashes remain visible when incoming bot FX saturate the pool. Only desktop QUALITY enables the existing optional local point light: ensure it disables when its Part is reused for debris or after expiration. Quick-switch graphics preset during a firefight. Confirm no gameplay damage, ammo, sound, hit confirmation or server logic changes. Record actual device FPS, frame time and memory before interpreting this as proven performance improvement.
+
+
+## Bot streamed-cosmetic LOD cache (9 November 2026)
+
+On Android with four bots, keep moving across ECO/BALANCED/QUALITY detail-visibility thresholds. Core body silhouettes, helmets, rifles and real R6 hitbox parts must stay visible and functional, while only tier=Detail armor fades out at distance. Kill and respawn bots, switch graphics presets, and join mid-round with streamed-in models to verify no detail flashes, stale hidden parts or accumulated cache connections. The client builds a bot's detail inventory once, listens to new/removed descendants and late tier attributes, and does not do a full GetDescendants scan each second. Measure real device frame times and memory; CI verifies invariants, not observed Android FPS.

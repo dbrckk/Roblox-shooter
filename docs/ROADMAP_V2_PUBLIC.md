@@ -342,3 +342,13 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Aucun changement de dégâts, validation réseau, IA, sons, VFX confirmés de touche, statut des points de carrière, collision ou raycast. Aucun effet 3D de dégâts confirmé n'est throttlé par le pool.
 - [x] Tests Luau purs : 12 000+ impacts, saturations, priorités, renversement temporel, baisse de preset, entrées invalides, réutilisation d'instance. Contrat intégration et build Rojo dans la CI.
 - [ ] Vérifier visuellement tous les effets sous 4 bots en Studio/Android (notamment lumière de bouche réutilisée, ordre de priorité, absence de traînées figées) puis comparer FPS et mémoire avant/après.
+
+
+### L3.4 — LOD des bots en cache avec prise en charge du streaming (9 novembre 2026)
+
+- [x] Le client ne reparcourt plus chaque seconde l'ensemble des descendants 3D de chaque bot. La liste des pièces `NeonCosmeticTier=Detail` est construite **une fois lors de l'apparition** de chaque modèle puis actualisée via `DescendantAdded` et `DescendantRemoving`.
+- [x] Les pièces apparaissant après le modèle (streaming Roblox) adoptent immédiatement l'état LOD courant ; un abonnement temporaire traite les attributs `NeonCosmeticTier` arrivant après la pièce, puis se déconnecte.
+- [x] La boucle de contrôle à 1 Hz n'effectue plus qu'un test de distance au carré par bot. Les propriétés de transparence ne sont réécrites **que** lors d'un changement de mode SHOW/HIDE ou de l'arrivée d'une nouvelle pièce.
+- [x] Hystérésis précédente et seuils ECO/BALANCED/QUALITY strictement conservés. Toutes les pièces Core, humanoïdes et hitboxes restent inchangées. Les abonnements et références du cache sont libérés lors du remplacement du bot ou de son dossier.
+- [x] Plan Luau pur, tests des changements de qualité, streaming tardif, apparition/disparition du bot et réutilisation sans accumulation ; contrôle d'intégration Python, compilation Luau et build Rojo dans CI.
+- [ ] Validation Android/PC : tuer/recréer quatre bots pendant les déplacements, entrer/sortir des seuils de visibilité, observer les pièces répliquées tardivement, mesurer FPS/mémoire et comparer au build précédent.
