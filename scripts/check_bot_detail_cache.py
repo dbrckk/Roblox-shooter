@@ -32,8 +32,12 @@ assert client.count("model:GetDescendants()") == 1, (
     "Cosmetic inventory must be read ONCE at model registration, never each polling tick")
 assert "model:GetDescendants()" not in client.split("local function updateModel(model)")[1].split(
     "-- Server-authored visual art")[0], "Bot update must be O(1) when the mode stays unchanged"
-assert 'item.LocalTransparencyModifier = hidden and 1 or 0' not in client, (
+bot_poller = client.split("local function updateModel(model)", 1)[1].split(
+    "-- Server-authored visual art", 1)[0]
+assert 'item.LocalTransparencyModifier = hidden and 1 or 0' not in bot_poller, (
     "Do not revert to per-second writes for every bot descendant")
+assert "if not changed then return end" in bot_poller, (
+    "Only a change in visual mode may update existing bot Parts")
 assert 'tier == "Detail"' in client and 'tier == "Detail"' in pure, (
     "Core rig and authoritative hitbox parts must stay visible and collidable")
 assert 'part.CanCollide =' not in client and 'part.CanQuery =' not in client, (
