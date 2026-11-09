@@ -200,8 +200,10 @@ def main():
         has(viewmodel, key, "Client-only confirmed damage and shotgun glints")
     for key in ("visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)",
                 "visuals:drawPelletImpacts(message.pelletImpacts)",
-                "if message.shooterUserId ~= player.UserId then"):
-        has(client, key, "Server-authored hit UI with no duplicate local tracer")
+                "local ownShot = message.shooterUserId == player.UserId",
+                "if remoteAccepted then",
+                '(ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table"'):
+        has(client, key, "Server-authored hit UI, no local duplicate or skipped pellet feedback")
     for key in ("visuals:drawLocalMuzzleFlash()",
                 "visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)",
                 "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)"):
