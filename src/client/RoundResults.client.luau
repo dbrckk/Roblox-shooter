@@ -4,6 +4,8 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local BuildInfo = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BuildInfo"))
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -209,7 +211,10 @@ local function render()
             leaderboard[i].TextColor3 = muted
         end
     end
+    local build = typeof(BuildInfo.sourceSha) == "string"
+        and #BuildInfo.sourceSha == 40 and BuildInfo.short or nil
     countdown.Text = string.format("NEXT ROUND IN %ds", math.max(0, seconds))
+        .. (build and ("   /   BUILD " .. build) or "")
     root.Visible = true
 end
 

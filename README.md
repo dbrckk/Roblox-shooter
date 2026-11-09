@@ -6,7 +6,7 @@
 - **[Feuille de route V2 vers la version publique premium](docs/ROADMAP_V2_PUBLIC.md)** : priorités critiques, lots finis et mesurables, conditions de validation, dépendances Roblox et ordre exact des prochains développements.
 - [Ancien journal de progression](docs/ROADMAP.md) : archive chronologique des travaux précédents, non utilisée pour prioriser les nouvelles fonctionnalités.
 
-Le retour utilisateur valide l'état fonctionnel courant ; les prochaines itérations suivent **L0.1 (anti-spam des remotes) puis L0.2 (pathfinding réellement borné)**, avant de poursuivre l'UX et les grandes améliorations premium. Le build GitHub et l'import d'assets ne doivent jamais être confondus avec une publication Roblox.
+Les premières protections serveur et la récupération de progression sont en place. Le projet vise désormais **une seule livraison publique**, sans phase privée : GitHub Actions produit un build testable, puis une publication publique manuelle strictement contrôlée lorsque l'expérience Roblox et les accès sont prêts. Un build GitHub n'est pas une publication Roblox.
 
 
 FPS Roblox indépendant, utilisant **RIVALS** (duels et progression), **Hypershot** (fluidité) et **Arsenal** (rythme) comme références de game design. Aucun script, asset, carte ni interface propriétaire de ces jeux n'a été copié.
@@ -35,9 +35,9 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - **Animations d'armes** : gants tactiques complets, mouvements cohérents pendant le rechargement, glissière du pistolet, pompe du fusil et verrou du sniper.
 
 
-## Publier comme expérience Roblox PRIVÉE
+## Publication Roblox DIRECTEMENT PUBLIQUE
 
-Le dépôt dispose d'un [workflow GitHub Actions manuel](https://github.com/dbrckk/Roblox-shooter/actions/workflows/publish-roblox-private.yml) qui construit la dernière version et l'envoie dans une expérience **IRON YARD déjà créée et privée**. Il vérifie la visibilité avant et après la publication et refuse toute autre expérience. Il nécessite un `Universe ID`, un `Place ID` et le secret GitHub `ROBLOX_OPEN_CLOUD_API_KEY`. **La présence de ce workflow ne signifie pas que l'expérience a été publiée.** [Instructions Android et configuration des accès](docs/PRIVATE_ROBLOX_PUBLISHING.md).
+Le dépôt comprend un [workflow manuel de publication publique](https://github.com/dbrckk/Roblox-shooter/actions/workflows/publish-roblox-public.yml) qui refuse les univers privés, les mauvais propriétaires, la mauvaise place et tout commit dont la CI n'est pas verte. Aucune publication automatique n'est déclenchée par un push. La destination IRON YARD doit déjà être **publique** dans Roblox Creator Dashboard. Le build affiche son SHA Git sur les résultats de manche pour identifier la version ; un retour arrière est documenté. **Aucune expérience Roblox n'a été publiée par ce changement de code.** [Guide Android/PC de publication et de rollback](docs/PUBLIC_ROBLOX_PUBLISHING.md).
 
 ## Construire et jouer
 

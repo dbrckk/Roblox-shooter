@@ -83,14 +83,16 @@ jobs:
           ./luau scripts/test_spawn_safety.luau
           ./luau scripts/test_supply_rules.luau
 
-      - name: Parse private Roblox publish script
+      - name: Validate PUBLIC release gates and build stamp
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/publish_private_roblox.py
-          python3 scripts/publish_private_roblox.py --help > /dev/null
+          python3 -m py_compile scripts/publish_public_roblox.py scripts/stamp_build.py scripts/test_public_release.py
+          python3 scripts/publish_public_roblox.py --help > /dev/null
+          python3 scripts/test_public_release.py
+          python3 scripts/stamp_build.py --sha "$GITHUB_SHA"
 
-      - name: Check private Roblox account publication prerequisites without exposing secrets
+      - name: Check PUBLIC Roblox release prerequisites without exposing secrets
         shell: bash
         env:
           ROBLOX_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}

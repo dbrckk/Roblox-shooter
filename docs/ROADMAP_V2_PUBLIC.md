@@ -61,16 +61,19 @@ Priorité explicite : fiabilité > fonctionnement réel > sécurité > architect
 
 **L0.3 — progression et exploitation, autonome + session Roblox**
 - Contrôler les idempotences, états LOCKED/RETRYING, sauvegarde en sortie, reconnexion et victoire FFA. Conserver les clés existantes et prévoir toute migration avant de modifier le schéma.
-- Construire un protocole Studio/test privé pour la vérification du moteur sans écrire dans les vraies données de production.
+- Valider les contrats localement sans ouvrir l'accès Studio aux données de production, puis contrôler sauvegarde/reconnexion en session serveur Roblox après mise en public.
 - Remettre le statut de sauvegarde clairement dans le HUD ; aucun point n'est annoncé définitivement acquis avant confirmation.
 
-**L0.4 — mise à disposition, owner-gated**
-- Conserver l'actuel pipeline CI Rojo et le workflow manuel de publication privée, avec cible IRON YARD uniquement, jamais Chaos Survival.
-- Brancher, lorsqu'ils existent, IRON_YARD_UNIVERSE_ID, IRON_YARD_PLACE_ID et ROBLOX_OPEN_CLOUD_API_KEY dans GitHub Actions, sans jamais enregistrer les secrets dans le dépôt ou le chat.
-- Ajouter un manifeste/version de build visible côté client et un contrôle de rollback de la place privée ; ne pas prétendre publié avant confirmation d'une version Roblox.
-- Préparer ensuite un flux public séparé qui exige confirmation propriétaire et conformité ; aucune publication publique silencieuse.
+**L0.4 — livraison directement PUBLIQUE, manuelle et owner-gated (9 novembre 2026)**
+- [x] Supprimer le workflow privé : une seule cible IRON YARD publique, jamais Chaos Survival.
+- [x] Créer un workflow à lancement manuel : préflight sans upload, confirmation exacte `PUBLISH IRON YARD PUBLIC` et CI verte sur le SHA exact.
+- [x] Contrôler les Universe/Place IDs, propriétaire Roblox, nom IRON YARD, visibilité PUBLIC avant et après, et place de démarrage ; aucun changement de visibilité depuis la CI.
+- [x] Inscrire le SHA Git complet dans le lieu Rojo avant compilation, rendre son identifiant court visible pendant les résultats, enregistrer la version retournée par Roblox lors d'un vrai déploiement.
+- [x] Préparer les tests offline du publisher et le guide Android/PC de publication/retour arrière ; aucun upload par simple push.
+- [ ] Configurer `IRON_YARD_UNIVERSE_ID`, `IRON_YARD_PLACE_ID`, `ROBLOX_OPEN_CLOUD_API_KEY` côté GitHub, et mettre l'expérience au statut Public dans Creator Dashboard.
+- [ ] Obtenir une version Roblox réellement publiée, puis mesurer gameplay/Android et DataStore. Aucun déploiement n'est affirmé tant qu'il n'existe pas dans Roblox.
 
-**Gate LOT 0 :** Rojo vert ; spam remote contrôlé ; IA ne se bloque pas sous charge ; régression sauvegarde validée sur une expérience de test ; et version privée identifiée de manière reproductible quand l'autorisation existe. Les tâches autonomes avancent même si l'autorisation Roblox manque.
+**Gate LOT 0 :** Rojo vert, protection serveur, garde-fous publication publique validés en CI ; validation moteur et données sur une expérience publique réelle encore requise.
 
 ### LOT 1 — Impact visuel et sonore premium visible pour le joueur (P1-A/B/C)
 
@@ -168,7 +171,7 @@ Une tâche n'est **terminée** que si :
 3. L2.1 : parcours de premier match et UX sur petit écran, en gardant la mission compréhensible.
 
 **SÉQUENCE B — nécessite uniquement les autorisations Roblox déjà prévues**
-4. L0.4 : publication privée sur la bonne expérience et version identifiable.
+4. L0.4 : préparation puis publication uniquement PUBLIQUE sur IRON YARD après confirmation et préflight.
 5. L1.1 : upload/activation des meshes VANGUARD et PBR originaux.
 6. L1.2 + L1.3 : refonte premium visuelle et sonore adaptée au rendu réel.
 
@@ -277,3 +280,8 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Le HUD de carrière affiche `SAVE PENDING` pour les gains non encore écrits et `SAVED` uniquement lorsque le cumul visible est confirmé ; indication compacte maintenue pendant la manche sur Android.
 - [x] Les gains reçus pendant un `UpdateAsync` en cours restent en attente ; les échecs n'avancent jamais le compteur confirmé. Vérifications statiques du flux ajoutées à la CI.
 - [ ] Confirmer les transitions des indicateurs dans une session publiée de test, sur Android puis PC, avec des retards réseau/écritures.
+
+
+### L0.4 — pivot confirmé : aucune version privée (9 novembre 2026)
+
+La publication privée est abandonnée à la demande du propriétaire. Le pipeline public est manuel et refuse de transformer la visibilité d'une expérience ou d'écraser Chaos Survival. La vérification à blanc doit précéder le déploiement public réel, lequel reste impossible sans une expérience IRON YARD déjà publique et une clé Open Cloud configurée. Les tests DataStore en serveur réel sont à mener après publication sous contrôle, sans configurer Studio pour écrire sur les clés de carrière de production.
