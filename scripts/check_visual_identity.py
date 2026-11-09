@@ -428,7 +428,7 @@ def main():
         check(needle in art_registry,
               "Shared incremental art sector registry missing: " + needle)
     for needle in ('ArtLOD.limits(', 'ArtLOD.classify(',
-                   'ArtLOD.hiddenSquared(', 'getDetailGroups(folder)',
+                   'ArtLOD.hiddenSquared(', 'getDetailGroups(folder, position)',
                    'applyGroupState(group, mode == "HIDE")',
                    'item.LocalTransparencyModifier = hidden and 1 or 0',
                    'group.lastMode = mode',

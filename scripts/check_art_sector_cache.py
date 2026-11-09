@@ -10,7 +10,7 @@ policy = (ROOT / "src/shared/ArtLODPolicy.luau").read_text()
 needles = (
     'Shared:WaitForChild("ArtSectorRegistry")',
     "local function releaseArtFolder(folder)",
-    "local function getDetailGroups(folder)",
+    "local function getDetailGroups(folder, initialEye)",
     "folder.DescendantAdded:Connect(inspectPart)",
     "folder.DescendantRemoving:Connect(function(item)",
     'item:GetAttributeChangedSignal("NeonArtTier")',
