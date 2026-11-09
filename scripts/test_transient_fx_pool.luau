@@ -24,14 +24,14 @@ assert(Pool.claim(slots, 10.02, 0.2, 3, 2) == one,
     "Tracer can preempt an old chip")
 assert(Pool.claim(slots, 10.03, 0.1, 3, 1) == nil,
     "Debris cannot preempt tracer or local flash")
-assert(Pool.claim(slots, 10.04, 0.1, 3, 4) == two,
-    "High priority flash can preempt tracer")
-assert(Pool.claim(slots, 10.05, 0.1, 3, 4) == two,
-    "High priority can recycle same-priority oldest if necessary")
-eq(Pool.progress(one, 10.02, true), 0, "Effect begins at zero")
+assert(Pool.claim(slots, 10.04, 0.1, 3, 4) == one,
+    "High priority flash takes earliest expiring eligible tracer")
+assert(Pool.claim(slots, 10.05, 0.1, 3, 4) == one,
+    "High priority may recycle its own earliest expiry slot")
+eq(Pool.progress(one, 10.05, true), 0, "Most recent effect begins at zero")
 local progress = Pool.progress(one, 10.10, true)
 assert(progress and progress > 0 and progress < 1, "Smooth fractional animation")
-assert(Pool.progress(one, 10.22, true) == nil, "Expired effect disappears")
+assert(Pool.progress(one, 10.16, true) == nil, "Expired effect disappears")
 assert(Pool.progress(one, 10.05, false) == nil, "Quality switch hides surplus")
 assert(Pool.progress(one, 10.01, true) == nil, "Time cannot predate effect")
 assert(Pool.progress(one, 0/0, true) == nil, "NaN progress rejected")

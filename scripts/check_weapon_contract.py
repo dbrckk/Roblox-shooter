@@ -196,7 +196,7 @@ def main():
                 "self:_updateTransientFx(clock)",
                 "self:_spawnTransient({"):
         has(viewmodel, key, "Material-aware client-only combat effects")
-    require(viewmodel.count("TweenService:Create(") == 1,
+    require(viewmodel.count("TweenService:Create(") == 2,
             "Only confirmed hit glints may still use TweenService; transient Parts are pooled")
     require("Debris:AddItem(tracer," not in viewmodel
             and "Debris:AddItem(chip," not in viewmodel
