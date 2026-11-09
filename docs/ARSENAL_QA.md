@@ -63,3 +63,10 @@ Five original viewmodels now use five cosmetic profiles rather than one generic 
 A pure audio admission policy keeps the shooter's own firing sound always audible and limits nonlocal emitter objects by distance, ECO/BALANCED/QUALITY device preset and active emitter count. At long range only the leading sound layer plays. Existing Roblox internal snap/bass/electronicpingshort samples remain interim: no claims of licensed custom gun recordings or finished premium audio.
 
 **Studio acceptance:** rapid AR fire must visibly accumulate but cap recoil; sniper and shotgun should feel heavier than pistol; verify the pistol slide, AR charging handle, pump and bolt only travel after their respective shots; reload/swap/death cancels the visual handling without ammunition gain. Test scoped sniper, left-hand glove/parts coherence, local firing audible in dense four-bot firefights, remote distance falloff and no excessive Sound or Part allocations on mobile presets.
+
+ 
+## Cover occlusion / spatial firearm audio — 9 November 2026
+
+The client applies **at most one raycast per admitted remote firearm sound** when the distance is 12 studs or greater. The ray excludes player characters, bot models and the camera, and respects physically collidable cover. Obstructed shots use one layer at 40% of the normal mix; clear shots retain their original mix. Audio culling and per-device emitter caps run before the cast, and the local shooter's audio is never occlusion-tested. There is no new server message, new external audio or per-frame raycast.
+
+**Manual Roblox acceptance:** put a second human or bot on the far side of a cargo container; the shot should be less sharp and quieter than a clear shot at the same distance. A non-collidable trim must not muffle the shot; a teammate standing between two clear positions must not simulate a wall. Repeat on Android ECO and QUALITY with 4 bots and check FPS + sound continuity. All bundled shot sounds are currently generic Roblox source assets, not final licensed premium foley.

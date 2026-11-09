@@ -29,6 +29,9 @@ for needle in (
     "if localShot then", "activeVoices >= maxVoices",
     "distance > maxDistance", "layers = far and 1 or 2",
     "REACH[weaponId] or 1",
+    "function Audio.needsOcclusion(distance, localShot)",
+    "function Audio.occludedMix(mix, blocked)",
+    "volume = mix.volume * 0.40",
 ):
     assert needle in audio, f"Audio admission missing: {needle}"
 
@@ -55,6 +58,11 @@ for needle in (
     "table.insert(self.remoteSoundEmitters, emitter)",
     "if index > mix.layers then break end",
     "Debris:AddItem(emitter, mix.lifetime)",
+    "if WeaponAudio.needsOcclusion(distance, ownShot) then",
+    "params.RespectCanCollide = true",
+    "params.IgnoreWater = true",
+    "workspace:Raycast(",
+    "mix = WeaponAudio.occludedMix(mix, cover ~= nil)",
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 

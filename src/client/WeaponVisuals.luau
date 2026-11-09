@@ -830,6 +830,28 @@ function WeaponVisuals:playFireSound(weaponId, origin, localShot)
         UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId)
     if not mix then return end
 
+    -- One cover ray ONLY for an admitted, distant remote sound. Ignore all
+    -- fighters, the native camera and the viewmodel: their bodies do not
+    -- acoustically block a shot. Collidable world cover does.
+    if WeaponAudio.needsOcclusion(distance, ownShot) then
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        local ignore = { camera }
+        for _, participant in ipairs(Players:GetPlayers()) do
+            if participant.Character then
+                table.insert(ignore, participant.Character)
+            end
+        end
+        local bots = workspace:FindFirstChild("NeonStrikeBots")
+        if bots then table.insert(ignore, bots) end
+        params.FilterDescendantsInstances = ignore
+        params.RespectCanCollide = true
+        params.IgnoreWater = true
+        local cover = workspace:Raycast(
+            camera.CFrame.Position, origin - camera.CFrame.Position, params)
+        mix = WeaponAudio.occludedMix(mix, cover ~= nil)
+    end
+
     local emitter = Instance.new("Part")
     emitter.Name = weaponId .. "FireSound"
     emitter.Anchored = true

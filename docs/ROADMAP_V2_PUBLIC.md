@@ -251,3 +251,14 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Tests de limites de distance et du nombre maximal de voix sur Android ajoutés ; aucun nouveau RemoteEvent, aucun nouvel asset ni instance supplémentaire.
 - [ ] Produire et publier cinq véritables enregistrements originaux/licenciés Roblox (les sons actuels sont des sons génériques fournis par Roblox), puis intégrer les IDs valides sans les inventer.
 - [ ] Écouter et mesurer en Studio/Android le mix réel et les transitions près/loin avant d'affirmer une qualité audio premium.
+
+ 
+### L2.5 — atténuation des tirs derrière le couvert (9 novembre 2026)
+
+- [x] Nouvelle occlusion acoustique réelle, locale au client : pour chaque tir **distant admis** au budget sonore et situé à au moins 12 studs, une unique raycast entre la caméra et la source vérifie le couvert physique. Les personnages, bots et la caméra sont exclus ; les décorations sans collision ne bloquent pas le son.
+- [x] Tir direct : deux couches proches (ou une à grande distance), portée propre à l'arme. Tir derrière une structure collidable : une seule couche, volume à 40 % de la valeur d'origine, même portée et même durée de vie ; aucun son n'est entièrement supprimé.
+- [x] Les tirs locaux sont toujours entendus immédiatement et ne déclenchent jamais de raycast d'occlusion. Les sons lointains déjà rejetés par les quotas ne déclenchent pas non plus de raycast.
+- [x] Aucun nouveau RemoteEvent, asset, boucle par image ou objet audio ajouté. Le plafond de voix déjà en place reste strict.
+- [x] Tests purs de l'occlusion/volume/limites et contrat d'intégration des raycasts et du mixage.
+- [ ] Validation acoustique sur Android + Studio : tirs face à face, derrière container, couloir ouvert, près d'un mur non collidable, quatre bots, distance variable, choix ECO/BALANCED/QUALITY. Mesurer le surcoût de raycasts en jeu.
+- [ ] Sons source toujours génériques Roblox en attente d'enregistrements originaux réellement importés et autorisés.

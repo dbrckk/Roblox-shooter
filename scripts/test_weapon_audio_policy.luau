@@ -39,4 +39,25 @@ assert(Audio.select("ECO", true, 1000, true, 1000, "Knife").layers == 2,
     "Owner hears every own shot even outside the acoustic range")
 assert(not Audio.select("ECO", true, 30, false, 8, "Sniper"),
     "Weapon-specific range must not bypass the global voice cap")
+-- A single inexpensive collision probe is permitted for already-admitted
+-- distant remote voices; the firing player's immediate mix never changes.
+assert(not Audio.needsOcclusion(0, false))
+assert(not Audio.needsOcclusion(11.99, false))
+assert(Audio.needsOcclusion(12, false))
+assert(Audio.needsOcclusion(120, false))
+assert(not Audio.needsOcclusion(120, true))
+assert(not Audio.needsOcclusion(math.huge, false))
+assert(not Audio.needsOcclusion(0/0, false))
+local clear = Audio.select("BALANCED", true, 50, false, 0, "AssaultRifle")
+local covered = Audio.occludedMix(clear, true)
+assert(covered and covered ~= clear, "Occlusion produces a new, independent mix")
+assert(covered.layers == 1, "Cover removes the bright second layer")
+assert(covered.volume == clear.volume * 0.40,
+    "Cover is quieter but never completely silent")
+assert(covered.maxDistance == clear.maxDistance
+    and covered.lifetime == clear.lifetime and covered.maxVoices == clear.maxVoices,
+    "Cover never raises distance, lifetime or voice allocations")
+assert(clear.layers == 2 and clear.volume == 1, "Uncovered mix not mutated")
+assert(Audio.occludedMix(clear, false) == clear)
+assert(Audio.occludedMix(nil, true) == nil)
 print("IRON YARD local-priority spatial weapon audio and capped remote voices: OK")

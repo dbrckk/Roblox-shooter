@@ -46,4 +46,25 @@ function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponI
     }
 end
 
+-- One WORLD geometry probe per admitted remote shot (not per frame).
+-- Ignore players/NPCs in the caller so a body between shooter and listener
+-- is not mistaken for a concrete wall. Very close shots stay unfiltered.
+function Audio.needsOcclusion(distance, localShot)
+    return not localShot and finite(distance) and distance >= 12
+end
+
+-- Conservative, non-mutating acoustic cover mix. An obstructed gunshot
+-- remains audible but has a quieter, less sharp, single-layer sound.
+-- The server still owns firing/visibility/damage; this is cosmetic only.
+function Audio.occludedMix(mix, blocked)
+    if type(mix) ~= "table" or blocked ~= true then return mix end
+    return {
+        layers = 1,
+        volume = mix.volume * 0.40,
+        maxDistance = mix.maxDistance,
+        lifetime = mix.lifetime,
+        maxVoices = mix.maxVoices,
+    }
+end
+
 return Audio
