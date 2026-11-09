@@ -242,3 +242,12 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Tests purs des cinq profils, de l'enveloppe/du plafonnement, des distances et des limites vocales. Contrôle CI que le code réellement appelé utilise les profils. Build Rojo conservé.
 - [ ] Les sons actuellement exploités restent les sons Roblox intégrés existants (snap/bass/electronicpingshort). La bibliothèque définitive de sons originaux/licenciés par arme n'a pas été importée : ne pas présenter cette passe comme une refonte audio AAA finale.
 - [ ] Valider en Studio/Android les animations de tirs/rechargement, la séparation des sons proche/lointain, les rafales à quatre bots et la fluidité réelle. Pas de prétention de mesures FPS/mémoire sans moteur.
+
+
+### L2.4 — identité acoustique et budget audio des armes (9 novembre 2026)
+
+- [x] Audit du rendu existant : les cinq armes possèdent déjà des animations de recul et mécanismes distincts via WeaponFeelProfile, et des couches sonores à partir d'assets Roblox génériques. Ne pas réimplémenter ces systèmes en doublon.
+- [x] La spatialisation distante tient désormais compte de la portée acoustique de l'arme : fusil et sniper 100 % du budget de distance du profil graphique, shotgun 90 %, pistolet 75 %, couteau lancé 38 %. Le budget global des voix reste inchangé et les effets locaux du tireur ne sont jamais filtrés.
+- [x] Tests de limites de distance et du nombre maximal de voix sur Android ajoutés ; aucun nouveau RemoteEvent, aucun nouvel asset ni instance supplémentaire.
+- [ ] Produire et publier cinq véritables enregistrements originaux/licenciés Roblox (les sons actuels sont des sons génériques fournis par Roblox), puis intégrer les IDs valides sans les inventer.
+- [ ] Écouter et mesurer en Studio/Android le mix réel et les transitions près/loin avant d'affirmer une qualité audio premium.

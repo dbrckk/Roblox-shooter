@@ -25,4 +25,18 @@ assert(allowed("ECO", true, 10, -1) == nil)
 local localMix = Audio.select("ECO", true, 900, true, 900)
 assert(localMix and localMix.layers == 2 and localMix.volume == 1,
     "Local shooter sound remains immediate regardless of other shots")
+-- Different weapons no longer broadcast identical acoustic reach.
+local rifle = Audio.select("BALANCED", true, 120, false, 0, "AssaultRifle")
+local pistol = Audio.select("BALANCED", true, 120, false, 0, "Pistol")
+local shotgun = Audio.select("BALANCED", true, 120, false, 0, "Shotgun")
+local knife = Audio.select("BALANCED", true, 120, false, 0, "Knife")
+assert(rifle and rifle.maxDistance == 130)
+assert(not pistol and not shotgun and not knife, "Compact weapons fall silent at range")
+assert(Audio.select("BALANCED", true, 95, false, 0, "Pistol"))
+assert(Audio.select("BALANCED", true, 48, false, 0, "Knife"))
+assert(not Audio.select("BALANCED", true, 51, false, 0, "Knife"))
+assert(Audio.select("ECO", true, 1000, true, 1000, "Knife").layers == 2,
+    "Owner hears every own shot even outside the acoustic range")
+assert(not Audio.select("ECO", true, 30, false, 8, "Sniper"),
+    "Weapon-specific range must not bypass the global voice cap")
 print("IRON YARD local-priority spatial weapon audio and capped remote voices: OK")

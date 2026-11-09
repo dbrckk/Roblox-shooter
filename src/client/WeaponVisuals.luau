@@ -827,7 +827,7 @@ function WeaponVisuals:playFireSound(weaponId, origin, localShot)
     local distance = ownShot and 0 or (camera.CFrame.Position - origin).Magnitude
     local mix = WeaponAudio.select(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters)
+        UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId)
     if not mix then return end
 
     local emitter = Instance.new("Part")

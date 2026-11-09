@@ -13,7 +13,17 @@ local LEVELS = {
     QUALITY = { mobileDistance = 155, pcDistance = 205, mobileVoices = 16, pcVoices = 24 },
 }
 
-function Audio.select(preset, mobile, distance, localShot, activeVoices)
+-- Acoustic reach differs by weapon, but never increases the device's
+-- global maximum audible range or active emitter cap.
+local REACH = {
+    AssaultRifle = 1.0,
+    Pistol = 0.75,
+    Shotgun = 0.90,
+    Sniper = 1.0,
+    Knife = 0.38,
+}
+
+function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponId)
     if localShot then
         -- Your weapon sound must never be gated by other players' audio.
         return { layers = 2, volume = 1, maxDistance = 160,
@@ -22,7 +32,8 @@ function Audio.select(preset, mobile, distance, localShot, activeVoices)
     if not finite(distance) or distance < 0
         or not finite(activeVoices) or activeVoices < 0 then return nil end
     local level = LEVELS[preset] or LEVELS.BALANCED
-    local maxDistance = mobile and level.mobileDistance or level.pcDistance
+    local maxDistance = (mobile and level.mobileDistance or level.pcDistance)
+        * (REACH[weaponId] or 1)
     local maxVoices = mobile and level.mobileVoices or level.pcVoices
     if distance > maxDistance or activeVoices >= maxVoices then return nil end
     local far = distance > maxDistance * 0.68
