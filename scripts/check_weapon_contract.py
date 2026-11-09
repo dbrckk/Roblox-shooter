@@ -207,6 +207,21 @@ def main():
         has(viewmodel, needle, "Only active transient Parts may animate each frame")
     require("for index, slot in ipairs(self.transientParts)" not in viewmodel,
             "An inactive but allocated FX pool must not be scanned each frame")
+    for needle in (
+        'WaitForChild("ViewmodelRenderPolicy")',
+        "self.lastViewmodelHidden = nil",
+        "function WeaponVisuals:_syncScopeVisibility()",
+        "ViewmodelRenderPolicy.needsUpdate(",
+        "ViewmodelRenderPolicy.transparency(",
+        "self:_syncScopeVisibility()",
+        "local actionTravel = WeaponFeel.mechanism(self.currentWeaponId, shotAge)",
+    ):
+        has(viewmodel, needle, "Weapon opacity must change only on scope/equip")
+    require("entry.part.Transparency = hideForScope and 1 or entry.baseTransparency"
+            not in viewmodel, "No full viewmodel transparency writes every frame")
+    for weapon in ("Pistol", "AssaultRifle", "Shotgun", "Sniper"):
+        require(f'WeaponFeel.mechanism("{weapon}", shotAge)' not in viewmodel,
+                "Do not evaluate inactive weapon mechanisms each frame")
     require(viewmodel.count("TweenService:Create(") == 2,
             "Only confirmed hit glints may still use TweenService; transient Parts are pooled")
     # Three intentional Debris calls remain: confirmed-hit core/spark and

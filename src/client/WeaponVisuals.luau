@@ -10,6 +10,7 @@ local TransientFxPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitFor
 local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
+local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -68,6 +69,7 @@ function WeaponVisuals.new(WeaponConfig)
     self.reloadActive = false
     self.reloadStartedAt = 0
     self.reloadBlend = 0
+    self.lastViewmodelHidden = nil
     self.stepPhase = 0
     self.stepBlend = 0
     self.lastCameraPosition = nil
@@ -200,6 +202,7 @@ function WeaponVisuals:_clearModel()
 
 	self.model = nil
 	table.clear(self.parts)
+    self.lastViewmodelHidden = nil
 end
 
 function WeaponVisuals:_createPistol(model)
@@ -315,14 +318,33 @@ function WeaponVisuals:setWeapon(weaponId)
 		self:_createPistol(model)
 	end
     self:_applyCareerFinish()
+    self:_syncScopeVisibility()
 end
 
 function WeaponVisuals:setSprinting(isSprinting)
 	self.sprinting = isSprinting
 end
 
+function WeaponVisuals:_syncScopeVisibility()
+    local hidden = ViewmodelRenderPolicy.hidden(self.currentWeaponId, self.scoped)
+    if not ViewmodelRenderPolicy.needsUpdate(self.lastViewmodelHidden, hidden) then
+        return
+    end
+    self.lastViewmodelHidden = hidden
+    -- The model still moves every frame; opacity changes only when
+    -- equipping or entering/exiting the sniper's optical scope.
+    for _, entry in ipairs(self.parts) do
+        local target = ViewmodelRenderPolicy.transparency(
+            entry.baseTransparency, hidden)
+        if entry.part.Transparency ~= target then
+            entry.part.Transparency = target
+        end
+    end
+end
+
 function WeaponVisuals:setScoped(isScoped)
-	self.scoped = isScoped
+    self.scoped = isScoped
+    self:_syncScopeVisibility()
 end
 
 -- Reload state comes only from server Ammo messages. Repeated snapshots
@@ -447,15 +469,13 @@ function WeaponVisuals:_render(deltaTime)
         * CFrame.Angles(math.rad(-2), math.rad(-4), 0)
     local root = camera.CFrame * offset * CFrame.new():Lerp(aimOffset, self.aimBlend)
         * self:_getAnimationCFrame(deltaTime, camera, self.stepBlend, reloadPose)
-	local hideForScope = self.currentWeaponId == "Sniper" and self.scoped
 
     -- Short, mechanically coherent motions for actual moving weapon parts.
     -- No physics, sounds or network calls: these offsets are client-only.
     local shotAge = now - self.fireStartedAt
-    local slideRecoil = WeaponFeel.mechanism("Pistol", shotAge)
-    local rifleAction = WeaponFeel.mechanism("AssaultRifle", shotAge)
-    local pumpTravel = WeaponFeel.mechanism("Shotgun", shotAge)
-    local boltTravel = WeaponFeel.mechanism("Sniper", shotAge)
+    -- A single equipped gun is animated. No longer evaluate the four
+    -- mechanical firing curves for inactive weapons on RenderStepped.
+    local actionTravel = WeaponFeel.mechanism(self.currentWeaponId, shotAge)
     local feel = WeaponFeel.get(self.currentWeaponId)
     local workingHand = CFrame.new(0.13 * magazineDip * feel.handTravel,
         -0.22 * magazineDip * feel.handTravel,
@@ -472,18 +492,17 @@ function WeaponVisuals:_render(deltaTime)
             localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip * feel.magazineTravel,
                 0.04 * magazineDip * feel.magazineTravel)
         elseif partName == "ChargingHandle" and self.currentWeaponId == "AssaultRifle" then
-            localOffset = localOffset * CFrame.new(0, 0, rifleAction * feel.actionTravel)
+            localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif partName == "Slide" and self.currentWeaponId == "Pistol" then
-            localOffset = localOffset * CFrame.new(0, 0, slideRecoil * feel.actionTravel)
+            localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif (partName == "PumpAction" or partName == "PumpGrooveA"
             or partName == "PumpGrooveB") and self.currentWeaponId == "Shotgun" then
-            localOffset = localOffset * CFrame.new(0, 0, pumpTravel * feel.actionTravel)
+            localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif partName == "Bolt" and self.currentWeaponId == "Sniper" then
-            localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * boltTravel,
-                0, feel.actionTravel * boltTravel)
+            localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * actionTravel,
+                0, feel.actionTravel * actionTravel)
         end
         entry.part.CFrame = root * localOffset
-        entry.part.Transparency = hideForScope and 1 or entry.baseTransparency
     end
 end
 

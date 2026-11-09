@@ -193,3 +193,8 @@ On low-end Android, fire continuously with four active bots until the 48-slot BA
 ## Boost HUD Tween throttling — 9 November 2026
 
 While sprinting, airborne boosting and recharging fuel on a real Android device, check that the fuel bar remains smooth (0.08-second tweens capped to 10Hz in steady operation), changes amber/red precisely around 25% and 12% and snaps promptly to 0%/100%. Leave the meter full for 10 seconds: no new Tween instances should be created by the repeated RenderStepped fuel reports. Check that rapid red-zone changes cancel any previous tween. This is entirely client cosmetic; movement, charge amount, and server anti-cheat remain unchanged. Use the Roblox MicroProfiler for actual evidence; the 3601-frame pure policy test proves only bounded admission.
+
+
+## First-person weapon scope visibility and mechanism cost — 9 November 2026
+
+With all five weapons, verify their first-person models still move smoothly during recoil, movement, sprint and reload. Non-sniper ADS must preserve the complete weapon model. Enter the sniper scope and ensure the first-person weapon disappears once; exit and ensure all Parts, including semi-transparent lens/glass and attachments, return to their exact pre-scope opacity. Change weapon rapidly while scoped and shoot with four bots nearby. Opacity updates occur only on equip / scope state changes, not 60 times per second, and only the equipped weapon's firing mechanism is sampled. These pure/source checks do not substitute for a real Roblox Android FPS and visual test.

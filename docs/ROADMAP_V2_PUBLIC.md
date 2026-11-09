@@ -423,3 +423,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Le serveur, la quantité de carburant, les déplacements et les contrôles tactiles restent strictement inchangés. Seule la représentation visuelle de la jauge est mise à jour moins souvent.
 - [x] Simulation Luau de 3601 images à 60 FPS, vidange/remplissage, seuils urgents, horloges et valeurs invalides, et absence d'animations à l'arrêt. Contrat Python de câblage HUD et suite Rojo CI.
 - [ ] Vérifier visuellement sur Android et PC les transitions à 12 % et 25 %, l'absence de scintillement et le frame-time réel pendant un combat avec quatre bots.
+
+
+### L3.12 — arme FPS : transparence mise à jour uniquement à l'équipement et à la lunette (9 novembre 2026)
+
+- [x] Supprimé les écritures de transparence sur chaque pièce de l'arme à chaque `RenderStepped`. La pose CFrame reste mise à jour chaque image, pour préserver caméra, recul, rechargement et fluidité.
+- [x] Mise à jour événementielle de l'opacité de l'arme FPS : une fois à l'équipement, puis au changement de visée optique du sniper. Le verre et les éléments semi-transparents retrouvent leur valeur d'origine à la sortie de la lunette ; les autres armes restent visibles en visée.
+- [x] Une seule courbe de mécanisme de tir est calculée par image, celle de l'arme actuellement équipée ; les courbes des trois autres armes à feu ne sont plus calculées inutilement.
+- [x] Tests pure Luau sur 3600 images, les cinq armes, changement rapide sniper/visée, préservation des transparences ; contrôle de câblage Python, compilation et build Rojo CI.
+- [ ] Vérifier sur Android les animations de recul/rechargement et la lunette sniper lors d'un changement d'arme rapide ; comparer temps d'image/FPS sur appareil réel.
