@@ -405,3 +405,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [ ] Validation visuelle en Studio avec streaming activé (suppression/recréation de phares sous ECO et QUALITY, disparition/réapparition d'un modèle pendant un déplacement) et mesures FPS Android.
 
 - [x] Couverture supplémentaire du chevauchement de streaming : si le remplaçant est déjà présent avant la destruction de l'ancien phare, le client retente l'enregistrement après le retrait, sans recopier le Part sortant ; aucune action si le Model entier est parti.
+
+
+### L3.10 — effets de combat actifs uniquement (9 novembre 2026)
+
+- [x] Suppression du parcours complet des 96 emplacements du pool VFX à chaque RenderStepped après le premier tir : seul l'ensemble `activeTransientIndices` des effets actuellement visibles est animé. En phase inactive, `next(self.activeTransientIndices)` évite tout travail sur les slots.
+- [x] Le pool `TransientFxPool.claim` retourne maintenant la référence ET son index, sans recherche supplémentaire pour retrouver l'emplacement réutilisé. Priorités locales et distantes inchangées : tirs locaux prioritaires, sans nouvel effet serveur.
+- [x] À expiration ou lors d'un passage QUALITY → ECO, les effets hors plafond sont détachés du rendu, leurs lumières sont désactivées et leurs indices retirés ; les instances restent recyclables pour le prochain tir.
+- [x] Régression Luau : 18 000 demandes d'effets avec changements de qualité, expiration, réutilisation et plafonds 24/48/72 Android, 80/96 PC ; contrôle de branchement Python et build GitHub.
+- [ ] Mesures réelles de frame time/FPS sur Android avec quatre bots, phase de combat intense puis repos, et transitions ECO/BALANCED/QUALITY : les tests de pool ne démontrent pas un gain FPS mesuré.
