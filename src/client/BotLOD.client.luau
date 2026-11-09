@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArtLOD = require(Shared:WaitForChild("ArtLODPolicy"))
 local BotDetailCache = require(Shared:WaitForChild("BotDetailCache"))
+local ArtSectorRegistry = require(Shared:WaitForChild("ArtSectorRegistry"))
 
 local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
@@ -142,56 +143,109 @@ end
 -- locally by at most 5.6 studs. Spatial sectors provide conservative
 -- whole-group visibility decisions; only horizon sectors need individual
 -- distance tests. Core silhouettes and gameplay parts are never included.
-local artCache = setmetatable({}, { __mode = "k" })
+local artCache = {}
 local artFolders = { "NeonStrikeDecor", "FreightLandmarks", "IronYardCoverSkins" }
+local trackedArtFolders = {}
+
+-- Streaming a single decoration should NOT rebuild thousands of parts.
+-- Register once and listen for incremental additions/removals. Only Detail
+-- is tracked; Core landmarks and real arena collision remain untouched.
+local function releaseArtFolder(folder)
+    local entry = artCache[folder]
+    if not entry then return end
+    for _, connection in ipairs(entry.connections) do connection:Disconnect() end
+    for item, connection in pairs(entry.pendingTier) do
+        connection:Disconnect()
+        entry.pendingTier[item] = nil
+    end
+    for item in pairs(entry.registry.byPart) do
+        if item.Parent then item.LocalTransparencyModifier = 0 end
+        rendered[item] = nil
+        ArtSectorRegistry.remove(entry.registry, item)
+    end
+    artCache[folder] = nil
+end
 
 local function getDetailGroups(folder)
     local entry = artCache[folder]
-    if not entry then
-        entry = { groups = {}, dirty = true }
-        artCache[folder] = entry
-        folder.DescendantAdded:Connect(function(item)
-            if item:IsA("BasePart") then
-                entry.dirty = true
-            end
-        end)
-        folder.DescendantRemoving:Connect(function(item)
-            if item:IsA("BasePart") then
-                entry.dirty = true
-            end
-        end)
+    if entry then return entry end
+    entry = {
+        registry = ArtSectorRegistry.new(),
+        pendingTier = {},
+        connections = {},
+        lastEye = nil,
+    }
+    artCache[folder] = entry
+
+    local function unwatchPart(item)
+        local pending = entry.pendingTier[item]
+        if pending then
+            pending:Disconnect()
+            entry.pendingTier[item] = nil
+        end
+        if ArtSectorRegistry.remove(entry.registry, item) then
+            rendered[item] = nil
+            if item.Parent then item.LocalTransparencyModifier = 0 end
+        end
     end
-    if entry.dirty then
-        local byKey = {}
-        local groups = {}
-        for _, item in ipairs(folder:GetDescendants()) do
-            if item:IsA("BasePart")
-                and item:GetAttribute("NeonArtTier") == "Detail" then
-                local position = item.Position
-                local key = ArtLOD.cellKey(position.X, position.Z)
-                if key then
-                    local group = byKey[key]
-                    if not group then
-                        group = { parts = {}, bounds = {}, lastMode = nil }
-                        byKey[key] = group
-                        table.insert(groups, group)
-                    end
-                    if ArtLOD.extendBounds(group.bounds, position) then
-                        table.insert(group.parts, item)
-                    end
+
+    local function inspectPart(item)
+        if not item:IsA("BasePart") then return end
+        local tier = item:GetAttribute("NeonArtTier")
+        if tier == "Detail" then
+            if ArtSectorRegistry.add(entry.registry, item, item.Position) then
+                -- Apply visibility immediately to a late-streamed part,
+                -- avoiding a distant visual flash before the next 1Hz poll.
+                local eye = entry.lastEye
+                if eye then
+                    local offset = item.Position - eye
+                    local hidden = ArtLOD.hiddenSquared(offset:Dot(offset),
+                        false, artHideBeyond, artUnhideBefore)
+                    rendered[item] = hidden
+                    item.LocalTransparencyModifier = hidden and 1 or 0
                 end
             end
+        elseif ArtSectorRegistry.remove(entry.registry, item) then
+            rendered[item] = nil
+            item.LocalTransparencyModifier = 0
         end
-        entry.groups = groups
-        entry.dirty = false
+        -- Tier may replicate after the BasePart. The listener is temporary,
+        -- not a permanent attribute connection for every static decoration.
+        if tier == nil and not entry.pendingTier[item] then
+            entry.pendingTier[item] =
+                item:GetAttributeChangedSignal("NeonArtTier"):Connect(function()
+                    inspectPart(item)
+                end)
+        elseif tier ~= nil then
+            local pending = entry.pendingTier[item]
+            if pending then
+                pending:Disconnect()
+                entry.pendingTier[item] = nil
+            end
+        end
     end
-    return entry.groups
+
+    table.insert(entry.connections, folder.DescendantAdded:Connect(inspectPart))
+    table.insert(entry.connections, folder.DescendantRemoving:Connect(function(item)
+        if item:IsA("BasePart") then
+            unwatchPart(item)
+        else
+            -- Removing an entire streamed Model may notify the container
+            -- before its children; remove its detail references promptly.
+            for _, desc in ipairs(item:GetDescendants()) do
+                if desc:IsA("BasePart") then unwatchPart(desc) end
+            end
+        end
+    end))
+    -- The only full inventory scan for this folder: initial registration.
+    for _, item in ipairs(folder:GetDescendants()) do inspectPart(item) end
+    return entry
 end
 
 local function applyGroupState(group, hidden)
     -- Apply on group-mode transition, including after streaming rebuilds:
     -- previous per-part LocalTransparencyModifier values may be stale.
-    for _, item in ipairs(group.parts) do
+    for item in pairs(group.parts) do
         if item.Parent then
             rendered[item] = hidden
             item.LocalTransparencyModifier = hidden and 1 or 0
@@ -202,36 +256,44 @@ end
 local function updateArt()
     local arena = Workspace:FindFirstChild("NeonStrikeArena")
     local camera = Workspace.CurrentCamera
-    if not arena or not camera then return end
-    local position = camera.CFrame.Position
+    local position = camera and camera.CFrame.Position
     for _, name in ipairs(artFolders) do
-        local folder = arena:FindFirstChild(name)
+        local folder = arena and arena:FindFirstChild(name)
+        local previous = trackedArtFolders[name]
+        if previous ~= folder then
+            if previous then releaseArtFolder(previous) end
+            trackedArtFolders[name] = folder
+        end
         if folder then
-            for _, group in ipairs(getDetailGroups(folder)) do
-                local mode = ArtLOD.classify(group.bounds, position,
-                    artHideBeyond, artUnhideBefore)
-                if mode == "HIDE" or mode == "SHOW" then
-                    if mode ~= group.lastMode then
-                        applyGroupState(group, mode == "HIDE")
-                    end
-                else
-                    -- Only groups crossing the current art visibility
-                    -- horizon need accurate individual 3D distances.
-                    for _, item in ipairs(group.parts) do
-                        if item.Parent then
-                            local offset = item.Position - position
-                            local distanceSquared = offset:Dot(offset)
-                            local wasHidden = rendered[item] or false
-                            local hidden = ArtLOD.hiddenSquared(distanceSquared,
-                                wasHidden, artHideBeyond, artUnhideBefore)
-                            if hidden ~= wasHidden then
-                                rendered[item] = hidden
-                                item.LocalTransparencyModifier = hidden and 1 or 0
+            local entry = getDetailGroups(folder)
+            if position then
+                entry.lastEye = position
+                for _, group in pairs(entry.registry.byKey) do
+                    local mode = ArtLOD.classify(group.bounds, position,
+                        artHideBeyond, artUnhideBefore)
+                    if mode == "HIDE" or mode == "SHOW" then
+                        if mode ~= group.lastMode then
+                            applyGroupState(group, mode == "HIDE")
+                        end
+                    else
+                        -- Only sectors crossing the visibility horizon
+                        -- need exact per-Part checks and hysteresis.
+                        for item in pairs(group.parts) do
+                            if item.Parent then
+                                local offset = item.Position - position
+                                local distanceSquared = offset:Dot(offset)
+                                local wasHidden = rendered[item] or false
+                                local hidden = ArtLOD.hiddenSquared(distanceSquared,
+                                    wasHidden, artHideBeyond, artUnhideBefore)
+                                if hidden ~= wasHidden then
+                                    rendered[item] = hidden
+                                    item.LocalTransparencyModifier = hidden and 1 or 0
+                                end
                             end
                         end
                     end
+                    group.lastMode = mode
                 end
-                group.lastMode = mode
             end
         end
     end

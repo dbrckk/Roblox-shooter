@@ -168,3 +168,8 @@ Under sustained rifle fire and four bots, check muzzle flashes, metal sparks, wo
 ## Bot streamed-cosmetic LOD cache (9 November 2026)
 
 On Android with four bots, keep moving across ECO/BALANCED/QUALITY detail-visibility thresholds. Core body silhouettes, helmets, rifles and real R6 hitbox parts must stay visible and functional, while only tier=Detail armor fades out at distance. Kill and respawn bots, switch graphics presets, and join mid-round with streamed-in models to verify no detail flashes, stale hidden parts or accumulated cache connections. The client builds a bot's detail inventory once, listens to new/removed descendants and late tier attributes, and does not do a full GetDescendants scan each second. Measure real device frame times and memory; CI verifies invariants, not observed Android FPS.
+
+
+## Incremental streamed arena art LOD — 9 November 2026
+
+Move rapidly through the warehouse entrance, container lanes, and catwalks on ECO, BALANCED, and QUALITY Android. Stream models in/out, replace arena art after the round if possible, and verify that distant Detail pieces never flash before hiding. Core signs, structural silhouettes, hitboxes, moving gantries and walkable surfaces must remain unaffected. Runtime should register each folder's detail inventory once, maintain 48-stud sectors incrementally and recompute only the sector from which Parts stream out. On a graphics change the old thresholds and 8-stud motion padding still apply. Measure actual mobile frame time / hitching and memory under asset replication rather than claiming synthetic Luau inventory tests prove frame-rate gains.

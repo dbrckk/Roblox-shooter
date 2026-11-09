@@ -352,3 +352,14 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Hystérésis précédente et seuils ECO/BALANCED/QUALITY strictement conservés. Toutes les pièces Core, humanoïdes et hitboxes restent inchangées. Les abonnements et références du cache sont libérés lors du remplacement du bot ou de son dossier.
 - [x] Plan Luau pur, tests des changements de qualité, streaming tardif, apparition/disparition du bot et réutilisation sans accumulation ; contrôle d'intégration Python, compilation Luau et build Rojo dans CI.
 - [ ] Validation Android/PC : tuer/recréer quatre bots pendant les déplacements, entrer/sortir des seuils de visibilité, observer les pièces répliquées tardivement, mesurer FPS/mémoire et comparer au build précédent.
+
+
+### L3.5 — index spatial des décors incrémental (9 novembre 2026)
+
+- [x] Corrigé le rebâtissage global de tous les `GetDescendants()` lorsqu'un seul Part apparaît/disparaît en streaming : les 3 dossiers de décor (`NeonStrikeDecor`, `FreightLandmarks`, `IronYardCoverSkins`) créent désormais leur inventaire une seule fois, puis utilisent `DescendantAdded/Removing` et l'index `ArtSectorRegistry`.
+- [x] Écriture en O(1) dans l'index de secteur de 48 studs pour chaque nouvel élément de détail. Un retrait recalcule uniquement l'AABB du secteur concerné ; disparition du dernier élément = retrait complet du secteur.
+- [x] Les éléments qui répliquent l'attribut `NeonArtTier` après le `Part` sont rattachés via un abonnement temporaire, ensuite libéré ; l'élément tardif hérite immédiatement du masquage selon la dernière position de caméra, sans attendre la prochaine seconde.
+- [x] Les modèles ou dossiers retirés libèrent leurs abonnements et leurs références; l'arène remplacée n'hérite pas de caches obsolètes.
+- [x] Seuls les éléments `Detail` non-collidants sont pilotés ; `Core`, collisions, raycasts, bots, tirs et lumières sont inchangés. Seuils ECO/BALANCED/QUALITY, marges anti-scintillement et marge de mouvement des ponts roulants conservés.
+- [x] Tests purs : 2000 parties ajoutées, la moitié supprimées et contrôle exact des AABB par rapport à un rebuild, puis purge complète ; tests de rejets/duplication et contrôle d'intégration en CI.
+- [ ] Mesures Android en situation (chargement progressif du grand décor, changements de qualité et mouvements de caméra) et contrôle visuel d'absence de flash temporaire, à comparer à l'ancienne version.

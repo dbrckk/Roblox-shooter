@@ -69,6 +69,7 @@ jobs:
           ./luau scripts/test_combat_feedback_policy.luau
           ./luau scripts/test_environment_profile.luau
           ./luau scripts/test_art_lod_policy.luau
+          ./luau scripts/test_art_sector_registry.luau
           ./luau scripts/test_bot_detail_cache.luau
           ./luau scripts/test_yard_wayfinding_plan.luau
           ./luau scripts/test_perimeter_wall_plan.luau
@@ -169,6 +170,7 @@ jobs:
           python3 scripts/check_bot_los_budget.py
           python3 scripts/check_bot_perf_contract.py
           python3 scripts/check_bot_detail_cache.py
+          python3 scripts/check_art_sector_cache.py
 
       - name: Verify persistent DataStore progression contracts
         shell: bash
