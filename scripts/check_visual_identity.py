@@ -422,14 +422,20 @@ def main():
                    'return "HIDE"', 'return "SHOW"', 'return "MIXED"'):
         check(needle in lod_policy,
               "Missing conservative client art sector policy: " + needle)
-    for needle in ('ArtLOD.limits(', 'ArtLOD.cellKey(',
-                   'ArtLOD.extendBounds(', 'ArtLOD.classify(',
+    art_registry = source("src/shared/ArtSectorRegistry.luau")
+    for needle in ('ArtLOD.cellKey(', 'ArtLOD.extendBounds(',
+                   'function Registry.add(', 'function Registry.remove('):
+        check(needle in art_registry,
+              "Shared incremental art sector registry missing: " + needle)
+    for needle in ('ArtLOD.limits(', 'ArtLOD.classify(',
                    'ArtLOD.hiddenSquared(', 'getDetailGroups(folder)',
                    'applyGroupState(group, mode == "HIDE")',
                    'item.LocalTransparencyModifier = hidden and 1 or 0',
-                   'group.lastMode = mode'):
+                   'group.lastMode = mode',
+                   'ArtSectorRegistry.add(entry.registry, item, item.Position)',
+                   'ArtSectorRegistry.remove(entry.registry, item)'):
         check(needle in lod,
-              "Client spatial LOD integration missing: " + needle)
+              "Client streamed spatial LOD integration missing: " + needle)
     for name in ("IronYardGraphicsPreset", "NeonArtTier"):
         check(name in lod, "Visual detail budget mismatch: " + name)
     check("function WeaponVisuals:drawImpact(" in effects,
