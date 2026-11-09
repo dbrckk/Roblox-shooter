@@ -198,9 +198,12 @@ def main():
         has(viewmodel, key, "Material-aware client-only combat effects")
     require(viewmodel.count("TweenService:Create(") == 2,
             "Only confirmed hit glints may still use TweenService; transient Parts are pooled")
-    require("Debris:AddItem(tracer," not in viewmodel
+    # Three intentional Debris calls remain: confirmed-hit core/spark and
+    # spatialized sound. Tracer, pellet, fragment, dust and muzzle effects
+    # must use the reusable pool instead of per-shot scheduled destruction.
+    require(viewmodel.count("Debris:AddItem(") == 3
+            and "Debris:AddItem(tracer," not in viewmodel
             and "Debris:AddItem(chip," not in viewmodel
-            and "Debris:AddItem(core," not in viewmodel
             and "Debris:AddItem(fin," not in viewmodel
             and "Debris:AddItem(dot," not in viewmodel,
             "Transient FX must not schedule per-shot debris cleanup")
