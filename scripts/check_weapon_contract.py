@@ -196,6 +196,17 @@ def main():
                 "self:_updateTransientFx(clock)",
                 "self:_spawnTransient({"):
         has(viewmodel, key, "Material-aware client-only combat effects")
+    for needle in (
+        "self.activeTransientIndices = {}",
+        "if next(self.activeTransientIndices) then",
+        "local slot, index = TransientFxPool.claim(self.transientParts,",
+        "self.activeTransientIndices[index] = true",
+        "for index in pairs(self.activeTransientIndices) do",
+        "self.activeTransientIndices[index] = nil",
+    ):
+        has(viewmodel, needle, "Only active transient Parts may animate each frame")
+    require("for index, slot in ipairs(self.transientParts)" not in viewmodel,
+            "An inactive but allocated FX pool must not be scanned each frame")
     require(viewmodel.count("TweenService:Create(") == 2,
             "Only confirmed hit glints may still use TweenService; transient Parts are pooled")
     # Three intentional Debris calls remain: confirmed-hit core/spark and
