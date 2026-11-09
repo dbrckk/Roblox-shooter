@@ -270,3 +270,10 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Régression Luau couvrant cette course, la préservation du nouveau verrou et le refus d'un gain non sauvegardé.
 - [ ] Tester la récupération d'une session avec latence/expiration réelle sur une expérience Roblox **privée de test** ; aucune garantie de persistance si le processus est interrompu ou si Roblox DataStore reste indisponible.
 - [ ] Compléter L0.3 (migrations éventuelles, reconnects et statut de sauvegarde en session réelle) avant de considérer le gate LOT 0 validé.
+
+### L0.3 — statut réel des XP non encore sauvegardés (9 novembre 2026)
+
+- [x] Le serveur réplique séparément `IronYardSavedXP` depuis la dernière acquisition/écriture DataStore acquittée, sans modifier les clés ni le schéma v1.
+- [x] Le HUD de carrière affiche `SAVE PENDING` pour les gains non encore écrits et `SAVED` uniquement lorsque le cumul visible est confirmé ; indication compacte maintenue pendant la manche sur Android.
+- [x] Les gains reçus pendant un `UpdateAsync` en cours restent en attente ; les échecs n'avancent jamais le compteur confirmé. Vérifications statiques du flux ajoutées à la CI.
+- [ ] Confirmer les transitions des indicateurs dans une session publiée de test, sur Android puis PC, avec des retards réseau/écritures.

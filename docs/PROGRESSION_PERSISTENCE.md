@@ -67,3 +67,9 @@ A slow `UpdateAsync` may acquire a lock **after** `PlayerRemoving` has exhausted
 A successful release may be retried after another server has already acquired the key. `Ledger.commit` now acknowledges the old session only if `lastSession.owner` and all committed counters prove it was fully persisted; it does **not** modify the newer server's lock or grant extra XP. The pure Luau regression covers both a valid acknowledgement and rejection of missing earnings.
 
 **Still required:** reproduce a delayed acquisition, leave/rejoin, throttling and server shutdown in a private published Roblox test universe. GitHub CI cannot prove real DataStore timing or the durability of a live session.
+
+## Visible save confirmation (9 November 2026)
+
+The server now publishes `IronYardSavedXP`, based only on the loaded persistent baseline and the last successfully acknowledged local `UpdateAsync` snapshot. `IronYardLifetimeXP` continues to show earned XP immediately. While the two differ, the career HUD explicitly displays **SAVE PENDING**, including a compact indicator during live mobile play; after a successful save it displays **SAVED**. LOADING, LOCKED, STUDIO and RETRYING states still warn independently. This is confirmation of a completed DataStore request, **not** a guarantee against every eventual Roblox outage or platform failure.
+
+When the player earns more XP during an in-flight save, only the snapshotted amount becomes confirmed; the newer XP remains pending. Failed writes never advance the confirmed counter. This state is ephemeral and does not change DataStore schema v1, player keys or reward amounts.

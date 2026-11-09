@@ -43,6 +43,9 @@ local function publish(player, record)
     local earned = record.earned
     local total = base.xp + earned.xp
     player:SetAttribute("IronYardLifetimeXP", total)
+    -- Saved XP is confirmed by the last successful DataStore transaction.
+    -- Earnings added while UpdateAsync yielded remain visibly pending.
+    player:SetAttribute("IronYardSavedXP", base.xp + math.min(earned.xp, record.committed.xp))
     player:SetAttribute("IronYardLifetimeEliminations", base.eliminations + earned.eliminations)
     player:SetAttribute("IronYardLifetimeHeadshots", base.headshots + earned.headshots)
     player:SetAttribute("IronYardLifetimeVictories", base.victories + earned.victories)
@@ -153,6 +156,7 @@ flush = function(player, record, release)
         record.lastWriteAt = os.clock()
         if player.Parent then
             setStatus(player, record, release and "CLOSED" or "ONLINE")
+            publish(player, record)
         end
         return true
     end

@@ -57,6 +57,8 @@ def main():
         "loadOrRetry(player, record)",
         "player:SetAttribute(\"IronYardProgressStatus\", status)",
         '"IronYardLifetimeXP"',
+        '"IronYardSavedXP"',
+        'math.min(earned.xp, record.committed.xp)',
     ), "DataStore lease/recovery")
 
     contains(ledger, (
@@ -75,6 +77,9 @@ def main():
 
     require("if release and data.lastSession" in ledger,
             "Previously released sessions need idempotent acknowledgement after a new lease")
+    require("publish(player, record)" in data.split("local function flush(player, record, release)")[-1]
+            or "publish(player, record)" in data.split("flush = function(player, record, release)")[-1],
+            "Successful DataStore saves must refresh the saved counter")
     require(data.count("store:UpdateAsync(") == 2,
             "Acquisition and every save must use UpdateAsync")
     for unsafe in ("store:SetAsync(", "store:IncrementAsync(", "GetDataStore("):
@@ -106,6 +111,8 @@ def main():
     require("SAVE NOT CONFIRMED" in ui, "HUD must display failure")
     require("STUDIO / SESSION ONLY" in ui, "Studio cannot pretend data is saved")
     require("ONLINE" in ui, "No success indication for confirmed DataStore access")
+    contains(ui, ("IronYardSavedXP", "CAREER / SAVE PENDING",
+                  "CAREER / SAVED", "savedXP < xp"), "Confirmed-vs-pending career HUD")
     require("CombatAward" in hud, "Session medal feedback must remain intact")
 
     contains(doc.lower(), ("updateasync", "idempotent", "45", "180", "studio",

@@ -92,6 +92,7 @@ end
 local function update()
     local status = player:GetAttribute("IronYardProgressStatus") or "LOADING"
     local xp = safeCount("IronYardLifetimeXP")
+    local savedXP = safeCount("IronYardSavedXP")
     local level = math.max(1, safeCount("IronYardProgressLevel"))
     local kills = safeCount("IronYardLifetimeEliminations")
     local wins = safeCount("IronYardLifetimeVictories")
@@ -114,8 +115,13 @@ local function update()
         details.Text = string.format("%d KILLS   /   %d WINS   /   MAX RANK", kills, wins)
     end
     if status == "ONLINE" then
-        statusLabel.Text = "CAREER / AUTO-SAVE"
-        statusLabel.TextColor3 = Color3.fromRGB(142, 201, 147)
+        if savedXP < xp then
+            statusLabel.Text = "CAREER / SAVE PENDING"
+            statusLabel.TextColor3 = Color3.fromRGB(229, 190, 112)
+        else
+            statusLabel.Text = "CAREER / SAVED"
+            statusLabel.TextColor3 = Color3.fromRGB(142, 201, 147)
+        end
     elseif status == "LOADING" then
         statusLabel.Text = "CAREER / LOADING..."
         statusLabel.TextColor3 = Color3.fromRGB(229, 190, 112)
@@ -136,9 +142,13 @@ local function update()
     statusLabel.Visible = not compact
     finishLabel.Visible = not compact
     track.Visible = not compact
-    if compact and status ~= "ONLINE" then
-        title.Text = string.format("RANK %d  |  SAVE %s", level,
-            status == "LOADING" and "WAIT" or "OFFLINE")
+    if compact then
+        if status ~= "ONLINE" then
+            title.Text = string.format("RANK %d  |  SAVE %s", level,
+                status == "LOADING" and "WAIT" or "OFFLINE")
+        elseif savedXP < xp then
+            title.Text = string.format("RANK %d  |  %d XP PENDING", level, xp)
+        end
     end
     panel.Visible = phase ~= "RESULTS"
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
@@ -166,7 +176,7 @@ local function connectCamera()
 end
 
 for _, name in ipairs({
-    "IronYardProgressStatus", "IronYardLifetimeXP", "IronYardLifetimeEliminations",
+    "IronYardProgressStatus", "IronYardLifetimeXP", "IronYardSavedXP", "IronYardLifetimeEliminations",
     "IronYardLifetimeVictories", "IronYardProgressLevel",
 }) do
     player:GetAttributeChangedSignal(name):Connect(update)
