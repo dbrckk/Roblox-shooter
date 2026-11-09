@@ -57,4 +57,13 @@ function Registry.remove(state, part)
     return true
 end
 
+-- On a whole arena/folder teardown all positions and groups are obsolete.
+-- Drop both tables in O(1) rather than rebuilding sector bounds once per Part.
+function Registry.clear(state)
+    state.byKey = {}
+    state.byPart = {}
+    state.count = 0
+    state.groupCount = 0
+end
+
 return Registry

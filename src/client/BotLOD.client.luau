@@ -161,8 +161,8 @@ local function releaseArtFolder(folder)
     for item in pairs(entry.registry.byPart) do
         if item.Parent then item.LocalTransparencyModifier = 0 end
         rendered[item] = nil
-        ArtSectorRegistry.remove(entry.registry, item)
     end
+    ArtSectorRegistry.clear(entry.registry)
     artCache[folder] = nil
 end
 

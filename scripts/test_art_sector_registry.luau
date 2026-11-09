@@ -69,4 +69,16 @@ for i = 1, 2000, 2 do assert(Registry.remove(huge, chunks[i])) end
 assert(huge.count == 0 and huge.groupCount == 0
     and next(huge.byKey) == nil and next(huge.byPart) == nil,
     "Repeated streaming churn cannot accumulate stale Part refs")
-print("IRON YARD 48-stud incremental art sectors and streaming cache: OK")
+-- Arena replacement must not recompute 2000 individual sector bounds.
+local replaced = Registry.new()
+for i = 1, 2000 do
+    assert(Registry.add(replaced, {}, pos(i%200, i%30, i%300)))
+end
+assert(replaced.count == 2000)
+Registry.clear(replaced)
+assert(replaced.count == 0 and replaced.groupCount == 0
+    and next(replaced.byPart) == nil and next(replaced.byKey) == nil,
+    "Whole arena replacement must discard the cached inventory atomically")
+assert(Registry.add(replaced, {}, pos(1,2,3))
+    and replaced.count == 1, "Replaced arena can initialize cleanly")
+print("IRON YARD 48-stud incremental art sectors, streaming and fast cleanup: OK")

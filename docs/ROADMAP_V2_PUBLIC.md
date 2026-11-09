@@ -363,3 +363,5 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Seuls les éléments `Detail` non-collidants sont pilotés ; `Core`, collisions, raycasts, bots, tirs et lumières sont inchangés. Seuils ECO/BALANCED/QUALITY, marges anti-scintillement et marge de mouvement des ponts roulants conservés.
 - [x] Tests purs : 2000 parties ajoutées, la moitié supprimées et contrôle exact des AABB par rapport à un rebuild, puis purge complète ; tests de rejets/duplication et contrôle d'intégration en CI.
 - [ ] Mesures Android en situation (chargement progressif du grand décor, changements de qualité et mouvements de caméra) et contrôle visuel d'absence de flash temporaire, à comparer à l'ancienne version.
+
+- [x] Libération d'un dossier/arène en une purge de l'index entier (sans recalcul des AABB de chaque pièce), avec remise à zéro des modificateurs de transparence et des abonnements.

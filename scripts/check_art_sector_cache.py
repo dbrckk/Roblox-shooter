@@ -28,6 +28,8 @@ needles = (
 )
 for needle in needles:
     assert needle in src, f"Missing streamed art cache integration: {needle}"
+assert "ArtSectorRegistry.clear(entry.registry)" in src, (
+    "Whole arena replacement must not recompute every 48-stud sector")
 assert src.count("folder:GetDescendants()") == 1, (
     "Whole-folder scans must happen only on first registration")
 assert "entry.dirty" not in src, "No dirty-triggered global art rebuilds"
@@ -42,6 +44,7 @@ for needle in (
     "if group.count == 0 then",
     "for other in pairs(group.parts) do",
     "ArtLOD.extendBounds(bounds, state.byPart[other].position)",
+    "function Registry.clear(state)",
 ):
     assert needle in registry, f"Missing per-sector cleanup: {needle}"
 assert "Policy.CellSize = 48" in policy and "Policy.MotionMargin = 8" in policy, (
