@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ArtLOD = require(Shared:WaitForChild("ArtLODPolicy"))
@@ -166,14 +167,14 @@ local function releaseArtFolder(folder)
     artCache[folder] = nil
 end
 
-local function getDetailGroups(folder)
+local function getDetailGroups(folder, initialEye)
     local entry = artCache[folder]
     if entry then return entry end
     entry = {
         registry = ArtSectorRegistry.new(),
         pendingTier = {},
         connections = {},
-        lastEye = nil,
+        lastEye = initialEye,
     }
     artCache[folder] = entry
 
@@ -237,8 +238,22 @@ local function getDetailGroups(folder)
             end
         end
     end))
-    -- The only full inventory scan for this folder: initial registration.
-    for _, item in ipairs(folder:GetDescendants()) do inspectPart(item) end
+    -- One snapshot, indexed in bounded batches across Heartbeats instead
+    -- of thousands of client Part checks on a single combat frame.
+    -- New DescendantAdded events are still processed immediately.
+    local initialParts = folder:GetDescendants()
+    task.spawn(function()
+        local batch = ArtLOD.bootstrapBatch(
+            player:GetAttribute("IronYardGraphicsPreset"), isTouch)
+        for index, item in ipairs(initialParts) do
+            if artCache[folder] ~= entry or not folder:IsDescendantOf(Workspace) then
+                return
+            end
+            -- Streaming may remove a snapshot item before its registration.
+            if item:IsDescendantOf(folder) then inspectPart(item) end
+            if index % batch == 0 then RunService.Heartbeat:Wait() end
+        end
+    end)
     return entry
 end
 
@@ -265,7 +280,7 @@ local function updateArt()
             trackedArtFolders[name] = folder
         end
         if folder then
-            local entry = getDetailGroups(folder)
+            local entry = getDetailGroups(folder, position)
             if position then
                 entry.lastEye = position
                 for _, group in pairs(entry.registry.byKey) do

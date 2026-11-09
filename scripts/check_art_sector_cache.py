@@ -19,7 +19,11 @@ needles = (
     "ArtSectorRegistry.remove(entry.registry, item)",
     "local eye = entry.lastEye",
     "ArtLOD.hiddenSquared(offset:Dot(offset),",
-    "for _, item in ipairs(folder:GetDescendants()) do inspectPart(item) end",
+    "local initialParts = folder:GetDescendants()",
+    "task.spawn(function()",
+    "ArtLOD.bootstrapBatch(",
+    "RunService.Heartbeat:Wait()",
+    "if item:IsDescendantOf(folder) then inspectPart(item) end",
     "for _, group in pairs(entry.registry.byKey) do",
     'if mode == "HIDE" or mode == "SHOW" then',
     "local previous = trackedArtFolders[name]",
@@ -32,6 +36,10 @@ assert "ArtSectorRegistry.clear(entry.registry)" in src, (
     "Whole arena replacement must not recompute every 48-stud sector")
 assert src.count("folder:GetDescendants()") == 1, (
     "Whole-folder scans must happen only on first registration")
+assert "for _, item in ipairs(folder:GetDescendants())" not in src, (
+    "Initial indexing must be sliced, not synchronous")
+assert "if index % batch == 0 then" in src, (
+    "Bootstrap must yield after every fixed registration batch")
 assert "entry.dirty" not in src, "No dirty-triggered global art rebuilds"
 assert "for _, item in ipairs(group.parts)" not in src, (
     "Streaming registry group.parts is a set, not a sequential array")
@@ -45,6 +53,9 @@ for needle in (
     "for other in pairs(group.parts) do",
     "ArtLOD.extendBounds(bounds, state.byPart[other].position)",
     "function Registry.clear(state)",
+    "local edge = p.X == before.minX",
+    "if edge then",
+    "elseif expanded then",
 ):
     assert needle in registry, f"Missing per-sector cleanup: {needle}"
 assert "Policy.CellSize = 48" in policy and "Policy.MotionMargin = 8" in policy, (

@@ -54,4 +54,19 @@ assert(Policy.hiddenSquared(100 * 100, true, 110, 94))
 assert(not Policy.hiddenSquared(93 * 93, true, 110, 94))
 assert(Policy.hiddenSquared(0/0, true, 110, 94))
 assert(not Policy.hiddenSquared(0/0, false, 110, 94))
-print("IRON YARD spatial art LOD, safe motion padding and stable hysteresis: OK")
+for _, setting in ipairs({
+    { "ECO", true, 48 }, { "ECO", false, 96 },
+    { "BALANCED", true, 96 }, { "BALANCED", false, 192 },
+    { "QUALITY", true, 128 }, { "QUALITY", false, 192 },
+}) do
+    assert(Policy.bootstrapBatch(setting[1], setting[2]) == setting[3],
+        "Incorrect registration budget for " .. setting[1])
+end
+local inspected, mobileLimit = 0, Policy.bootstrapBatch("ECO", true)
+for _ = 1, 5 do
+    local step = math.min(mobileLimit, 217 - inspected)
+    assert(step <= 48, "ECO registration must stay below its frame budget")
+    inspected += step
+end
+assert(inspected == 217, "Initial inventory must eventually complete")
+print("IRON YARD spatial art LOD, safe motion and boot frame budgets: OK")

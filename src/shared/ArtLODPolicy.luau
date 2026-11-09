@@ -9,6 +9,14 @@ local Policy = {}
 Policy.MotionMargin = 8
 Policy.CellSize = 48
 
+-- Limit the one-time art inventory initialization per Heartbeat. No
+-- per-frame background LOD loop or gameplay scheduling is introduced.
+function Policy.bootstrapBatch(preset, isTouch)
+    if preset == "ECO" then return isTouch and 48 or 96 end
+    if isTouch then return preset == "QUALITY" and 128 or 96 end
+    return 192
+end
+
 function Policy.limits(preset, isTouch)
     local bot, art
     if preset == "ECO" then

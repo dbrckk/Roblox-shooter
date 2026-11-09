@@ -81,4 +81,41 @@ assert(replaced.count == 0 and replaced.groupCount == 0
     "Whole arena replacement must discard the cached inventory atomically")
 assert(Registry.add(replaced, {}, pos(1,2,3))
     and replaced.count == 1, "Replaced arena can initialize cleanly")
-print("IRON YARD 48-stud incremental art sectors, streaming and fast cleanup: OK")
+-- Dense streamed groups must never force a full-sector transparency
+-- reapplication when new/removed Parts do not change the group AABB.
+local dense = Registry.new()
+local first, last, sameEdge = {}, {}, {}
+assert(Registry.add(dense, first, pos(0, 0, 0)))
+assert(Registry.add(dense, last, pos(47, 30, 47)))
+local sector = dense.byKey["0:0"]
+sector.lastMode = "HIDE"
+local interiors = {}
+for i = 1, 1000 do
+    local p = {}
+    interiors[i] = p
+    assert(Registry.add(dense, p,
+        pos(8 + i%25, 1 + i%20, 8 + i%27)))
+    assert(sector.lastMode == "HIDE",
+        "Interior additions must preserve previous LOD mode")
+end
+assert(dense.count == 1002)
+for _, p in ipairs(interiors) do
+    assert(Registry.remove(dense, p))
+    assert(sector.lastMode == "HIDE",
+        "Interior removals must preserve sector mode and bounds")
+end
+assert(sector.bounds.minX == 0 and sector.bounds.maxX == 47
+    and sector.bounds.minZ == 0 and sector.bounds.maxZ == 47)
+assert(Registry.remove(dense, first))
+assert(sector.lastMode == nil and sector.bounds.minX == 47,
+    "Removing a unique extreme must invalidate visibility")
+sector.lastMode = "SHOW"
+assert(Registry.add(dense, sameEdge, pos(47,30,47)))
+assert(sector.lastMode == "SHOW",
+    "Equal-bound additions must not cause whole-group writes")
+assert(Registry.remove(dense, sameEdge))
+assert(sector.lastMode == "SHOW",
+    "Removing a duplicate extremum must preserve unchanged bounds")
+assert(Registry.remove(dense, last))
+assert(dense.count == 0 and dense.groupCount == 0)
+print("IRON YARD sector streaming: 1000 interior additions/removals and bounds: OK")

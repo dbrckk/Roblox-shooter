@@ -365,3 +365,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [ ] Mesures Android en situation (chargement progressif du grand décor, changements de qualité et mouvements de caméra) et contrôle visuel d'absence de flash temporaire, à comparer à l'ancienne version.
 
 - [x] Libération d'un dossier/arène en une purge de l'index entier (sans recalcul des AABB de chaque pièce), avec remise à zéro des modificateurs de transparence et des abonnements.
+
+
+### L3.6 — amortissement du chargement des décors et des retraits (9 novembre 2026)
+
+- [x] Index initial des trois dossiers 3D enregistré par tranches coopératives : 48 inspections par Heartbeat en ECO Android, 96 en BALANCED Android, 128 en QUALITY Android, 96 en ECO desktop et 192 en BALANCED/QUALITY desktop. L'enregistrement est annulé si le dossier disparaît ; les événements de streaming continuent à s'appliquer immédiatement.
+- [x] Le cache évite l'indexation double quand un élément reçoit à la fois une notification de streaming et apparaît dans la capture initiale. Les éléments déjà retirés sont ignorés.
+- [x] Les ajouts/retraits intérieurs dans un secteur n'invalident plus son mode LOD ; les retraits n'actualisent les limites du secteur que si une pièce constituant l'un de ses extrêmes est retirée, et le mode est conservé si les nouvelles limites restent identiques.
+- [x] Les seuils ECO/BALANCED/QUALITY, silhouettes Core, collisions, déplacements, tirs et IA restent inchangés. Tests Luau : 1 000 ajouts et 1 000 retraits intérieurs, extrémités partagées, budgets de chargement et rejets existants ; build Rojo et contrôles d'intégration CI.
+- [ ] Sur Android réel, comparer FPS, temps d'image p95/p99 et variations d'affichage à l'apparition de l'arène avec quatre bots. Observer si le premier inventaire en plusieurs images laisse temporairement apparaître des détails lointains.
