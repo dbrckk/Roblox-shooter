@@ -12,9 +12,12 @@ eq(Pool.cap("QUALITY", false), 96, "PC quality")
 eq(Pool.cap("ECO", false), 24, "Desktop ECO")
 
 local slots = {}
-local one = Pool.claim(slots, 10, 0.25, 3, 1)
-local two = Pool.claim(slots, 10, 0.25, 3, 2)
-local three = Pool.claim(slots, 10, 0.25, 3, 4)
+local one, firstIndex = Pool.claim(slots, 10, 0.25, 3, 1)
+local two, secondIndex = Pool.claim(slots, 10, 0.25, 3, 2)
+local three, thirdIndex = Pool.claim(slots, 10, 0.25, 3, 4)
+eq(firstIndex, 1, "First live slot index")
+eq(secondIndex, 2, "Second live slot index")
+eq(thirdIndex, 3, "Third live slot index")
 one.part = "original-roblox-part"
 assert(one and two and three and #slots == 3)
 eq(Pool.claim(slots, 10.01, 0.24, 3, 1), one,
@@ -70,4 +73,59 @@ assert(Pool.claim(invalid, 1, 0.2, 24, 0) == nil)
 assert(Pool.claim(invalid, 1, 0.2, 24, 5) == nil)
 assert(Pool.claim(nil, 1, 0.2, 24, 2) == nil)
 assert(#invalid == 0, "Invalid data never allocates slots")
-print("IRON YARD transient VFX: mobile 24/48/72, priority and 96-Part cap: OK")
+-- Simulate RenderStepped's active-index tracking through sustained bot fire,
+-- profile downgrades, idle periods, and local muzzle-flash priority.
+local renderSlots, active = {}, {}
+local function spawn(at, priority, cap)
+    local slot, index = Pool.claim(renderSlots, at, 0.12, cap, priority)
+    if slot then
+        assert(type(index) == "number" and index >= 1 and index <= cap)
+        assert(renderSlots[index] == slot, "Exact index must identify the pooled Part")
+        active[index] = true
+    end
+end
+local function tick(at, cap)
+    local n = 0
+    for index in pairs(active) do
+        if Pool.progress(renderSlots[index], at, index <= cap) then
+            n += 1
+        else
+            active[index] = nil
+        end
+    end
+    return n
+end
+for shot = 1, 18000 do
+    local now = shot * 0.004
+    local cap = shot < 6000 and 72 or shot < 12000 and 24 or 48
+    spawn(now, shot % 3 == 0 and 4 or 1, cap)
+    if shot % 2 == 0 then tick(now, cap) end
+    assert(#renderSlots <= 72)
+end
+assert(tick(100, 24) == 0 and next(active) == nil,
+    "All expired effects must leave the active rendering set")
+assert(#renderSlots > 0 and #renderSlots <= 72,
+    "Idle rendering must preserve pooled Part storage")
+spawn(101, 4, 24)
+assert(next(active) ~= nil and tick(101, 24) == 1,
+    "Local flash must reawaken an idle pool immediately")
+assert(tick(101.13, 24) == 0 and next(active) == nil,
+    "A completed flash never triggers perpetual per-frame scanning")
+local qualitySlots, qualityActive = {}, {}
+for i = 1, 72 do
+    local slot, index = Pool.claim(qualitySlots, 102, 0.45, 72, 4)
+    assert(slot and index == i)
+    qualityActive[index] = true
+end
+for index in pairs(qualityActive) do
+    if not Pool.progress(qualitySlots[index], 102.01, index <= 24) then
+        qualityActive[index] = nil
+    end
+end
+local count = 0
+for index in pairs(qualityActive) do
+    assert(index <= 24, "ECO must retire indices above its VFX cap")
+    count += 1
+end
+assert(count == 24, "Quality downgrade retains only 24 eligible flashes")
+print("IRON YARD transient VFX: priorities, 18k shots and idle slot retirement: OK")
