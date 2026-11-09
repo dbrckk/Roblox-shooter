@@ -262,3 +262,11 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Tests purs de l'occlusion/volume/limites et contrat d'intégration des raycasts et du mixage.
 - [ ] Validation acoustique sur Android + Studio : tirs face à face, derrière container, couloir ouvert, près d'un mur non collidable, quatre bots, distance variable, choix ECO/BALANCED/QUALITY. Mesurer le surcoût de raycasts en jeu.
 - [ ] Sons source toujours génériques Roblox en attente d'enregistrements originaux réellement importés et autorisés.
+
+### L0.3 — fermeture tardive des sessions DataStore (9 novembre 2026)
+
+- [x] Corrigé le cas où `UpdateAsync` acquiert le verrou **après** la fin du délai de `PlayerRemoving` : une fermeture différée sauvegarde le cumul local et libère le verrou avec le GUID d'origine, même après retrait du joueur de `records`.
+- [x] Les accusés de réception de fermeture déjà réussie restent idempotents si un autre serveur a repris la clé : le marqueur `lastSession` doit prouver les compteurs, sans toucher au nouveau verrou.
+- [x] Régression Luau couvrant cette course, la préservation du nouveau verrou et le refus d'un gain non sauvegardé.
+- [ ] Tester la récupération d'une session avec latence/expiration réelle sur une expérience Roblox **privée de test** ; aucune garantie de persistance si le processus est interrompu ou si Roblox DataStore reste indisponible.
+- [ ] Compléter L0.3 (migrations éventuelles, reconnects et statut de sauvegarde en session réelle) avant de considérer le gate LOT 0 validé.

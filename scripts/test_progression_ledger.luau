@@ -100,6 +100,21 @@ case("reject concurrent live server and stale session", function()
     eq(nextSession.xp, 250, "new server sees stored career")
 end)
 
+case("delayed release acknowledgement preserves a new server lease", function()
+    local released = L.acquire(nil, A, 1000, 180)
+    released = L.commit(released, A, earnings(180, 2, 1), 1010, 180, true)
+    local nextSession = L.acquire(released, B, 1020, 180)
+    local ack = L.commit(nextSession, A, earnings(180, 2, 1), 1025, 180, true)
+    assert(ack ~= nil, "fully persisted late release must acknowledge")
+    eq(ack.xp, 180, "no duplicated XP")
+    eq(ack.lock.owner, B, "another server lease remains intact")
+    eq(ack.lock.committed.xp, 0, "other server ledger remains untouched")
+    eq(L.commit(nextSession, A, earnings(181, 2, 1), 1025, 180, true),
+        nil, "late release must not grant unpersisted XP")
+    eq(L.commit(nextSession, A, earnings(180, 2, 1), 1025, 180, false),
+        nil, "old server cannot resume normal writes")
+end)
+
 case("zero-delta heartbeat renews lease without inflating totals", function()
     local state = L.acquire(nil, A, 1000, 180)
     state = L.commit(state, A, earnings(), 1050, 180, false)

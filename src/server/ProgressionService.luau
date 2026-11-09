@@ -17,6 +17,7 @@ local STATS = Ledger.STATS
 local records = {}
 local started = false
 local store
+local flush -- acquisition may finish after a player has already left
 
 local zero = Ledger.zero
 local safeInt = Ledger.safeInt
@@ -102,6 +103,14 @@ local function acquire(player, record)
             record.loaded = true
             record.base = Ledger.sessionBase(result, record.token)
             record.committed = copyStats(result.lock.committed)
+            -- PlayerRemoving may have exhausted its wait while this UpdateAsync
+            -- was still running. Release the acquired lock and save earned XP
+            -- even when the departing Player was removed from records.
+            task.spawn(function()
+                if not flush(player, record, true) then
+                    warn("[IRON YARD] Late DataStore release failed for UserId " .. tostring(player.UserId))
+                end
+            end)
             return true
         end
         return false
@@ -119,7 +128,7 @@ local function acquire(player, record)
     return false
 end
 
-local function flush(player, record, release)
+flush = function(player, record, release)
     -- A load may have successfully acquired its lock before Roblox drops its
     -- response. On PlayerRemoving, safely release ONLY our GUID-owned lock
     -- and commit pending XP even when the initial acknowledgement was lost.

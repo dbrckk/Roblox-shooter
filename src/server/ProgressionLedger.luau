@@ -92,9 +92,11 @@ function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds,
     local snapshot = Ledger.copyStats(earnedSnapshot)
     local data = Ledger.normalize(previous)
     if not data.lock or data.lock.owner ~= token then
-        -- A retry after successful PlayerRemoving may observe an unlocked key.
-        -- It is successful ONLY when lastSession proves every counter persisted.
-        if release and data.lock == nil and data.lastSession
+        -- A release retry may arrive after a different server acquires the
+        -- already-released key. Acknowledgement is safe only when lastSession
+        -- proves every counter persisted, regardless of the NEW lock owner.
+        -- Never overwrite or release the other server's active lease.
+        if release and data.lastSession
             and data.lastSession.owner == token then
             for _, field in ipairs(Ledger.STATS) do
                 if data.lastSession.committed[field] < snapshot[field] then

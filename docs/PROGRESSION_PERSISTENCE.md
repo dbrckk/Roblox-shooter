@@ -59,3 +59,11 @@ and exercises first-time records, exact-once replays, reconnect after release,
 out-of-order saves, stale writers, lock expiry, corrupted schemas and
 nonnegative XP limits. This verifies the state-machine calculations; it is
 **not** a substitute for published Roblox DataStore throttling tests.
+
+## Recovery when an acquisition completes after departure (9 November 2026)
+
+A slow `UpdateAsync` may acquire a lock **after** `PlayerRemoving` has exhausted its bounded wait and detached the Player record. The acquisition completion now schedules a final, GUID-owned `Ledger.commit(..., release=true)` using the Player's original UserId and the XP earned before departure. It is best-effort: an interrupted server or a continuing DataStore outage can still delay recovery until lease expiry. No live player key is used from Studio.
+
+A successful release may be retried after another server has already acquired the key. `Ledger.commit` now acknowledges the old session only if `lastSession.owner` and all committed counters prove it was fully persisted; it does **not** modify the newer server's lock or grant extra XP. The pure Luau regression covers both a valid acknowledgement and rejection of missing earnings.
+
+**Still required:** reproduce a delayed acquisition, leave/rejoin, throttling and server shutdown in a private published Roblox test universe. GitHub CI cannot prove real DataStore timing or the durability of a live session.
