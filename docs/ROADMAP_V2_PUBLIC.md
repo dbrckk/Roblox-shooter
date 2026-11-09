@@ -385,3 +385,11 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Robustesse au streaming : un phare manquant invalide proprement l'enregistrement du modèle, désactive/détruit sa lumière locale ; le hook de chargement existant le réinscrit si une pièce revient.
 - [x] Tests Luau de cadence pure, bornes de distance, ECO/QUALITY et entrées invalides + compilation/contrôles d'intégration/build Rojo CI.
 - [ ] Mesurer l'impact CPU/GPU, la qualité des animations lointaines et l'apparence des phares en ECO/BALANCED/QUALITY sur Android et desktop ; les tests de politiques ne démontrent pas de gain FPS réel.
+
+
+### L3.8 — robustesse au streaming des ponts roulants (9 novembre 2026)
+
+- [x] Un modèle de pont roulant qui arrive avant ses attributs `IronYardGantryMover` / `IronYardGantryIndex` peut maintenant s'enregistrer dès leur réplication, sans nécessiter un rechargement complet du dossier.
+- [x] Les nouveaux `BasePart` reçus dans les modèles candidats déclenchent une nouvelle tentative d'enregistrement lorsque le phare manquait. Un modèle retiré libère ses abonnements et sa lumière locale.
+- [x] Les changements d'index sont traités en repartant du pivot d'origine, et les changements de statut `Mover` suppriment l'ancien rig.
+- [ ] Vérifier en Studio avec `StreamingEnabled` : apparition différée du modèle, du phare et des attributs, remplacement du modèle pendant le combat, absence de double lumière.

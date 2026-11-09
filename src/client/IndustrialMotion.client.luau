@@ -17,6 +17,23 @@ if not decor then
 end
 
 local rigs = setmetatable({}, { __mode = "k" })
+-- A streamed Model may arrive before its attributes and beacon Parts.
+-- Watch only candidate Models, not every mesh, and release subscriptions
+-- as soon as the Model is removed from the arena.
+local pendingModels = {}
+
+local function forgetCandidate(candidate)
+    local entry = pendingModels[candidate]
+    if entry then
+        for _, connection in ipairs(entry) do connection:Disconnect() end
+        pendingModels[candidate] = nil
+    end
+    local rig = rigs[candidate]
+    if rig then
+        if rig.light then rig.light:Destroy() end
+        rigs[candidate] = nil
+    end
+end
 
 local function register(candidate)
     if not candidate:IsA("Model")
@@ -38,19 +55,52 @@ local function register(candidate)
         lastPreset = nil,
         nextUpdateAt = 0,
     }
+    -- The candidate is now registered. Keep the index and mover attribute
+    -- listeners until removal so a streamed replacement can be discovered.
 end
 
-for _, candidate in ipairs(decor:GetChildren()) do register(candidate) end
-decor.ChildAdded:Connect(function(candidate)
-    if candidate:IsA("Model") then
-        -- Streaming may deliver child Mesh/Parts a frame after their Model.
-        task.defer(register, candidate)
-    end
-end)
+local function watchCandidate(candidate)
+    if not candidate:IsA("Model") or pendingModels[candidate] then return end
+    local connections = {}
+    pendingModels[candidate] = connections
+    table.insert(connections,
+        candidate:GetAttributeChangedSignal("IronYardGantryMover"):Connect(function()
+            if candidate:GetAttribute("IronYardGantryMover") ~= true then
+                forgetCandidate(candidate)
+                if candidate:IsDescendantOf(decor) then
+                    watchCandidate(candidate)
+                end
+            else
+                register(candidate)
+            end
+        end))
+    table.insert(connections,
+        candidate:GetAttributeChangedSignal("IronYardGantryIndex"):Connect(function()
+            -- The index is server-authored and immutable for an active rig.
+            -- On replication or replacement, rebuild its original pivot.
+            if rigs[candidate] then
+                local rig = rigs[candidate]
+                if rig.moving then candidate:PivotTo(rig.base) end
+                if rig.light then rig.light:Destroy() end
+                rigs[candidate] = nil
+            end
+            register(candidate)
+        end))
+    register(candidate)
+end
+
+for _, candidate in ipairs(decor:GetChildren()) do watchCandidate(candidate) end
+decor.ChildAdded:Connect(watchCandidate)
+decor.ChildRemoved:Connect(forgetCandidate)
 decor.DescendantAdded:Connect(function(candidate)
-    if candidate:GetAttribute("IronYardGantryBeacon") then
+    if candidate:IsA("BasePart") then
         local parent = candidate.Parent
-        if parent and parent:IsA("Model") then register(parent) end
+        if parent and parent:IsA("Model") and parent.Parent == decor then
+            -- A beacon may stream after its Model. Try registration for
+            -- every arriving Part: only four gantry candidates can match.
+            watchCandidate(parent)
+            register(parent)
+        end
     end
 end)
 
@@ -81,6 +131,11 @@ RunService.Heartbeat:Connect(function(dt)
             end
             if rig.light then rig.light:Destroy() end
             rigs[model] = nil
+            if model:IsDescendantOf(decor) then
+                -- The beacon alone streamed out. Keep the candidate
+                -- watcher for its replacement; do not leak old lights.
+                watchCandidate(model)
+            end
         else
             local offset = rig.base.Position - cameraPosition
             local distanceSquared = offset:Dot(offset)
