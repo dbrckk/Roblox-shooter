@@ -313,3 +313,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Affichage des XP restant pour atteindre le rang suivant, plutôt que du seuil cumulatif ambigu ; même pourcentage dans le HUD et le podium.
 - [x] Tests de politique pure et contrôle d'intégration CI, sans nouvelle instance graphique à chaque XP.
 - [ ] Tester les transitions d'autosave dans une session Roblox publique réelle avec Android/PC, victoire FFA et reconnexion.
+
+
+### L3.1 — budget de tirs VISUELS distants Android (9 novembre 2026)
+
+- [x] Audit du pipeline : les armes et les bots sont déjà filtrés par distance, mais quatre bots peuvent produire une rafale collective de Parts/Tweens malgré le LOD existant. L'émetteur distant dispose maintenant d'un **token bucket partagé BOT** et d'un bucket séparé PLAYER, afin que les effets des bots ne privent pas les autres joueurs humains de leurs retours visuels.
+- [x] ECO Android : jusqu'à **4 groupes BOT/s** (+2 groupes de courte rafale), BALANCED : **7/s** (+3), QUALITY : **11/s** (+4). Le groupe englobe tracer, flash et impact afin d'éviter la création d'effets incomplets. Les tirs humains distants ont leurs propres quotas plus élevés.
+- [x] Admission locale O(1) et deux seuls états conservés pour toute la session ; aucune boucle par image, aucun nouvel objet serveur ou RemoteEvent. Les tirs prévus du joueur local et les indications serveur de dégâts/kills ne traversent **jamais** ce filtre.
+- [x] Les règles de distance restent prioritaires. Les impacts de pellets d'un joueur local restent visibles malgré les quotas des autres tireurs. Tests purs de charge 1000 événements/s, cas 4 bots, priorité humains, preset ECO/BALANCED/QUALITY et entrée invalide ; contrôle de branchement des deux chemins réseau.
+- [ ] Mesurer le vrai coût GPU, nombre d'effets simultanés, FPS p95 et confort de combat sur Android faible gamme face à quatre bots ; la CI prouve les plafonds logiques, pas un gain de FPS observé. Ajuster les quotas selon mesures.

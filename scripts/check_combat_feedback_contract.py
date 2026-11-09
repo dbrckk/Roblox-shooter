@@ -16,6 +16,7 @@ client = load("src/client/init.client.luau")
 hud = load("src/client/HudController.luau")
 policy = load("src/shared/CombatFeedbackPolicy.luau")
 vfx = load("src/shared/CombatVfxProfile.luau")
+remote_budget = load("src/shared/RemoteCombatFxBudget.luau")
 
 def requires(src, needles, label):
     for needle in needles:
@@ -72,4 +73,24 @@ requires(vfx, (
     "function Profile.hitPriority(headshot, killed)",
     "function Profile.shouldDisplayHit(now, lastAt, lastPriority, priority)",
 ), "Kill-first short-lived hit priority")
-print("IRON YARD actual damage, spawn-shield readout, kill-priority and no miss spam: OK")
+requires(remote_budget, (
+    'local Vfx = require("./CombatVfxProfile")',
+    'function Budget.allow(state, now, preset, touch, distance, kind)',
+    'if not limit or not Vfx.budget(preset, touch, distance) then return false end',
+    'bucket.tokens -= 1',
+    'PLAYER = { rate = 10, burst = 3 }',
+    'BOT = { rate = 7, burst = 3 }',
+), "Bounded remote visual groups")
+requires(client, (
+    'local remoteFxState = RemoteCombatFxBudget.new()',
+    'local ownShot = message.shooterUserId == player.UserId',
+    'remoteFxState, os.clock(),',
+    '(cameraNow.CFrame.Position - message.origin).Magnitude, "PLAYER")',
+    'UserInputService.TouchEnabled, visualDistance, "BOT")',
+    'if remoteAccepted then',
+    '(ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table"',
+), "Human/bot remote group admissions and unthrottled own-shot feedback")
+assert(client.count('RemoteCombatFxBudget.allow(') == 2, (
+    "Exactly two remote visuals pathways must be admitted once per group"
+))
+print("IRON YARD actual damage, spawn-shield readout, kill priority and remote FX quotas: OK")

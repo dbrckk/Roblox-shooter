@@ -148,3 +148,8 @@ From a spawn, shoot and wallrun along the whole perimeter, verifying that all hi
 ## Warehouse entrance silhouette and genuine opening — 9 November 2026
 
 The warehouse's south approach (near z=-25) now displays a major signed freight portal anchored to the existing physical east/west warehouse walls and north bulkhead. Check that the lintel and roof canopy do not suggest false bullet-proof cover, that the sign remains readable on a small Android viewport at street level, and that the three amber approach lanes point into the real open bay. Walk, slide, mantle and fire through the entrance with four bots active. Inspect from the side catwalks that the portal does not appear suspended or clipped through the pitched roof. Repeat ECO/BALANCED/QUALITY and note any shimmering on thin noncollidable floor markings. Validate client-side LOD and FPS with actual Roblox rendering; the Luau test only validates geometry policy.
+
+
+## Remote combat FX flood control (9 November 2026)
+
+With four bots constantly exchanging fire, capture Android frame-time and FPS on identical routes with ECO/BALANCED/QUALITY. Only remote tracer/flash/impact visual groups are throttled locally: ECO permits 4 BOT groups/s + a short 2-group burst, BALANCED 7 + 3, and QUALITY 11 + 4. Human remote visuals have a separate, higher bucket, and your own predicted shots and verified hit readouts are never throttled by this policy. Verify that reduced fire visuals do NOT change hit registration, bot attack rates, audio, damage, kill medals, weapon FX returned to the shooter, or proximity clarity. Compare a real Android PERF session with screenshots and real FPS/frame time before claiming performance gains.

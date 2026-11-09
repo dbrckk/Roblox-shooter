@@ -9,6 +9,8 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
+local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget"))
+local remoteFxState = RemoteCombatFxBudget.new()
 local TouchLayout = require(shared:WaitForChild("TouchLayout"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
@@ -1114,7 +1116,15 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
             and direction.Magnitude > 0.01 and fullLength > 0.1 then
             -- Prediction already shows the shooter's central tracer and mark.
             -- A server confirmation must not double that visual/audio.
-            if message.shooterUserId ~= player.UserId then
+            local ownShot = message.shooterUserId == player.UserId
+            -- One shared rate admission for all effects of a REMOTE player
+            -- shot. Never gate local prediction or its shotgun confirmation.
+            local remoteAccepted = not ownShot and RemoteCombatFxBudget.allow(
+                remoteFxState, os.clock(),
+                player:GetAttribute("IronYardGraphicsPreset"),
+                UserInputService.TouchEnabled,
+                (cameraNow.CFrame.Position - message.origin).Magnitude, "PLAYER")
+            if remoteAccepted then
                 visuals:drawTracer(message.origin, direction.Unit, fullLength, Color3.fromRGB(240, 213, 165))
                 visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)
                 if typeof(message.impactNormal) == "Vector3" then
@@ -1122,7 +1132,7 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
                         message.impactNormal, message.impactMaterial)
                 end
             end
-            if typeof(message.pelletImpacts) == "table" then
+            if (ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table" then
                 visuals:drawPelletImpacts(message.pelletImpacts)
             end
         end
@@ -1144,7 +1154,10 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
             UserInputService.TouchEnabled, visualDistance)
         if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 195
             and botFxBudget
-            and message.direction.Magnitude > 0.01 and distance > 1 then
+            and message.direction.Magnitude > 0.01 and distance > 1
+            and RemoteCombatFxBudget.allow(remoteFxState, os.clock(),
+                player:GetAttribute("IronYardGraphicsPreset"),
+                UserInputService.TouchEnabled, visualDistance, "BOT") then
             local accent = typeof(message.color) == "Color3" and message.color or nil
             visuals:drawTracer(message.origin, message.direction.Unit, distance, accent)
             visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)
