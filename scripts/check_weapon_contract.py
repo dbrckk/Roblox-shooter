@@ -190,8 +190,22 @@ def main():
                 "ImpactMarkPool.alpha(slot, now, i <= allowed)",
                 "self:_updateImpactMarks(clock)",
                 "for i = 1, budget.muzzleFins do",
-                "if budget.muzzleLight then"):
+                "if budget.muzzleLight then",
+                "TransientFxPool.claim(self.transientParts,",
+                "TransientFxPool.progress(slot, now, index <= cap)",
+                "self:_updateTransientFx(clock)",
+                "self:_spawnTransient({"):
         has(viewmodel, key, "Material-aware client-only combat effects")
+    require(viewmodel.count("TweenService:Create(") == 1,
+            "Only confirmed hit glints may still use TweenService; transient Parts are pooled")
+    require("Debris:AddItem(tracer," not in viewmodel
+            and "Debris:AddItem(chip," not in viewmodel
+            and "Debris:AddItem(core," not in viewmodel
+            and "Debris:AddItem(fin," not in viewmodel
+            and "Debris:AddItem(dot," not in viewmodel,
+            "Transient FX must not schedule per-shot debris cleanup")
+    has(viewmodel, "self:drawMuzzleFlash(entry.part.Position + direction * 0.25, nil, direction, true)",
+        "Own muzzle flash must keep priority over remote debris")
     for key in ("CombatVfxProfile.hitPriority(headshot == true, killed == true)",
                 "CombatVfxProfile.shouldDisplayHit(now,"):
         has(viewmodel, key, "Fatal confirmation overrides ordinary hit VFX cooldown")

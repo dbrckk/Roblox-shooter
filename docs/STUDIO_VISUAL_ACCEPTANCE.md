@@ -158,3 +158,8 @@ With four bots constantly exchanging fire, capture Android frame-time and FPS on
 ## Persistent bullet-mark reuse — 9 November 2026
 
 Fire a full magazine at concrete, steel, warehouse cladding, and cover; verify that surface impacts still follow the true raycast contact plane and fade smoothly for the final 1.1 seconds without disappearing instantly. Cycle ECO/BALANCED/QUALITY after sustained fire to verify correct 10/16/22 mobile and 26/36 desktop live-mark budgets. A client may keep a cache of at most 36 unparented Parts; it must not repeatedly create/destroy persistent marks or schedule a Tween/Debris cleanup for each impact. With four bots fighting, use Roblox MicroProfiler and memory statistics to measure actual object/GC reduction. Short transient sparks/confirmed hits deliberately continue to use their existing effect implementations.
+
+
+## Pooled short-lived combat VFX (9 November 2026)
+
+Under sustained rifle fire and four bots, check muzzle flashes, metal sparks, wood/concrete fragments, shotgun pellet glints, tracer travel and dust for correct shape, color and smooth fade. ECO Android may hold at most 24 transient visual Parts, BALANCED 48, QUALITY 72; PC BALANCED 80, PC QUALITY 96. Verify local muzzle flashes remain visible when incoming bot FX saturate the pool. Only desktop QUALITY enables the existing optional local point light: ensure it disables when its Part is reused for debris or after expiration. Quick-switch graphics preset during a firefight. Confirm no gameplay damage, ammo, sound, hit confirmation or server logic changes. Record actual device FPS, frame time and memory before interpreting this as proven performance improvement.

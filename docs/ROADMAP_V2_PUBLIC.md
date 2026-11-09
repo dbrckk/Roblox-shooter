@@ -331,3 +331,14 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Fondu des marques sur les 1,1 dernières secondes et expiration à fréquence **8 Hz** dans le RenderStepped déjà existant ; aucune nouvelle boucle et aucune allocation de Tween ou de Debris par marque. Les Parts expirées ou exclues par le LOD ont `Parent=nil` ; elles ne bloquent ni les déplacements ni les raycasts.
 - [x] Plan pur `ImpactMarkPool.luau` testé sous 5000 impacts, réutilisation, réduction de qualité, durée de vie, entrées invalides, nombre constant de slots ; compilation et build Rojo CI.
 - [ ] Mesurer la mémoire et la fluidité réelles sur Android en tir continu, quatre bots et changement de profil ; les particules transitoires restent volontairement indépendantes jusqu'à validation du rendu natif.
+
+
+### L3.3 — pool de tous les VFX transitoires des tirs (9 novembre 2026)
+
+- [x] Les traceurs, flashs de bouche, pétales de flash, ricochets acier, éclats, poussières et impacts mineurs de shotgun utilisent désormais **un seul pool local de Parts réutilisables**, au lieu de créer un Part + Tween + Debris pour chaque émission.
+- [x] Budgets de pool selon qualité : ECO 24, Android BALANCED 48, Android QUALITY 72, PC BALANCED 80, PC QUALITY 96 Parts maximum. Les effets expirés sont masqués puis réutilisés, sans nettoyage différé ou tâche supplémentaire.
+- [x] Animation fluide sub-300 ms dans le RenderStepped existant, sans boucle ajoutée ; interpolation linéaire pour les traceurs et quadratique pour les impacts, flashs et poussières.
+- [x] Priorité 4 aux flashs du joueur local, 3 aux flashs distants, 2 aux traceurs et impacts pellets, 1 aux débris : les petits éclats ne peuvent pas expulser les retours essentiels à saturation. Toutes les propriétés du Part sont réinitialisées lors d'une réutilisation, y compris la désactivation du PointLight sur une ancienne bouche de canon.
+- [x] Aucun changement de dégâts, validation réseau, IA, sons, VFX confirmés de touche, statut des points de carrière, collision ou raycast. Aucun effet 3D de dégâts confirmé n'est throttlé par le pool.
+- [x] Tests Luau purs : 12 000+ impacts, saturations, priorités, renversement temporel, baisse de preset, entrées invalides, réutilisation d'instance. Contrat intégration et build Rojo dans la CI.
+- [ ] Vérifier visuellement tous les effets sous 4 bots en Studio/Android (notamment lumière de bouche réutilisée, ordre de priorité, absence de traînées figées) puis comparer FPS et mémoire avant/après.
