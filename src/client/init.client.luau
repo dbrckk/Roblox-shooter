@@ -808,7 +808,7 @@ local function fireWeapon(weaponId)
     end
 	visuals:kick(weaponId)
     visuals:drawLocalMuzzleFlash()
-	visuals:playFireSound(weaponId, ray.Origin)
+	visuals:playFireSound(weaponId, ray.Origin, true)
 
 
     if config.kind == "Raycast" or config.kind == "Pellet" then

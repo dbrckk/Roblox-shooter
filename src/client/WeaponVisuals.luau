@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
+local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
+local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -70,6 +72,9 @@ function WeaponVisuals.new(WeaponConfig)
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
     self.impactMarks = {}
+    -- A bounded list of remote emitters only. The local weapon's feedback
+    -- has absolute priority and does not consume these slots.
+    self.remoteSoundEmitters = {}
     -- Server-authored rank only affects the cosmetic local viewmodel.
     self.finishConnection = Players.LocalPlayer:GetAttributeChangedSignal(
         "IronYardProgressLevel"):Connect(function()
@@ -324,9 +329,10 @@ function WeaponVisuals:setReloading(weaponId, active)
 end
 
 function WeaponVisuals:kick(weaponId)
-	local config = self.WeaponConfig.get(weaponId)
-	self.recoil = math.max(self.recoil, config and config.recoilKick or 0.08)
-	self.fireStartedAt = os.clock()
+    local config = self.WeaponConfig.get(weaponId)
+    if not config or weaponId ~= self.currentWeaponId then return end
+    self.recoil = WeaponFeel.kick(weaponId, self.recoil, config.recoilKick or 0.08)
+    self.fireStartedAt = os.clock()
 end
 
 function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingPose)
@@ -356,19 +362,24 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
 	local equipMotion = CFrame.new(0, (1 - equipAlpha) * 0.5, (1 - equipAlpha) * 0.36)
         * CFrame.Angles(math.rad((1 - equipAlpha) * -18), math.rad((1 - equipAlpha) * 10), 0)
 
-	local fireAlpha = 1 - math.clamp((timeNow - self.fireStartedAt) / 0.14, 0, 1)
-	local fireMotion = CFrame.new(0, 0, fireAlpha * 0.06)
-        * CFrame.Angles(math.rad(fireAlpha * 7), math.rad(fireAlpha * -2), math.rad(fireAlpha * 1.5))
+    local feel = WeaponFeel.get(self.currentWeaponId)
+    local fireAlpha = WeaponFeel.shotEnvelope(self.currentWeaponId,
+        timeNow - self.fireStartedAt)
+    local fireMotion = CFrame.new(0, 0, fireAlpha * feel.back)
+        * CFrame.Angles(math.rad(fireAlpha * feel.pitch),
+            math.rad(fireAlpha * feel.yaw), math.rad(fireAlpha * feel.roll))
 
 	local swayMotion = CFrame.Angles(self.sway.Y, self.sway.X, self.sway.X * 0.45)
 	local sprintOffset = SPRINT_OFFSETS[self.currentWeaponId] or CFrame.new()
 	local sprintMotion = CFrame.new():Lerp(sprintOffset, sprintAlpha)
 
-    -- Distinct, readable reload dip and roll. Rifle, pistol and sniper
-    -- all share this timeline, with their own server-configured duration.
-    local reloadMotion = CFrame.new(0.07 * reloadingPose, -0.16 * reloadingPose, 0.16 * reloadingPose)
-        * CFrame.Angles(math.rad(17 * reloadingPose), math.rad(12 * reloadingPose),
-            math.rad(10 * reloadingPose))
+    -- Common server-timed reload progression, visibly different mechanical
+    -- grip and roll per original weapon. Never changes the server reload.
+    local reloadMotion = CFrame.new(feel.reloadX * reloadingPose,
+        feel.reloadY * reloadingPose, feel.reloadZ * reloadingPose)
+        * CFrame.Angles(math.rad(feel.reloadPitch * reloadingPose),
+            math.rad(feel.reloadYaw * reloadingPose),
+            math.rad(feel.reloadRoll * reloadingPose))
 	return sprintMotion * bob * swayMotion * fireMotion * reloadMotion * equipMotion
 end
 function WeaponVisuals:_render(deltaTime)
@@ -381,7 +392,7 @@ function WeaponVisuals:_render(deltaTime)
 		self.model.Parent = camera
 	end
 
-	self.recoil = math.max(0, self.recoil - deltaTime * 5.5)
+    self.recoil = WeaponFeel.recover(self.currentWeaponId, self.recoil, deltaTime)
 
     local now = os.clock()
     local reloadConfig = self.WeaponConfig.get(self.currentWeaponId)
@@ -422,11 +433,14 @@ function WeaponVisuals:_render(deltaTime)
     -- Short, mechanically coherent motions for actual moving weapon parts.
     -- No physics, sounds or network calls: these offsets are client-only.
     local shotAge = now - self.fireStartedAt
-    local slideRecoil = math.max(0, 1 - shotAge / 0.13)
-    local pumpTravel = math.max(0, 1 - math.abs(shotAge - 0.39) / 0.25)
-    local boltTravel = math.max(0, 1 - math.abs(shotAge - 0.43) / 0.23)
-    local workingHand = CFrame.new(0.13 * magazineDip,
-        -0.22 * magazineDip, -0.11 * magazineDip)
+    local slideRecoil = WeaponFeel.mechanism("Pistol", shotAge)
+    local rifleAction = WeaponFeel.mechanism("AssaultRifle", shotAge)
+    local pumpTravel = WeaponFeel.mechanism("Shotgun", shotAge)
+    local boltTravel = WeaponFeel.mechanism("Sniper", shotAge)
+    local feel = WeaponFeel.get(self.currentWeaponId)
+    local workingHand = CFrame.new(0.13 * magazineDip * feel.handTravel,
+        -0.22 * magazineDip * feel.handTravel,
+        -0.11 * magazineDip * feel.handTravel)
 
     for _, entry in ipairs(self.parts) do
         local localOffset = entry.offset
@@ -436,15 +450,18 @@ function WeaponVisuals:_render(deltaTime)
             -- otherwise the previous left glove remained behind during reloads.
             localOffset = localOffset * workingHand
         elseif partName == "Magazine" and self.currentWeaponId ~= "Shotgun" then
-            localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip,
-                0.04 * magazineDip)
+            localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip * feel.magazineTravel,
+                0.04 * magazineDip * feel.magazineTravel)
+        elseif partName == "ChargingHandle" and self.currentWeaponId == "AssaultRifle" then
+            localOffset = localOffset * CFrame.new(0, 0, rifleAction * feel.actionTravel)
         elseif partName == "Slide" and self.currentWeaponId == "Pistol" then
-            localOffset = localOffset * CFrame.new(0, 0, slideRecoil * 0.16)
+            localOffset = localOffset * CFrame.new(0, 0, slideRecoil * feel.actionTravel)
         elseif (partName == "PumpAction" or partName == "PumpGrooveA"
             or partName == "PumpGrooveB") and self.currentWeaponId == "Shotgun" then
-            localOffset = localOffset * CFrame.new(0, 0, pumpTravel * 0.32)
+            localOffset = localOffset * CFrame.new(0, 0, pumpTravel * feel.actionTravel)
         elseif partName == "Bolt" and self.currentWeaponId == "Sniper" then
-            localOffset = localOffset * CFrame.new(0.12 * boltTravel, 0, 0.15 * boltTravel)
+            localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * boltTravel,
+                0, feel.actionTravel * boltTravel)
         end
         entry.part.CFrame = root * localOffset
         entry.part.Transparency = hideForScope and 1 or entry.baseTransparency
@@ -775,48 +792,72 @@ function WeaponVisuals:drawLocalMuzzleFlash()
     end
 end
 
-function WeaponVisuals:_playSoundLayer(parent, layer)
-	local sound = Instance.new("Sound")
-	sound.Name = "FireLayer"
-	sound.SoundId = layer.soundId
-	sound.Volume = layer.volume or 0.5
-	sound.PlaybackSpeed = (layer.playbackSpeed or 1) + self.random:NextNumber(-0.035, 0.035)
-	sound.RollOffMaxDistance = 160
-	sound.RollOffMinDistance = 6
-	sound.Parent = parent
-	sound:Play()
+-- Playback from existing, approved Roblox sounds. The spatial audio
+-- budget does NOT pretend these are final original licensed gun recordings.
+function WeaponVisuals:_playSoundLayer(parent, layer, mix)
+    if typeof(layer.soundId) ~= "string" or layer.soundId == "" then return end
+    local sound = Instance.new("Sound")
+    sound.Name = "FireLayer"
+    sound.SoundId = layer.soundId
+    sound.Volume = math.clamp((layer.volume or 0.5) * mix.volume, 0, 2)
+    sound.PlaybackSpeed = math.clamp((layer.playbackSpeed or 1)
+        + self.random:NextNumber(-0.035, 0.035), 0.25, 3)
+    sound.RollOffMaxDistance = mix.maxDistance
+    sound.RollOffMinDistance = 6
+    sound.Parent = parent
+    sound:Play()
 end
 
-function WeaponVisuals:playFireSound(weaponId, origin)
-	local config = self.WeaponConfig.get(weaponId)
-	if not config then
-		return
-	end
+function WeaponVisuals:playFireSound(weaponId, origin, localShot)
+    local config = self.WeaponConfig.get(weaponId)
+    if not config or typeof(origin) ~= "Vector3" then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
 
-	local emitter = Instance.new("Part")
-	emitter.Name = weaponId .. "FireSound"
-	emitter.Anchored = true
-	emitter.CanCollide = false
-	emitter.CanQuery = false
-	emitter.CanTouch = false
-	emitter.Transparency = 1
-	emitter.Size = Vector3.new(0.2, 0.2, 0.2)
-	emitter.Position = origin
-	emitter.Parent = workspace
+    local ownShot = localShot == true
+    if not ownShot then
+        -- No heartbeat or extra task: clear completed remote emitters only
+        -- when another spatialized shot is considered.
+        for i = #self.remoteSoundEmitters, 1, -1 do
+            if not self.remoteSoundEmitters[i].Parent then
+                table.remove(self.remoteSoundEmitters, i)
+            end
+        end
+    end
+    local distance = ownShot and 0 or (camera.CFrame.Position - origin).Magnitude
+    local mix = WeaponAudio.select(
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters)
+    if not mix then return end
 
-	if config.soundLayers then
-		for _, layer in ipairs(config.soundLayers) do
-			self:_playSoundLayer(emitter, layer)
-		end
-	elseif config.fireSoundId then
-		self:_playSoundLayer(emitter, {
-			soundId = config.fireSoundId,
-			volume = config.fireVolume,
-			playbackSpeed = config.firePlaybackSpeed,
-		})
-	end
+    local emitter = Instance.new("Part")
+    emitter.Name = weaponId .. "FireSound"
+    emitter.Anchored = true
+    emitter.CanCollide = false
+    emitter.CanQuery = false
+    emitter.CanTouch = false
+    emitter.Transparency = 1
+    emitter.Size = Vector3.new(0.2, 0.2, 0.2)
+    emitter.Position = origin
+    emitter.Parent = workspace
 
-	Debris:AddItem(emitter, 2)
+    if config.soundLayers then
+        for index, layer in ipairs(config.soundLayers) do
+            if index > mix.layers then break end
+            self:_playSoundLayer(emitter, layer, mix)
+        end
+    elseif config.fireSoundId then
+        self:_playSoundLayer(emitter, {
+            soundId = config.fireSoundId,
+            volume = config.fireVolume,
+            playbackSpeed = config.firePlaybackSpeed,
+        }, mix)
+    end
+
+    if not ownShot then
+        table.insert(self.remoteSoundEmitters, emitter)
+    end
+    Debris:AddItem(emitter, mix.lifetime)
 end
 
 return WeaponVisuals

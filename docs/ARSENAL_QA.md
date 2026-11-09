@@ -54,3 +54,12 @@ for IRON YARD. No copyrighted source assets from RIVALS or Arsenal were cloned.
 - Shotgun pellets continue to aggregate damage per target on the server and send one confirmed Hit per damaged target. Existing priority gating prevents weaker same-volley hits from hiding a confirmed elimination; the HUD uses one reusable label, no per-shot GUI objects.
 - Baseline theoretical 100-HP zero-spread body/headshots: AR-24 5/3, pistol 3/1, B-8 1/1 if all eight pellets land point-blank, sniper 2/1, knife 1/1. This is NOT a live TTK/playtest measurement; shotgun spread/falloff, reaction and reload matter.
 - **Studio / mobile acceptance:** fire into cover, protected and unprotected players, bots, and empty space. Check shield text only on protected fighter contact; fire AR continuously and verify no non-damage remote flood. Confirm a 9-HP target displays 9 DMG on lethal AR shot. Confirm headshot, simultaneous shotgun multi-target kill, knife projectile, respawn and scoped sniper. Check readability and no input obstruction at 568x320 and 915x412. This change does not claim a Roblox engine test.
+
+
+## Distinct weapon handling and bounded 3D gun sound (9 November 2026)
+
+Five original viewmodels now use five cosmetic profiles rather than one generic recovery: per-weapon capped accumulated recoil, exponential settlement, transient fire rotations and distinct server-timed reload grips. Rifle charging handle, pistol slide, shotgun pump and sniper bolt move at their own mechanical timing. All hit detection, magazine and reload data remain server authoritative.
+
+A pure audio admission policy keeps the shooter's own firing sound always audible and limits nonlocal emitter objects by distance, ECO/BALANCED/QUALITY device preset and active emitter count. At long range only the leading sound layer plays. Existing Roblox internal snap/bass/electronicpingshort samples remain interim: no claims of licensed custom gun recordings or finished premium audio.
+
+**Studio acceptance:** rapid AR fire must visibly accumulate but cap recoil; sniper and shotgun should feel heavier than pistol; verify the pistol slide, AR charging handle, pump and bolt only travel after their respective shots; reload/swap/death cancels the visual handling without ammunition gain. Test scoped sniper, left-hand glove/parts coherence, local firing audible in dense four-bot firefights, remote distance falloff and no excessive Sound or Part allocations on mobile presets.

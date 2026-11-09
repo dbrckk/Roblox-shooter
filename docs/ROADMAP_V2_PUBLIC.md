@@ -231,3 +231,14 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 - [x] Tests Luau des dégâts réellement perdus, des boucliers et d'une baseline théorique des 5 armes pour une cible à 100 PV ; contrôle d'intégration des flux serveur/client en CI.
 - [ ] Confirmer en jeu sur Android/PC les confirmations visuelles, la lisibilité pendant l'ADS, le cas shotgun multicibles, le respawn protégé et le débit réseau. Les TTK théoriques ne mesurent ni les dispersions ni le taux de réussite.
 - [ ] Ajuster statistiquement l'équilibrage des armes après des sessions réelles ; ne pas altérer les valeurs sans référence d'usage.
+
+
+### L1.3 / L2.3 — manipulation des armes et budget audio 3D (9 novembre 2026)
+
+- [x] Cinq profils de recul de la vue FPS, tous cosmétiques : amplitude accumulée plafonnée par arme, récupération exponentielle propre, impulsions angulaires distinctes. Shotgun et sniper retombent plus lentement ; le couteau emploie une rotation de lancer.
+- [x] Mise en scène de rechargement propre à chaque arme (roulis/tangage/translation, déplacement de la main gauche et du chargeur). Progression du rechargement toujours dictée par les messages Ammo du serveur ; aucun rechargement anticipé.
+- [x] Culasse du pistolet, poignée de charge du fusil automatique, pompe du shotgun et verrou du sniper suivent des courbes mécaniques distinctes. Une seule animation client dérivée du temps depuis le tir, sans nouveaux RenderStepped, RemoteEvents ni objets par image.
+- [x] Mixage spatialisé : priorité permanente au son du joueur local, réduction à une couche sonore au-delà de 68 % de la portée, limites ECO/BALANCED/QUALITY selon Android/PC et plafonds des émetteurs distants actifs. Les lancers et les tirs qui infligent des dégâts sont **inchangés**.
+- [x] Tests purs des cinq profils, de l'enveloppe/du plafonnement, des distances et des limites vocales. Contrôle CI que le code réellement appelé utilise les profils. Build Rojo conservé.
+- [ ] Les sons actuellement exploités restent les sons Roblox intégrés existants (snap/bass/electronicpingshort). La bibliothèque définitive de sons originaux/licenciés par arme n'a pas été importée : ne pas présenter cette passe comme une refonte audio AAA finale.
+- [ ] Valider en Studio/Android les animations de tirs/rechargement, la séparation des sons proche/lointain, les rafales à quatre bots et la fluidité réelle. Pas de prétention de mesures FPS/mémoire sans moteur.

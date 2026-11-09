@@ -1,0 +1,28 @@
+-- Distance, overlap and local-shooter priority are pure and deterministic.
+local Audio = require("../src/shared/WeaponAudioPolicy")
+local function allowed(preset, mobile, distance, count)
+    return Audio.select(preset, mobile, distance, false, count)
+end
+
+local eco = allowed("ECO", true, 30, 0)
+assert(eco and eco.layers == 2 and eco.maxVoices == 8)
+assert(allowed("ECO", true, 96, 0) == nil, "Mobile ECO range culling")
+assert(allowed("ECO", true, 95, 0) ~= nil, "Distance inclusive at boundary")
+assert(allowed("ECO", true, 35, 8) == nil, "Mobile ECO voice cap")
+assert(allowed("BALANCED", true, 100, 0).layers == 1, "Far audio reduces layers")
+assert(allowed("BALANCED", true, 60, 0).layers == 2, "Near audio stays layered")
+assert(allowed("BALANCED", true, 131, 0) == nil)
+assert(allowed("BALANCED", false, 170, 0).layers == 1)
+assert(allowed("QUALITY", false, 204, 0) ~= nil)
+assert(allowed("QUALITY", false, 206, 0) == nil)
+assert(allowed("QUALITY", false, 30, 24) == nil)
+assert(allowed("QUALITY", true, 30, 16) == nil)
+assert(allowed("QUALITY", true, 30, 15) ~= nil)
+assert(allowed(nil, true, 130, 0) ~= nil, "Unknown preset defaults to balanced")
+assert(allowed("ECO", true, math.huge, 0) == nil)
+assert(allowed("ECO", true, 0/0, 0) == nil)
+assert(allowed("ECO", true, 10, -1) == nil)
+local localMix = Audio.select("ECO", true, 900, true, 900)
+assert(localMix and localMix.layers == 2 and localMix.volume == 1,
+    "Local shooter sound remains immediate regardless of other shots")
+print("IRON YARD local-priority spatial weapon audio and capped remote voices: OK")
