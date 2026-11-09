@@ -59,6 +59,23 @@ def main():
     check("p.CanCollide = false" in art and "p.CanQuery = false" in art,
           "Decorative art must not change collision or raycasts")
 
+    perimeter = source("src/server/PerimeterWallArt.luau")
+    wall_plan = source("src/shared/PerimeterWallPlan.luau")
+    for needle in ('local PerimeterWallArt = require(script.Parent:WaitForChild("PerimeterWallArt"))',
+                   'PerimeterWallArt.decorate(decor, arena)'):
+        check(needle in art, "Perimeter cladding not connected to arena")
+    for needle in ('function PerimeterWallArt.decorate(decor, arena)',
+                   'Plan.layout(wall.Name, size.X, size.Y, size.Z)',
+                   'part.CanCollide = false', 'part.CanQuery = false',
+                   'part.CanTouch = false', 'part.CastShadow = false',
+                   'part:SetAttribute("NeonArtTier", tier)',
+                   '"PERIMETER / "', 'markSector(sign, layout, panel.index)'):
+        check(needle in perimeter, "Perimeter visual safety/identity contract: " + needle)
+    for needle in ('function Plan.layout(name, sizeX, sizeY, sizeZ)',
+                   '"BOUNDARY / east-west "', '"BOUNDARY / north-south "',
+                   'not near(sizeY, 38)', 'not near(sizeZ, 356)',
+                   'not near(sizeX, 356)', 'width = 46'):
+        check(needle in wall_plan, "Perimeter geometry plan missing: " + needle)
     # These build-time checks prevent attractive world detailing from silently
     # becoming extra collision or bullet-blocking geometry on Android.
     for name in ("warehouseArchitecture", "catwalkSafety", "gantryRigging"):

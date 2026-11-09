@@ -285,3 +285,12 @@ La séquence A doit avancer immédiatement même si l'utilisateur n'a pas encore
 ### L0.4 — pivot confirmé : aucune version privée (9 novembre 2026)
 
 La publication privée est abandonnée à la demande du propriétaire. Le pipeline public est manuel et refuse de transformer la visibilité d'une expérience ou d'écraser Chaos Survival. La vérification à blanc doit précéder le déploiement public réel, lequel reste impossible sans une expérience IRON YARD déjà publique et une clé Open Cloud configurée. Les tests DataStore en serveur réel sont à mener après publication sous contrôle, sans configurer Studio pour écrire sur les clés de carrière de production.
+
+
+### L1.2 — refonte visuelle des quatre grandes limites de l'arène (9 novembre 2026)
+
+- [x] Nouveau parement industriel original à **28 travées 3D** sur les quatre grands murs de 356 × 38 studs, dérivé uniquement des vrais colliders `MapService`. Les grandes tôles acier, poutrelles hautes et plinthes ambre restent visibles en ECO ; les cadres de joint et les petites ouïes relèvent du LOD Detail mobile.
+- [x] Douze grandes inscriptions de secteurs WEST/EAST/NORTH/SOUTH, lisibles depuis la zone de jeu sans ID d'image importée. Une seule surface d'inscription par panneau sélectionné, sans lumière dynamique, RemoteEvent ni calcul par image.
+- [x] Aucune nouvelle collision, interception de raycast, surface d'escalade ou obstacle IA : tous les éléments décoratifs sont `CanCollide=false`, `CanTouch=false`, `CanQuery=false`, `CastShadow=false` et participent au système `NeonArtTier` existant.
+- [x] Plan pur Luau testant les 4 colliders exacts, 28 panneaux, 12 plaques, limites des sections, rejet des dimensions/identités invalides. Contrôle d'intégration et build Rojo en CI.
+- [ ] Valider les quatre côtés dans Roblox Studio/Android, notamment contraste et lisibilité des plaques, recouvrement avec les anciens poteaux et enseignes, taille des éléments sur petit écran, absence de scintillement, FPS et mémoire à quatre bots. Aucune mesure réelle n'est revendiquée.

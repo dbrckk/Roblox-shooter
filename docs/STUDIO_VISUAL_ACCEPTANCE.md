@@ -136,3 +136,10 @@ On a Roblox experience owned by a user, sign in as the actual experience creator
 ## Mobile HUD / touch-size accessibility — 8 November 2026
 
 On Android, open SET at the upper-left (below the match header), choose BUTTON SIZE and cycle SMALL / MED / LARGE. Check that every weapon, fire/aim/reload/sprint/slide control remains fully inside the safe area and never collides with SET. The mission temporarily replaces the score banner at the top, and opening SET hides the briefing to keep the settings modal in front. Verify in Roblox Studio mobile emulator and an actual Android device that Roblox's native joystick/jump button do not overlap the custom cluster; the offline 36-layout test cannot prove native input geometry, notches, or thumb reach. Test a 568x320 landscape viewport, a 915x412 landscape viewport, and a narrow 320x280 edge case. Settings are session-local to the client; no DataStore or combat/network state is changed.
+
+
+## Perimeter-wall visual rebuild — 9 November 2026
+
+The four actual `BOUNDARY / east-west ±1` and `BOUNDARY / north-south ±1` collider parts now carry an independent decorative skin with seven 46-stud metal bays each. Gameplay geometry and physical surfaces remain unchanged. With ECO, BAL and HIGH selected, traverse the north, south, east and west sides and visually verify that the large steel plates, upper girders, amber plinths and 12 sector signs remain clear and do not obscure the terrain, threat silhouettes or catwalks. Check that smaller louvres and seams vanish beyond the existing LOD range on Android without hiding the primary wall silhouette.
+
+From a spawn, shoot and wallrun along the whole perimeter, verifying that all hit detection, climbing and movement still use the original walls. Compare PERF FPS and frame times before and after on a low-end Android device with four bots active; a green Rojo build is not a GPU or memory benchmark. The previously generated 3D/PBR assets remain unactivated until official Roblox IDs are available.

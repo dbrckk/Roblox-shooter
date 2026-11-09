@@ -6,6 +6,7 @@ local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"
 local CatwalkDeckArt = require(script.Parent:WaitForChild("CatwalkDeckArt"))
 local FreightSurfaceArt = require(script.Parent:WaitForChild("FreightSurfaceArt"))
 local YardWayfindingArt = require(script.Parent:WaitForChild("YardWayfindingArt"))
+local PerimeterWallArt = require(script.Parent:WaitForChild("PerimeterWallArt"))
 local ArenaArt = {}
 local COLOR = {
     wall = Color3.fromRGB(136, 135, 125),
@@ -627,6 +628,7 @@ function ArenaArt.build(arena)
     groundWear(decor)
     FreightSurfaceArt.decorate(decor)
     YardWayfindingArt.decorate(decor)
+    PerimeterWallArt.decorate(decor, arena)
     silhouettes(decor)
 
     poster(decor, "SIGN / west logistics", Vector3.new(-142, 17, 134),
