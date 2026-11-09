@@ -6,6 +6,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
+local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 
@@ -72,6 +73,7 @@ function WeaponVisuals.new(WeaponConfig)
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
     self.impactMarks = {}
+    self.nextImpactMarkUpdateAt = 0
     -- A bounded list of remote emitters only. The local weapon's feedback
     -- has absolute priority and does not consume these slots.
     self.remoteSoundEmitters = {}
@@ -383,6 +385,13 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
 	return sprintMotion * bob * swayMotion * fireMotion * reloadMotion * equipMotion
 end
 function WeaponVisuals:_render(deltaTime)
+    -- Pool opacity/expiry is serviced at 8 Hz, not via a Tween and Debris
+    -- allocation for every bullet. Reuses the existing RenderStepped hook.
+    local clock = os.clock()
+    if #self.impactMarks > 0 and clock >= self.nextImpactMarkUpdateAt then
+        self.nextImpactMarkUpdateAt = clock + 0.125
+        self:_updateImpactMarks(clock)
+    end
 	local camera = workspace.CurrentCamera
 	if not camera or not self.model then
 		return
@@ -502,17 +511,38 @@ local function colorFromChannels(channels)
     return Color3.fromRGB(channels[1], channels[2], channels[3])
 end
 
--- Surface marks are local, non-queryable and short-lived. Always cap their
--- total number, even under concentrated automatic fire or low-end Android.
-function WeaponVisuals:_trackImpactMark(mark, cap)
-    local marks = self.impactMarks
-    for i = #marks, 1, -1 do
-        if not marks[i].Parent then table.remove(marks, i) end
+-- Only a bounded set of client-owned Parts exists for persistent marks.
+-- Inactive entries are unparented rather than Destroyed, then immediately
+-- reused on the next shot. The pool never participates in hit raycasts.
+function WeaponVisuals:_trackImpactMark(now, duration, cap)
+    local slot = ImpactMarkPool.claim(self.impactMarks, now, duration, cap)
+    if not slot then return nil end
+    if not slot.part then
+        local mark = Instance.new("Part")
+        mark.Name = "IronYardBulletMark"
+        configurePart(mark)
+        mark.Shape = Enum.PartType.Cylinder
+        mark.Material = MATERIAL_SMOOTH
+        slot.part = mark
     end
-    table.insert(marks, mark)
-    while #marks > cap do
-        local oldest = table.remove(marks, 1)
-        if oldest.Parent then oldest:Destroy() end
+    return slot.part
+end
+
+function WeaponVisuals:_updateImpactMarks(now)
+    local preset = Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset")
+    local allowed = CombatVfxProfile.budget(
+        preset, UserInputService.TouchEnabled, 0).marks
+    for i, slot in ipairs(self.impactMarks) do
+        local mark = slot.part
+        if mark then
+            local alpha = ImpactMarkPool.alpha(slot, now, i <= allowed)
+            if alpha then
+                if not mark.Parent then mark.Parent = workspace end
+                mark.Transparency = alpha
+            elseif mark.Parent then
+                mark.Parent = nil
+            end
+        end
     end
 end
 
@@ -643,25 +673,16 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
 
     -- Embedded circular mark on the actual contact plane (no TextureIds,
     -- collision, server instances or permanently growing decal inventory).
-    local mark = Instance.new("Part")
-    mark.Name = "IronYardBulletMark"
-    configurePart(mark)
-    mark.Shape = Enum.PartType.Cylinder
-    mark.Material = MATERIAL_SMOOTH
+    local mark = self:_trackImpactMark(now, budget.markSeconds, budget.marks)
+    if not mark then return end
     mark.Color = colorFromChannels(surface.mark)
-    mark.Transparency = 0.24
+    mark.Transparency = ImpactMarkPool.INITIAL_ALPHA
     local width = self.random:NextNumber(0.15, 0.26)
     mark.Size = Vector3.new(0.019, width, width * self.random:NextNumber(0.86, 1.14))
     mark.CFrame = CFrame.lookAt(position + n * 0.032, position + n)
         * CFrame.Angles(0, math.pi * 0.5, 0)
         * CFrame.Angles(self.random:NextNumber(0, math.pi * 2), 0, 0)
     mark.Parent = workspace
-    self:_trackImpactMark(mark, budget.marks)
-    TweenService:Create(mark, TweenInfo.new(1.1, Enum.EasingStyle.Quad,
-        Enum.EasingDirection.Out, 0, false, budget.markSeconds - 1.1), {
-        Transparency = 1,
-    }):Play()
-    Debris:AddItem(mark, budget.markSeconds)
 
     -- Fleeting directional sparks for metal, glass glints, splinters for wood,
     -- and small dust/gravel for concrete and ground. All VFX are cosmetic.

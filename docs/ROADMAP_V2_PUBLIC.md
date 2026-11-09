@@ -322,3 +322,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Admission locale O(1) et deux seuls états conservés pour toute la session ; aucune boucle par image, aucun nouvel objet serveur ou RemoteEvent. Les tirs prévus du joueur local et les indications serveur de dégâts/kills ne traversent **jamais** ce filtre.
 - [x] Les règles de distance restent prioritaires. Les impacts de pellets d'un joueur local restent visibles malgré les quotas des autres tireurs. Tests purs de charge 1000 événements/s, cas 4 bots, priorité humains, preset ECO/BALANCED/QUALITY et entrée invalide ; contrôle de branchement des deux chemins réseau.
 - [ ] Mesurer le vrai coût GPU, nombre d'effets simultanés, FPS p95 et confort de combat sur Android faible gamme face à quatre bots ; la CI prouve les plafonds logiques, pas un gain de FPS observé. Ajuster les quotas selon mesures.
+
+
+### L3.2 — marques d'impacts recyclées, sans Tween/Debris par tir (9 novembre 2026)
+
+- [x] `WeaponVisuals.drawImpact` réutilise les objets Part locaux des marques d'impact, au lieu de créer, tweener et détruire une nouvelle Part par balle qui touche le décor.
+- [x] Plafond strict de **36 Parts mises en cache au maximum**, quels que soient le nombre de bots, la durée de session ou le volume de tirs. ECO/BALANCED/QUALITY conservent leurs plafonds visibles de 10/16/22 sur mobile et 26/36 sur PC. À saturation, la marque la plus ancienne est recyclée.
+- [x] Fondu des marques sur les 1,1 dernières secondes et expiration à fréquence **8 Hz** dans le RenderStepped déjà existant ; aucune nouvelle boucle et aucune allocation de Tween ou de Debris par marque. Les Parts expirées ou exclues par le LOD ont `Parent=nil` ; elles ne bloquent ni les déplacements ni les raycasts.
+- [x] Plan pur `ImpactMarkPool.luau` testé sous 5000 impacts, réutilisation, réduction de qualité, durée de vie, entrées invalides, nombre constant de slots ; compilation et build Rojo CI.
+- [ ] Mesurer la mémoire et la fluidité réelles sur Android en tir continu, quatre bots et changement de profil ; les particules transitoires restent volontairement indépendantes jusqu'à validation du rendu natif.

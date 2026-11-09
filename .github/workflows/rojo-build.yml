@@ -63,6 +63,7 @@ jobs:
           ./luau scripts/test_bot_motion_profile.luau
           ./luau scripts/test_bot_death_plan.luau
           ./luau scripts/test_combat_vfx_profile.luau
+          ./luau scripts/test_impact_mark_pool.luau
           ./luau scripts/test_remote_combat_fx_budget.luau
           ./luau scripts/test_combat_feedback_policy.luau
           ./luau scripts/test_environment_profile.luau

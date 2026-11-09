@@ -185,8 +185,10 @@ def main():
                 "function WeaponVisuals:drawLocalMuzzleFlash()",
                 "CombatVfxProfile.surface(materialName)",
                 "CombatVfxProfile.budget(preset, touch, distance)",
-                "self:_trackImpactMark(mark, budget.marks)",
-                "Debris:AddItem(mark, budget.markSeconds)",
+                "self:_trackImpactMark(now, budget.markSeconds, budget.marks)",
+                "ImpactMarkPool.claim(self.impactMarks, now, duration, cap)",
+                "ImpactMarkPool.alpha(slot, now, i <= allowed)",
+                "self:_updateImpactMarks(clock)",
                 "for i = 1, budget.muzzleFins do",
                 "if budget.muzzleLight then"):
         has(viewmodel, key, "Material-aware client-only combat effects")
