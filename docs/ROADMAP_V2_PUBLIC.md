@@ -393,3 +393,13 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Les nouveaux `BasePart` reçus dans les modèles candidats déclenchent une nouvelle tentative d'enregistrement lorsque le phare manquait. Un modèle retiré libère ses abonnements et sa lumière locale.
 - [x] Les changements d'index sont traités en repartant du pivot d'origine, et les changements de statut `Mover` suppriment l'ancien rig.
 - [ ] Vérifier en Studio avec `StreamingEnabled` : apparition différée du modèle, du phare et des attributs, remplacement du modèle pendant le combat, absence de double lumière.
+
+
+### L3.9 — réparation déterministe des phares lors du streaming rapide (9 novembre 2026)
+
+- [x] Corrigé une course entre le remplacement du phare d'un pont roulant et la cadence visuelle réduite. Le nouvel élément peut arriver avant le prochain Heartbeat d'animation : l'enregistrement remplace désormais le rig obsolète si son ancien phare n'appartient plus au modèle, même lorsque le modèle et son index n'ont pas changé.
+- [x] Le départ d'un phare détecté par `DescendantRemoving` libère immédiatement sa lumière locale et son rig ; l'arrivée du remplaçant réinscrit le modèle.
+- [x] Lors d'une modification de l'index, du mode Mover ou du phare, le modèle revient à son pivot de départ avant le réenregistrement : pas de dérive accumulée de l'animation.
+- [x] Les abonnements à des attributs tardifs restent actifs pendant la vie du modèle ; pas de déconnexion/réinscription inutile lors d'un changement Mover true/false.
+- [x] Politique pure `needsRigReplacement`, cas de régression Luau et garde statique du vrai branchement client. Aucune modification de collisions, serveur, mouvements joueurs ou réseau.
+- [ ] Validation visuelle en Studio avec streaming activé (suppression/recréation de phares sous ECO et QUALITY, disparition/réapparition d'un modèle pendant un déplacement) et mesures FPS Android.

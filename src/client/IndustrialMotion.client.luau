@@ -22,25 +22,45 @@ local rigs = setmetatable({}, { __mode = "k" })
 -- as soon as the Model is removed from the arena.
 local pendingModels = {}
 
+local function retireRig(candidate)
+    local rig = rigs[candidate]
+    if not rig then return end
+    -- On an attribute or beacon change, restore the original authoring
+    -- pivot before capturing a new rig; otherwise re-registration can
+    -- accumulate cosmetic offsets. No server gameplay Part is touched.
+    if rig.moving and candidate:IsDescendantOf(decor) then
+        candidate:PivotTo(rig.base)
+    end
+    if rig.light then rig.light:Destroy() end
+    rigs[candidate] = nil
+end
+
 local function forgetCandidate(candidate)
     local entry = pendingModels[candidate]
     if entry then
         for _, connection in ipairs(entry) do connection:Disconnect() end
         pendingModels[candidate] = nil
     end
-    local rig = rigs[candidate]
-    if rig then
-        if rig.light then rig.light:Destroy() end
-        rigs[candidate] = nil
-    end
+    retireRig(candidate)
 end
 
 local function register(candidate)
     if not candidate:IsA("Model")
-        or candidate:GetAttribute("IronYardGantryMover") ~= true
-        or rigs[candidate] then return end
+        or not candidate:IsDescendantOf(decor)
+        or candidate:GetAttribute("IronYardGantryMover") ~= true then return end
     local index = candidate:GetAttribute("IronYardGantryIndex")
-    if typeof(index) ~= "number" or index < 1 or index > 4 then return end
+    if typeof(index) ~= "number" or index < 1 or index > 4
+        or index % 1 ~= 0 then return end
+    local existing = rigs[candidate]
+    if existing then
+        local beaconAttached = existing.beacon:IsDescendantOf(candidate)
+        if not Motion.needsRigReplacement(existing.index, index, beaconAttached) then
+            return
+        end
+        -- A replacement can stream in before the 15/24Hz sample notices
+        -- the lost beacon. Retire stale references immediately.
+        retireRig(candidate)
+    end
     local beacon = candidate:FindFirstChild("GANTRY / beacon " .. tostring(index), true)
     if not beacon or not beacon:IsA("BasePart") then return end
     -- GetPivot is read only once: moving this Model's offset must never
@@ -66,10 +86,9 @@ local function watchCandidate(candidate)
     table.insert(connections,
         candidate:GetAttributeChangedSignal("IronYardGantryMover"):Connect(function()
             if candidate:GetAttribute("IronYardGantryMover") ~= true then
-                forgetCandidate(candidate)
-                if candidate:IsDescendantOf(decor) then
-                    watchCandidate(candidate)
-                end
+                -- Keep the attribute watchers alive while the Model stays
+                -- streamed in; a future true transition registers it again.
+                retireRig(candidate)
             else
                 register(candidate)
             end
@@ -78,12 +97,7 @@ local function watchCandidate(candidate)
         candidate:GetAttributeChangedSignal("IronYardGantryIndex"):Connect(function()
             -- The index is server-authored and immutable for an active rig.
             -- On replication or replacement, rebuild its original pivot.
-            if rigs[candidate] then
-                local rig = rigs[candidate]
-                if rig.moving then candidate:PivotTo(rig.base) end
-                if rig.light then rig.light:Destroy() end
-                rigs[candidate] = nil
-            end
+            retireRig(candidate)
             register(candidate)
         end))
     register(candidate)
@@ -92,6 +106,17 @@ end
 for _, candidate in ipairs(decor:GetChildren()) do watchCandidate(candidate) end
 decor.ChildAdded:Connect(watchCandidate)
 decor.ChildRemoved:Connect(forgetCandidate)
+decor.DescendantRemoving:Connect(function(item)
+    if not item:IsA("BasePart") then return end
+    local parent = item.Parent
+    if not parent or not parent:IsA("Model") then return end
+    local rig = rigs[parent]
+    if rig and rig.beacon == item then
+        -- ChildRemoved of the complete model is handled separately;
+        -- when only the beacon streams out, free the stale light at once.
+        retireRig(parent)
+    end
+end)
 decor.DescendantAdded:Connect(function(candidate)
     if candidate:IsA("BasePart") then
         local parent = candidate.Parent
@@ -126,11 +151,7 @@ RunService.Heartbeat:Connect(function(dt)
             -- Streaming can remove only the beacon and leave the rig Model.
             -- Remove its local light; the DescendantAdded hook re-registers
             -- the replacement beacon when it becomes available again.
-            if model:IsDescendantOf(decor) and rig.moving then
-                model:PivotTo(rig.base)
-            end
-            if rig.light then rig.light:Destroy() end
-            rigs[model] = nil
+            retireRig(model)
             if model:IsDescendantOf(decor) then
                 -- The beacon alone streamed out. Keep the candidate
                 -- watcher for its replacement; do not leak old lights.

@@ -58,4 +58,17 @@ for _, time in ipairs({ 0, 1, 3.8, 48, 100 }) do
     local a, c, d = Motion.pose(time, 2, "QUALITY", 100)
     near(a, x); near(c, y); near(d, b)
 end
-print("IRON YARD 4 client-only gantries: adaptive 5-24Hz distance LOD: OK")
+-- Rapid beacon out/in while the same Model stays registered must never
+-- leave its old beacon cached until the next animation tick.
+for _, sample in ipairs({
+    {1, 1, true, false},
+    {1, 1, false, true},
+    {1, 2, true, true},
+    {2, 1, true, true},
+    {3, 3, true, false},
+    {4, 4, false, true},
+}) do
+    assert(Motion.needsRigReplacement(sample[1], sample[2], sample[3])
+        == sample[4], "Wrong registration decision under streaming churn")
+end
+print("IRON YARD 4 client gantries: adaptive LOD and streamed beacon repair: OK")

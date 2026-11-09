@@ -396,13 +396,19 @@ def main():
                    'RunService.Heartbeat:Connect(', 'PointLight',
                    'distance < 150', 'local interval = UserInputService.TouchEnabled'):
         check(needle in industrialMotion, "Client-only crane animation missing: " + needle)
-    for needle in ('function GantryMotion.sampleInterval(', 
+    for needle in ('function GantryMotion.needsRigReplacement(',
+                   'function GantryMotion.sampleInterval(', 
                    'distanceSquared > cutoff * cutoff',
                    'return touch and 1 / 15 or 1 / 24, true',
                    'return touch and 1 / 5 or 1 / 8, true'):
         check(needle in gantryMotion,
               "Gantry motion adaptive client LOD budget disconnected: " + needle)
-    for needle in ('Motion.sampleInterval(',
+    for needle in ('Motion.needsRigReplacement(',
+                   'local function retireRig(candidate)',
+                   'decor.DescendantRemoving:Connect(function(item)',
+                   'rig and rig.beacon == item',
+                   'if rig.moving and candidate:IsDescendantOf(decor) then',
+                   'Motion.sampleInterval(',
                    'local distanceSquared = offset:Dot(offset)',
                    'rig.nextUpdateAt = now + period',
                    'if not elapsed then elapsed = Workspace:GetServerTimeNow() end',

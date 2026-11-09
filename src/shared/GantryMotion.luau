@@ -5,6 +5,13 @@ local function finite(n)
     return type(n) == "number" and n == n and math.abs(n) < 1e8
 end
 
+-- A replacement beacon can arrive before the next animation sample. The
+-- old rig must be retired when its original beacon has streamed out, even
+-- if the containing Model and its index have not changed.
+function GantryMotion.needsRigReplacement(oldIndex, nextIndex, beaconAttached)
+    return oldIndex ~= nextIndex or beaconAttached ~= true
+end
+
 -- Pure per-rig animation cadence from SQUARED camera distance. Inactive
 -- gantries never need a PivotTo or a pose/trigonometry evaluation.
 -- Near-field retains the previous Android 15Hz / desktop 24Hz motion.
