@@ -25,9 +25,10 @@ for needle in (
     assert needle in feel, f"Pure weapon feel missing: {needle}"
 
 for needle in (
-    "function Audio.select(preset, mobile, distance, localShot, activeVoices)",
+    "function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponId)",
     "if localShot then", "activeVoices >= maxVoices",
     "distance > maxDistance", "layers = far and 1 or 2",
+    "REACH[weaponId] or 1",
 ):
     assert needle in audio, f"Audio admission missing: {needle}"
 
@@ -49,6 +50,7 @@ for needle in (
     'partName == "Slide"',
     "function WeaponVisuals:playFireSound(weaponId, origin, localShot)",
     "WeaponAudio.select(",
+    "UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId)",
     "self.remoteSoundEmitters = {}",
     "table.insert(self.remoteSoundEmitters, emitter)",
     "if index > mix.layers then break end",
