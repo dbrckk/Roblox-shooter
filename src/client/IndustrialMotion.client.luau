@@ -34,6 +34,9 @@ local function register(candidate)
         beacon = beacon,
         light = nil,
         moving = false,
+        active = nil,
+        lastPreset = nil,
+        nextUpdateAt = 0,
     }
 end
 
@@ -52,50 +55,90 @@ decor.DescendantAdded:Connect(function(candidate)
 end)
 
 local accumulated = 0
+local isTouch = UserInputService.TouchEnabled
 local interval = UserInputService.TouchEnabled and 1 / 15 or 1 / 24
 RunService.Heartbeat:Connect(function(dt)
     accumulated += dt
     if accumulated < interval then return end
-    accumulated = 0
+    -- Drop excess backlog after a slow frame, never burst animations to
+    -- catch up with old positions. Individual rigs track their own cadence.
+    accumulated = math.min(accumulated - interval, interval)
     local camera = Workspace.CurrentCamera
     if not camera then return end
     local cameraPosition = camera.CFrame.Position
     local quality = player:GetAttribute("IronYardGraphicsPreset") or "BALANCED"
-    local elapsed = Workspace:GetServerTimeNow()
+    local now = os.clock()
+    local elapsed = nil -- GetServerTimeNow is needed only if a rig actually animates.
 
     for model, rig in pairs(rigs) do
-        if not model:IsDescendantOf(decor) then
+        if not model:IsDescendantOf(decor)
+            or not rig.beacon:IsDescendantOf(model) then
+            -- Streaming can remove only the beacon and leave the rig Model.
+            -- Remove its local light; the DescendantAdded hook re-registers
+            -- the replacement beacon when it becomes available again.
+            if model:IsDescendantOf(decor) and rig.moving then
+                model:PivotTo(rig.base)
+            end
             if rig.light then rig.light:Destroy() end
             rigs[model] = nil
         else
-            local distance = (rig.base.Position - cameraPosition).Magnitude
-            local travel, lift, pulse = Motion.pose(elapsed, rig.index, quality, distance)
-            if travel ~= 0 or lift ~= 0 then
-                model:PivotTo(rig.base * CFrame.new(travel, lift, 0))
-                rig.moving = true
-            elseif rig.moving then
-                model:PivotTo(rig.base)
-                rig.moving = false
-            end
+            local offset = rig.base.Position - cameraPosition
+            local distanceSquared = offset:Dot(offset)
+            local period, active = Motion.sampleInterval(
+                quality, isTouch, distanceSquared)
+            local modeChanged = rig.active ~= active or rig.lastPreset ~= quality
+            rig.active = active
+            rig.lastPreset = quality
+            if modeChanged then rig.nextUpdateAt = 0 end
 
-            local active = pulse > 0
-            rig.beacon.Transparency = active and math.clamp(0.74 - pulse * 0.68, 0.15, 0.85)
-                or 0.55
-            if quality == "QUALITY" and distance < 150 then
-                if not rig.light then
-                    -- A per-client light only when high settings and close;
-                    -- no server-side dynamic lighting or replicated updates.
-                    local lamp = Instance.new("PointLight")
-                    lamp.Name = "LocalCraneBeaconLight"
-                    lamp.Color = Color3.fromRGB(251, 175, 79)
-                    lamp.Range = 11
-                    lamp.Shadows = false
-                    lamp.Parent = rig.beacon
-                    rig.light = lamp
+            if not active then
+                -- ECO and fully culled cranes are reset only once. Avoid
+                -- reparenting, PivotTo, opacity changes and dynamic lights
+                -- on every Heartbeat for an already-inactive distant rig.
+                if rig.moving then
+                    model:PivotTo(rig.base)
+                    rig.moving = false
                 end
-                rig.light.Enabled = true
-                rig.light.Brightness = 0.25 + pulse * 0.70
-            elseif rig.light then
+                if modeChanged then rig.beacon.Transparency = 0.55 end
+                if rig.light and rig.light.Enabled then
+                    rig.light.Enabled = false
+                end
+            elseif now + 0.004 >= rig.nextUpdateAt then
+                rig.nextUpdateAt = now + period
+                if not elapsed then elapsed = Workspace:GetServerTimeNow() end
+                local distance = math.sqrt(distanceSquared)
+                local travel, lift, pulse = Motion.pose(elapsed, rig.index, quality, distance)
+                if travel ~= 0 or lift ~= 0 then
+                    model:PivotTo(rig.base * CFrame.new(travel, lift, 0))
+                    rig.moving = true
+                elseif rig.moving then
+                    model:PivotTo(rig.base)
+                    rig.moving = false
+                end
+
+                rig.beacon.Transparency =
+                    math.clamp(0.74 - pulse * 0.68, 0.15, 0.85)
+                -- Mobile QUALITY keeps the illuminated amber material,
+                -- but does not allocate a costly dynamic PointLight.
+                if not isTouch and quality == "QUALITY" and distance < 150 then
+                    if not rig.light then
+                        local lamp = Instance.new("PointLight")
+                        lamp.Name = "LocalCraneBeaconLight"
+                        lamp.Color = Color3.fromRGB(251, 175, 79)
+                        lamp.Range = 11
+                        lamp.Shadows = false
+                        lamp.Parent = rig.beacon
+                        rig.light = lamp
+                    end
+                    rig.light.Enabled = true
+                    rig.light.Brightness = 0.25 + pulse * 0.70
+                elseif rig.light and rig.light.Enabled then
+                    rig.light.Enabled = false
+                end
+            elseif rig.light and rig.light.Enabled and
+                (isTouch or quality ~= "QUALITY" or distanceSquared >= 150 * 150) then
+                -- Disable lighting immediately when the camera leaves the
+                -- near light range, even on a reduced-frequency animation.
                 rig.light.Enabled = false
             end
         end

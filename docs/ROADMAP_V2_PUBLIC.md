@@ -374,3 +374,14 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Les ajouts/retraits intérieurs dans un secteur n'invalident plus son mode LOD ; les retraits n'actualisent les limites du secteur que si une pièce constituant l'un de ses extrêmes est retirée, et le mode est conservé si les nouvelles limites restent identiques.
 - [x] Les seuils ECO/BALANCED/QUALITY, silhouettes Core, collisions, déplacements, tirs et IA restent inchangés. Tests Luau : 1 000 ajouts et 1 000 retraits intérieurs, extrémités partagées, budgets de chargement et rejets existants ; build Rojo et contrôles d'intégration CI.
 - [ ] Sur Android réel, comparer FPS, temps d'image p95/p99 et variations d'affichage à l'apparition de l'arène avec quatre bots. Observer si le premier inventaire en plusieurs images laisse temporairement apparaître des détails lointains.
+
+
+### L3.7 — cadence adaptée des quatre ponts roulants (9 novembre 2026)
+
+- [x] Les quatre modèles mobiles gardent leur oscillation d'origine déterministe : 15 Hz à proximité sur Android, 24 Hz sur PC. À moyenne distance : 9/12 Hz ; à grande distance visible : 5/8 Hz. Le profil ECO et les modèles hors des seuils de 185/285 studs ne calculent plus de pose ni de `PivotTo`.
+- [x] Calcul de distance au carré par rig à la fréquence de contrôle existante ; racine carrée, sinusoïdes, PivotTo et calcul de temps synchronisé seulement lorsqu'une pose visible est réellement due. Mise à jour indépendante des quatre rigs, sans boucle supplémentaires ni charge serveur.
+- [x] Transition immédiate lorsque l'appareil change de profil ou lorsque le rig entre/sort de son périmètre visible ; un modèle masqué ne se repositionne et ne réinitialise son phare qu'une fois. Pas de rattrapage d'animations après un ralentissement.
+- [x] Les feux restent visuellement pulsés, mais les `PointLight` dynamiques ne sont autorisés que sur desktop QUALITY à moins de 150 studs (plus sur Android). Les feux lumineux Android conservent leur matériau coloré sans lumière calculée.
+- [x] Robustesse au streaming : un phare manquant invalide proprement l'enregistrement du modèle, désactive/détruit sa lumière locale ; le hook de chargement existant le réinscrit si une pièce revient.
+- [x] Tests Luau de cadence pure, bornes de distance, ECO/QUALITY et entrées invalides + compilation/contrôles d'intégration/build Rojo CI.
+- [ ] Mesurer l'impact CPU/GPU, la qualité des animations lointaines et l'apparence des phares en ECO/BALANCED/QUALITY sur Android et desktop ; les tests de politiques ne démontrent pas de gain FPS réel.

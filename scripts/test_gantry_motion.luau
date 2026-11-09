@@ -23,4 +23,39 @@ assert(farX == 0, "Balanced must cull more than high")
 assert(nearX ~= 0, "High quality should animate a nearby giant gantry")
 local invalid = Motion.pose(0/0,1,"QUALITY",0)
 assert(invalid == 0, "Malformed timer must be rejected")
-print("IRON YARD 4 client-only gantry rigs: bounded motion and graphics budget OK")
+-- The four rigs keep full near-field animation while distant / ECO rigs
+-- avoid costly PivotTo, trigonometry and PointLight allocations.
+local expected = {
+    { "BALANCED", true, 40, 1 / 15, true },
+    { "BALANCED", true, 110, 1 / 9, true },
+    { "BALANCED", true, 175, 1 / 5, true },
+    { "BALANCED", true, 185, 1 / 5, true },
+    { "BALANCED", true, 186, 1, false },
+    { "QUALITY", true, 280, 1 / 5, true },
+    { "QUALITY", true, 286, 1, false },
+    { "BALANCED", false, 60, 1 / 24, true },
+    { "BALANCED", false, 180, 1 / 12, true },
+    { "QUALITY", false, 260, 1 / 8, true },
+    { "ECO", true, 2, 1, false },
+    { "ECO", false, 2, 1, false },
+}
+for _, sample in ipairs(expected) do
+    local period, active = Motion.sampleInterval(
+        sample[1], sample[2], sample[3] * sample[3])
+    near(period, sample[4])
+    assert(active == sample[5], "Wrong crane animation admission")
+end
+for _, bad in ipairs({ -1, 0 / 0, math.huge }) do
+    local period, active = Motion.sampleInterval("QUALITY", true, bad)
+    assert(period == 1 and active == false, "Invalid distances never animate")
+end
+-- Moving in from afar must retain the original visible, exact sine pose
+-- when the client schedules the next sample.
+for _, time in ipairs({ 0, 1, 3.8, 48, 100 }) do
+    local x, y, b = Motion.pose(time, 2, "QUALITY", 100)
+    local intervalNow, admitted = Motion.sampleInterval("QUALITY", true, 10000)
+    assert(admitted and intervalNow > 0)
+    local a, c, d = Motion.pose(time, 2, "QUALITY", 100)
+    near(a, x); near(c, y); near(d, b)
+end
+print("IRON YARD 4 client-only gantries: adaptive 5-24Hz distance LOD: OK")
