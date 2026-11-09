@@ -56,7 +56,9 @@ function Pool.claim(slots, now, duration, cap, priority)
     slot.expiresAt = now + duration
     slot.priority = priority
     slots.lastAt = now
-    return slot
+    -- Return the exact slot index so the renderer never needs a reverse
+    -- scan to track a live effect. Existing one-value callers are unchanged.
+    return slot, index
 end
 
 function Pool.progress(slot, now, visible)
