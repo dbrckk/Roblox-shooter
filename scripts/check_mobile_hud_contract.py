@@ -11,6 +11,7 @@ def read(name):
     return (root / name).read_text(encoding="utf-8")
 
 layout = read("src/shared/TouchLayout.luau")
+boost_policy = read("src/shared/BoostMeterPolicy.luau")
 controller = read("src/client/HudController.luau")
 client = read("src/client/init.client.luau")
 match = read("src/client/MatchHud.client.luau")
@@ -61,4 +62,21 @@ for needle in (
 ):
     assert needle in briefing, f"Briefing obstructs mobile controls: {needle}"
 
-print("IRON YARD mobile presets, match/mission top lane and modal layering: OK")
+for needle in (
+    'WaitForChild("BoostMeterPolicy")',
+    'BoostMeterPolicy.shouldDraw(',
+    'if not draw then return end',
+    'self.lastBoostUpdateAt = now',
+    'if self.lastBoostZone ~= zone then',
+    'if self.boostTween then self.boostTween:Cancel() end',
+    'TweenService:Create(self.boostFill,',
+):
+    assert needle in controller, f"Boost HUD rendering still allocates per-frame: {needle}"
+for needle in ('Policy.MIN_INTERVAL = 0.1',
+               'Policy.MIN_DELTA = 0.005',
+               'zone ~= Policy.zone(previousRatio)',
+               'if ratio == 0 or ratio == 1'):
+    assert needle in boost_policy, f"Boost update scheduler lost urgency/budget: {needle}"
+assert 'hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)' in client, (
+    "Client fuel remains driven by real local movement, not placeholders")
+print("IRON YARD mobile presets, modal layering and bounded boost Tweens: OK")

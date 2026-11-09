@@ -414,3 +414,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] À expiration ou lors d'un passage QUALITY → ECO, les effets hors plafond sont détachés du rendu, leurs lumières sont désactivées et leurs indices retirés ; les instances restent recyclables pour le prochain tir.
 - [x] Régression Luau : 18 000 demandes d'effets avec changements de qualité, expiration, réutilisation et plafonds 24/48/72 Android, 80/96 PC ; contrôle de branchement Python et build GitHub.
 - [ ] Mesures réelles de frame time/FPS sur Android avec quatre bots, phase de combat intense puis repos, et transitions ECO/BALANCED/QUALITY : les tests de pool ne démontrent pas un gain FPS mesuré.
+
+
+### L3.11 — jauge de propulsion Android sans créations de Tweens par image (9 novembre 2026)
+
+- [x] Corrigé le HUD de boost : `setBoostFuel` est appelé par la boucle de mouvement à chaque `RenderStepped`, mais auparavant il lançait un `TweenService:Create` à chaque appel même lorsque le carburant restait à 100 %. Les nouvelles demandes sont filtrées par une politique pure `BoostMeterPolicy` : jusqu'à 10 animations/s pendant les changements progressifs, aucune durant les états constants.
+- [x] Les transitions de couleur NORMAL/WARNING/CRITICAL (seuils 25 % et 12 %) et les passages à exactement 0 % et 100 % restent immédiats, y compris si l'intervalle d'animation n'est pas terminé. Les Tweens précédents sont interrompus pour éviter l'empilement.
+- [x] Le serveur, la quantité de carburant, les déplacements et les contrôles tactiles restent strictement inchangés. Seule la représentation visuelle de la jauge est mise à jour moins souvent.
+- [x] Simulation Luau de 3601 images à 60 FPS, vidange/remplissage, seuils urgents, horloges et valeurs invalides, et absence d'animations à l'arrêt. Contrat Python de câblage HUD et suite Rojo CI.
+- [ ] Vérifier visuellement sur Android et PC les transitions à 12 % et 25 %, l'absence de scintillement et le frame-time réel pendant un combat avec quatre bots.

@@ -47,6 +47,7 @@ jobs:
           ./luau scripts/test_career_readout.luau
           ./luau scripts/test_operator_finishes.luau
           ./luau scripts/test_touch_layout.luau
+          ./luau scripts/test_boost_meter_policy.luau
           ./luau scripts/test_first_match_guide.luau
           ./luau scripts/test_gantry_motion.luau
           ./luau scripts/test_bot_avoidance.luau

@@ -188,3 +188,8 @@ With StreamingEnabled and camera near all four gantries, remove and recreate a c
 ## Idle transient-combat-FX slot retirement (9 November 2026)
 
 On low-end Android, fire continuously with four active bots until the 48-slot BALANCED or 72-slot QUALITY transient visual pool has filled. Stop firing and confirm all impacts, tracers and muzzle flashes disappear after their 0.5-second maximum lifetime without persistent world Parts or PointLights. The index-tracked RenderStepped updater should perform no pooled visual-Part iteration after all effects expire. Fire again to verify immediate reuse and own muzzle flash priority. While firing, switch QUALITY → ECO → BALANCED and check expired or over-cap Parts never remain parented. Compare true device idle/combat frametime, P95/P99 stutter, and memory against the previous build. CI verifies slot reuse and state transitions, not actual Android frame rates.
+
+
+## Boost HUD Tween throttling — 9 November 2026
+
+While sprinting, airborne boosting and recharging fuel on a real Android device, check that the fuel bar remains smooth (0.08-second tweens capped to 10Hz in steady operation), changes amber/red precisely around 25% and 12% and snaps promptly to 0%/100%. Leave the meter full for 10 seconds: no new Tween instances should be created by the repeated RenderStepped fuel reports. Check that rapid red-zone changes cancel any previous tween. This is entirely client cosmetic; movement, charge amount, and server anti-cheat remain unchanged. Use the Roblox MicroProfiler for actual evidence; the 3601-frame pure policy test proves only bounded admission.

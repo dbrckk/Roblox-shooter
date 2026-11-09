@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TouchLayout"))
 local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
 local FeedbackPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatFeedbackPolicy"))
+local BoostMeterPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BoostMeterPolicy"))
 
 local HudController = {}
 HudController.__index = HudController
@@ -601,22 +602,34 @@ function HudController:_updateHealth(humanoid)
 end
 
 function HudController:setBoostFuel(ratio)
-	if not self.boostFill then
-		return
-	end
+    if not self.boostFill then return end
+    -- The movement controller reports fuel every RenderStepped. Previous
+    -- code created a Tween on EVERY frame, even at constant full fuel.
+    local now = os.clock()
+    local draw, value, zone = BoostMeterPolicy.shouldDraw(
+        self.lastBoostRatio, self.lastBoostUpdateAt, ratio, now)
+    if not draw then return end
 
-	ratio = math.clamp(ratio, 0, 1)
-	if ratio <= 0.12 then
-		self.boostFill.BackgroundColor3 = Color3.fromRGB(245, 82, 82)
-	elseif ratio <= 0.25 then
-		self.boostFill.BackgroundColor3 = Color3.fromRGB(245, 192, 82)
-	else
-		self.boostFill.BackgroundColor3 = Color3.fromRGB(207, 160, 89)
-	end
+    self.lastBoostRatio = value
+    self.lastBoostUpdateAt = now
+    if self.lastBoostZone ~= zone then
+        self.lastBoostZone = zone
+        if zone == "CRITICAL" then
+            self.boostFill.BackgroundColor3 = Color3.fromRGB(245, 82, 82)
+        elseif zone == "WARNING" then
+            self.boostFill.BackgroundColor3 = Color3.fromRGB(245, 192, 82)
+        else
+            self.boostFill.BackgroundColor3 = Color3.fromRGB(207, 160, 89)
+        end
+    end
 
-	TweenService:Create(self.boostFill, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = UDim2.fromScale(ratio, 1),
-	}):Play()
+    -- Urgent color/empty/full transitions may interrupt the previous 80ms
+    -- animation. Never stack overlapping Tweens on the same UI property.
+    if self.boostTween then self.boostTween:Cancel() end
+    self.boostTween = TweenService:Create(self.boostFill,
+        TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        { Size = UDim2.fromScale(value, 1) })
+    self.boostTween:Play()
 end
 
 function HudController:setSettingsOpen(open)
