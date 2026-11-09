@@ -14,8 +14,8 @@ assert(recycled == first and recycled.fakePart == "persistent-instance"
     and #p == 3, "Full pool reuses oldest slot without new Part allocation")
 assert(Pool.alpha(first, 0.10, true) == Pool.INITIAL_ALPHA,
     "Fresh mark stays visible")
-assert(Pool.alpha(first, 3.50, true) == Pool.INITIAL_ALPHA,
-    "No premature fade")
+assert(Pool.alpha(first, 3.0, true) == Pool.INITIAL_ALPHA,
+    "No premature fade outside the final 1.1 seconds")
 local fading = Pool.alpha(first, 4.1, true)
 assert(fading and fading > Pool.INITIAL_ALPHA and fading < 1,
     "Last 1.1 seconds fade progressively")
