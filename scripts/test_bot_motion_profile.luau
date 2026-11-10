@@ -115,4 +115,28 @@ for slot = 1, 4 do
     local n = M.nextPoseAt(37.123, 90 * 90, slot)
     assert(n > 37.123 and n - 37.123 <= 1 / 15 + 1e-9)
 end
+-- The high-frequency turn and reversal signals now validate scalars
+-- without constructing one temporary values table per bot/pose sample.
+for _, invalid in ipairs({math.huge, -math.huge, 0 / 0}) do
+    near(M.turnSignal(invalid, 0, 0, -1, 0.1), 0, nil, "Invalid prior turn")
+    near(M.turnSignal(0, -1, invalid, 0, 0.1), 0, nil, "Invalid current turn")
+    near(M.turnSignal(0, -1, 1, 0, invalid), 0, nil, "Invalid turn duration")
+    near(M.reversalSignal(invalid, -12, 0, 12), 0, nil, "Invalid prior velocity")
+    near(M.reversalSignal(0, -12, invalid, 12), 0, nil, "Invalid current velocity")
+end
+near(M.turnSignal(nil, -1, 1, 0, 0.1), 0, nil, "Missing facing component")
+near(M.reversalSignal(nil, -12, 0, 12), 0, nil, "Missing velocity component")
+local sumTurn, sumReverse = 0, 0
+for i = 1, 50000 do
+    local angle = (i % 900) / 900 * math.pi * 2
+    local px, pz = math.sin(angle), -math.cos(angle)
+    local cx, cz = math.sin(angle + 0.04), -math.cos(angle + 0.04)
+    local turn = M.turnSignal(px, pz, cx, cz, 1 / 15)
+    local reverse = M.reversalSignal(0, -12, 0, i % 2 == 0 and 12 or -12)
+    assert(turn > 0 and turn <= 1, "Smooth positive turn must preserve its sign")
+    assert(reverse == 0 or reverse == 1, "Velocity reversal must stay bounded")
+    sumTurn += turn
+    sumReverse += reverse
+end
+assert(sumTurn > 0 and sumReverse == 25000)
 print("IRON YARD bot poses: 4-slot phase staggering, squared distance, 8/15Hz: OK")
