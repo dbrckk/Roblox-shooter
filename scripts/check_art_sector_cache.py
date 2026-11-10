@@ -40,7 +40,19 @@ assert "for _, item in ipairs(folder:GetDescendants())" not in src, (
     "Initial indexing must be sliced, not synchronous")
 assert "if index % batch == 0 then" in src, (
     "Bootstrap must yield after every fixed registration batch")
-assert "entry.dirty" not in src, "No dirty-triggered global art rebuilds"
+for needle in (
+    "entry.dirty = true",
+    "local needsSweep = entry.dirty",
+    "or entry.lastSweepEye ~= position",
+    "or entry.lastSweepHide ~= artHideBeyond",
+    "or entry.lastSweepShow ~= artUnhideBefore",
+    "if needsSweep then",
+    "entry.lastSweepEye = position",
+    "entry.dirty = false",
+):
+    assert needle in src, f"Stationary camera LOD invalidation missing: {needle}"
+assert src.count("entry.dirty = true") >= 3, (
+    "Every detail addition and removal must invalidate the stationary cache")
 assert "for _, item in ipairs(group.parts)" not in src, (
     "Streaming registry group.parts is a set, not a sequential array")
 assert "Part:Destroy()" not in src and "CanQuery =" not in src and "CanCollide =" not in src, (
