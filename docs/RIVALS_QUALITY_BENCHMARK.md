@@ -394,3 +394,17 @@ requête réseau ou instance Roblox lors de chaque mise à jour.
   du premier-personnage sont detruits/recrees seulement au changement
   de viewmodel. Un test de 10 000 positions verifie la trajectoire,
   le bornage, la visibilite et le comportement du preset ECO.
+
+
+## Ecran de defaite : information adaptee au mode duel
+
+- En FFA, le joueur conserve son compte a rebours de reapparition
+  et l'indication du bouclier de spawn.
+- En 1v1, un adversaire elimine ne voit plus le message trompeur
+  REDEPLOY IN : le panneau indique AWAITING ROUND RESULT puis
+  NEXT BOUT IN, avec le verdict serveur (manche perdue ou egalite).
+- Une unique interpolation Tween de 0,26 seconde affiche le panneau.
+  Le Tween est annule et le panneau est reinitialise au changement
+  de Character, sans accumulation d'effets ni de boucles de frame.
+- La logique texte est testable hors de Roblox et est couverte par
+  une suite Luau et les contrats de branchement mobile.

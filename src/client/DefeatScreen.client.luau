@@ -2,7 +2,12 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
+local DefeatPresentation = require(ReplicatedStorage:WaitForChild("Shared")
+    :WaitForChild("DefeatPresentation"))
+local DuelReadout = require(ReplicatedStorage:WaitForChild("Shared")
+    :WaitForChild("DuelReadout"))
 local WeaponConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponConfig"))
 
 local gui = Instance.new("ScreenGui")
@@ -78,10 +83,13 @@ local attributeConnections = {}
 local dead = false
 local diedAt = nil
 local epoch = 0
+local entranceTween = nil
 
 local function update()
+    local phase = Workspace:GetAttribute("NeonMatchPhase")
+    local mode = Workspace:GetAttribute("IronYardMatchMode")
     local show = dead and activeCharacter == player.Character
-        and Workspace:GetAttribute("NeonMatchPhase") == "LIVE"
+        and (phase == "LIVE" or (mode == "DUEL" and phase == "DUEL_BREAK"))
     shade.Visible = show
     if not show then return end
 
@@ -102,15 +110,28 @@ local function update()
     local stamp = activeCharacter:GetAttribute("IronYardDefeatAt")
     local startedAt = typeof(stamp) == "number" and stamp > 0 and stamp or diedAt
     local elapsed = startedAt and math.max(0, Workspace:GetServerTimeNow() - startedAt) or 0
-    local remaining = math.max(0, math.ceil(Players.RespawnTime - elapsed))
-    countdown.Text = remaining > 0 and ("REDEPLOY IN  " .. remaining .. "s")
-        or "REDEPLOYING..."
+    local verdict = DuelReadout.boutLabel(
+        Workspace:GetAttribute("IronYardDuelLastResult"),
+        player.UserId, Workspace:GetAttribute("IronYardDuelPlayerA"),
+        Workspace:GetAttribute("IronYardDuelPlayerB"))
+    local heading, countdownText, hintText = DefeatPresentation.labels(
+        mode, phase, Workspace:GetAttribute("NeonMatchTimeLeft"),
+        Players.RespawnTime - elapsed, verdict)
+    title.Text = heading
+    countdown.Text = countdownText
+    hint.Text = hintText
 end
 
 local function onDeath()
     if activeCharacter ~= player.Character or dead then return end
     dead = true
     diedAt = Workspace:GetServerTimeNow()
+    if entranceTween then entranceTween:Cancel() end
+    card.Position = UDim2.fromScale(0.5, 0.53)
+    entranceTween = TweenService:Create(card,
+        TweenInfo.new(0.26, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        { Position = UDim2.fromScale(0.5, 0.49) })
+    entranceTween:Play()
     update()
     local token = epoch
     task.spawn(function()
@@ -130,6 +151,11 @@ local function watchCharacter(character)
     activeCharacter = character
     dead = false
     diedAt = nil
+    if entranceTween then
+        entranceTween:Cancel()
+        entranceTween = nil
+    end
+    card.Position = UDim2.fromScale(0.5, 0.49)
     shade.Visible = false
     for _, key in ipairs({
         "IronYardDefeatAttacker", "IronYardDefeatWeapon",

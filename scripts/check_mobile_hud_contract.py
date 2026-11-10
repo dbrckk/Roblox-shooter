@@ -21,6 +21,8 @@ briefing = read("src/client/Briefing.client.luau")
 kill_feed = read("src/client/KillFeed.client.luau")
 damage_direction = read("src/client/DamageDirection.client.luau")
 round_results = read("src/client/RoundResults.client.luau")
+defeat = read("src/client/DefeatScreen.client.luau")
+defeat_presentation = read("src/shared/DefeatPresentation.luau")
 
 for needle in (
     'Layout.PRESETS = { "COMPACT", "STANDARD", "LARGE" }',
@@ -169,6 +171,23 @@ for needle in (
     assert needle in damage_direction, f"Old character damage UI listener not released: {needle}"
 assert damage_direction.count('GetAttributeChangedSignal(\n        "IronYardLastHitTime"):Connect') == 1, (
     "Only the current character's hit timestamp may drive the arrow")
+
+for needle in (
+    'DefeatPresentation.labels(',
+    'DuelReadout.boutLabel(',
+    'phase == "LIVE" or (mode == "DUEL" and phase == "DUEL_BREAK")',
+    'if entranceTween then entranceTween:Cancel() end',
+    'TweenService:Create(card,',
+    'entranceTween:Cancel()',
+):
+    assert needle in defeat, f"Mode-aware defeat screen missing: {needle}"
+for needle in (
+    "function Policy.labels(mode, phase, boutSeconds, respawnSeconds, verdict)",
+    'and ("NEXT BOUT IN  " .. countdown(boutSeconds) .. "s")',
+    '"DUEL  /  NO SECOND LIFE THIS BOUT"',
+    '"SPAWN SHIELD 2.5s  /  SHOOT TO CANCEL"',
+):
+    assert needle in defeat_presentation, f"FFA / duel outcome message missing: {needle}"
 
 for needle in (
     "local activeStats = nil",
