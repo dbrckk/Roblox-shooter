@@ -113,19 +113,20 @@ local function sendProtected(player, weaponId)
     sendFeedback(player, { kind = "Protected", weaponId = weaponId })
 end
 
-local function broadcastFireFx(player, weaponId, origin)
-    if not remotes then
-        return
-    end
-    -- Only accepted server-owned shots reach this function. A client cannot
-    -- manufacture bot hearing with a free-standing cosmetic FX event.
+local function broadcastFireFx(player, weaponId, origin, soundOnly)
+    if not remotes then return end
+    -- Bot hearing is recorded for every accepted server shot. Hitscan
+    -- audio now travels inside PlayerTracer instead of a second broadcast.
+    -- Thrown knives have no PlayerTracer, so keep their sound-only packet.
     BotHearingService.record(player.Character, weaponId, origin)
-    remotes.WeaponFx:FireAllClients({
-        kind = "FireSound",
-        shooterUserId = player.UserId,
-        weaponId = weaponId,
-        origin = origin,
-    })
+    if soundOnly then
+        remotes.WeaponFx:FireAllClients({
+            kind = "FireSound",
+            shooterUserId = player.UserId,
+            weaponId = weaponId,
+            origin = origin,
+        })
+    end
 end
 
 -- Spectator effects use server raycasts, never client-submitted hit data.
@@ -468,7 +469,7 @@ local function fireKnife(player, weaponId, config, direction)
     local params = makeRaycastParams({ character })
     local initialHit = workspace:Raycast(start, origin - start, params)
     if initialHit then
-        broadcastFireFx(player, weaponId, start)
+        broadcastFireFx(player, weaponId, start, true)
         damageHit(player, weaponId, config, initialHit, start)
         return
     end
@@ -478,7 +479,7 @@ local function fireKnife(player, weaponId, config, direction)
     local speed = config.projectileSpeed
     local maxRange = config.range
     local lifetime = config.projectileLifetime
-    broadcastFireFx(player, weaponId, origin)
+    broadcastFireFx(player, weaponId, origin, true)
 
     Debris:AddItem(knife, lifetime + 0.5)
 
