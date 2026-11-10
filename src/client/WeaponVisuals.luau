@@ -967,6 +967,16 @@ function WeaponVisuals:_playSoundLayer(parent, layer, mix)
     sound.RollOffMaxDistance = mix.maxDistance
     sound.RollOffMinDistance = 6
     sound.Parent = parent
+    -- Standard Roblox equalization on remote/distant shots only.
+    -- Avoid an additional engine effect on full-band local/near shots.
+    if (mix.highGain or 0) < 0 or (mix.midGain or 0) < 0 then
+        local eq = Instance.new("EqualizerSoundEffect")
+        eq.Name = "IronYardDistanceFilter"
+        eq.LowGain = mix.lowGain or 0
+        eq.MidGain = mix.midGain or 0
+        eq.HighGain = mix.highGain or 0
+        eq.Parent = sound
+    end
     sound:Play()
 end
 

@@ -27,7 +27,8 @@ function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponI
     if localShot then
         -- Your weapon sound must never be gated by other players' audio.
         return { layers = 2, volume = 1, maxDistance = 160,
-            lifetime = 2, maxVoices = math.huge }
+            lifetime = 2, maxVoices = math.huge,
+            lowGain = 0, midGain = 0, highGain = 0 }
     end
     if not finite(distance) or distance < 0
         or not finite(activeVoices) or activeVoices < 0 then return nil end
@@ -43,6 +44,11 @@ function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponI
         maxDistance = maxDistance,
         lifetime = 2,
         maxVoices = maxVoices,
+        -- Distant shots lose high frequencies, not just loudness.
+        -- Closer shots keep their full spectrum.
+        lowGain = 0,
+        midGain = far and -3 or 0,
+        highGain = far and -10 or 0,
     }
 end
 
@@ -64,6 +70,10 @@ function Audio.occludedMix(mix, blocked)
         maxDistance = mix.maxDistance,
         lifetime = mix.lifetime,
         maxVoices = mix.maxVoices,
+        -- Structural cover masks transients and midrange; lows travel.
+        lowGain = -1,
+        midGain = -12,
+        highGain = -24,
     }
 end
 

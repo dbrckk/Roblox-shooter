@@ -33,6 +33,8 @@ for needle in (
     "function Audio.needsOcclusion(distance, localShot)",
     "function Audio.occludedMix(mix, blocked)",
     "volume = mix.volume * 0.40",
+    "highGain = -24", "midGain = -12",
+    "highGain = far and -10 or 0",
 ):
     assert needle in audio, f"Audio admission missing: {needle}"
 
@@ -64,6 +66,12 @@ for needle in (
     "params.IgnoreWater = true",
     "workspace:Raycast(",
     "mix = WeaponAudio.occludedMix(mix, cover ~= nil)",
+    'Instance.new("EqualizerSoundEffect")',
+    'eq.Name = "IronYardDistanceFilter"',
+    "eq.HighGain = mix.highGain or 0",
+    "eq.MidGain = mix.midGain or 0",
+    "eq.LowGain = mix.lowGain or 0",
+    "if (mix.highGain or 0) < 0 or (mix.midGain or 0) < 0 then",
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 

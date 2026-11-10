@@ -71,3 +71,19 @@ Elle ne remplace ni le test moteur ni les mesures de FPS/latence.
   et coûts FPS sur 100 tirs continus. Les sons restent provisoires et ne sont
   pas revendiqués de niveau RIVALS tant que des échantillons originaux licenciés
   ne sont pas disponibles.
+
+
+## Audio : distance et couverture (10 novembre 2026)
+
+Les tirs à proximité conservent leurs deux couches sonores et leur spectre complet.
+Les tirs lointains conservent la limite de distance/voix existante, mais atténuent
+désormais les fréquences hautes (EQ -10 dB) et médianes (-3 dB).
+Un mur ou conteneur réellement solide, vérifié par le raycast audio local déjà
+existant, ajoute un filtrage plus prononcé (-24 dB haut, -12 dB médium, -1 dB bas),
+en complément du mix de volume à 40 % et du mode monocouche.
+Ce filtre est un EqualizerSoundEffect Roblox attaché uniquement aux sons qui en
+ont besoin : aucun nouveau raycast, aucun nouveau réseau, ni effet EQ pour le
+tireur local et les coups proches non masqués. Le cap de voix reste identique.
+Les tests Luau contrôlent les valeurs; la qualité perçue doit être comparée en
+Studio avec une source proche, derrière un conteneur et à plus de 100 studs.
+Les sources audio intégrées demeurent provisoires, sans promesse d'échantillons AAA.

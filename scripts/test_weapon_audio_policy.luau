@@ -9,8 +9,13 @@ assert(eco and eco.layers == 2 and eco.maxVoices == 8)
 assert(allowed("ECO", true, 96, 0) == nil, "Mobile ECO range culling")
 assert(allowed("ECO", true, 95, 0) ~= nil, "Distance inclusive at boundary")
 assert(allowed("ECO", true, 35, 8) == nil, "Mobile ECO voice cap")
-assert(allowed("BALANCED", true, 100, 0).layers == 1, "Far audio reduces layers")
-assert(allowed("BALANCED", true, 60, 0).layers == 2, "Near audio stays layered")
+local farMix = allowed("BALANCED", true, 100, 0)
+assert(farMix.layers == 1 and farMix.highGain == -10
+    and farMix.midGain == -3 and farMix.lowGain == 0,
+    "Far audio reduces layers AND loses high frequencies")
+local nearMix = allowed("BALANCED", true, 60, 0)
+assert(nearMix.layers == 2 and nearMix.highGain == 0
+    and nearMix.midGain == 0, "Near audio stays clear and layered")
 assert(allowed("BALANCED", true, 131, 0) == nil)
 assert(allowed("BALANCED", false, 170, 0).layers == 1)
 assert(allowed("QUALITY", false, 204, 0) ~= nil)
@@ -23,7 +28,8 @@ assert(allowed("ECO", true, math.huge, 0) == nil)
 assert(allowed("ECO", true, 0/0, 0) == nil)
 assert(allowed("ECO", true, 10, -1) == nil)
 local localMix = Audio.select("ECO", true, 900, true, 900)
-assert(localMix and localMix.layers == 2 and localMix.volume == 1,
+assert(localMix and localMix.layers == 2 and localMix.volume == 1
+    and localMix.highGain == 0 and localMix.midGain == 0,
     "Local shooter sound remains immediate regardless of other shots")
 -- Different weapons no longer broadcast identical acoustic reach.
 local rifle = Audio.select("BALANCED", true, 120, false, 0, "AssaultRifle")
@@ -54,10 +60,18 @@ assert(covered and covered ~= clear, "Occlusion produces a new, independent mix"
 assert(covered.layers == 1, "Cover removes the bright second layer")
 assert(covered.volume == clear.volume * 0.40,
     "Cover is quieter but never completely silent")
+assert(covered.highGain == -24 and covered.midGain == -12
+    and covered.lowGain == -1,
+    "Solid cover attenuates high frequencies rather than muting the shot")
+assert(clear.highGain == 0 and clear.midGain == 0,
+    "Clear-source audio EQ remains full-band")
 assert(covered.maxDistance == clear.maxDistance
     and covered.lifetime == clear.lifetime and covered.maxVoices == clear.maxVoices,
     "Cover never raises distance, lifetime or voice allocations")
 assert(clear.layers == 2 and clear.volume == 1, "Uncovered mix not mutated")
+local farCovered = Audio.occludedMix(farMix, true)
+assert(farCovered.layers == 1 and farCovered.highGain < farMix.highGain,
+    "Occluded distant shots remain more muffled than clear distant ones")
 assert(Audio.occludedMix(clear, false) == clear)
 assert(Audio.occludedMix(nil, true) == nil)
 print("IRON YARD local-priority spatial weapon audio and capped remote voices: OK")
