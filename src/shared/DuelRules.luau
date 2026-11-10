@@ -3,6 +3,7 @@ local Duel = {}
 Duel.WIN_LIMIT = 5
 Duel.MAX_BOUTS = 24
 Duel.RECOVERY_TIMEOUT_SECONDS = 20
+Duel.PREP_SECONDS = 3
 
 local function finite(n)
     return type(n) == "number" and n == n and n >= 0 and n < math.huge
@@ -45,6 +46,14 @@ end
 function Duel.recoveryExpired(since, now)
     if not finite(since) or not finite(now) then return true end
     return now - since >= Duel.RECOVERY_TIMEOUT_SECONDS
+end
+
+-- Match transitions are valid only for the same two live Roblox characters.
+-- Identity checks are pure; no engine service can spoof the original pair.
+function Duel.prepValid(expectedA, actualA, readyA, expectedB, actualB, readyB)
+    return expectedA ~= nil and expectedB ~= nil and expectedA ~= expectedB
+        and expectedA == actualA and expectedB == actualB
+        and readyA == true and readyB == true
 end
 
 function Duel.canFight(mode, userId, a, b, playerCount)

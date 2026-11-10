@@ -44,5 +44,19 @@ assert(not D.recoveryExpired(10,8))
 assert(D.recoveryExpired(nil,50))
 assert(D.recoveryExpired(10,0/0))
 assert(D.recoveryExpired(-1,50))
+assert(D.PREP_SECONDS >= 2 and D.PREP_SECONDS <= 5)
+local playerLifeA, playerLifeB = {}, {}
+assert(D.prepValid(playerLifeA, playerLifeA, true,
+    playerLifeB, playerLifeB, true))
+assert(not D.prepValid(playerLifeA, {}, true,
+    playerLifeB, playerLifeB, true))
+assert(not D.prepValid(playerLifeA, playerLifeA, false,
+    playerLifeB, playerLifeB, true))
+assert(not D.prepValid(playerLifeA, playerLifeA, true,
+    playerLifeB, playerLifeB, false))
+assert(not D.prepValid(playerLifeA, playerLifeA, true,
+    playerLifeA, playerLifeA, true))
+assert(not D.prepValid(nil, nil, true,
+    playerLifeB, playerLifeB, true))
 assert(D.advance(0,0,0/0,"A")==nil)
 print("IRON YARD duel rules: first-to-five, draws, forfeit selection and participant isolation OK")

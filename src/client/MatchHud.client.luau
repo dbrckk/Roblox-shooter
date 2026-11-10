@@ -2,6 +2,7 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 local remotes = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("PrecisionNet")).getRemotes(false)
 local player = Players.LocalPlayer
@@ -95,6 +96,80 @@ player:GetAttributeChangedSignal("IronYardDuelReady"):Connect(duelLabel)
 Players.PlayerAdded:Connect(function() task.defer(duelLabel) end)
 Players.PlayerRemoving:Connect(function() task.defer(duelLabel) end)
 
+-- A single reusable, touch-safe introduction layer. Only state changes
+-- schedule a short tween; no per-frame allocations or additional remotes.
+local duelIntro = Instance.new("Frame")
+duelIntro.Name = "DuelIntro"
+duelIntro.AnchorPoint = Vector2.new(0.5, 0.5)
+duelIntro.Position = UDim2.fromScale(0.5, 0.36)
+duelIntro.Size = UDim2.new(0.72, 0, 0, 162)
+duelIntro.BackgroundColor3 = Color3.fromRGB(24, 30, 32)
+duelIntro.BackgroundTransparency = 0.1
+duelIntro.BorderSizePixel = 0
+duelIntro.Active = false
+duelIntro.Visible = false
+duelIntro.Parent = gui
+local introSize = Instance.new("UISizeConstraint")
+introSize.MaxSize = Vector2.new(350, 162)
+introSize.MinSize = Vector2.new(180, 135)
+introSize.Parent = duelIntro
+local introCorner = Instance.new("UICorner")
+introCorner.CornerRadius = UDim.new(0, 14)
+introCorner.Parent = duelIntro
+local introStroke = Instance.new("UIStroke")
+introStroke.Color = Color3.fromRGB(216, 167, 94)
+introStroke.Thickness = 2
+introStroke.Transparency = 0.12
+introStroke.Parent = duelIntro
+local introGradient = Instance.new("UIGradient")
+introGradient.Rotation = 110
+introGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(44, 52, 52)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(17, 23, 26)),
+})
+introGradient.Parent = duelIntro
+local function introText(name, y, h, size, color)
+    local t = Instance.new("TextLabel")
+    t.Name = name
+    t.Position = UDim2.new(0, 8, 0, y)
+    t.Size = UDim2.new(1, -16, 0, h)
+    t.BackgroundTransparency = 1
+    t.Font = Enum.Font.GothamBlack
+    t.TextColor3 = color
+    t.TextSize = size
+    t.TextXAlignment = Enum.TextXAlignment.Center
+    t.Parent = duelIntro
+    return t
+end
+local introTitle = introText("Title", 12, 25, 16, Color3.fromRGB(219, 170, 102))
+introTitle.Text = "IRON YARD  /  DUEL"
+local introNumber = introText("Countdown", 35, 94, 78, Color3.fromRGB(250, 244, 229))
+introNumber.TextStrokeTransparency = 0.65
+local introFooter = introText("Footer", 133, 20, 12, Color3.fromRGB(188, 200, 198))
+introFooter.Text = "FIRST TO FIVE  ·  EQUAL START"
+local introTween = nil
+local lastIntroSecond = nil
+local function updateIntro(phase, seconds, duelMode)
+    local shown = duelMode == "DUEL" and phase == "DUEL_PREP"
+    duelIntro.Visible = shown
+    if not shown then
+        lastIntroSecond = nil
+        if introTween then introTween:Cancel() introTween = nil end
+        return
+    end
+    local nextSecond = math.clamp(math.floor(seconds), 1, 3)
+    if nextSecond == lastIntroSecond then return end
+    lastIntroSecond = nextSecond
+    if introTween then introTween:Cancel() end
+    introNumber.Text = tostring(nextSecond)
+    introNumber.TextSize = 108
+    introNumber.TextTransparency = 0.20
+    introTween = TweenService:Create(introNumber,
+        TweenInfo.new(0.30, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+        { TextSize = 78, TextTransparency = 0 })
+    introTween:Play()
+end
+
 local eliminations = nil
 local statsConnection = nil
 local statsGeneration = 0
@@ -121,6 +196,9 @@ local function update()
         if phase == "LIVE" then
             headerText = string.format("DUEL %d  |  %s", duelBout, clock)
             detailText = "FIRST TO 5 ROUNDS   /   " .. score
+        elseif phase == "DUEL_PREP" then
+            headerText = string.format("DUEL  |  ROUND %d", duelBout + 1)
+            detailText = string.format("PREPARE  /  %ds   ·   %s", seconds, score)
         elseif phase == "DUEL_BREAK" then
             headerText = string.format("DUEL  |  NEXT BOUT IN %ds", seconds)
             detailText = "ROUND SCORE   /   " .. score
@@ -153,6 +231,7 @@ local function update()
     -- reaches Roblox UI properties; score/time changes remain immediate.
     if header.Text ~= headerText then header.Text = headerText end
     if detail.Text ~= detailText then detail.Text = detailText end
+    updateIntro(phase, seconds, matchMode)
 end
 
 local function connectStats(stats)

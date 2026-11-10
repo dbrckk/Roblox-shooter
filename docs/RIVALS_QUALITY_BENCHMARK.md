@@ -251,3 +251,30 @@ indéfiniment pendant les pauses :
 - Les tests en CI vérifient les limites de temps, la sélection physique,
   la non-répétition des consentements, les remotes et l'attribution.
   Essais Roblox à deux vrais joueurs toujours nécessaires.
+
+
+## Intro synchronisée 1v1 — préparation et départ équitable (10 novembre 2026)
+
+Les points de départ sont maintenant suivis d'une séquence **DUEL_PREP**
+de **3 secondes** avant chaque manche. Le serveur immobilise les deux
+personnages, invalide les anciennes glissades/boosts et remet leurs
+vitesses à zéro. Les commandes de mouvement offensives sont ignorées
+pendant la préparation (les commandes d'arrêt restent permises).
+La cadence des tirs et les dégâts restent désactivés, car seules les
+manches LIVE autorisent le tir.
+
+À la fin de la préparation, le serveur vérifie que les deux avatars
+sont exactement ceux placés au départ et qu'ils sont vivants :
+- Cas valide : les racines sont déverrouillées, les boucliers de spawn
+  sont retirés au même tick, les armes réinitialisées, la manche devient LIVE.
+- Respawn intervenu pendant le countdown : déverrouillage des anciennes
+  références, retour à DUEL_BREAK et réessai dans le délai global borné.
+- Lobby modifié : sortie contrôlée sans ancrage restant.
+- Le client réutilise le MatchHud existant pour afficher un panneau métal
+  en dégradé avec **3 / 2 / 1**, sans RenderStepped additionnel, et le
+  score des manches reste lisible dans la bannière de match.
+
+Le nouveau panneau n'est qu'une présentation : aucune source de temps,
+dégâts ou d'autorité n'a été déplacée vers le client. Les scripts doivent
+être vérifiés sur deux joueurs Roblox/Android, notamment le remplacement
+de personnage pendant le compte à rebours.

@@ -339,6 +339,7 @@ def main():
         "function Duel.advance(scoreA, scoreB, bouts, result)",
         "function Duel.canFight(mode, userId, a, b, playerCount)",
         "function Duel.recoveryExpired(since, now)",
+        "function Duel.prepValid(expectedA, actualA, readyA, expectedB, actualB, readyB)",
     ):
         has(duel_rules, token, "Pure first-to-five duel rules")
     for token in (
@@ -364,6 +365,14 @@ def main():
         'players[2]:SetAttribute("IronYardDuelReady", false)',
         'duel.waitSince = nil',
         'duel.waitSince = os.clock()',
+        'local function releaseDuelPrep()',
+        'local function startLiveDuelBout()',
+        'phase == "DUEL_PREP" and remaining <= 0',
+        'transition("DUEL_PREP", DuelRules.PREP_SECONDS)',
+        'SpawnService.clearProtection(a.Character)',
+        'SpawnService.clearProtection(b.Character)',
+        'MovementService.resetDuelMovement(a)',
+        'MovementService.resetDuelMovement(b)',
     ):
         has(match, token, "Duel lifecycle without FFA regression")
     for token in (
@@ -407,6 +416,7 @@ def main():
         'duelToggle.Activated:Connect(function()',
         '"IronYardDuelScoreA"', '"IronYardDuelScoreB"',
         '"DUEL_BREAK"', '"IronYardDuelReadyCount"',
+        '"DUEL_PREP"', 'updateIntro(phase, seconds, matchMode)',
     ):
         has(match_hud, token, "Real opt-in duel HUD")
     has(client, 'if workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',

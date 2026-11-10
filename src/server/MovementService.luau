@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
@@ -588,11 +589,42 @@ local function onCharacterAdded(player, character)
 	end)
 end
 
+-- The two players enter each bout with no momentum, slide or jet fuel
+-- thrust left from the previous round. Existing delayed slide/wallrun
+-- callbacks are invalidated by their token generation counters.
+function MovementService.resetDuelMovement(player)
+    local state = getState(player)
+    state.sprinting = false
+    state.sliding = false
+    state.slideToken += 1
+    state.wallRunning = false
+    state.wallSide = nil
+    state.wallNormal = nil
+    state.wallDirection = nil
+    state.wallRunStartedAt = -math.huge
+    state.wallRunStartVerticalSpeed = 0
+    state.wallRunSpeed = 0
+    state.wallRunToken += 1
+    state.boosting = false
+    state.boostDirection = nil
+    state.boostStartedAt = -math.huge
+    local _, _, root = getCharacterParts(player)
+    if root then
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+    end
+    applyMovement(player)
+    sendMovementState(player, state)
+end
+
 local function onSprintingChanged(player, isSprinting)
     if not RemoteGuard.allow(player, "SetSprinting") then return end
 	if typeof(isSprinting) ~= "boolean" then
 		return
 	end
+    if isSprinting and Workspace:GetAttribute("NeonMatchPhase") == "DUEL_PREP" then
+        return
+    end
 
     local character = getCharacterParts(player)
     if not character then return end
@@ -609,6 +641,8 @@ local function onMovementAction(player, payload)
     -- when high-frequency movement updates are temporarily throttled.
     local action = typeof(payload) == "table" and payload.action or nil
     if not RemoteGuard.movement(player, action) then return end
+    if Workspace:GetAttribute("NeonMatchPhase") == "DUEL_PREP"
+        and action ~= "BoostStop" and action ~= "StopWallRun" then return end
 	if typeof(payload) ~= "table" or typeof(action) ~= "string"
         or #action > 24 then return end
 

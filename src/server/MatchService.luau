@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
+local MovementService = require(script.Parent:WaitForChild("MovementService"))
 local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local RoundStandings = require(script.Parent:WaitForChild("RoundStandings"))
@@ -163,8 +164,24 @@ local function resetRoundScores()
     end
 end
 
+-- Anchors are owned by the current duel preparation only. Every exit,
+-- including a disconnect, result, stale respawn or lobby change, releases
+-- exactly those references. Never unanchor unrelated new characters.
+local function releaseDuelPrep()
+    if not duel or not duel.prep then return end
+    for _, entry in ipairs(duel.prep) do
+        if entry.root and entry.root.Parent and entry.root.Anchored then
+            entry.root.Anchored = false
+            entry.root.AssemblyLinearVelocity = Vector3.zero
+            entry.root.AssemblyAngularVelocity = Vector3.zero
+        end
+    end
+    duel.prep = nil
+end
+
 local function endDuel(reason, winningSide)
     if not duel then return end
+    releaseDuelPrep()
     local snapshot = RoundStandings.build(duelRows(), round)
     snapshot.mode = "DUEL"
     snapshot.bouts = duel.bouts
@@ -198,9 +215,52 @@ local function startDuelBout()
     end
     if not alive(a) or not alive(b) then return false end
     if not SpawnService.placeDuelPair(a,b,duel.bouts+1) then return false end
+
+    MovementService.resetDuelMovement(a)
+    MovementService.resetDuelMovement(b)
+    local rootA = a.Character:FindFirstChild("HumanoidRootPart")
+    local rootB = b.Character:FindFirstChild("HumanoidRootPart")
+    if not rootA or not rootB or rootA.Anchored or rootB.Anchored then
+        return false
+    end
+    duel.prep = {
+        { character = a.Character, root = rootA },
+        { character = b.Character, root = rootB },
+    }
+    for _, entry in ipairs(duel.prep) do
+        entry.root.AssemblyLinearVelocity = Vector3.zero
+        entry.root.AssemblyAngularVelocity = Vector3.zero
+        entry.root.Anchored = true
+    end
+    duel.waitSince = nil
+    transition("DUEL_PREP", DuelRules.PREP_SECONDS)
+    return true
+end
+
+local function startLiveDuelBout()
+    if not duel or not duel.prep or not duelPlayersIntact() then return false end
+    local a,b = duelParticipants()
+    local prep = duel.prep
+    local function liveAndAnchored(entry, player)
+        local c = player.Character
+        local h = c and c:FindFirstChildOfClass("Humanoid")
+        return entry.root and entry.root.Parent and entry.root.Anchored
+            and h and h.Health > 0 and entry.root:IsDescendantOf(c)
+    end
+    local valid = DuelRules.prepValid(prep[1].character, a.Character,
+        liveAndAnchored(prep[1], a),
+        prep[2].character, b.Character, liveAndAnchored(prep[2], b))
+    releaseDuelPrep()
+    if not valid then
+        duel.waitSince = os.clock()
+        transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
+        return false
+    end
+    -- All shields are removed before the same server tick unlocks fire.
+    SpawnService.clearProtection(a.Character)
+    SpawnService.clearProtection(b.Character)
     WeaponService.resetRound()
     duel.bouts += 1
-    duel.waitSince = nil
     publishDuelScores()
     transition("LIVE", DUEL_BOUT_SECONDS)
     return true
@@ -339,6 +399,8 @@ local function tick()
                 endRound()
             end
         end
+    elseif phase == "DUEL_PREP" and remaining <= 0 then
+        startLiveDuelBout()
     elseif phase == "DUEL_BREAK" and remaining <= 0 then
         if DuelRules.recoveryExpired(duel and duel.waitSince, os.clock()) then
             endDuel("SPAWN_TIMEOUT", nil)
