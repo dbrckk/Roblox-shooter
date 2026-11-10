@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
-"""Blender background builder: original PBR 3D pistol / knife, two LODs each."""
+"""Blender background builder: five original PBR weapons with mechanical mesh LODs."""
 import argparse
 import json
 import math
 import sys
 from pathlib import Path
 import bpy
+
+# Blender --python does not guarantee this directory is in sys.path.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from long_guns import assault_rifle, shotgun, sniper
+
+WEAPONS = ("pistol", "knife", "assault_rifle", "shotgun", "sniper")
 
 def box(name, pos, dims, mat, quality=2):
     bpy.ops.mesh.primitive_cube_add(size=1, location=pos)
@@ -138,8 +144,19 @@ def build(weapon,lod,out,textures):
     for material in list(bpy.data.materials):
         bpy.data.materials.remove(material)
     mats={n:pbr(n,textures) for n in ("gunmetal","carbon","armor","accent_sand")}
-    if weapon=="pistol": pistol(mats,lod=="LOD0")
-    else: knife(mats,lod=="LOD0")
+    high = lod == "LOD0"
+    if weapon == "pistol":
+        pistol(mats,high)
+    elif weapon == "knife":
+        knife(mats,high)
+    elif weapon == "assault_rifle":
+        assault_rifle(mats,high,box,cylinder,joined)
+    elif weapon == "shotgun":
+        shotgun(mats,high,box,cylinder,joined)
+    elif weapon == "sniper":
+        sniper(mats,high,box,cylinder,joined)
+    else:
+        raise ValueError("Unknown weapon archetype: " + weapon)
     bpy.ops.object.select_all(action="DESELECT")
     parts=[x for x in bpy.context.scene.objects if x.type=="MESH"]
     for x in parts: x.select_set(True)
@@ -147,6 +164,9 @@ def build(weapon,lod,out,textures):
     path=out/"meshes"/("iron_yard_"+weapon+"_"+lod+".glb")
     bpy.ops.export_scene.gltf(filepath=str(path),export_format="GLB",
                                use_selection=True,export_yup=True)
+    if high:
+        bpy.ops.wm.save_as_mainfile(
+            filepath=str(out / ("iron_yard_" + weapon + "_source.blend")))
     return {"weapon":weapon,"lod":lod,"names":sorted(x.name for x in parts),
             "file":path.name,"bytes":path.stat().st_size}
 
@@ -160,14 +180,14 @@ def main():
     textures=args.textures.resolve()
     (out/"meshes").mkdir(parents=True,exist_ok=True)
     rows=[]
-    for w in ("pistol","knife"):
+    for w in WEAPONS:
         for lod in ("LOD0","LOD1"):
             rows.append(build(w,lod,out,textures))
     build("pistol","LOD0",out,textures)
     bpy.ops.wm.save_as_mainfile(filepath=str(out/"weapons_source.blend"))
     (out/"manifest.json").write_text(json.dumps({
         "author":"IRON YARD original AssetForge",
-        "weapons":["pistol","knife"],"textureResolution":512,"exports":rows
+        "weapons":list(WEAPONS),"textureResolution":512,"exports":rows
     },indent=2)+"\n",encoding="utf8")
     print(json.dumps(rows,indent=2))
 
