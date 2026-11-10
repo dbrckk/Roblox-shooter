@@ -16,7 +16,8 @@ function Lifecycle.bind(state, character)
 end
 
 function Lifecycle.retire(state, character)
-    if type(state) ~= "table" or state.character ~= character then return false end
+    if type(state) ~= "table" or character == nil
+        or state.character ~= character then return false end
     state.generation += 1
     state.character = nil
     state.humanoid = nil
@@ -27,7 +28,8 @@ end
 function Lifecycle.bindHumanoid(state, token, character, humanoid, currentCharacter)
     if type(state) ~= "table" or token ~= state.generation
         or character == nil or humanoid == nil or state.character ~= character
-        or currentCharacter ~= character then return false end
+        or currentCharacter ~= character or state.recorded
+        or (state.humanoid ~= nil and state.humanoid ~= humanoid) then return false end
     state.humanoid = humanoid
     return true
 end
@@ -35,8 +37,8 @@ end
 -- A client can never send these arguments. This is called only from the
 -- server's Humanoid.Died signal, after checking the live match phase.
 function Lifecycle.recordDeath(state, token, character, humanoid, currentCharacter, live)
-    if type(state) ~= "table" or state.recorded
-        or token ~= state.generation or state.character ~= character
+    if type(state) ~= "table" or character == nil or humanoid == nil
+        or state.recorded or token ~= state.generation or state.character ~= character
         or state.humanoid ~= humanoid or currentCharacter ~= character
         or live ~= true then return false end
     state.recorded = true
