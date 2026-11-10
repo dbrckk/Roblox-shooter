@@ -9,12 +9,51 @@ local Policy = {}
 Policy.MotionMargin = 8
 Policy.CellSize = 48
 
+local function finite(n)
+    return type(n) == "number" and n == n
+        and n < math.huge and n > -math.huge
+end
+
 -- Limit the one-time art inventory initialization per Heartbeat. No
 -- per-frame background LOD loop or gameplay scheduling is introduced.
 function Policy.bootstrapBatch(preset, isTouch)
     if preset == "ECO" then return isTouch and 48 or 96 end
     if isTouch then return preset == "QUALITY" and 128 or 96 end
     return 192
+end
+
+-- The ordinary poll remains 1Hz. Fast movement may request up to 4Hz
+-- (never once per frame), preventing a one-second delayed LOD reveal.
+Policy.ArtPollSeconds = 1
+Policy.FastPollSeconds = 0.25
+Policy.FastTravelStuds = 20
+
+local function validEye(eye)
+    return eye and finite(eye.X) and finite(eye.Y) and finite(eye.Z)
+end
+
+function Policy.shouldPollArt(now, lastAt, eye, lastEye, preset, lastPreset)
+    if not finite(now) then return false end
+    if lastAt == nil or not finite(lastAt) or now < lastAt then return true end
+    local elapsed = now - lastAt
+    if elapsed >= Policy.ArtPollSeconds then return true end
+    if elapsed < Policy.FastPollSeconds then return false end
+    if preset ~= lastPreset then return true end
+    if validEye(eye) ~= validEye(lastEye) then return true end
+    if not validEye(eye) then return false end
+    local dx, dy, dz = eye.X - lastEye.X, eye.Y - lastEye.Y, eye.Z - lastEye.Z
+    return dx * dx + dy * dy + dz * dz
+        >= Policy.FastTravelStuds * Policy.FastTravelStuds
+end
+
+-- When details stream in during boosting, never make the admission
+-- decision with the eye position captured by the previous 1Hz art sweep.
+function Policy.streamedHidden(position, liveEye, fallbackEye, hideBeyond, showBefore)
+    local eye = validEye(liveEye) and liveEye or fallbackEye
+    if not validEye(eye) or not validEye(position) then return false end
+    local dx, dy, dz = position.X - eye.X, position.Y - eye.Y, position.Z - eye.Z
+    return Policy.hiddenSquared(dx * dx + dy * dy + dz * dz,
+        false, hideBeyond, showBefore)
 end
 
 function Policy.limits(preset, isTouch)
@@ -32,11 +71,6 @@ function Policy.limits(preset, isTouch)
         botHide = bot, botShow = bot - 12,
         artHide = art, artShow = art - 16,
     }
-end
-
-local function finite(n)
-    return type(n) == "number" and n == n
-        and n < math.huge and n > -math.huge
 end
 
 function Policy.cellKey(x, z)
