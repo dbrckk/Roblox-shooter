@@ -101,4 +101,16 @@ for needle in ("function Policy.ammo(", "function Policy.health(",
     assert needle in combat_policy, f"Combat HUD snapshot policy missing: {needle}"
 assert "self:_pulseDamage(self.previousHealth - health)" in controller, (
     "Health UI deduplication must never delay or remove damage feedback")
+for needle in (
+    "if header.Text ~= headerText then header.Text = headerText end",
+    "if detail.Text ~= detailText then detail.Text = detailText end",
+    "statsGeneration += 1",
+    "if statsConnection then",
+    "statsConnection:Disconnect()",
+    "if generation ~= statsGeneration or stats.Parent ~= player then return end",
+    'kills:GetPropertyChangedSignal("Value"):Connect(update)',
+):
+    assert needle in match, f"Match HUD must reject stale stats and duplicate writes: {needle}"
+assert 'stats:WaitForChild("Eliminations", 10)' in match, (
+    "Leaderstats replication remains asynchronous, never assume instant availability")
 print("IRON YARD mobile presets, stable readouts and bounded HUD redraws: OK")
