@@ -29,6 +29,16 @@ assert(Policy.allow(bucket, "EquipWeapon", 10),
     "Weapon swaps must not share fire bucket")
 assert(Policy.allow(bucket, "ReloadWeapon", 10),
     "Reloads must not be blocked by weapon fire")
+local duelProfile = Policy.profile("SetDuelReady")
+assert(duelProfile.rate >= 2 and duelProfile.burst >= 2)
+local duelBucket = {}
+for _ = 1, duelProfile.burst do
+    assert(Policy.allow(duelBucket, "SetDuelReady", 50))
+end
+assert(not Policy.allow(duelBucket, "SetDuelReady", 50))
+assert(Policy.allow(duelBucket, "SetDuelReady",
+    50 + 1 / duelProfile.rate))
+assert(Policy.allow(duelBucket, "FireWeapon", 50))
 local aimProfile = Policy.profile("SetAiming")
 assert(aimProfile.rate >= 8 and aimProfile.burst >= 6)
 local aimBucket = {}

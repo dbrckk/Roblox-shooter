@@ -161,6 +161,8 @@ local function render()
         or Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
     local round = snapshot and snapshot.round
         or Workspace:GetAttribute("NeonMatchRound") or 0
+    local isDuel = snapshot and snapshot.mode == "DUEL"
+        or Workspace:GetAttribute("IronYardMatchMode") == "DUEL"
     local seconds = Workspace:GetAttribute("NeonMatchTimeLeft") or 0
     local xp = safeCount("IronYardLifetimeXP")
     local level = math.max(1, safeCount("IronYardProgressLevel"))
@@ -169,7 +171,8 @@ local function render()
         player:GetAttribute("IronYardProgressStatus"), xp,
         safeCount("IronYardSavedXP"))
 
-    title.Text = isWinner and "VICTORY" or ("ROUND " .. tostring(round) .. " COMPLETE")
+    title.Text = isDuel and (isWinner and "DUEL VICTORY" or "DUEL COMPLETE")
+        or (isWinner and "VICTORY" or ("ROUND " .. tostring(round) .. " COMPLETE"))
     title.TextColor3 = isWinner and green or amber
     winnerLabel.Text = winner == "DRAW" and "MATCH DRAW"
         or ("WINNER  /  " .. string.sub(tostring(winner), 1, 30))
@@ -184,10 +187,14 @@ local function render()
         end
     end
     if myStanding then
-        personalLabel.Text = string.format(
-            "YOU  /  #%d OF %d   ·   %d ELIMS   ·   %d DEATHS",
-            myStanding.rank or 0, participants,
-            myStanding.eliminations or 0, myStanding.deaths or 0)
+        personalLabel.Text = isDuel
+            and string.format("YOU  /  #%d OF %d   ·   %d ROUNDS WON",
+                myStanding.rank or 0, participants,
+                myStanding.eliminations or 0)
+            or string.format(
+                "YOU  /  #%d OF %d   ·   %d ELIMS   ·   %d DEATHS",
+                myStanding.rank or 0, participants,
+                myStanding.eliminations or 0, myStanding.deaths or 0)
     elseif snapshot then
         personalLabel.Text = "YOU  /  JOINED BETWEEN ROUNDS"
     else
@@ -210,8 +217,8 @@ local function render()
             local name = string.sub(tostring(row.name or "Operator"), 1, 23)
             local score = math.max(0, math.floor(tonumber(row.eliminations) or 0))
             local placement = math.max(1, math.floor(tonumber(row.rank) or i))
-            leaderboard[i].Text = string.format("%d     %s     ·     %d ELIMS",
-                placement, name, score)
+            leaderboard[i].Text = string.format("%d     %s     ·     %d %s",
+                placement, name, score, isDuel and "ROUNDS" or "ELIMS")
             leaderboard[i].TextColor3 = not row.bot and row.userId == player.UserId
                 and green or (i == 1 and amber or muted)
         else
@@ -221,7 +228,8 @@ local function render()
     end
     local build = typeof(BuildInfo.sourceSha) == "string"
         and #BuildInfo.sourceSha == 40 and BuildInfo.short or nil
-    countdown.Text = string.format("NEXT ROUND IN %ds", math.max(0, seconds))
+    countdown.Text = string.format(isDuel and "NEXT MATCH IN %ds"
+        or "NEXT ROUND IN %ds", math.max(0, seconds))
         .. (build and ("   /   BUILD " .. build) or "")
     root.Visible = true
 end

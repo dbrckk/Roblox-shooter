@@ -830,6 +830,11 @@ local function fireWeapon(weaponId)
     local _, humanoid = getCharacterParts()
     if not humanoid or humanoid.Health <= 0 then return end
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    if workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
+        local a = workspace:GetAttribute("IronYardDuelPlayerA")
+        local b = workspace:GetAttribute("IronYardDuelPlayerB")
+        if player.UserId ~= a and player.UserId ~= b then return end
+    end
 
 	local now = os.clock()
 	local lastShot = lastLocalFire[weaponId] or -math.huge

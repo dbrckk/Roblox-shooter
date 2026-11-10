@@ -7,6 +7,7 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local ShotInputPolicy = require(shared:WaitForChild("ShotInputPolicy"))
 local WeaponSpreadPolicy = require(shared:WaitForChild("WeaponSpreadPolicy"))
+local DuelRules = require(shared:WaitForChild("DuelRules"))
 local AimStancePolicy = require(shared:WaitForChild("AimStancePolicy"))
 local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
@@ -201,6 +202,21 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
     }, origin, player)
 end
 
+-- Duel membership is read from match-server attributes, never supplied
+-- by a fire packet. FFA retains its existing human/bot combat rules.
+local function duelCanFire(player)
+    return DuelRules.canFight(workspace:GetAttribute("IronYardMatchMode"),
+        player.UserId, workspace:GetAttribute("IronYardDuelPlayerA"),
+        workspace:GetAttribute("IronYardDuelPlayerB"), #Players:GetPlayers())
+end
+
+local function duelCanDamage(attacker, targetPlayer)
+    if not duelCanFire(attacker) then return false end
+    if workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" then return true end
+    return targetPlayer ~= nil and duelCanFire(targetPlayer)
+        and targetPlayer ~= attacker
+end
+
 local function damageHit(attacker, weaponId, config, raycastResult, origin)
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
         return false
@@ -222,6 +238,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
     if targetPlayer == attacker then
         return false
     end
+    if not duelCanDamage(attacker, targetPlayer) then return false end
 
     -- Avoid spawn-camping. Server-only protection is removed when its owner fires.
     if SpawnService.isProtected(targetCharacter) then
@@ -446,10 +463,12 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             end
             if humanoid and humanoid.Health > 0 and model ~= character then
                 local opponent = Players:GetPlayerFromCharacter(model)
-                if (opponent or model:GetAttribute("IsArenaBot") == true)
+                if duelCanDamage(player, opponent)
+                    and (opponent or model:GetAttribute("IsArenaBot") == true)
                     and SpawnService.isProtected(model) then
                     struckShield = true
-                elseif (opponent or model:GetAttribute("IsArenaBot") == true) then
+                elseif duelCanDamage(player, opponent)
+                    and (opponent or model:GetAttribute("IsArenaBot") == true) then
                     local entry = victims[humanoid]
                     if not entry then
                         entry = { model = model, player = opponent, damage = 0,
@@ -659,6 +678,7 @@ local function onFireWeapon(player, payload)
         return
     end
 
+    if not duelCanFire(player) then return end
     local weaponId = payload.weaponId
     local config = WeaponConfig.get(weaponId)
     local direction = getAimDirection(payload)

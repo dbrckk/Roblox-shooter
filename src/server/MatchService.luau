@@ -283,7 +283,10 @@ end
 local function tick()
     if duel and phase ~= "RESULTS" and not duelPlayersIntact() then
         local a,b = duelParticipants()
-        endDuel("FORFEIT", a and "A" or b and "B" or nil)
+        -- A third observer cancels the duel without gifting a victory.
+        local side = #Players:GetPlayers() == 1
+            and (a and "A" or b and "B" or nil) or nil
+        endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)
         return
     end
     if #Players:GetPlayers() == 0 then

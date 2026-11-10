@@ -191,3 +191,34 @@ boost, saut ou vitesse horizontale supérieure à 23 studs/s.
 Essais restant à effectuer dans Studio puis Android : tir rafale et contrôlé,
 ADS après sprint, saut, réapparition et changement d'arme; vérifier la
 latence ressentie et la précision à moyenne et longue portée.
+
+
+## Mode duel 1v1 — première version intégrée (10 novembre 2026)
+
+**Mode volontaire et jouable** : deux utilisateurs connectés sur un même
+serveur appuient chacun sur « JOIN 1v1 DUEL ». Si les deux sont prêts au
+démarrage du prochain match, le serveur choisit DUEL au lieu de FFA.
+Le FFA avec bots reste la valeur par défaut; aucun duel automatique
+n'interrompt les joueurs qui ne l'ont pas choisi.
+
+- Manches séparées de 80 s, victoire du duel au premier à cinq manches.
+  Une mort clôt la manche; double KO = égalité. À la fin du temps,
+  le pourcentage de vie détermine le gagnant, égalité si identique.
+  Après 24 manches sans vainqueur à cinq, la série est nulle.
+- Réapparitions réelles et téléportation sur deux points opposés, inversion
+  des côtés à chaque manche. Pause de 7 s (prolongée si le personnage n'a
+  pas encore respawn), restauration de la vie, des chargeurs et des états
+  serveur avant chaque reprise. Aucune manche à sens unique lancée avant
+  que les deux Humanoids soient disponibles.
+- Les quatre bots sont retirés immédiatement; les nouveaux sont empêchés
+  de naître pendant le duel. Un combattant extérieur ne peut pas tirer ni
+  subir des dégâts des deux participants.
+- L'arrivée d'un troisième joueur annule la série sans offrir de fausse
+  victoire; un départ de l'un des deux constitue un forfait.
+- Le mode et les scores sont publiés par le serveur; le bandeau et l'écran
+  de résultats affichent les manches gagnées, pas des éliminations fictives.
+  Les joueurs peuvent préparer une revanche au prochain cycle de match.
+- Le matchmaking entre serveurs **n'est pas fourni** : seuls deux joueurs
+  réunis dans la même instance peuvent lancer cette première version.
+  Les tests de logique et le build Rojo ne remplacent pas un essai Roblox
+  sur deux vrais clients.

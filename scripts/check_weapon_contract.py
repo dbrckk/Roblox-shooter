@@ -328,6 +328,65 @@ def main():
         server.index("local aimed = acceptedAimReady(player, weaponId,"),
         "ADS only evaluated on admitted shots")
 
+    duel_rules = source("src/shared/DuelRules.luau")
+    match_hud = source("src/client/MatchHud.client.luau")
+    duel_spawn = source("src/server/SpawnService.luau")
+    for token in (
+        "function Duel.canStart(players, readyA, readyB)",
+        "function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)",
+        "function Duel.advance(scoreA, scoreB, bouts, result)",
+        "function Duel.canFight(mode, userId, a, b, playerCount)",
+    ):
+        has(duel_rules, token, "Pure first-to-five duel rules")
+    for token in (
+        'SetDuelReady = "RemoteEvent"',
+    ):
+        has(network, token, "Duel ready event")
+    for token in (
+        'remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled)',
+        'RemoteGuard.allow(player, "SetDuelReady")',
+        'local function startDuelSeries(players)',
+        'local function startDuelBout()',
+        'local function finishDuelBout(result)',
+        'local function endDuel(reason, winningSide)',
+        'DuelRules.boutWinner(ah,am,bh,bm,remaining<=0)',
+        'BotService.reconcileNow()',
+        'SpawnService.placeDuelPair(a,b,duel.bouts+1)',
+        'WeaponService.resetRound()',
+        'Workspace:SetAttribute("IronYardMatchMode", mode)',
+        'transition("DUEL_BREAK", DUEL_BREAK_SECONDS)',
+    ):
+        has(match, token, "Duel lifecycle without FFA regression")
+    for token in (
+        'function SpawnService.placeDuelPair(a, b, bout)',
+    ):
+        has(duel_spawn, token, "Opposite duel spawn pads")
+    for token in (
+        'DuelRules.canFight(workspace:GetAttribute("IronYardMatchMode")',
+        'if not duelCanDamage(attacker, targetPlayer) then return false end',
+        'if not duelCanFire(player) then return end',
+        'if duelCanDamage(player, opponent)',
+        'elseif duelCanDamage(player, opponent)',
+    ):
+        has(server, token, "Duel fire and hit isolation")
+    for token in (
+        'function BotService.reconcileNow()',
+        'if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',
+    ):
+        has(bot, token, "Immediate bot removal in duel")
+    for token in (
+        'remotes.SetDuelReady:FireServer',
+        'duelToggle.Activated:Connect(function()',
+        '"IronYardDuelScoreA"', '"IronYardDuelScoreB"',
+        '"DUEL_BREAK"', '"IronYardDuelReadyCount"',
+    ):
+        has(match_hud, token, "Real opt-in duel HUD")
+    has(client, 'if workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',
+        "Client spectator fire prediction suppression")
+    require(server.index('if not duelCanFire(player) then return end')
+        < server.index('if not canFire(player, weaponId, config) then'),
+        "Duel spectator shot must not consume server ammo")
+
     has(network, 'ReloadWeapon = "RemoteEvent"', "Network ammo remote")
     for needle in (
         "local function randomSpread(direction, spreadDegrees)",
