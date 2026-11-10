@@ -64,7 +64,7 @@ for tick = 1, 20000 do
 end
 assert(peak > 1 and peak <= 5, "Mobile quality never exceeds its 5-Part budget")
 local oldSlots = #live
-assert(Pool.claim(live, 801, 2) ~= nil and #live == oldSlots,
+assert(Pool.claim(live, 802, 2) ~= nil and #live == oldSlots,
     "Quality downgrade reuses already-created Parts")
-assert(Pool.claim(live, 800, 2) == nil)
+assert(Pool.claim(live, 801, 2) == nil)
 print("IRON YARD vapor: capped 0/2/5/5/11 Parts, 20k emission cycles and Quad.Out: OK")
