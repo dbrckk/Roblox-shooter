@@ -36,6 +36,14 @@ assert(Plan.get("Knife","ECO",false) == Plan.get("Knife","ECO",true))
 assert(Plan.get("Unknown","QUALITY",false)==nil)
 assert(Plan.tier("ECO",false)==1 and Plan.tier("BALANCED",true)==2)
 assert(Plan.tier("BALANCED",false)==3)
+-- Switching ECO <-> BALANCED <-> QUALITY changes only allowed details.
+local eco=Plan.get("Pistol","ECO",true)
+local balanced=Plan.get("Pistol","BALANCED",true)
+local quality=Plan.get("Pistol","QUALITY",true)
+for i=1,#eco do assert(eco[i]==balanced[i] and eco[i]==quality[i]) end
+for i=1,#balanced do assert(balanced[i]==quality[i]) end
+assert(eco~=balanced and balanced~=quality,
+    "Tier changes select cached distinct lists without rebuilding data")
 for i=1,25000 do
     assert(Plan.get("Pistol","BALANCED",true)==Plan.get("Pistol","BALANCED",true))
 end

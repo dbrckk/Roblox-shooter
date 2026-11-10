@@ -148,7 +148,15 @@ for needle in (
     'self:_addDetailGeometry(model, "Pistol")',
     'self:_addDetailGeometry(model, "Knife")',
     'or string.sub(partName, 1, 11) == "SlideDetail"',
-    'self.parts[#self.parts].finishRole = spec.finish',
+    'added.finishRole = spec.finish',
+    'added.isDetail = true',
+    'self.detailPresetConnection = Players.LocalPlayer:GetAttributeChangedSignal(',
+    'function WeaponVisuals:_syncDetailTier()',
+    'if newTier == self.detailTier then return end',
+    'if entry.isDetail and not allowed[entry.part.Name] then',
+    'entry.part:Destroy()',
+    'self:_addDetailGeometry(self.model, self.currentWeaponId)',
+    'self:_applyCareerFinish()',
 ):
     assert needle in visuals, f"Viewmodel cosmetic detail rendering missing: {needle}"
 assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (

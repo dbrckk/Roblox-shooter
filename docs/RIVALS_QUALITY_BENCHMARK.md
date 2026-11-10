@@ -449,3 +449,16 @@ requête réseau ou instance Roblox lors de chaque mise à jour.
 - Test Luau des tailles, materiaux, formes, unicite de chaque piece
   et de 25 000 consultations de plans caches ; contrat Python
   de cablage et de cycle d'animation.
+
+
+## Presets graphiques en direct : LOD du pistolet et du couteau
+
+Le joueur peut passer de ECO a BALANCED puis QUALITY au milieu
+d'une manche. WeaponVisuals conserve les pieces toujours utiles,
+ajoute les details desormais autorises et detruit uniquement celles
+qui sont retirees en descendant de qualite. Le traitement n'a lieu
+qu'au signal de changement de preset graphique, jamais par frame.
+L'arme equipee, son rechargement, le recul et la visee ne sont pas
+reinitialises. Les couleurs et finitions de progression sont appliquees
+aux nouvelles pieces. Les listes des differentes qualites partagent
+les memes definitions de pieces pour garantir leur identite.

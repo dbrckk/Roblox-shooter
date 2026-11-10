@@ -90,6 +90,13 @@ function WeaponVisuals.new(WeaponConfig)
     self.remoteSoundEmitters = {}
     self.cartridgeShots = {}
     self.pendingCartridge = nil
+    self.detailTier = nil
+    -- Update visible detail immediately on graphics setting changes, without
+    -- resetting reload state, recoil, camera aim or the equipped weapon.
+    self.detailPresetConnection = Players.LocalPlayer:GetAttributeChangedSignal(
+        "IronYardGraphicsPreset"):Connect(function()
+            self:_syncDetailTier()
+        end)
     -- Server-authored rank only affects the cosmetic local viewmodel.
     self.finishConnection = Players.LocalPlayer:GetAttributeChangedSignal(
         "IronYardProgressLevel"):Connect(function()
@@ -126,27 +133,59 @@ function WeaponVisuals:_addPart(model, className, name, size, color, offset, mat
 	return part
 end
 
--- Apply small original shape details at equip only. The pure detail plan
--- limits physical Part counts by ECO/BALANCED/QUALITY and device type;
--- every piece remains uncollidable and receives the camera-root pose.
+-- Device-specific cosmetic detail is created on equip and updated only
+-- when the graphics preset changes. Existing pieces survive tier switches.
 function WeaponVisuals:_addDetailGeometry(model, weaponId)
-    local plans = WeaponDetailPlan.get(weaponId,
-        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        UserInputService.TouchEnabled)
+    local preset = Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset")
+    local touch = UserInputService.TouchEnabled
+    local plans = WeaponDetailPlan.get(weaponId, preset, touch)
     if not plans then return end
-    for _, spec in ipairs(plans) do
-        local className = spec.shape == "Wedge" and "WedgePart" or "Part"
-        local shape = spec.shape ~= "Wedge" and Enum.PartType[spec.shape] or nil
-        local pos, ang = spec.position, spec.angles
-        local offset = CFrame.new(pos[1],pos[2],pos[3])
-            * CFrame.Angles(math.rad(ang[1]),math.rad(ang[2]),math.rad(ang[3]))
-        self:_addPart(model, className, spec.name,
-            Vector3.new(spec.size[1],spec.size[2],spec.size[3]),
-            rgb(spec.color), offset,
-            spec.finish == "dark" and MATERIAL_SMOOTH or MATERIAL_METAL,
-            nil, shape)
-        self.parts[#self.parts].finishRole = spec.finish
+    local existing = {}
+    for _, entry in ipairs(self.parts) do
+        if entry.isDetail then existing[entry.part.Name] = true end
     end
+    for _, spec in ipairs(plans) do
+        if not existing[spec.name] then
+            local className = spec.shape == "Wedge" and "WedgePart" or "Part"
+            local shape = spec.shape ~= "Wedge" and Enum.PartType[spec.shape] or nil
+            local pos, ang = spec.position, spec.angles
+            local offset = CFrame.new(pos[1],pos[2],pos[3])
+                * CFrame.Angles(math.rad(ang[1]),math.rad(ang[2]),math.rad(ang[3]))
+            self:_addPart(model, className, spec.name,
+                Vector3.new(spec.size[1],spec.size[2],spec.size[3]),
+                rgb(spec.color), offset,
+                spec.finish == "dark" and MATERIAL_SMOOTH or MATERIAL_METAL,
+                nil, shape)
+            local added = self.parts[#self.parts]
+            added.finishRole = spec.finish
+            added.isDetail = true
+        end
+    end
+    self.detailTier = WeaponDetailPlan.tier(preset, touch)
+end
+
+function WeaponVisuals:_syncDetailTier()
+    if not self.model
+        or (self.currentWeaponId ~= "Pistol" and self.currentWeaponId ~= "Knife") then
+        return
+    end
+    local preset = Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset")
+    local touch = UserInputService.TouchEnabled
+    local newTier = WeaponDetailPlan.tier(preset, touch)
+    if newTier == self.detailTier then return end
+    local allowed = {}
+    for _, spec in ipairs(WeaponDetailPlan.get(self.currentWeaponId, preset, touch)) do
+        allowed[spec.name] = true
+    end
+    for i = #self.parts, 1, -1 do
+        local entry = self.parts[i]
+        if entry.isDetail and not allowed[entry.part.Name] then
+            entry.part:Destroy()
+            table.remove(self.parts, i)
+        end
+    end
+    self:_addDetailGeometry(self.model, self.currentWeaponId)
+    self:_applyCareerFinish()
 end
 
 -- Rank-gated finishes recolor only first-person visual Parts, not weapons
@@ -239,6 +278,7 @@ function WeaponVisuals:_clearModel()
 	self.model = nil
 	table.clear(self.parts)
     self.lastViewmodelHidden = nil
+    self.detailTier = nil
 end
 
 function WeaponVisuals:_createPistol(model)
