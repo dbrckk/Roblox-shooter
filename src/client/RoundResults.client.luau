@@ -228,28 +228,35 @@ end
 
 local cameraConnection
 local function reconnectCamera()
-    if cameraConnection then cameraConnection:Disconnect() end
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = nil
+    end
     local camera = Workspace.CurrentCamera
     if camera then
         cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateLayout)
     end
     updateLayout()
 end
-Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(reconnectCamera)
+local cameraChangedConnection =
+    Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(reconnectCamera)
 reconnectCamera()
 
+local attributeConnections = {}
 for _, attr in ipairs({
     "NeonMatchPhase", "NeonMatchWinner", "NeonMatchRound",
     "NeonMatchTimeLeft", "IronYardWinnerUserId", "IronYardStandings",
     "IronYardFinalStandings",
 }) do
-    Workspace:GetAttributeChangedSignal(attr):Connect(render)
+    table.insert(attributeConnections,
+        Workspace:GetAttributeChangedSignal(attr):Connect(render))
 end
 for _, attr in ipairs({
     "IronYardLifetimeXP", "IronYardProgressLevel", "IronYardRoundXP",
     "IronYardSavedXP", "IronYardProgressStatus",
 }) do
-    player:GetAttributeChangedSignal(attr):Connect(render)
+    table.insert(attributeConnections,
+        player:GetAttributeChangedSignal(attr):Connect(render))
 end
 
 -- leaderstats and their values can arrive late or be replaced between
@@ -339,6 +346,12 @@ script.Destroying:Connect(function()
     playerStatsAdded:Disconnect()
     playerStatsRemoved:Disconnect()
     releaseStats()
+    cameraChangedConnection:Disconnect()
     if cameraConnection then cameraConnection:Disconnect() end
+    for _, connection in ipairs(attributeConnections) do
+        connection:Disconnect()
+    end
+    table.clear(attributeConnections)
+    gui:Destroy()
 end)
 render()
