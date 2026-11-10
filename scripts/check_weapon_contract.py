@@ -342,9 +342,33 @@ def main():
     for needle in ("function Plan.sequence(", "function Plan.duration(",
                    "function Plan.dustBudget("):
         has(death_plan, needle, "Pure deterministic fall pose and graphics budgets")
-    for needle in ('humanoid.Died:Connect(function()', "floor.Normal.Y < 0.65",
-                   "puff.CanQuery = false", "Debris:AddItem(puff,"):
-        has(death_fx, needle, "Local-only, grounded and bounded defeat dust")
+    dust_pool = source("src/shared/BotDeathDustPool.luau")
+    for needle in (
+        'humanoid.Died:Connect(function()',
+        "floor.Normal.Y < 0.65",
+        "puff.CanQuery = false",
+        "puff.CanCollide = false",
+        "puff.CanTouch = false",
+        'shared:WaitForChild("BotDeathDustPool")',
+        "DustPool.cap(",
+        "DustPool.claim(dustSlots, now,",
+        "DustPool.ease(slot, now, index <= cap)",
+        "if not next(activeDustIndices) then return end",
+        "nextAnimationAt = now + 1 / 30",
+        "activeDustIndices[slotIndex] = true",
+        "activeDustIndices[index] = nil",
+        "if puff and puff.Parent then puff.Parent = nil end",
+        "script.Destroying:Connect(function()",
+    ):
+        has(death_fx, needle, "Local-only, pooled and grounded defeat dust")
+    require("TweenService" not in death_fx and "Debris" not in death_fx,
+            "Bot death dust must not create per-kill Tween/Debris jobs")
+    require(death_fx.count('Instance.new("Part")') == 1,
+            "Dust geometry is allocated lazily only when a new pool slot is needed")
+    for needle in ("Pool.MAX_BOTS = 4", "Pool.MAX_PARTS = 16",
+                   "function Pool.cap(", "function Pool.claim(",
+                   "function Pool.ease(", "return 1 - (1 - t) * (1 - t)"):
+        has(dust_pool, needle, "Bounded 4-bot recycled defeat-dust policy")
     require(bot.index("component.CanQuery = false") < bot.index("BotDeathAnimation.play(bot)"),
             "Dead bot hitboxes must be removed before posing its body")
     require("playDeathStagger(bot)" not in bot,
