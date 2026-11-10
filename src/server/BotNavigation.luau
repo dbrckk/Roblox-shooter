@@ -62,6 +62,12 @@ local function environmentParams(bot)
     return params
 end
 
+-- Module-level helper avoids a closure allocation for each sampled route.
+local function capsuleRayBlocked(origin, offset, flat, params)
+    BotPerfService.count("navRay")
+    return Workspace:Raycast(origin + offset, flat, params) ~= nil
+end
+
 local function directRouteClear(bot, goal, cachedParams)
     -- A centre-only ray slips past freight-container corners while a two-stud
     -- humanoid collides. Probe the approximate capsule at two elevations.
@@ -74,15 +80,11 @@ local function directRouteClear(bot, goal, cachedParams)
     -- Same five capsule rays, ordered from centre to the shoulders.
     -- Compute directions directly instead of allocating an offset table
     -- for every 0.2s movement decision and detour candidate.
-    local function blockedAt(offset)
-        BotPerfService.count("navRay")
-        return Workspace:Raycast(origin + offset, flat, params) ~= nil
-    end
-    if blockedAt(LOW_CAPSULE_OFFSET)
-        or blockedAt(LOW_CAPSULE_OFFSET + side)
-        or blockedAt(LOW_CAPSULE_OFFSET - side)
-        or blockedAt(HIGH_CAPSULE_OFFSET + side)
-        or blockedAt(HIGH_CAPSULE_OFFSET - side) then
+    if capsuleRayBlocked(origin, LOW_CAPSULE_OFFSET, flat, params)
+        or capsuleRayBlocked(origin, LOW_CAPSULE_OFFSET + side, flat, params)
+        or capsuleRayBlocked(origin, LOW_CAPSULE_OFFSET - side, flat, params)
+        or capsuleRayBlocked(origin, HIGH_CAPSULE_OFFSET + side, flat, params)
+        or capsuleRayBlocked(origin, HIGH_CAPSULE_OFFSET - side, flat, params) then
         return false
     end
     -- Capsule clearance does not imply the FLOOR exists. Especially from
