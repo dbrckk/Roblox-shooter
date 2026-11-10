@@ -2,6 +2,13 @@
 -- The caller owns movement truth. This module never advances navigation.
 local Motion = {}
 
+-- Pose helpers run for up to four server bots at 8-15Hz. Validate scalar
+-- components directly instead of allocating a temporary table per signal.
+local function finite(value)
+    return type(value) == "number" and value == value
+        and value > -math.huge and value < math.huge
+end
+
 function Motion.smooth(value, target, dt, response)
     local elapsed = math.clamp(tonumber(dt) or 0, 0, 0.35)
     local rate = math.max(0, tonumber(response) or 0)
@@ -25,12 +32,9 @@ end
 -- Angular rate is normalized, so 8Hz distant rigs and 15Hz nearby rigs
 -- receive comparable turns without instantaneous upper-body snapping.
 function Motion.turnSignal(previousX, previousZ, currentX, currentZ, dt)
-    local values = { previousX, previousZ, currentX, currentZ, dt }
-    for _, n in ipairs(values) do
-        if type(n) ~= "number" or n ~= n or math.abs(n) == math.huge then
-            return 0
-        end
-    end
+    if not finite(previousX) or not finite(previousZ)
+        or not finite(currentX) or not finite(currentZ)
+        or not finite(dt) then return 0 end
     if dt <= 0 or previousX * previousX + previousZ * previousZ < 0.0001
         or currentX * currentX + currentZ * currentZ < 0.0001 then
         return 0
@@ -44,12 +48,8 @@ end
 -- Body-velocity reversal is a separate transition from chassis rotation.
 -- It is used for a short planted-foot braking pose after an actual dodge.
 function Motion.reversalSignal(previousX, previousZ, currentX, currentZ)
-    local values = { previousX, previousZ, currentX, currentZ }
-    for _, n in ipairs(values) do
-        if type(n) ~= "number" or n ~= n or math.abs(n) == math.huge then
-            return 0
-        end
-    end
+    if not finite(previousX) or not finite(previousZ)
+        or not finite(currentX) or not finite(currentZ) then return 0 end
     local before = previousX * previousX + previousZ * previousZ
     local after = currentX * currentX + currentZ * currentZ
     if before < 16 or after < 16 then return 0 end
