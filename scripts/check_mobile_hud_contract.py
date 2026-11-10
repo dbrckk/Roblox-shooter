@@ -18,6 +18,9 @@ client = read("src/client/init.client.luau")
 match = read("src/client/MatchHud.client.luau")
 tactical = read("src/client/TacticalHud.client.luau")
 briefing = read("src/client/Briefing.client.luau")
+kill_feed = read("src/client/KillFeed.client.luau")
+damage_direction = read("src/client/DamageDirection.client.luau")
+round_results = read("src/client/RoundResults.client.luau")
 
 for needle in (
     'Layout.PRESETS = { "COMPACT", "STANDARD", "LARGE" }',
@@ -123,4 +126,80 @@ for needle in (
     'if heading.Text ~= newHeading then',
 ):
     assert needle in tactical, f"Tactical compass camera lifecycle missing: {needle}"
+# The three combat HUD controllers remain alive for the complete match
+# session. Camera replacement and 200+ respawns must never accumulate
+# connections to old Cameras, Characters or leaderstats IntValues.
+for needle in (
+    "local cameraConnection = nil",
+    "local function reconnectCamera()",
+    "cameraConnection:Disconnect()",
+    "cameraConnection = nil",
+    'Workspace:GetPropertyChangedSignal(\n    "CurrentCamera"):Connect(reconnectCamera)',
+    'camera:GetPropertyChangedSignal(\n            "ViewportSize"):Connect(updateFeedLayout)',
+    "local killFeedConnection = remotes.KillFeed.OnClientEvent:Connect(addEntry)",
+    "killFeedConnection:Disconnect()",
+    "currentCameraConnection:Disconnect()",
+    "matchConnection:Disconnect()",
+    "briefingConnection:Disconnect()",
+    "gui:Destroy()",
+):
+    assert needle in kill_feed, f"Kill feed old-camera/subscription leak: {needle}"
+assert kill_feed.count('ViewportSize"):Connect(updateFeedLayout)') == 1, (
+    "Only the current camera may own the kill feed ViewportSize listener")
+assert kill_feed.count('remotes.KillFeed.OnClientEvent:Connect(addEntry)') == 1
+
+for needle in (
+    "local hitConnection = nil",
+    "local boundCharacter = nil",
+    "local function releaseCharacter()",
+    "hitConnection:Disconnect()",
+    "boundCharacter = nil",
+    "revision += 1",
+    "for _, tween in ipairs(activeTweens) do tween:Cancel() end",
+    "pointer.Visible = false",
+    'player.CharacterAdded:Connect(bindCharacter)',
+    'player.CharacterRemoving:Connect(function(character)',
+    "if boundCharacter == character then releaseCharacter() end",
+    "if boundCharacter ~= character or player.Character ~= character then return end",
+    "addedConnection:Disconnect()",
+    "removingConnection:Disconnect()",
+    "gui:Destroy()",
+):
+    assert needle in damage_direction, f"Old character damage UI listener not released: {needle}"
+assert damage_direction.count('GetAttributeChangedSignal(\n        "IronYardLastHitTime"):Connect') == 1, (
+    "Only the current character's hit timestamp may drive the arrow")
+
+for needle in (
+    "local activeStats = nil",
+    "local statsAddedConnection = nil",
+    "local statsRemovedConnection = nil",
+    "local statConnections = {}",
+    "local statValues = {}",
+    "local function releaseStats()",
+    "statsAddedConnection:Disconnect()",
+    "statsRemovedConnection:Disconnect()",
+    "connection:Disconnect()",
+    "table.clear(statValues)",
+    "activeStats = nil",
+    "local function bindValue(value)",
+    "if statValues[name] == value then return end",
+    "statConnections[name]:Disconnect()",
+    "if activeStats == value.Parent and statValues[name] == value then",
+    "local function bindStats(stats)",
+    "releaseStats()",
+    "statsAddedConnection = stats.ChildAdded:Connect(bindValue)",
+    "statsRemovedConnection = stats.ChildRemoved:Connect(function(child)",
+    "for _, value in ipairs(stats:GetChildren()) do",
+    "local playerStatsRemoved = player.ChildRemoved:Connect(function(child)",
+    "if child == activeStats then",
+    "cameraChangedConnection:Disconnect()",
+    "table.clear(attributeConnections)",
+    "gui:Destroy()",
+):
+    assert needle in round_results, f"Round results stale leaderstats or UI listener: {needle}"
+assert round_results.count('value:GetPropertyChangedSignal("Value"):Connect(function()') == 1
+assert 'value:GetPropertyChangedSignal("Value"):Connect(render)' not in round_results, (
+    "Raw stat listeners can fire after a leaderstats container is replaced")
+print("IRON YARD combat HUD listeners: current camera, respawn and leaderstats lifecycle: OK")
+
 print("IRON YARD mobile presets, stable readouts and bounded HUD redraws: OK")
