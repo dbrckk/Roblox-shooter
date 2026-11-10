@@ -163,7 +163,9 @@ for needle in (
     'localOffset = localOffset * workingHand * supportMotion',
     '(partName == "Magazine" or partName == "MagazineBase")',
     '(partName == "Slide" or partName == "EjectionPort"',
-    'or partName == "Extractor") and self.currentWeaponId == "Pistol"',
+    'or partName == "Extractor"',
+    'or string.sub(partName, 1, 11) == "SlideDetail")',
+    'and self.currentWeaponId == "Pistol" then',
 ):
     assert needle in visuals, f"Moving first-person weapon part missing: {needle}"
 assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
