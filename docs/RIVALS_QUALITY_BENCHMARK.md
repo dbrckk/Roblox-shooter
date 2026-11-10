@@ -462,3 +462,26 @@ L'arme equipee, son rechargement, le recul et la visee ne sont pas
 reinitialises. Les couleurs et finitions de progression sont appliquees
 aux nouvelles pieces. Les listes des differentes qualites partagent
 les memes definitions de pieces pour garantir leur identite.
+
+
+## Armes longues : détails adaptatifs sans surcharge Android (10 novembre 2026)
+
+- L'AR-24, le B-8 et le sniper utilisent désormais le plan de détails local
+  `WeaponDetailPlan`, comme le pistolet et le couteau.
+- Preset ECO : **zéro pièce ajoutée** sur les armes longues. BALANCED tactile :
+  **six détails** sur l'AR-24 et **cinq** sur chaque B-8/sniper. QUALITÉ ou
+  ordinateur : **douze** sur l'AR-24 et **onze** sur chaque B-8/sniper.
+- Plaques de boîtier, ferrures, bagues, supports de lunette, inserts de crosse
+  et fixations distinctes rendent les silhouettes moins uniformes. Les nouveaux
+  détails restent fixés sur les parties statiques : ni la pompe, ni la culasse,
+  ni le levier d'armement n'ont de pièces flottantes.
+- Passage ECO/BALANCED/QUALITY en match : ajout et retrait uniquement au
+  changement de preset, sans changer l'arme, les munitions, le recul ou la
+  logique serveur. Le changement de preset en visée sniper conserve les
+  nouveaux détails invisibles pendant l'affichage de la lunette.
+- Plans mis en cache, ordre stable d'un tier à l'autre ; aucun RemoteEvent,
+  RenderStepped supplémentaire, rayon, collision ou asset payant.
+- Validation automatisée : tests Luau et contrats d'intégration Python, plus
+  build Rojo. **L'aspect et le FPS restent à mesurer dans Roblox Studio/Android.**
+  Les maillages PBR véritablement intégrés sont toujours la priorité pour
+  atteindre une qualité visuelle comparable à RIVALS.
