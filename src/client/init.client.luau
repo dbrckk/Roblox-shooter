@@ -1142,6 +1142,12 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         and typeof(message.origin) == "Vector3"
         and typeof(message.direction) == "Vector3"
         and typeof(message.length) == "number" then
+        -- All verified hitscan fire now travels in one tracer packet.
+        -- Play the original remote shot audio independently of whether
+        -- graphics quality admits an optional tracer Part.
+        if message.shooterUserId ~= player.UserId then
+            visuals:playFireSound(message.weaponId, message.origin)
+        end
         local cameraNow = workspace.CurrentCamera
         local fullLength = math.clamp(message.length, 0, 1500)
         local direction = message.direction
@@ -1173,6 +1179,9 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         and typeof(message.origin) == "Vector3"
         and typeof(message.direction) == "Vector3"
         and typeof(message.length) == "number" then
+        -- Bot shots also carry sound in their one authoritative packet.
+        -- Audio is not starved by the distant-tracer token budget.
+        visuals:playFireSound(message.weaponId, message.origin)
         local distance = math.clamp(message.length, 0, 140)
         local cameraNow = workspace.CurrentCamera
         -- Do not allocate tracer/muzzle parts for shots beyond the local
