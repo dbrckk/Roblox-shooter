@@ -492,6 +492,7 @@ local function fireKnife(player, weaponId, config, direction)
             -- Projectile tasks may outlive a round, their original owner or
             -- character. Never apply late damage in a different combat state.
             if launchedEpoch ~= weaponRoundEpoch
+                or player.Parent ~= Players
                 or player.Character ~= character
                 or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
                 knife:Destroy()
