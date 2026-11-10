@@ -20,9 +20,9 @@ local top = Instance.new("Frame")
 top.Name = "MatchPanel"
 top.AnchorPoint = Vector2.new(0.5, 0)
 top.Position = UDim2.new(0.5, 0, 0, 8)
-top.Size = UDim2.new(0.9, 0, 0, 70)
+top.Size = UDim2.new(0.9, 0, 0, 80)
 local sizeConstraint = Instance.new("UISizeConstraint")
-sizeConstraint.MaxSize = Vector2.new(340, 70)
+sizeConstraint.MaxSize = Vector2.new(340, 80)
 sizeConstraint.Parent = top
 top.BackgroundColor3 = Color3.fromRGB(37, 43, 43)
 top.BackgroundTransparency = 0.15
@@ -56,6 +56,54 @@ end
 local header = label("Status", 16, UDim2.new(1, -12, 0, 28), UDim2.fromOffset(6, 5), Color3.fromRGB(244, 217, 170))
 local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(248, 248, 241))
 
+-- Ten reusable, non-interactive score indicators (five wins per side).
+-- No RenderStepped loop, network events or creation during match updates.
+local duelProgress = Instance.new("Frame")
+duelProgress.Name = "DuelProgress"
+duelProgress.Position = UDim2.new(0, 12, 1, -15)
+duelProgress.Size = UDim2.new(1, -24, 0, 7)
+duelProgress.BackgroundTransparency = 1
+duelProgress.Visible = false
+duelProgress.Parent = top
+
+local myRoundBars, rivalRoundBars = {}, {}
+local EMPTY_ROUND = Color3.fromRGB(65, 72, 73)
+local MY_ROUND = Color3.fromRGB(231, 182, 97)
+local RIVAL_ROUND = Color3.fromRGB(118, 158, 169)
+for i = 1, 5 do
+    for _, side in ipairs({
+        { bars = myRoundBars, startX = 0, active = MY_ROUND },
+        { bars = rivalRoundBars, startX = 0.54, active = RIVAL_ROUND },
+    }) do
+        local bar = Instance.new("Frame")
+        bar.Name = (side.bars == myRoundBars and "My" or "Rival") .. "Win" .. i
+        bar.Position = UDim2.new(side.startX + (i - 1) * 0.46 / 5, 0, 0, 0)
+        bar.Size = UDim2.new(0.46 / 5, -3, 1, 0)
+        bar.BackgroundColor3 = EMPTY_ROUND
+        bar.BorderSizePixel = 0
+        bar.Parent = duelProgress
+        local roundCorner = Instance.new("UICorner")
+        roundCorner.CornerRadius = UDim.new(1, 0)
+        roundCorner.Parent = bar
+        table.insert(side.bars, { part = bar, active = side.active })
+    end
+end
+
+local function updateDuelProgress(mode, phase, myWins, rivalWins)
+    local shown = mode == "DUEL" and phase ~= "WAITING"
+        and phase ~= "COUNTDOWN" and myWins ~= nil and rivalWins ~= nil
+    duelProgress.Visible = shown
+    if not shown then return end
+    for index, entry in ipairs(myRoundBars) do
+        local color = index <= myWins and entry.active or EMPTY_ROUND
+        if entry.part.BackgroundColor3 ~= color then entry.part.BackgroundColor3 = color end
+    end
+    for index, entry in ipairs(rivalRoundBars) do
+        local color = index <= rivalWins and entry.active or EMPTY_ROUND
+        if entry.part.BackgroundColor3 ~= color then entry.part.BackgroundColor3 = color end
+    end
+end
+
 -- Public player-facing opt-in. No test or developer controls.
 local duelToggle = Instance.new("TextButton")
 duelToggle.Name = "DuelOneVsOne"
@@ -82,7 +130,10 @@ local function duelLabel()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local humans = #Players:GetPlayers()
     local ready = player:GetAttribute("IronYardDuelReady") == true
-    duelToggle.Visible = mode ~= "DUEL" or phase == "RESULTS"
+    -- Never overlay the action HUD with an unavailable 1v1 option.
+    duelToggle.Visible = humans <= 2
+        and (mode ~= "DUEL" or phase == "RESULTS")
+        and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
     duelToggle.Active = humans <= 2
     duelToggle.AutoButtonColor = humans <= 2
     duelToggle.Text = humans > 2 and "DUEL / 2 PLAYERS"
@@ -242,6 +293,7 @@ local function update()
     -- reaches Roblox UI properties; score/time changes remain immediate.
     if header.Text ~= headerText then header.Text = headerText end
     if detail.Text ~= detailText then detail.Text = detailText end
+    updateDuelProgress(matchMode, phase, myWins, rivalWins)
     updateIntro(phase, seconds, matchMode)
 end
 
@@ -272,7 +324,10 @@ player.ChildAdded:Connect(function(child)
     end
 end)
 
-playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(update)
+playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(function()
+    update()
+    duelLabel()
+end)
 for _, name in ipairs({
     "NeonMatchPhase", "NeonMatchRound", "NeonMatchTimeLeft",
     "NeonMatchWinner", "NeonMatchScoreLimit", "NeonBotCount",

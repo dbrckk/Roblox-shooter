@@ -461,6 +461,12 @@ def main():
         '"IronYardDuelScoreA"', '"IronYardDuelScoreB"',
         '"DUEL_BREAK"', '"IronYardDuelReadyCount"',
         '"DUEL_PREP"', 'updateIntro(phase, seconds, matchMode)',
+        'local function updateDuelProgress(mode, phase, myWins, rivalWins)',
+        'updateDuelProgress(matchMode, phase, myWins, rivalWins)',
+        'duelProgress.Name = "DuelProgress"',
+        'local myRoundBars, rivalRoundBars = {}, {}',
+        'for i = 1, 5 do',
+        'duelToggle.Visible = humans <= 2',
     ):
         has(match_hud, token, "Real opt-in duel HUD")
     has(client, 'if workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',

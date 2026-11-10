@@ -338,3 +338,21 @@ verifications d'integration de MatchService/MatchHud dans la CI.
 - La recompense de victoire est conditionnee a la presence effective du
   gagnant dans Players et utilise sa reference d'origine.
 - Tests de logique Luau et contrats Python verifient les controles.
+
+
+## HUD 1v1 : cinq marqueurs de victoire par camp
+
+Le bandeau de match possède une petite jauge de dix segments :
+cinq ambre pour les manches gagnées par le joueur local et
+cinq bleu acier pour son adversaire. Tous les segments sont
+créés une seule fois ; seuls les changements de score répliqués
+par le serveur modifient leur couleur.
+
+Le bouton JOIN 1v1 DUEL n'encombre plus l'écran lorsque le serveur
+contient plus de deux joueurs ou lorsque l'introduction de partie
+est ouverte. Il reste accessible pendant les FFA avec un ou deux
+joueurs, et au moment de demander une revanche.
+
+Le bandeau conserve une largeur maximale de 340 px, gagne 10 px
+en hauteur pour les jauges, et n'ajoute aucune boucle RenderStepped,
+requête réseau ou instance Roblox lors de chaque mise à jour.
