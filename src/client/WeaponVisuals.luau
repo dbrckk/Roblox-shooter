@@ -161,6 +161,10 @@ function WeaponVisuals:_addDetailGeometry(model, weaponId)
             local added = self.parts[#self.parts]
             added.finishRole = spec.finish
             added.isDetail = true
+            -- An in-match graphics upgrade must not leak parts into the
+            -- sniper optical sight while the rest of the model is hidden.
+            added.part.Transparency = ViewmodelRenderPolicy.transparency(
+                added.baseTransparency, self.lastViewmodelHidden == true)
         end
     end
     self.detailTier = WeaponDetailPlan.tier(preset, touch)
