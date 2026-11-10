@@ -79,6 +79,20 @@ for needle in (
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 
+# Mechanically linked pieces share transforms in the existing frame loop.
+for needle in (
+    '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',
+    '"Extractor", Vector3.new(0.035, 0.032, 0.14)',
+    'local supportMotion = self.currentWeaponId == "Shotgun"',
+    'localOffset = localOffset * workingHand * supportMotion',
+    '(partName == "Magazine" or partName == "MagazineBase")',
+    '(partName == "Slide" or partName == "EjectionPort"',
+    'or partName == "Extractor") and self.currentWeaponId == "Pistol"',
+):
+    assert needle in visuals, f"Moving first-person weapon part missing: {needle}"
+assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
+    "Mechanical motion must reuse the existing single frame loop"
+)
 for needle in (
     "function Policy.plan(weaponId, preset, touch, shotNumber)",
     'preset == "ECO"', "function Policy.arc(progress, height)",

@@ -278,3 +278,18 @@ Le nouveau panneau n'est qu'une présentation : aucune source de temps,
 dégâts ou d'autorité n'a été déplacée vers le client. Les scripts doivent
 être vérifiés sur deux joueurs Roblox/Android, notamment le remplacement
 de personnage pendant le compte à rebours.
+
+
+## Pistolet et shotgun : pièces réellement liées aux mécanismes (10 novembre 2026)
+
+- Le pistolet possède désormais un chargeur amovible visible et un
+  talon de chargeur, animés ensemble pendant le rechargement.
+- La culasse du pistolet entraîne sa fenêtre d'éjection et son extracteur
+  au lieu de laisser ces pièces fixes et visuellement décalées.
+- La pompe du shotgun entraîne également tout le bras de soutien gauche :
+  la main n'a plus l'air de flotter à travers la pièce mobile.
+- Les trois mécanismes réutilisent la **seule boucle RenderStepped**
+  du viewmodel. Aucun nouvel événement réseau, hitbox, objet physique
+  ou changement de munitions/dégâts côté serveur.
+- Les contrats statiques et la compilation sont vérifiés en CI; les
+  animations doivent aussi être contrôlées visuellement dans Roblox Studio.

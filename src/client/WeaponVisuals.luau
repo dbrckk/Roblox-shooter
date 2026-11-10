@@ -213,9 +213,22 @@ function WeaponVisuals:_createPistol(model)
 	self:_addArms(model, nil, CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
 	self:_addPart(model, "Part", "Grip", Vector3.new(0.24, 0.62, 0.24), Color3.fromRGB(24, 27, 34), CFrame.new(0, -0.29, 0.07) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "GripPanelLeft", Vector3.new(0.03, 0.46, 0.18), Color3.fromRGB(50, 57, 70), CFrame.new(-0.135, -0.3, 0.07) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
+    -- The sidearm now has a distinct magazine and baseplate that animate
+    -- through the existing server-confirmed reload pose, without physics.
+    self:_addPart(model, "Part", "Magazine", Vector3.new(0.17, 0.46, 0.16),
+        Color3.fromRGB(45, 50, 58),
+        CFrame.new(0, -0.49, 0.13) * CFrame.Angles(math.rad(-14), 0, 0),
+        MATERIAL_METAL)
+    self:_addPart(model, "Part", "MagazineBase", Vector3.new(0.22, 0.09, 0.20),
+        Color3.fromRGB(85, 91, 100),
+        CFrame.new(0, -0.73, 0.17) * CFrame.Angles(math.rad(-14), 0, 0),
+        MATERIAL_METAL)
 	self:_addPart(model, "Part", "Frame", Vector3.new(0.38, 0.24, 0.82), Color3.fromRGB(36, 41, 50), CFrame.new(0, 0, -0.2), MATERIAL_METAL)
 	self:_addPart(model, "Part", "Slide", Vector3.new(0.43, 0.18, 0.9), Color3.fromRGB(78, 88, 102), CFrame.new(0, 0.17, -0.25), MATERIAL_METAL)
 	self:_addPart(model, "Part", "EjectionPort", Vector3.new(0.2, 0.025, 0.18), Color3.fromRGB(14, 16, 20), CFrame.new(0.07, 0.272, -0.32), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "Extractor", Vector3.new(0.035, 0.032, 0.14),
+        Color3.fromRGB(139, 145, 149), CFrame.new(0.17, 0.28, -0.33),
+        MATERIAL_METAL)
 	self:_addPart(model, "Part", "Barrel", Vector3.new(0.15, 0.15, 0.54), Color3.fromRGB(16, 19, 24), CFrame.new(0, 0.16, -0.77), MATERIAL_METAL)
 	self:_addPart(model, "Part", "Muzzle", Vector3.new(0.2, 0.2, 0.08), Color3.fromRGB(8, 10, 13), CFrame.new(0, 0.16, -1.06), MATERIAL_METAL)
 	self:_addPart(model, "Part", "TriggerGuard", Vector3.new(0.32, 0.05, 0.24), Color3.fromRGB(22, 25, 31), CFrame.new(0, -0.18, -0.2), MATERIAL_METAL)
@@ -550,6 +563,10 @@ function WeaponVisuals:_render(deltaTime)
     local workingHand = CFrame.new(0.13 * magazineDip * feel.handTravel,
         -0.22 * magazineDip * feel.handTravel,
         -0.11 * magazineDip * feel.handTravel)
+    -- All left-hand components ride the shotgun pump on its mechanical beat.
+    local supportMotion = self.currentWeaponId == "Shotgun"
+        and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)
+        or CFrame.new()
 
     for _, entry in ipairs(self.parts) do
         local localOffset = entry.offset
@@ -557,13 +574,16 @@ function WeaponVisuals:_render(deltaTime)
         if string.sub(partName, 1, 4) == "Left" then
             -- All glove, strap and sleeve elements move as ONE support hand;
             -- otherwise the previous left glove remained behind during reloads.
-            localOffset = localOffset * workingHand
-        elseif partName == "Magazine" and self.currentWeaponId ~= "Shotgun" then
+            localOffset = localOffset * workingHand * supportMotion
+        elseif (partName == "Magazine" or partName == "MagazineBase")
+            and self.currentWeaponId ~= "Shotgun" then
             localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip * feel.magazineTravel,
                 0.04 * magazineDip * feel.magazineTravel)
         elseif partName == "ChargingHandle" and self.currentWeaponId == "AssaultRifle" then
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
-        elseif partName == "Slide" and self.currentWeaponId == "Pistol" then
+        elseif (partName == "Slide" or partName == "EjectionPort"
+            or partName == "Extractor") and self.currentWeaponId == "Pistol" then
+            -- Mechanism and ejection anchor must remain attached to the slide.
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif (partName == "PumpAction" or partName == "PumpGrooveA"
             or partName == "PumpGrooveB") and self.currentWeaponId == "Shotgun" then
