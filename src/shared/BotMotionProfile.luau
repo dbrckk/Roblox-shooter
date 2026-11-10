@@ -126,7 +126,11 @@ function Motion.nextPoseAt(now, nearestPlayerDistanceSquared, slot)
     local botSlot = type(slot) == "number" and slot >= 1
         and slot <= 4 and slot % 1 == 0 and slot or 1
     local phase = (botSlot - 1) * interval / 4
-    return (math.floor((now - phase) / interval) + 1) * interval + phase
+    -- Floating-point division can round an exact phase boundary just
+    -- below an integer; use a tiny tolerance so the next deadline is
+    -- strictly after now rather than retriggering on the same frame.
+    return (math.floor((now - phase) / interval + 1e-9) + 1)
+        * interval + phase
 end
 
 return Motion
