@@ -4,8 +4,24 @@ local P={}
 P.Required={
     Pistol={"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
     Knife={"IRONYARD_Knife_Static"},
+    AssaultRifle={"IRONYARD_AssaultRifle_Static",
+        "IRONYARD_AssaultRifle_ChargingHandle","IRONYARD_AssaultRifle_Magazine"},
+    Shotgun={"IRONYARD_Shotgun_Static","IRONYARD_Shotgun_PumpAction"},
+    Sniper={"IRONYARD_Sniper_Static","IRONYARD_Sniper_Bolt"},
 }
 P.Maps={"ColorMap","NormalMap","RoughnessMap","MetalnessMap"}
+
+local RUNTIME_NAMES={
+    IRONYARD_Pistol_Slide="Slide",
+    IRONYARD_AssaultRifle_ChargingHandle="ChargingHandle",
+    IRONYARD_AssaultRifle_Magazine="Magazine",
+    IRONYARD_Shotgun_PumpAction="PumpAction",
+    IRONYARD_Sniper_Bolt="Bolt",
+}
+-- Known source names only: no client-authored data or executable descendants.
+function P.runtimeName(meshName)
+    return RUNTIME_NAMES[meshName] or "WeaponBody"
+end
 
 function P.lod(preset,touch)
     return (preset=="ECO" or (touch==true and preset~="QUALITY"))
