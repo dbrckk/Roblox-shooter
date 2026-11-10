@@ -11,12 +11,11 @@ local player = Players.LocalPlayer
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local Profile = require(shared:WaitForChild("EnvironmentProfile"))
 local VaporPool = require(shared:WaitForChild("ExhaustWispPool"))
-local arena = Workspace:WaitForChild("NeonStrikeArena", 45)
-local decor = arena and arena:WaitForChild("NeonStrikeDecor", 45)
-if not decor then
-    warn("[IRON YARD] Exhaust ambience disabled: optional roof art unavailable")
-    return
-end
+-- The arena and its streamed decor folder may be replaced during a long
+-- session. Poll a cheap identity check instead of capturing a stale folder
+-- or permanently disabling visual effects after a timed startup wait.
+local decor = nil
+local decorAddedConnection = nil
 
 local registered = setmetatable({}, { __mode = "k" })
 local emitters = {}
@@ -28,7 +27,8 @@ local END_SIZE = Vector3.new(2.18, 1.04, 2.18)
 local VAPOR_COLOR = Color3.fromRGB(189, 197, 193)
 
 local function register(part)
-    if not part:IsA("BasePart")
+    if not decor or not part:IsA("BasePart")
+        or not part:IsDescendantOf(decor)
         or part:GetAttribute("IronYardExhaustVent") ~= true
         or registered[part] then return end
     registered[part] = true
@@ -38,16 +38,39 @@ local function register(part)
     })
 end
 
-for _, descendant in ipairs(decor:GetDescendants()) do
-    register(descendant)
+local function refreshDecor()
+    local arena = Workspace:FindFirstChild("NeonStrikeArena")
+    local current = arena and arena:FindFirstChild("NeonStrikeDecor")
+    if current == decor then return end
+
+    if decorAddedConnection then
+        decorAddedConnection:Disconnect()
+        decorAddedConnection = nil
+    end
+    -- Don't let emission Parts from an obsolete arena survive the swap.
+    -- Keep the bounded pool available for reuse in the replacement arena.
+    for index in pairs(activeVaporIndices) do
+        local slot = vaporSlots[index]
+        if slot and slot.part then slot.part.Parent = nil end
+        activeVaporIndices[index] = nil
+    end
+    table.clear(emitters)
+    table.clear(registered)
+    decor = current
+    if decor then
+        decorAddedConnection = decor.DescendantAdded:Connect(register)
+        for _, descendant in ipairs(decor:GetDescendants()) do
+            register(descendant)
+        end
+    end
 end
-decor.DescendantAdded:Connect(register)
+refreshDecor()
 
 -- One pool serves every rooftop exhaust, whatever the current quality
 -- preset. Animation is local only and never enters hit registration.
 local function makeWisp(entry, index, now, cap)
     local part = entry.part
-    if not part or not part:IsDescendantOf(decor) then return false end
+    if not part or not decor or not part:IsDescendantOf(decor) then return false end
     local slot, slotIndex = VaporPool.claim(vaporSlots, now, cap)
     if not slot then return false end
 
@@ -106,6 +129,7 @@ end)
 
 -- A removed LocalScript must not orphan local Workspace Parts.
 script.Destroying:Connect(function()
+    if decorAddedConnection then decorAddedConnection:Disconnect() end
     animationConnection:Disconnect()
     for _, slot in ipairs(vaporSlots) do
         if slot.part then slot.part:Destroy() end
@@ -117,8 +141,9 @@ end)
 -- decorative rooftop part or doing per-frame geometry/physics updates.
 while script.Parent do
     task.wait(0.2)
+    refreshDecor()
     local camera = Workspace.CurrentCamera
-    if camera then
+    if camera and decor then
         for i = #emitters, 1, -1 do
             local entry = emitters[i]
             if not entry.part:IsDescendantOf(decor) then
