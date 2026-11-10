@@ -313,7 +313,7 @@ def main():
                 "bot.turnBlend = 0", "bot.reversalBlend = 0",
                 "bot.coverApproachBlend = 0", "bot.coverBraceBlend = 0"):
         has(bot, key, "Respawn clears local turn and braking pose inertia")
-    for key in ("BotMotionProfile.interval(distance)",
+    for key in ("BotMotionProfile.nextPoseAt(\n                        now, nearestSquared, bot.slot)",
                 "BotAnimation.step(bot, now, bot.isAiming == true)",
                 "task.wait(1 / 30)", "BotDeathAnimation.play(bot)"):
         has(bot, key, "Decoupled 15Hz pose clock and staged defeat")
