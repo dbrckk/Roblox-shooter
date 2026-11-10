@@ -87,3 +87,22 @@ tireur local et les coups proches non masqués. Le cap de voix reste identique.
 Les tests Luau contrôlent les valeurs; la qualité perçue doit être comparée en
 Studio avec une source proche, derrière un conteneur et à plus de 100 studs.
 Les sources audio intégrées demeurent provisoires, sans promesse d'échantillons AAA.
+
+
+## ADS et visuel natif, 10 novembre 2026
+
+Le jeu possède toujours les 4 IDs VANGUARD et les 12 IDs PBR à zéro :
+leurs vrais meshes/textures n'ont donc **pas été activés** dans Roblox par ce lot.
+
+- Correction d'un défaut de transition : un changement d'arme quitte toujours
+  l'ancienne visée avant d'équiper la nouvelle. Le sniper ne récupère plus
+  le FOV du pistolet ou du shotgun en cas de switch pendant ADS.
+- Les positions visées du pistolet, AR-24 et shotgun sont centrées sur
+  leurs mires arrière existantes ou ajoutées, au lieu d'un décalage global
+  identique pour toutes les armes. L'ADS réduit sway/bob mais garde recul.
+- Le fusil à pompe possède désormais une mire arrière; le tube du sniper
+  et sa lentille sont cylindriques avec tourelles latérales dédiées.
+- Mêmes hitboxes, munitions et logique de tir. Pas de raycast ni audio ajoutés
+  à RenderStepped. Les nouvelles pièces sont strictement cosmétiques.
+- La CI compile et teste la géométrie numérique, mais ne valide pas
+  encore visuellement le centrage sur Android ou PC.

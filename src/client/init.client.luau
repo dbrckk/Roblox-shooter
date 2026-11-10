@@ -771,11 +771,13 @@ local function equipWeapon(weaponId)
 		return
 	end
 
+    -- Release old FOV and scope HUD BEFORE changing the selected weapon.
+    -- Pistol ADS -> sniper previously inherited the old gun's magnification.
+    if currentWeaponId ~= weaponId and scoped then
+        setScoped(false)
+    end
 	currentWeaponId = weaponId
     refreshTouchSelection()
-	if currentWeaponId ~= "Sniper" then
-		setScoped(false)
-	end
 
 	hud:setWeapon(weaponId)
     local ammunition = ammoByWeapon[weaponId]

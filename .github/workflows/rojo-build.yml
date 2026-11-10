@@ -96,6 +96,7 @@ jobs:
           ./luau scripts/test_weapon_cadence.luau
           ./luau scripts/test_shot_input_policy.luau
           ./luau scripts/test_weapon_feel_profile.luau
+          ./luau scripts/test_weapon_aim_pose.luau
           ./luau scripts/test_cartridge_ejection_policy.luau
           ./luau scripts/test_viewmodel_render_policy.luau
           ./luau scripts/test_weapon_audio_policy.luau

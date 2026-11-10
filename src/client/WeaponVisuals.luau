@@ -11,6 +11,7 @@ local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
+local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -66,6 +67,7 @@ function WeaponVisuals.new(WeaponConfig)
 	self.sprinting = false
 	self.scoped = false
     self.aimBlend = 0
+    self.aimPose = nil
     self.reloadActive = false
     self.reloadStartedAt = 0
     self.reloadBlend = 0
@@ -230,9 +232,13 @@ function WeaponVisuals:_createSniper(model)
 	self:_addPart(model, "Part", "Barrel", Vector3.new(0.12, 0.12, 1.68), Color3.fromRGB(18, 22, 27), CFrame.new(0, 0.03, -1.47), MATERIAL_METAL)
 	self:_addPart(model, "Part", "MuzzleBrake", Vector3.new(0.28, 0.18, 0.18), Color3.fromRGB(29, 34, 40), CFrame.new(0, 0.03, -2.35), MATERIAL_METAL)
 	self:_addPart(model, "Part", "Grip", Vector3.new(0.23, 0.54, 0.21), Color3.fromRGB(25, 29, 35), CFrame.new(0.02, -0.36, -0.02) * CFrame.Angles(math.rad(-10), 0, 0), MATERIAL_SMOOTH)
-	self:_addPart(model, "Part", "ScopeBody", Vector3.new(0.3, 0.24, 0.78), Color3.fromRGB(18, 23, 30), CFrame.new(0, 0.32, -0.38), MATERIAL_METAL)
-	self:_addPart(model, "Part", "ScopeFront", Vector3.new(0.38, 0.3, 0.16), Color3.fromRGB(18, 23, 30), CFrame.new(0, 0.32, -0.83), MATERIAL_METAL)
-	self:_addPart(model, "Part", "ScopeLens", Vector3.new(0.28, 0.22, 0.04), Color3.fromRGB(81, 112, 127), CFrame.new(0, 0.32, -0.94), MATERIAL_SMOOTH, 0.25)
+    -- Rounded optical tube and lens instead of the original stacked cubes.
+    local scopeAxis = CFrame.Angles(math.pi / 2, 0, 0)
+    self:_addPart(model, "Part", "ScopeBody", Vector3.new(0.30, 0.78, 0.30), Color3.fromRGB(18, 23, 30), CFrame.new(0, 0.32, -0.38) * scopeAxis, MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "ScopeFront", Vector3.new(0.38, 0.16, 0.38), Color3.fromRGB(18, 23, 30), CFrame.new(0, 0.32, -0.83) * scopeAxis, MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "ScopeLens", Vector3.new(0.28, 0.04, 0.28), Color3.fromRGB(81, 112, 127), CFrame.new(0, 0.32, -0.94) * scopeAxis, MATERIAL_SMOOTH, 0.25, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "ScopeAdjustmentTurret", Vector3.new(0.14, 0.18, 0.14), Color3.fromRGB(63, 72, 76), CFrame.new(0, 0.57, -0.37), MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "ScopeAdjustmentCap", Vector3.new(0.17, 0.035, 0.17), Color3.fromRGB(30, 35, 38), CFrame.new(0, 0.68, -0.37), MATERIAL_METAL, nil, Enum.PartType.Cylinder)
 	self:_addPart(model, "Part", "ForeRail", Vector3.new(0.42, 0.08, 0.78), Color3.fromRGB(36, 42, 50), CFrame.new(0, -0.12, -0.86), MATERIAL_METAL)
 end
 
@@ -282,6 +288,7 @@ function WeaponVisuals:_createShotgun(model)
     self:_addPart(model, "Part", "MuzzleRing", Vector3.new(0.31, 0.31, 0.12), charcoal, CFrame.new(0, 0.10, -2.31), MATERIAL_METAL)
     self:_addPart(model, "Part", "ShellCarrier", Vector3.new(0.08, 0.21, 0.43), sand, CFrame.new(-0.30, 0.02, -0.10), MATERIAL_SMOOTH)
     self:_addPart(model, "Part", "Sight", Vector3.new(0.09, 0.13, 0.10), sand, CFrame.new(0, 0.25, -2.12), MATERIAL_METAL)
+    self:_addPart(model, "Part", "RearSight", Vector3.new(0.19, 0.09, 0.14), charcoal, CFrame.new(0, 0.24, -0.28), MATERIAL_METAL)
 end
 
 function WeaponVisuals:_createKnife(model)
@@ -297,6 +304,9 @@ end
 function WeaponVisuals:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
     self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap
+    self.aimBlend = 0
+    local pose = WeaponAimPose.get(weaponId)
+    self.aimPose = pose and CFrame.new(pose.x, pose.y, pose.z) or nil
 	self.equipStartedAt = os.clock()
 	self.recoil = 0
     self.reloadActive = false
@@ -431,6 +441,8 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
     local bobAmount = (self.sprinting and 0.035 or 0.014) * movement
     local cadence = self.sprinting and 13.5 or 10
     self.stepPhase = (self.stepPhase + cadence * deltaTime * movement) % (math.pi * 2)
+    local swayFactor, bobFactor = WeaponAimPose.damping(self.aimBlend)
+    bobAmount *= bobFactor
 	local bob = CFrame.new(
 		math.sin(self.stepPhase) * bobAmount,
 		math.abs(math.cos(self.stepPhase)) * bobAmount * 0.7,
@@ -448,9 +460,10 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
         * CFrame.Angles(math.rad(fireAlpha * feel.pitch),
             math.rad(fireAlpha * feel.yaw), math.rad(fireAlpha * feel.roll))
 
-	local swayMotion = CFrame.Angles(self.sway.Y, self.sway.X, self.sway.X * 0.45)
+	local swayMotion = CFrame.Angles(self.sway.Y * swayFactor,
+        self.sway.X * swayFactor, self.sway.X * 0.45 * swayFactor)
 	local sprintOffset = SPRINT_OFFSETS[self.currentWeaponId] or CFrame.new()
-	local sprintMotion = CFrame.new():Lerp(sprintOffset, sprintAlpha)
+	local sprintMotion = CFrame.new():Lerp(sprintOffset, sprintAlpha * (1 - self.aimBlend))
 
     -- Common server-timed reload progression, visibly different mechanical
     -- grip and roll per original weapon. Never changes the server reload.
@@ -520,11 +533,11 @@ function WeaponVisuals:_render(deltaTime)
 	local offset = WEAPON_OFFSETS[self.currentWeaponId] or WEAPON_OFFSETS.Pistol
     local aimTarget = self.scoped and self.currentWeaponId ~= "Sniper" and 1 or 0
     self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(deltaTime * 13, 0, 1)
-    -- Smooth sight alignment for iron-sight weapons. The sniper uses its
-    -- dedicated scope overlay and hides the viewmodel when scoped.
-    local aimOffset = CFrame.new(-0.40, 0.13, -0.14)
-        * CFrame.Angles(math.rad(-2), math.rad(-4), 0)
-    local root = camera.CFrame * offset * CFrame.new():Lerp(aimOffset, self.aimBlend)
+    -- Blend the full viewmodel root toward each weapon's rear iron sight.
+    -- Sniper keeps its dedicated optical overlay and hidden scoped weapon.
+    local rootPose = self.aimPose and offset:Lerp(self.aimPose, self.aimBlend)
+        or offset
+    local root = camera.CFrame * rootPose
         * self:_getAnimationCFrame(deltaTime, camera, self.stepBlend, reloadPose)
 
     -- Short, mechanically coherent motions for actual moving weapon parts.

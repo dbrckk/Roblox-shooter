@@ -17,6 +17,7 @@ client = get("src/client/init.client.luau")
 server = get("src/server/WeaponService.luau")
 config = get("src/shared/WeaponConfig.luau")
 ejection = get("src/shared/CartridgeEjectionPolicy.luau")
+ads = get("src/shared/WeaponAimPose.luau")
 
 for needle in (
     "function Feel.get(id)", "function Feel.kick(id, current, added)",
@@ -101,6 +102,26 @@ assert visuals.count("function WeaponVisuals:_ejectCartridge(plan)") == 1
 assert visuals.index("self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap") < (
     visuals.index("function WeaponVisuals:_ejectCartridge(plan)"))
 assert "FireServer" not in ejection and "Instance.new" not in ejection
+for needle in (
+    "function Pose.get(id)", "function Pose.damping(blend)",
+    "sightX = 0, sightY = 0.32, sightZ = -0.05",
+    "sightX = 0, sightY = 0.30, sightZ = 0.10",
+    "sightX = 0, sightY = 0.24, sightZ = -0.28",
+):
+    assert needle in ads, f"ADS policy missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponAimPose")',
+    "WeaponAimPose.damping(self.aimBlend)",
+    "self.aimPose = pose and CFrame.new(pose.x, pose.y, pose.z) or nil",
+    "offset:Lerp(self.aimPose, self.aimBlend)",
+    '"ScopeAdjustmentTurret"', '"ScopeAdjustmentCap"',
+    '"RearSight", Vector3.new(0.19, 0.09, 0.14)',
+):
+    assert needle in visuals, f"Sight geometry or pose missing: {needle}"
+assert "local aimOffset = CFrame.new(-0.40, 0.13, -0.14)" not in visuals
+assert "if currentWeaponId ~= weaponId and scoped then" in client
+assert client.index("if currentWeaponId ~= weaponId and scoped then") < client.index(
+    "currentWeaponId = weaponId", client.index("local function equipWeapon("))
 assert "visuals:playFireSound(weaponId, ray.Origin, true)" in client, (
     "Locally predicted shot must never be culled as a remote shot"
 )
