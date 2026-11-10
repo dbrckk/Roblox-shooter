@@ -132,8 +132,10 @@ assert(count == 24, "Quality downgrade retains only 24 eligible flashes")
 -- a high-priority core (4) and optional spark(s) (3); no extra instance
 -- or Tween pool is needed even under four-bot crossfire.
 local Feedback = require("../src/shared/CombatVfxProfile")
-local hitSlots = {}
 for _, preset in ipairs({"ECO", "BALANCED", "QUALITY"}) do
+    -- Independent combat sessions may reset the clock; the same live
+    -- pool never receives time in reverse within a single session.
+    local hitSlots = {}
     local cap = Pool.cap(preset, true)
     local now = 200
     for shot = 1, 1800 do
