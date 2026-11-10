@@ -104,8 +104,8 @@ assert 'Shotgun = { anchor = "ShotgunEjectionPort"' in ejection
 assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1
 assert 'FireServer' not in reload_visual and 'Instance.new' not in reload_visual
 assert 'return {' not in reload_visual, "No per-frame allocation of shell pose tables"
-assert 'local loadingShell = self.currentWeaponId' not in visuals,
-    "Shotgun reload viewmodel must consume scalar motion, not tables"
+assert 'local loadingShell = self.currentWeaponId' not in visuals, (
+    "Shotgun reload viewmodel must consume scalar motion, not tables")
 
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
