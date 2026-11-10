@@ -458,3 +458,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Un compteur de génération protège les connexions `leaderstats` lors d'un remplacement pendant `WaitForChild("Eliminations", 10)`. L'ancien signal est déconnecté et une réponse obsolète ne peut plus écraser le score courant.
 - [x] Contrat d'intégration Python ajouté à `check_mobile_hud_contract.py` et exécuté dans la CI existante.
 - [ ] Valider en session Roblox la réplication lente des leaderstats, le changement de manche et les transitions de spawn ; comparer les écritures UI avec les versions précédentes.
+
+
+### L3.16 — mesures P95/P99 et reconnexion du HUD tactique (10 novembre 2026)
+
+- [x] Le bouton PERF privé (créateur/Studio uniquement) affiche maintenant FPS, temps d'image maximal, P95/P99 des 240 dernières images et nombre d'images au-delà de 33,3 ms. L'ancienne mesure FPS/pic ne distinguait pas les ralentissements récurrents des incidents isolés.
+- [x] `ClientFrameWindow` utilise un tableau circulaire borné à 240 images, sans allocation par image ; le tri statistique est déclenché au plus une fois par seconde lorsque PERF est activé. Le suivi est réinitialisé à chaque activation, ne quitte pas le client, et ne modifie aucun service de gameplay.
+- [x] La connexion aux changements de taille de `CurrentCamera` est désormais recréée après remplacement de la caméra, avec libération de l'ancien abonnement. Les textes de secteur et cap du HUD tactique ne sont plus réécrits lorsqu'ils sont identiques.
+- [x] Tests Luau : quantiles exacts nearest-rank, 240 entrées tournantes, pics à 33/50 ms, reset et entrées invalides. Contrôles Python des câblages et sécurité du panneau, puis compilation et build Rojo CI.
+- [ ] Enregistrer sur Android, avec le compte créateur, des sessions comparables de 60 secondes et quatre bots : FPS, P95, P99, nombre d'images lentes, ECO/BALANCED/QUALITY. Cette mise à jour rend les ralentissements mesurables, mais n'est pas une preuve de gain FPS.
