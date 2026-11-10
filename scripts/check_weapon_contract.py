@@ -88,7 +88,44 @@ def main():
         "player.CharacterRemoving:Connect(function(character)",
     ):
         has(server, needle, "Allocation-free server fire hot path")
-    require(server.count("local params = shotRaycastParams(player, character)") == 2,
+    for needle in (
+        "local function convergeCameraAim(player, payload, direction, config, character, head)",
+        'if typeof(cameraOrigin) ~= "Vector3" then return direction end',
+        "ShotInputPolicy.validCameraOffset(offset.X, offset.Y, offset.Z)",
+        "workspace:Raycast(head.Position, offset, params)",
+        "workspace:Raycast(cameraOrigin, direction * config.range, params)",
+        "local fromHead = aimPoint - head.Position",
+        "fromHead:Dot(direction) <= 0",
+        "return fromHead.Unit",
+        "direction = convergeCameraAim(player, payload, direction, config,",
+        "if not canFire(player, weaponId, config) then",
+        "local origin = head.Position",
+    ):
+        has(server, needle, "Server-side sight convergence without camera-origin damage")
+    for needle in (
+        "Policy.MAX_CONVERGENCE_OFFSET = 4.5",
+        "function Policy.validCameraOffset(dx, dy, dz)",
+        "validNumber(dx) and validNumber(dy) and validNumber(dz)",
+    ):
+        has(shot_input, needle, "Bounded camera aim origin; fallback under high latency")
+    require(server.index("direction = convergeCameraAim(") <
+            server.index("if not canFire(player, weaponId, config) then"),
+            "Aim hint must be resolved before consuming server ammo/cooldown")
+    require(server.count("local origin = head.Position") == 2,
+            "Rifle and shotgun must keep server-owned Head origins")
+    require("local start = head.Position" in server,
+            "Knife must keep its server-owned Head origin")
+    require(server.count("workspace:Raycast(cameraOrigin, direction * config.range, params)") == 1,
+            "Only one camera sight ray for each accepted converged aim")
+    require(server.count("local params = shotRaycastParams(player, character)") == 3,
+            "Convergence reuses the existing character raycast filter")
+    require(server.count("makeRaycastParams({ character })") == 2,
+            "Only one cached hitscan filter and one mutable knife filter permitted")
+    # Existing hot-path shot filters must still be used by hitscan & pellets.
+    # Their cached instance is shared with optional convergence.
+    # The check below replaces the previous two-use assertion.
+    # Remainder of weapon regression remains unchanged.
+    require(server.count("local params = shotRaycastParams(player, character)") == 3,
             "Rifle/sniper/pistol and shotgun must reuse character raycast filters")
     require(server.count("makeRaycastParams({ character })") == 2,
             "Only one cached hitscan filter and one mutable knife filter permitted")

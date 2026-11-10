@@ -15,4 +15,14 @@ function Policy.validDirection(x, y, z)
         and x * x + y * y + z * z >= 0.000001
 end
 
+-- Camera origin is an optional aiming hint, never the damage ray origin.
+-- Beyond this offset (including under replication latency) the server
+-- preserves the original head-origin shot rather than rejecting the fire.
+Policy.MAX_CONVERGENCE_OFFSET = 4.5
+function Policy.validCameraOffset(dx, dy, dz)
+    return validNumber(dx) and validNumber(dy) and validNumber(dz)
+        and dx * dx + dy * dy + dz * dz
+            <= Policy.MAX_CONVERGENCE_OFFSET * Policy.MAX_CONVERGENCE_OFFSET
+end
+
 return Policy

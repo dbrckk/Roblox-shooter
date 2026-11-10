@@ -15,6 +15,7 @@ FPS Roblox indépendant, utilisant **RIVALS** (duels et progression), **Hypersho
 
 Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas-mikalainis/roblox-precision-framework) par Lukas Mikalainis, sous **MIT**. La licence et attribution sont conservées dans [LICENSE](LICENSE). Code serveur/client et jeu de tirs intégrés, pas seulement des fichiers de documentation.
 
+- **Précision de visée caméra/tête (10 novembre 2026) :** la visée du joueur converge désormais vers le point visible depuis sa caméra, mais le rayon de dégâts reste lancé depuis la tête contrôlée par le serveur, sans tir à travers les couvertures. En cas de caméra trop éloignée ou masquée (latence/déplacement rapide), la trajectoire serveur existante reste utilisée. La validation Roblox Studio reste à effectuer.
 - **Arsenal de cinq armes originales :** AR-24 automatique, B-8 à huit plombs, pistolet, sniper et couteau à lancer. Dégâts, dispersion, chargeurs, rechargements et cadence sont contrôlés par le serveur. Les armes disposent de modèles originaux à la première personne ; lunette sniper et visée à l'épaule/hausse pour les autres armes.
 - **Munitions et confort de tir :** 30 balles AR-24, 14 pistolet, 6 pompe, 5 sniper ; couteaux sans chargeur. Rechargement par `R` sur PC ou bouton `RLD` sur Android ; nouvelles munitions en début de manche. Le HUD affiche la quantité réelle répliquée par le serveur.
 - Déplacements : sprint, slide, saut, boost, wallrun et mantle.

@@ -111,6 +111,35 @@ local function shotRaycastParams(player, character)
     return state.shotRayParams
 end
 
+-- Camera-space aim converges on the actual target, while the accepted damage
+-- ray STILL originates at the server character's Head. Never trust a client
+-- hit/target, and never shoot from an offset camera behind cover.
+-- Invalid/stale camera origins (e.g. a sprinting player on a high-ping link)
+-- fall back to the original head ray to avoid rejecting legitimate shots.
+local function convergeCameraAim(player, payload, direction, config, character, head)
+    local cameraOrigin = payload.origin
+    if typeof(cameraOrigin) ~= "Vector3" then return direction end
+    local offset = cameraOrigin - head.Position
+    if not ShotInputPolicy.validCameraOffset(offset.X, offset.Y, offset.Z) then
+        return direction
+    end
+    if offset.Magnitude <= 0.05 then return direction end
+
+    local params = shotRaycastParams(player, character)
+    -- Occluded cameras cannot grant a new firing position or view angle.
+    if workspace:Raycast(head.Position, offset, params) then
+        return direction
+    end
+    local cameraHit = workspace:Raycast(cameraOrigin, direction * config.range, params)
+    local aimPoint = cameraHit and cameraHit.Position
+        or cameraOrigin + direction * config.range
+    local fromHead = aimPoint - head.Position
+    if fromHead.Magnitude <= 0.05 or fromHead:Dot(direction) <= 0 then
+        return direction
+    end
+    return fromHead.Unit
+end
+
 local function sendFeedback(player, message)
     if remotes then
         remotes.WeaponFeedback:FireClient(player, message)
@@ -571,8 +600,10 @@ local function onFireWeapon(player, payload)
     end
 
     -- A dead character cannot fire or consume its rate limit.
-    local liveCharacter = getLiveCharacter(player)
+    local liveCharacter, _, liveHead = getLiveCharacter(player)
     if not liveCharacter then return end
+    direction = convergeCameraAim(player, payload, direction, config,
+        liveCharacter, liveHead)
     if not canFire(player, weaponId, config) then
         return
     end
