@@ -450,3 +450,11 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Tous les abonnements sont libérés et l'index purgé lors de chaque changement de Character. La caméra Roblox peut continuer à écraser `LocalTransparencyModifier` : le recalage des seules pièces encore vivantes reste assuré chaque image pour conserver la première personne et les armes visibles.
 - [x] Suite Luau : 4000 Parts streamées et retirées, sorties au milieu de la liste, doublons, reparenting, 100 respawns consécutifs ; contrat de câblage Python, compilation et build Rojo.
 - [ ] Vérification en Studio/Android : accessoires apparaissant/disparaissant pendant un combat, mort et respawn, caméra en première personne, absence de bras/visage qui masquent l'arme. Mesurer le frame-time réel.
+
+
+### L3.15 — scoreboard sans écritures inutiles ni leaderstats obsolètes (10 novembre 2026)
+
+- [x] Le panneau de match ne réécrit `header.Text` et `detail.Text` que lorsque la valeur réellement visible change. Les événements de phase, de temps, de score et de bots restent réactifs immédiatement.
+- [x] Un compteur de génération protège les connexions `leaderstats` lors d'un remplacement pendant `WaitForChild("Eliminations", 10)`. L'ancien signal est déconnecté et une réponse obsolète ne peut plus écraser le score courant.
+- [x] Contrat d'intégration Python ajouté à `check_mobile_hud_contract.py` et exécuté dans la CI existante.
+- [ ] Valider en session Roblox la réplication lente des leaderstats, le changement de manche et les transitions de spawn ; comparer les écritures UI avec les versions précédentes.
