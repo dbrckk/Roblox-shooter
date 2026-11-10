@@ -13,6 +13,7 @@ local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local BotHearingService = require(script.Parent:WaitForChild("BotHearingService"))
+local CombatFxRelay = require(script.Parent:WaitForChild("CombatFxRelay"))
 local WeaponService = {}
 
 local remotes = nil
@@ -120,12 +121,12 @@ local function broadcastFireFx(player, weaponId, origin, soundOnly)
     -- Thrown knives have no PlayerTracer, so keep their sound-only packet.
     BotHearingService.record(player.Character, weaponId, origin)
     if soundOnly then
-        remotes.WeaponFx:FireAllClients({
+        CombatFxRelay.send(remotes.WeaponFx, {
             kind = "FireSound",
             shooterUserId = player.UserId,
             weaponId = weaponId,
             origin = origin,
-        })
+        }, origin, player)
     end
 end
 
@@ -137,7 +138,7 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
         local humanoid = getHumanoidFromHit(result.Instance)
         isWorldImpact = humanoid == nil
     end
-    remotes.WeaponFx:FireAllClients({
+    CombatFxRelay.send(remotes.WeaponFx, {
         kind = "PlayerTracer",
         shooterUserId = player.UserId,
         weaponId = weaponId,
@@ -147,7 +148,7 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
         impactNormal = isWorldImpact and result.Normal or nil,
         impactMaterial = isWorldImpact and result.Material.Name or nil,
         pelletImpacts = pelletImpacts,
-    })
+    }, origin, player)
 end
 
 local function damageHit(attacker, weaponId, config, raycastResult, origin)
