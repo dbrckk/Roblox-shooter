@@ -9,8 +9,9 @@ if not RunService:IsStudio() and not (
     game.CreatorType == Enum.CreatorType.User and game.CreatorId > 0
     and player.UserId == game.CreatorId) then return end
 
-local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared")
-    :WaitForChild("PrecisionNet"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local PrecisionNet = require(Shared:WaitForChild("PrecisionNet"))
+local FrameWindow = require(Shared:WaitForChild("ClientFrameWindow"))
 local remote = PrecisionNet.getRemotes(false).PerformanceDiagnostics
 
 local gui = Instance.new("ScreenGui")
@@ -35,7 +36,7 @@ toggle.Parent = gui
 local panel = Instance.new("Frame")
 panel.Name = "PerformancePanel"
 panel.Visible = false
-panel.Size = UDim2.fromOffset(272, 245)
+panel.Size = UDim2.fromOffset(272, 279)
 panel.Position = UDim2.fromOffset(12, 100)
 panel.BackgroundColor3 = Color3.fromRGB(21, 29, 33)
 panel.BackgroundTransparency = 0.07
@@ -58,11 +59,9 @@ label.Parent = panel
 
 local active = false
 local lastPacket = nil
-local frameCount = 0
+local frameWindow = FrameWindow.new()
 local frameSeconds = 0
-local maximumFrameMs = 0
-local fps = 0
-local framePeak = 0
+local latestFrameStats = nil
 
 local function updateLabel()
     if not active then return end
@@ -72,6 +71,13 @@ local function updateLabel()
         return
     end
     local r, t = p.rates, p.timings
+    local frames = latestFrameStats
+    local fps = frames and frames.fps or 0
+    local framePeak = frames and frames.peakMs or 0
+    local p95 = frames and frames.p95Ms or 0
+    local p99 = frames and frames.p99Ms or 0
+    local slow = frames and frames.slow33 or 0
+    local samples = frames and frames.count or 0
     local rays = (r.targetRay or 0) + (r.navRay or 0)
         + (r.tacticsRay or 0) + (r.muzzleRay or 0) + (r.shotRay or 0)
     local think = t.thinkMs or {}
@@ -80,6 +86,8 @@ local function updateLabel()
     label.Text = string.format(
         "IRON YARD / PRIVATE PROFILER\n"
         .. "FPS client: %4.0f   pic: %.0fms\n"
+        .. "P95: %.0fms  P99: %.0fms\n"
+        .. ">33ms: %d / %d images\n"
         .. "Bots actifs: %d\n"
         .. "Raycasts IA: %.1f/s\n"
         .. "  vision %.1f | nav %.1f\n"
@@ -90,7 +98,8 @@ local function updateLabel()
         .. "IA ms: %.1f avg / %.1f pic\n"
         .. "Pose ms: %.1f avg / %.1f pic\n"
         .. "Pose: %.1f/s | Feu: %.1f/s",
-        fps, framePeak, p.bots or 0, rays,
+        fps, framePeak, p95, p99, slow, samples,
+        p.bots or 0, rays,
         r.targetRay or 0, r.navRay or 0,
         r.tacticsRay or 0, (r.muzzleRay or 0) + (r.shotRay or 0),
         r.pathStarted or 0, r.pathDeferred or 0,
@@ -121,11 +130,9 @@ toggle.Activated:Connect(function()
     toggle.Text = active and "CLOSE" or "PERF"
     if active then
         lastPacket = nil
-        fps = 0
-        framePeak = 0
-        frameCount = 0
+        FrameWindow.clear(frameWindow)
+        latestFrameStats = nil
         frameSeconds = 0
-        maximumFrameMs = 0
         updateLabel()
     end
     remote:FireServer(active and "start" or "stop")
@@ -133,15 +140,11 @@ end)
 
 RunService.RenderStepped:Connect(function(dt)
     if not active then return end
+    if not FrameWindow.push(frameWindow, dt) then return end
     frameSeconds += dt
-    frameCount += 1
-    maximumFrameMs = math.max(maximumFrameMs, dt * 1000)
     if frameSeconds >= 1.0 then
-        fps = frameCount / frameSeconds
-        framePeak = maximumFrameMs
-        frameCount = 0
-        frameSeconds = 0
-        maximumFrameMs = 0
+        latestFrameStats = FrameWindow.snapshot(frameWindow)
+        frameSeconds %= 1.0
         updateLabel()
     end
 end)
