@@ -28,6 +28,7 @@ def main():
     network = source("src/shared/PrecisionNet.luau")
     server = source("src/server/WeaponService.luau")
     shot_input = source("src/shared/ShotInputPolicy.luau")
+    spread_policy = source("src/shared/WeaponSpreadPolicy.luau")
     client = source("src/client/init.client.luau")
     viewmodel = source("src/client/WeaponVisuals.luau")
     hud = source("src/client/HudController.luau")
@@ -247,6 +248,40 @@ def main():
     for key in ("AssaultRifle", "Shotgun", "Sniper", "Pistol"):
         has(config, "aimFov" if key != "Sniper" else "zoomFieldOfView",
             f"ADS support {key}")
+
+    # Competitive first-shot accuracy is server-only. This policy cannot
+    # trust a client spread claim or advance after a rejected shot.
+    for needle in (
+        "function Policy.next(weaponId, previousAt, previousBurst, now, maxDegrees)",
+        "Policy.RESET_SECONDS = 0.38",
+        "Policy.FIRST_SHOT_DEGREES = 0.17",
+        "Policy.STEP_DEGREES = 0.23",
+        'weaponId ~= "AssaultRifle"',
+    ):
+        has(spread_policy, needle, "Pure authoritative burst profile")
+    for needle in (
+        'WaitForChild("WeaponSpreadPolicy")',
+        "lastSpreadAt = {}", "spreadCount = {}",
+        "local function acceptedRaycastSpread(player, weaponId, config)",
+        "WeaponSpreadPolicy.next(weaponId,",
+        "state.lastSpreadAt[weaponId] = now",
+        "state.spreadCount[weaponId] = count",
+        "local function fireRaycastWeapon(player, weaponId, config, direction, coneDegrees)",
+        "randomSpread(direction, coneDegrees)",
+        "local coneDegrees = acceptedRaycastSpread(player, weaponId, config)",
+        "fireRaycastWeapon(player, weaponId, config, direction, coneDegrees)",
+        "state.lastSpreadAt = {}",
+        "state.spreadCount = {}",
+    ):
+        has(server, needle, "Accepted-only burst cone and respawn reset")
+    require(server.index("if not canFire(player, weaponId, config) then") <
+            server.index("local coneDegrees = acceptedRaycastSpread(player, weaponId, config)"),
+            "Rejected shots must not grow the server burst")
+    require(server.count("state.lastSpreadAt = {}") == 2
+            and server.count("state.spreadCount = {}") == 2,
+            "Both round reset and character respawn must reset server burst")
+    require("spreadDegrees = " not in source("src/client/init.client.luau"),
+            "Client should never send/choose weapon dispersion")
 
     has(network, 'ReloadWeapon = "RemoteEvent"', "Network ammo remote")
     for needle in (

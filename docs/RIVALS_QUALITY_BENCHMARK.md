@@ -141,3 +141,28 @@ Les quatre segments sont repositionnés seulement quand leur rayon arrondi chang
 - À contrôler dans le moteur Roblox : se faire éliminer pendant l'ADS sniper
   et pistolet, réapparaître, changer de caméra et d'arme, vérifier le FOV
   et le réticule sur Android et PC.
+
+
+## Précision compétitive : premier tir et rafales (10 novembre 2026)
+
+Un défaut identifié dans le combat : les tirs du fusil AR-24 utilisaient
+toujours le même cône de 1,1°, même après une pause. À longue distance,
+cela rendait le premier tir aléatoirement imprécis. Correction côté serveur :
+le premier tir AR-24 utilise un cône de 0,17°, puis les tirs successifs
+élargissent le cône de 0,23° par coup jusqu'à la limite préexistante
+de 1,1°. Une pause d'au moins 0,38 s réinitialise la précision.
+
+Le fusil à pompe conserve sa dispersion fixe de huit plombs et les trois
+autres armes leurs réglages existants (pistolet et sniper à 0°).
+Le serveur gère seul cadence, timestamp, nombre de tirs de la rafale,
+dispersion et dégâts. Les tirs rejetés n'augmentent pas le bloom. Une mort
+ou une nouvelle manche réinitialise le compteur; changer d'arme pendant une
+rafale ne falsifie pas les délais de tir. Aucun nouveau remote, aucun
+raycast ni instance; le réticule client reste indicatif, pas une promesse
+sur le point exact d'impact du RNG côté serveur.
+
+Tests Luau : premier tir, sixième tir, pause, changement de cadence, armes
+non concernées, horloge/paramètres invalides, 50 000 coups simulés;
+contrat Python vérifiant le chemin d'admission puis le raycast.
+Validation en moteur restante : 50, 100, 200 studs sur cible,
+tir par tap-fire vs automatique, recul ressenti et latence Android/PC.

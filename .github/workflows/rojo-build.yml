@@ -94,6 +94,7 @@ jobs:
           ./luau scripts/test_vanguard_mesh_policy.luau
           ./luau scripts/test_round_standings.luau
           ./luau scripts/test_weapon_cadence.luau
+          ./luau scripts/test_weapon_spread_policy.luau
           ./luau scripts/test_shot_input_policy.luau
           ./luau scripts/test_weapon_feel_profile.luau
           ./luau scripts/test_weapon_aim_pose.luau

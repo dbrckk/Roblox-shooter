@@ -6,6 +6,7 @@ local Debris = game:GetService("Debris")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local ShotInputPolicy = require(shared:WaitForChild("ShotInputPolicy"))
+local WeaponSpreadPolicy = require(shared:WaitForChild("WeaponSpreadPolicy"))
 local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
@@ -28,6 +29,8 @@ local function getState(player)
         state = {
             equippedWeaponId = "AssaultRifle",
             lastFireAt = {},
+            lastSpreadAt = {},
+            spreadCount = {},
             nextGlobalFireAt = 0,
             magazines = {},
             reloadUntil = {},
@@ -352,6 +355,21 @@ local function canFire(player, weaponId, config)
     return true
 end
 
+-- Only after cadence/ammo admission do we advance the burst state.
+-- A client cannot choose a spread value, hitbox, or burst timestamp.
+local function acceptedRaycastSpread(player, weaponId, config)
+    local baseline = config.spreadDegrees or 0
+    if baseline <= 0 then return baseline end
+    local state = getState(player)
+    local now = os.clock()
+    local cone, count = WeaponSpreadPolicy.next(weaponId,
+        state.lastSpreadAt[weaponId], state.spreadCount[weaponId], now, baseline)
+    if cone == nil then return baseline end -- safe native-weapon fallback
+    state.lastSpreadAt[weaponId] = now
+    state.spreadCount[weaponId] = count
+    return cone
+end
+
 -- Server-side cone sampling: the client never selects individual pellets.
 local function randomSpread(direction, spreadDegrees)
     if not spreadDegrees or spreadDegrees <= 0 then return direction end
@@ -361,7 +379,7 @@ local function randomSpread(direction, spreadDegrees)
         * CFrame.Angles(math.cos(theta) * radius, math.sin(theta) * radius, 0)).LookVector
 end
 
-local function fireRaycastWeapon(player, weaponId, config, direction)
+local function fireRaycastWeapon(player, weaponId, config, direction, coneDegrees)
     local character, _, head = getLiveCharacter(player)
     if not character then
         return
@@ -371,7 +389,7 @@ local function fireRaycastWeapon(player, weaponId, config, direction)
     local params = shotRaycastParams(player, character)
     broadcastFireFx(player, weaponId, origin)
 
-    local shotDirection = randomSpread(direction, config.spreadDegrees)
+    local shotDirection = randomSpread(direction, coneDegrees)
     local result = workspace:Raycast(origin, shotDirection * config.range, params)
     broadcastTrace(player, weaponId, origin, shotDirection, config.range, result)
     damageHit(player, weaponId, config, result, origin)
@@ -613,7 +631,8 @@ local function onFireWeapon(player, payload)
     -- Shooting forfeits the temporary defensive shield; no invincible attackers.
     SpawnService.clearProtection(player.Character)
     if config.kind == "Raycast" then
-        fireRaycastWeapon(player, weaponId, config, direction)
+        local coneDegrees = acceptedRaycastSpread(player, weaponId, config)
+        fireRaycastWeapon(player, weaponId, config, direction, coneDegrees)
     elseif config.kind == "Pellet" then
         firePelletWeapon(player, weaponId, config, direction)
     elseif config.kind == "Projectile" then
@@ -631,6 +650,8 @@ function WeaponService.resetRound()
         for id in pairs(state.reloadUntil) do cancelReload(state, id) end
         state.magazines = {}
         state.lastFireAt = {}
+        state.lastSpreadAt = {}
+        state.spreadCount = {}
         state.nextGlobalFireAt = 0
         if player.Parent then sendAmmo(player, state.equippedWeaponId) end
     end
@@ -654,6 +675,8 @@ function WeaponService.start()
             for id in pairs(state.reloadUntil) do cancelReload(state, id) end
             state.magazines = {}
             state.lastFireAt = {}
+            state.lastSpreadAt = {}
+            state.spreadCount = {}
             state.shotRayCharacter = nil
             state.shotRayParams = nil
             -- Respawn deliberately keeps the prior global shot deadline.
