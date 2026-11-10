@@ -175,6 +175,10 @@ local function getDetailGroups(folder, initialEye)
         pendingTier = {},
         connections = {},
         lastEye = initialEye,
+        dirty = true,
+        lastSweepEye = nil,
+        lastSweepHide = nil,
+        lastSweepShow = nil,
     }
     artCache[folder] = entry
 
@@ -185,6 +189,7 @@ local function getDetailGroups(folder, initialEye)
             entry.pendingTier[item] = nil
         end
         if ArtSectorRegistry.remove(entry.registry, item) then
+            entry.dirty = true
             rendered[item] = nil
             if item.Parent then item.LocalTransparencyModifier = 0 end
         end
@@ -195,6 +200,7 @@ local function getDetailGroups(folder, initialEye)
         local tier = item:GetAttribute("NeonArtTier")
         if tier == "Detail" then
             if ArtSectorRegistry.add(entry.registry, item, item.Position) then
+                entry.dirty = true
                 -- Apply visibility immediately to a late-streamed part,
                 -- avoiding a distant visual flash before the next 1Hz poll.
                 local eye = entry.lastEye
@@ -207,6 +213,7 @@ local function getDetailGroups(folder, initialEye)
                 end
             end
         elseif ArtSectorRegistry.remove(entry.registry, item) then
+            entry.dirty = true
             rendered[item] = nil
             item.LocalTransparencyModifier = 0
         end
@@ -283,6 +290,15 @@ local function updateArt()
             local entry = getDetailGroups(folder, position)
             if position then
                 entry.lastEye = position
+                -- When the camera is stationary, no tier has streamed and
+                -- graphics limits are unchanged, the 1Hz sector walk would
+                -- only repeat identical work. Never skip the first sweep,
+                -- streamed inventory changes or any actual camera movement.
+                local needsSweep = entry.dirty
+                    or entry.lastSweepEye ~= position
+                    or entry.lastSweepHide ~= artHideBeyond
+                    or entry.lastSweepShow ~= artUnhideBefore
+                if needsSweep then
                 for _, group in pairs(entry.registry.byKey) do
                     local mode = ArtLOD.classify(group.bounds, position,
                         artHideBeyond, artUnhideBefore)
@@ -308,6 +324,11 @@ local function updateArt()
                         end
                     end
                     group.lastMode = mode
+                end
+                entry.lastSweepEye = position
+                entry.lastSweepHide = artHideBeyond
+                entry.lastSweepShow = artUnhideBefore
+                entry.dirty = false
                 end
             end
         end
