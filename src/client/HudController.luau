@@ -7,6 +7,7 @@ local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitFo
 local FeedbackPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatFeedbackPolicy"))
 local BoostMeterPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BoostMeterPolicy"))
 local CombatReadoutPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatReadoutPolicy"))
+local CrosshairFeedback = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CrosshairFeedbackPolicy"))
 
 local HudController = {}
 HudController.__index = HudController
@@ -80,6 +81,9 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.options = options or {}
 	self.currentWeaponId = "AssaultRifle"
 	self.hitToken = 0
+    self.reticleKick = 0
+    self.reticleLastAt = -math.huge
+    self.reticleRadius = nil
     self.lastConfirmedHudHitAt = -math.huge
     self.lastConfirmedHudHitPriority = 0
     self.damageReadoutToken = 0
@@ -145,11 +149,26 @@ function HudController:_buildCrosshair()
 	end
 
 	self.crosshairLines = {
-		addLine("Top", UDim2.fromOffset(2, 12), UDim2.fromScale(0.5, 0.18)),
-		addLine("Bottom", UDim2.fromOffset(2, 12), UDim2.fromScale(0.5, 0.82)),
-		addLine("Left", UDim2.fromOffset(12, 2), UDim2.fromScale(0.18, 0.5)),
-		addLine("Right", UDim2.fromOffset(12, 2), UDim2.fromScale(0.82, 0.5)),
-	}
+        addLine("Top", UDim2.fromOffset(2, 12), UDim2.new(0.5, 0, 0.5, -15)),
+        addLine("Bottom", UDim2.fromOffset(2, 12), UDim2.new(0.5, 0, 0.5, 15)),
+        addLine("Left", UDim2.fromOffset(12, 2), UDim2.new(0.5, -15, 0.5, 0)),
+        addLine("Right", UDim2.fromOffset(12, 2), UDim2.new(0.5, 15, 0.5, 0)),
+    }
+    -- ADS replaces the four hip-fire bars with a small outlined center dot;
+    -- sniper ADS uses the independent calibrated-looking optical reticle.
+    local adsDot = Instance.new("Frame")
+    adsDot.Name = "IronYardAdsDot"
+    adsDot.AnchorPoint = Vector2.new(0.5, 0.5)
+    adsDot.Position = UDim2.fromScale(0.5, 0.5)
+    adsDot.Size = UDim2.fromOffset(3, 3)
+    adsDot.BackgroundColor3 = Color3.fromRGB(235, 235, 222)
+    adsDot.BorderSizePixel = 0
+    adsDot.Visible = false
+    adsDot.Active = false
+    adsDot.Parent = self.gui
+    makeCorner(adsDot, 999)
+    makeStroke(adsDot, Color3.fromRGB(30, 34, 32), 0.08, 1)
+    self.adsDot = adsDot
 
 	local hitMarker = Instance.new("TextLabel")
 	hitMarker.Name = "HitMarker"
@@ -745,6 +764,8 @@ end
 
 function HudController:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
+    self.reticleKick = 0
+    self.reticleRadius = nil
     -- Equip must force a fresh readout even when two magazines happen to
     -- share the same text and the server snapshot arrives a frame later.
     self.lastAmmoText = nil
@@ -765,15 +786,40 @@ function HudController:setWeapon(weaponId)
 	end
 
 	for _, line in ipairs(self.crosshairLines) do
-		line.BackgroundColor3 = color
-	end
+        line.BackgroundColor3 = color
+    end
+    self.adsDot.BackgroundColor3 = color
+end
+
+-- Predicted shot bloom is cosmetic; only a server "Hit" triggers damage feedback.
+function HudController:registerPredictedShot(weaponId)
+    if weaponId ~= self.currentWeaponId then return end
+    self.reticleKick = CrosshairFeedback.kick(weaponId, self.reticleKick)
+end
+
+-- Reuse the existing client RenderStepped loop. Radius only writes when
+-- the rounded position changes and at most once every 45ms. No Tweens.
+function HudController:updateCrosshair(dt, moving, running)
+    self.reticleKick = CrosshairFeedback.recover(self.reticleKick, dt)
+    local radius = CrosshairFeedback.radius(
+        self.currentWeaponId, moving, running, self.reticleKick)
+    local now = os.clock()
+    if not CrosshairFeedback.shouldDraw(now,
+        self.reticleLastAt, self.reticleRadius, radius) then return end
+    self.reticleLastAt = now
+    self.reticleRadius = radius
+    self.crosshairLines[1].Position = UDim2.new(0.5, 0, 0.5, -radius)
+    self.crosshairLines[2].Position = UDim2.new(0.5, 0, 0.5, radius)
+    self.crosshairLines[3].Position = UDim2.new(0.5, -radius, 0.5, 0)
+    self.crosshairLines[4].Position = UDim2.new(0.5, radius, 0.5, 0)
 end
 
 function HudController:setScoped(scoped)
 	local isOptical = self.currentWeaponId == "Sniper"
     self.scopeOverlay.Visible = scoped and isOptical
     self.scopeRing.Visible = scoped and isOptical
-    self.crosshair.Visible = not (scoped and isOptical)
+    self.crosshair.Visible = not scoped
+    self.adsDot.Visible = scoped and not isOptical
 end
 
 local function showDamageReadout(self, content, color, duration)

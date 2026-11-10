@@ -844,6 +844,7 @@ local function fireWeapon(weaponId)
         hud:setAmmo(weaponId, ammo.loaded, ammo.capacity, false)
     end
 	visuals:kick(weaponId)
+    hud:registerPredictedShot(weaponId)
     visuals:drawLocalMuzzleFlash()
 	visuals:playFireSound(weaponId, ray.Origin, true)
 
@@ -1271,6 +1272,13 @@ RunService.RenderStepped:Connect(function(deltaTime)
 	applyAirControl(deltaTime)
 	applyFallGravity(deltaTime)
 	updateCameraFeel(deltaTime)
+
+    -- Local-only reticle feedback. The scope/ADS dot hides hip-fire bars
+    -- independently; authoritative spread/hits are still server-owned.
+    local _, movementHumanoid = getCharacterParts()
+    local moveAmount = movementHumanoid and movementHumanoid.Health > 0
+        and movementHumanoid.MoveDirection.Magnitude or 0
+    hud:updateCrosshair(deltaTime, moveAmount, sprinting)
 
 	local _, humanoid = getCharacterParts()
 	if isGrounded(humanoid) then

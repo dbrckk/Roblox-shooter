@@ -19,6 +19,7 @@ config = get("src/shared/WeaponConfig.luau")
 ejection = get("src/shared/CartridgeEjectionPolicy.luau")
 ads = get("src/shared/WeaponAimPose.luau")
 hud = get("src/client/HudController.luau")
+crosshair = get("src/shared/CrosshairFeedbackPolicy.luau")
 
 for needle in (
     "function Feel.get(id)", "function Feel.kick(id, current, added)",
@@ -150,6 +151,32 @@ for needle in (
     assert needle in hud, f"Missing optically scoped UI element: {needle}"
 assert 'scopeRing.Size = UDim2.fromOffset(310, 310)' not in hud
 assert 'RenderStepped:Connect' not in hud, "Sniper UI must not add a frame loop"
+for needle in (
+    "function Policy.kick(weaponId, previous)",
+    "function Policy.recover(previous, dt)",
+    "function Policy.radius(weaponId, moveAmount, sprinting, kick)",
+    "function Policy.shouldDraw(now, previousAt, previousRadius, radius)",
+):
+    assert needle in crosshair, f"Cosmetic crosshair policy missing: {needle}"
+for needle in (
+    'WaitForChild("CrosshairFeedbackPolicy")',
+    'function HudController:registerPredictedShot(weaponId)',
+    'function HudController:updateCrosshair(dt, moving, running)',
+    'CrosshairFeedback.shouldDraw(now,',
+    'self.crosshair.Visible = not scoped',
+    'self.adsDot.Visible = scoped and not isOptical',
+    'self.crosshairLines[1].Position = UDim2.new(0.5, 0, 0.5, -radius)',
+    'self.adsDot.BackgroundColor3 = color',
+):
+    assert needle in hud, f"Adaptive hip-fire / ADS UI missing: {needle}"
+assert 'hud:registerPredictedShot(weaponId)' in client
+assert 'hud:updateCrosshair(deltaTime, moveAmount, sprinting)' in client
+assert client.index('hud:registerPredictedShot(weaponId)') < (
+    client.index('remotes.FireWeapon:FireServer({', client.index('local function fireWeapon(')))
+assert client.count('RenderStepped:Connect') == 1, (
+    "Hip-fire responsiveness must reuse the existing frame callback")
+assert "FireServer" not in crosshair and "Instance.new" not in crosshair
+
 assert "targetHumanoid:TakeDamage(damage)" in server
 assert "fireCooldown = 0.115" in config, "Server/weapon cadence not rewritten"
 print("IRON YARD five original viewmodels and bounded spatial audio wiring: OK")

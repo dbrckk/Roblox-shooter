@@ -114,3 +114,12 @@ leurs vrais meshes/textures n'ont donc **pas été activés** dans Roblox par ce
 - Taille adaptative (ratio hauteur, 150–350 px), voile périphérique réduit pour distinguer les cibles sur téléphone Android; aucun effet sur les raycasts de combat ou les hitboxes.
 - Confirmations de touches, dégâts et éliminations au-dessus des traits optiques. Tous les éléments sont alloués une seule fois et restent cachés hors ADS sniper.
 - Contrôle d'intégration ajouté à la suite Python du build Rojo; rendu en moteur encore à vérifier.
+
+
+## Réticule dynamique de combat et point ADS (10 novembre 2026)
+
+La mire de tir sans zoom réagit désormais visuellement aux coups tirés, à la marche et au sprint. Chaque arme a sa propre ouverture de base et impulsion, avec récupération exponentielle. Cette ouverture ne reflète pas la dispersion réelle du serveur : il s'agit uniquement d'une indication de mouvement/recul.
+
+Les quatre segments sont repositionnés seulement quand leur rayon arrondi change (et pas plus souvent que toutes les 45 ms), via le RenderStepped existant. Aucun Tween ni nouvel événement réseau. En ADS, les quatre barres laissent place à un point central discret et cerclé ; le sniper conserve sa lunette. Les tests Luau simulent 3 600 images et cinq armes, puis la CI vérifie le câblage.
+
+À vérifier en moteur : emplacement du point ADS avec les mires, comportement sur très petits écrans, lisibilité dans les hautes lumières et absence de gêne dans les duels. Aucune métrique FPS réelle n'est affirmée.
