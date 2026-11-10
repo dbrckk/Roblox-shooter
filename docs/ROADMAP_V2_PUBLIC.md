@@ -432,3 +432,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Une seule courbe de mécanisme de tir est calculée par image, celle de l'arme actuellement équipée ; les courbes des trois autres armes à feu ne sont plus calculées inutilement.
 - [x] Tests pure Luau sur 3600 images, les cinq armes, changement rapide sniper/visée, préservation des transparences ; contrôle de câblage Python, compilation et build Rojo CI.
 - [ ] Vérifier sur Android les animations de recul/rechargement et la lunette sniper lors d'un changement d'arme rapide ; comparer temps d'image/FPS sur appareil réel.
+
+
+### L3.13 — données vitales du HUD idempotentes et sûres après respawn (10 novembre 2026)
+
+- [x] Les synchronisations serveur identiques de munitions n'entraînent plus de réécriture de texte/couleur. Les transitions `RELOADING...`, `UNLIMITED`, munitions faibles et l'équipement restent immédiates, sans temporisation ou perte de données.
+- [x] Le HUD de santé évite les écritures de couleur et de texte ainsi que les Tweens répétés lorsque la valeur affichée n'a pas changé. Un vrai changement de santé relance immédiatement une seule animation de barre, en annulant la précédente ; les flashs de dégâts continuent de se déclencher sur une perte de santé même si l'affichage arrondi n'a pas changé.
+- [x] L'arrivée d'un nouveau personnage invalide les anciennes demandes de `WaitForChild("Humanoid", 5)` et les anciens événements de santé via un jeton de génération ; les anciens événements ne peuvent plus écraser le nouveau HUD après respawn.
+- [x] Nouveau module pur `CombatReadoutPolicy` et régression Luau sur 10 000 snapshots identiques, armes à munitions faibles, transitions de rechargement, seuils de santé et vie maximale. Contrôles de câblage et build Rojo.
+- [ ] Vérifier visuellement sur Android une rafale de dégâts, la régénération, le changement de chargeur, la mort/réapparition et comparer les temps d'image en combat. Les tests CI ne mesurent pas les FPS.

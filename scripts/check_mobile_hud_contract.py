@@ -12,6 +12,7 @@ def read(name):
 
 layout = read("src/shared/TouchLayout.luau")
 boost_policy = read("src/shared/BoostMeterPolicy.luau")
+combat_policy = read("src/shared/CombatReadoutPolicy.luau")
 controller = read("src/client/HudController.luau")
 client = read("src/client/init.client.luau")
 match = read("src/client/MatchHud.client.luau")
@@ -79,4 +80,25 @@ for needle in ('Policy.MIN_INTERVAL = 0.1',
     assert needle in boost_policy, f"Boost update scheduler lost urgency/budget: {needle}"
 assert 'hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)' in client, (
     "Client fuel remains driven by real local movement, not placeholders")
-print("IRON YARD mobile presets, modal layering and bounded boost Tweens: OK")
+for needle in (
+    'WaitForChild("CombatReadoutPolicy")',
+    "CombatReadoutPolicy.ammo(loaded, capacity, reloading)",
+    "if text ~= self.lastAmmoText then",
+    "if tone ~= self.lastAmmoTone then",
+    "self.lastAmmoText = nil",
+    "self.lastAmmoTone = nil",
+    "self.healthBindGeneration = (self.healthBindGeneration or 0) + 1",
+    "if self.healthBindGeneration ~= generation",
+    "self.player.Character ~= character",
+    "CombatReadoutPolicy.health(health, maxHealth)",
+    "if ratio ~= self.lastHealthRatio then",
+    "if text ~= self.lastHealthText then",
+    "if self.healthTween then self.healthTween:Cancel() end",
+):
+    assert needle in controller, f"Combat readout deduplication missing: {needle}"
+for needle in ("function Policy.ammo(", "function Policy.health(",
+               '"RELOADING..."', '"CRITICAL"', '"WARNING"'):
+    assert needle in combat_policy, f"Combat HUD snapshot policy missing: {needle}"
+assert "self:_pulseDamage(self.previousHealth - health)" in controller, (
+    "Health UI deduplication must never delay or remove damage feedback")
+print("IRON YARD mobile presets, stable readouts and bounded HUD redraws: OK")

@@ -6,6 +6,7 @@ local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChil
 local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
 local FeedbackPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatFeedbackPolicy"))
 local BoostMeterPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BoostMeterPolicy"))
+local CombatReadoutPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatReadoutPolicy"))
 
 local HudController = {}
 HudController.__index = HudController
@@ -336,20 +337,28 @@ end
 
 function HudController:setAmmo(weaponId, loaded, capacity, reloading)
     if weaponId ~= self.currentWeaponId or not self.ammoLabel then return end
-    if capacity == nil or capacity <= 0 then
-        self.ammoLabel.Text = "UNLIMITED"
-        self.ammoLabel.TextColor3 = Color3.fromRGB(218, 219, 204)
-    elseif reloading then
-        self.ammoLabel.Text = "RELOADING..."
-        self.ammoLabel.TextColor3 = Color3.fromRGB(241, 189, 97)
-    elseif loaded == nil then
-        self.ammoLabel.Text = string.format("-- / %d", capacity)
-        self.ammoLabel.TextColor3 = Color3.fromRGB(231, 217, 181)
-    else
-        local remaining = math.clamp(math.floor(loaded), 0, capacity)
-        self.ammoLabel.Text = string.format("%02d / %02d", remaining, capacity)
-        self.ammoLabel.TextColor3 = remaining <= 3 and Color3.fromRGB(242, 134, 102)
-            or Color3.fromRGB(231, 224, 200)
+    -- Server snapshots may repeat the same loaded/capacity/reload state.
+    -- Keep all transitions instant while skipping identical UI writes.
+    local text, tone = CombatReadoutPolicy.ammo(loaded, capacity, reloading)
+    if text ~= self.lastAmmoText then
+        self.ammoLabel.Text = text
+        self.lastAmmoText = text
+    end
+    if tone ~= self.lastAmmoTone then
+        local color
+        if tone == "UNLIMITED" then
+            color = Color3.fromRGB(218, 219, 204)
+        elseif tone == "RELOADING" then
+            color = Color3.fromRGB(241, 189, 97)
+        elseif tone == "UNKNOWN" then
+            color = Color3.fromRGB(231, 217, 181)
+        elseif tone == "LOW" then
+            color = Color3.fromRGB(242, 134, 102)
+        else
+            color = Color3.fromRGB(231, 224, 200)
+        end
+        self.ammoLabel.TextColor3 = color
+        self.lastAmmoTone = tone
     end
 end
 
@@ -551,8 +560,17 @@ function HudController:_disconnectHealth()
 end
 
 function HudController:_bindHealth(character)
+    self.healthBindGeneration = (self.healthBindGeneration or 0) + 1
+    local generation = self.healthBindGeneration
 	self:_disconnectHealth()
     self.previousHealth = nil
+    self.lastHealthRatio = nil
+    self.lastHealthText = nil
+    self.lastHealthTone = nil
+    if self.healthTween then
+        self.healthTween:Cancel()
+        self.healthTween = nil
+    end
 
 	if not character then
 		self:_updateHealth(nil)
@@ -560,6 +578,10 @@ function HudController:_bindHealth(character)
 	end
 
 	local humanoid = character:FindFirstChildOfClass("Humanoid") or character:WaitForChild("Humanoid", 5)
+    -- CharacterAdded may fire while an older WaitForChild is suspended.
+    -- Never reconnect the obsolete Humanoid over the new character HUD.
+    if self.healthBindGeneration ~= generation
+        or self.player.Character ~= character then return end
 	if not humanoid then
 		self:_updateHealth(nil)
 		return
@@ -567,10 +589,14 @@ function HudController:_bindHealth(character)
 
 	self:_updateHealth(humanoid)
 	table.insert(self.healthConnections, humanoid.HealthChanged:Connect(function()
-		self:_updateHealth(humanoid)
+        if self.healthBindGeneration == generation then
+		    self:_updateHealth(humanoid)
+        end
 	end))
 	table.insert(self.healthConnections, humanoid:GetPropertyChangedSignal("MaxHealth"):Connect(function()
-		self:_updateHealth(humanoid)
+        if self.healthBindGeneration == generation then
+		    self:_updateHealth(humanoid)
+        end
 	end))
 end
 
@@ -581,24 +607,33 @@ function HudController:_updateHealth(humanoid)
     end
     self.previousHealth = health
 	local maxHealth = humanoid and humanoid.MaxHealth or 100
-	local ratio = 0
-
-	if maxHealth > 0 then
-		ratio = math.clamp(health / maxHealth, 0, 1)
-	end
-
-	local color = Color3.fromRGB(77, 224, 128)
-	if ratio <= 0.3 then
-		color = Color3.fromRGB(245, 82, 82)
-	elseif ratio <= 0.6 then
-		color = Color3.fromRGB(245, 192, 82)
-	end
-
-	self.healthFill.BackgroundColor3 = color
-	TweenService:Create(self.healthFill, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = UDim2.fromScale(ratio, 1),
-	}):Play()
-	self.healthText.Text = string.format("%d / %d", math.max(0, math.ceil(health)), math.ceil(maxHealth))
+    local ratio, tone, text = CombatReadoutPolicy.health(health, maxHealth)
+    -- Damage pulse above remains independent and immediate, even if two
+    -- consecutive health readings round to the same displayed number.
+    if tone ~= self.lastHealthTone then
+        self.lastHealthTone = tone
+        local color = Color3.fromRGB(77, 224, 128)
+        if tone == "CRITICAL" then
+            color = Color3.fromRGB(245, 82, 82)
+        elseif tone == "WARNING" then
+            color = Color3.fromRGB(245, 192, 82)
+        end
+        self.healthFill.BackgroundColor3 = color
+    end
+    if ratio ~= self.lastHealthRatio then
+        self.lastHealthRatio = ratio
+        -- Prevent a repeated HealthChanged or MaxHealth sync from stacking
+        -- new tweens over the same property.
+        if self.healthTween then self.healthTween:Cancel() end
+        self.healthTween = TweenService:Create(self.healthFill,
+            TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            { Size = UDim2.fromScale(ratio, 1) })
+        self.healthTween:Play()
+    end
+    if text ~= self.lastHealthText then
+        self.lastHealthText = text
+        self.healthText.Text = text
+    end
 end
 
 function HudController:setBoostFuel(ratio)
@@ -654,6 +689,10 @@ end
 
 function HudController:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
+    -- Equip must force a fresh readout even when two magazines happen to
+    -- share the same text and the server snapshot arrives a frame later.
+    self.lastAmmoText = nil
+    self.lastAmmoTone = nil
 	local config = self.WeaponConfig.get(weaponId)
 	self.weaponLabel.Text = config and config.displayName or weaponId
     self:setAmmo(weaponId, nil, config and config.magazineSize, false)
