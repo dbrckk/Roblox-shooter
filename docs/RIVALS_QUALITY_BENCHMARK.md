@@ -305,3 +305,20 @@ de personnage pendant le compte à rebours.
   joueur et remet a zero les delais de slide/boost, en plus des vitesses.
 - Tests de logique Luau sur les references, les remplacements, les
   donnees de sante invalides et controles Python sur les ressources.
+
+
+## Retours de manches 1v1 cote joueur
+
+Les manches montrent maintenant le score dans le sens du joueur local,
+sous la forme YOU 2 : 3 RIVAL (plutot qu'un score A/B anonyme).
+
+Chaque fin de manche publie un resultat serveur strictement type :
+A, B ou DRAW. Le MatchHud affiche alors ROUND WON, ROUND LOST ou
+ROUND DRAW selon l'identite reelle des participants, avant la
+preparation suivante. Les informations sont effacees au debut de la
+manche suivante et entre deux matchs. Aucune prediction locale de tir
+ne peut modifier un resultat de duel.
+
+La logique de readout possede un module Luau pur, un test executable
+pour les deux perspectives et les entrées invalides, et des
+verifications d'integration de MatchService/MatchHud dans la CI.

@@ -329,6 +329,7 @@ def main():
         "ADS only evaluated on admitted shots")
 
     duel_rules = source("src/shared/DuelRules.luau")
+    duel_readout = source("src/shared/DuelReadout.luau")
     match_hud = source("src/client/MatchHud.client.luau")
     duel_spawn = source("src/server/SpawnService.luau")
     duel_spawn_plan = source("src/shared/DuelSpawnPlan.luau")
@@ -413,11 +414,24 @@ def main():
     ):
         has(server, token, "Duel fire and hit isolation")
     for token in (
+        'function Readout.scores(userId, aId, bId, aWins, bWins)',
+        'function Readout.boutLabel(result, userId, aId, bId)',
+    ):
+        has(duel_readout, token, "Safe verified duel readout")
+    for token in (
+        'Workspace:SetAttribute("IronYardDuelLastResult", result)',
+        'Workspace:SetAttribute("IronYardDuelLastResult", "")',
+    ):
+        has(match, token, "Server-published round outcome and reset")
+    for token in (
         'function BotService.reconcileNow()',
         'if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',
     ):
         has(bot, token, "Immediate bot removal in duel")
     for token in (
+        'DuelReadout.scores(player.UserId,',
+        'DuelReadout.boutLabel(lastDuelResult,',
+        '"IronYardDuelLastResult"',
         'remotes.SetDuelReady:FireServer',
         'duelToggle.Activated:Connect(function()',
         '"IronYardDuelScoreA"', '"IronYardDuelScoreB"',

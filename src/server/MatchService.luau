@@ -261,6 +261,7 @@ local function startLiveDuelBout()
     -- Lock both participants to the same character generation for this bout.
     duel.liveCharacterA = a.Character
     duel.liveCharacterB = b.Character
+    Workspace:SetAttribute("IronYardDuelLastResult", "")
     -- All shields are removed before the same server tick unlocks fire.
     SpawnService.clearProtection(a.Character)
     SpawnService.clearProtection(b.Character)
@@ -282,6 +283,7 @@ local function startDuelSeries(players)
     players[2]:SetAttribute("IronYardDuelReady", false)
     mode = "DUEL"
     Workspace:SetAttribute("IronYardMatchMode", mode)
+    Workspace:SetAttribute("IronYardDuelLastResult", "")
     publishDuelScores()
     -- Clear every FFA bot synchronously before the first valid duel shot.
     BotService.reconcileNow()
@@ -299,6 +301,7 @@ local function finishDuelBout(result)
         duel.aWins,duel.bWins,duel.bouts-1,result)
     if not a then return end
     duel.aWins,duel.bWins = a,b
+    Workspace:SetAttribute("IronYardDuelLastResult", result)
     -- DuelRules.advance counts resolved bouts. The currently started bout
     -- was already included in duel.bouts at spawn; never count it twice.
     duel.bouts = n
@@ -419,6 +422,7 @@ local function tick()
         duel = nil
         mode = "FFA"
         Workspace:SetAttribute("IronYardMatchMode", mode)
+        Workspace:SetAttribute("IronYardDuelLastResult", "")
         publishDuelScores()
         transition("COUNTDOWN", COUNTDOWN_SECONDS)
     end
@@ -440,6 +444,7 @@ function MatchService.start()
     end)
     Workspace:SetAttribute("IronYardMatchMode", mode)
     Workspace:SetAttribute("IronYardDuelReadyCount", 0)
+    Workspace:SetAttribute("IronYardDuelLastResult", "")
     publishDuelScores()
     transition("WAITING", 0)
     task.spawn(function()

@@ -5,6 +5,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local remotes = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("PrecisionNet")).getRemotes(false)
+local DuelReadout = require(ReplicatedStorage:WaitForChild("Shared")
+    :WaitForChild("DuelReadout"))
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "NeonStrikeMatchHud"
@@ -187,21 +189,30 @@ local function update()
     local duelBout = Workspace:GetAttribute("IronYardDuelBout") or 0
     local duelScoreA = Workspace:GetAttribute("IronYardDuelScoreA") or 0
     local duelScoreB = Workspace:GetAttribute("IronYardDuelScoreB") or 0
+    local duelAId = Workspace:GetAttribute("IronYardDuelPlayerA")
+    local duelBId = Workspace:GetAttribute("IronYardDuelPlayerB")
+    local myWins, rivalWins = DuelReadout.scores(player.UserId,
+        duelAId, duelBId, duelScoreA, duelScoreB)
+    local lastDuelResult = Workspace:GetAttribute("IronYardDuelLastResult")
+    local boutLabel = DuelReadout.boutLabel(lastDuelResult,
+        player.UserId, duelAId, duelBId)
     local kills = eliminations and eliminations.Value or 0
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
     local headerText, detailText
     if matchMode == "DUEL" and phase ~= "COUNTDOWN" and phase ~= "WAITING" then
-        local score = string.format("%d - %d", duelScoreA, duelScoreB)
+        local score = myWins and string.format("YOU %d : %d RIVAL", myWins, rivalWins)
+            or string.format("A %d : %d B", duelScoreA, duelScoreB)
         if phase == "LIVE" then
             headerText = string.format("DUEL %d  |  %s", duelBout, clock)
-            detailText = "FIRST TO 5 ROUNDS   /   " .. score
+            detailText = "FIRST TO 5   /   " .. score
         elseif phase == "DUEL_PREP" then
             headerText = string.format("DUEL  |  ROUND %d", duelBout + 1)
             detailText = string.format("PREPARE  /  %ds   ·   %s", seconds, score)
         elseif phase == "DUEL_BREAK" then
-            headerText = string.format("DUEL  |  NEXT BOUT IN %ds", seconds)
-            detailText = "ROUND SCORE   /   " .. score
+            headerText = string.format("%s  |  NEXT IN %ds",
+                boutLabel or "DUEL", seconds)
+            detailText = score
         else
             headerText = "DUEL FINISHED"
             detailText = (Workspace:GetAttribute("NeonMatchWinner") or "DRAW")
@@ -267,6 +278,7 @@ for _, name in ipairs({
     "NeonMatchWinner", "NeonMatchScoreLimit", "NeonBotCount",
     "IronYardMatchMode", "IronYardDuelReadyCount",
     "IronYardDuelBout", "IronYardDuelScoreA", "IronYardDuelScoreB",
+    "IronYardDuelPlayerA", "IronYardDuelPlayerB", "IronYardDuelLastResult",
 }) do
     Workspace:GetAttributeChangedSignal(name):Connect(function()
         update()
