@@ -5,6 +5,7 @@ local Debris = game:GetService("Debris")
 
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
+local ShotInputPolicy = require(shared:WaitForChild("ShotInputPolicy"))
 local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
@@ -31,6 +32,8 @@ local function getState(player)
             magazines = {},
             reloadUntil = {},
             reloadTokens = {},
+            shotRayCharacter = nil,
+            shotRayParams = nil,
         }
         playerState[player] = state
     end
@@ -77,15 +80,11 @@ local function getAimDirection(payload)
     end
 
     local direction = payload.direction
-    -- Reject non-finite client vectors before multiplying them into a server Raycast.
-    for _, coordinate in ipairs({ direction.X, direction.Y, direction.Z }) do
-        if coordinate ~= coordinate or math.abs(coordinate) > 1e6 then
-            return nil
-        end
-    end
-    if direction.Magnitude < 0.001 then
-        return nil
-    end
+    -- Do not allocate a coordinate array for every remote fire request.
+    -- The pure policy rejects invalid, oversized and near-zero vectors
+    -- before the Roblox Vector3 normalization and server Raycast.
+    if not ShotInputPolicy.validDirection(
+        direction.X, direction.Y, direction.Z) then return nil end
 
     return direction.Unit
 end
@@ -96,6 +95,20 @@ local function makeRaycastParams(ignoreInstances)
     params.FilterDescendantsInstances = ignoreInstances
     params.IgnoreWater = true
     return params
+end
+
+-- A new immutable RaycastParams per shot wastes allocation work during
+-- automatic fire and 8-pellet shotgun bursts. Only the current character
+-- is excluded, so a single set can safely serve both hitscan weapons.
+-- Knife projectiles continue to use isolated params: they must also ignore
+-- their own moving Part.
+local function shotRaycastParams(player, character)
+    local state = getState(player)
+    if state.shotRayCharacter ~= character or not state.shotRayParams then
+        state.shotRayParams = makeRaycastParams({ character })
+        state.shotRayCharacter = character
+    end
+    return state.shotRayParams
 end
 
 local function sendFeedback(player, message)
@@ -326,7 +339,7 @@ local function fireRaycastWeapon(player, weaponId, config, direction)
     end
 
     local origin = head.Position
-    local params = makeRaycastParams({ character })
+    local params = shotRaycastParams(player, character)
     broadcastFireFx(player, weaponId, origin)
 
     local shotDirection = randomSpread(direction, config.spreadDegrees)
@@ -339,7 +352,7 @@ local function firePelletWeapon(player, weaponId, config, direction)
     local character, _, head = getLiveCharacter(player)
     if not character then return end
     local origin = head.Position
-    local params = makeRaycastParams({ character })
+    local params = shotRaycastParams(player, character)
     local victims = {}
     broadcastFireFx(player, weaponId, origin)
     local firstDirection = nil
@@ -608,10 +621,19 @@ function WeaponService.start()
             for id in pairs(state.reloadUntil) do cancelReload(state, id) end
             state.magazines = {}
             state.lastFireAt = {}
+            state.shotRayCharacter = nil
+            state.shotRayParams = nil
             -- Respawn deliberately keeps the prior global shot deadline.
             task.defer(function()
                 if player.Parent then sendAmmo(player, state.equippedWeaponId) end
             end)
+        end)
+        player.CharacterRemoving:Connect(function(character)
+            local state = playerState[player]
+            if state and state.shotRayCharacter == character then
+                state.shotRayCharacter = nil
+                state.shotRayParams = nil
+            end
         end)
     end
     Players.PlayerAdded:Connect(watchPlayer)
