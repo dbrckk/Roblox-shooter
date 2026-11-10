@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
+local DuelCombatState = require(script.Parent:WaitForChild("DuelCombatState"))
 local MovementService = require(script.Parent:WaitForChild("MovementService"))
 local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
@@ -181,6 +182,7 @@ end
 
 local function endDuel(reason, winningSide)
     if not duel then return end
+    DuelCombatState.clear()
     releaseDuelPrep()
     duel.liveCharacterA = nil
     duel.liveCharacterB = nil
@@ -265,6 +267,11 @@ local function startLiveDuelBout()
     -- All shields are removed before the same server tick unlocks fire.
     SpawnService.clearProtection(a.Character)
     SpawnService.clearProtection(b.Character)
+    if not DuelCombatState.begin(a, b) then
+        duel.waitSince = os.clock()
+        transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
+        return false
+    end
     WeaponService.resetRound()
     duel.bouts += 1
     publishDuelScores()
@@ -273,6 +280,7 @@ local function startLiveDuelBout()
 end
 
 local function startDuelSeries(players)
+    DuelCombatState.clear()
     duel = {
         aId=players[1].UserId, bId=players[2].UserId,
         aName=players[1].DisplayName, bName=players[2].DisplayName,
@@ -297,6 +305,7 @@ end
 
 local function finishDuelBout(result)
     if not duel then return end
+    DuelCombatState.clear()
     local a,b,n,complete,winner=DuelRules.advance(
         duel.aWins,duel.bWins,duel.bouts-1,result)
     if not a then return end
@@ -328,6 +337,7 @@ local function startRound()
         startDuelSeries(candidates)
         return
     end
+    DuelCombatState.clear()
     duel = nil
     mode = "FFA"
     Workspace:SetAttribute("IronYardMatchMode", mode)
@@ -419,6 +429,7 @@ local function tick()
             transition("DUEL_BREAK", 1)
         end
     elseif phase == "RESULTS" and remaining <= 0 then
+        DuelCombatState.clear()
         duel = nil
         mode = "FFA"
         Workspace:SetAttribute("IronYardMatchMode", mode)
@@ -431,6 +442,7 @@ end
 function MatchService.start()
     if started then return end
     started = true
+    DuelCombatState.clear()
     local remotes = PrecisionNet.getRemotes(true)
     remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end

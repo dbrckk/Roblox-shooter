@@ -329,6 +329,7 @@ def main():
         "ADS only evaluated on admitted shots")
 
     duel_rules = source("src/shared/DuelRules.luau")
+    duel_gate = source("src/server/DuelCombatState.luau")
     duel_readout = source("src/shared/DuelReadout.luau")
     match_hud = source("src/client/MatchHud.client.luau")
     duel_spawn = source("src/server/SpawnService.luau")
@@ -406,13 +407,25 @@ def main():
     has(match, '(duel ~= nil and phase ~= "RESULTS")',
         "No forced duel ready state during active competition")
     for token in (
-        'DuelRules.canFight(workspace:GetAttribute("IronYardMatchMode")',
-        'if not duelCanDamage(attacker, targetPlayer) then return false end',
+        'DuelCombatState.canFire(player,',
+        'DuelCombatState.canDamage(attacker, targetPlayer, targetCharacter,',
+        'if not duelCanDamage(attacker, targetPlayer, targetCharacter) then return false end',
         'if not duelCanFire(player) then return end',
-        'if duelCanDamage(player, opponent)',
-        'elseif duelCanDamage(player, opponent)',
+        'if duelCanDamage(player, opponent, model)',
+        'elseif duelCanDamage(player, opponent, model)',
+        'duelCanDamage(player, entry.player, entry.model)',
+        'or not duelCanFire(player)',
     ):
-        has(server, token, "Duel fire and hit isolation")
+        has(server, token, "All duel hit paths bound to original rigs")
+    for token in (
+        "function Gate.begin(a, b)",
+        "function Gate.clear()",
+        "function Gate.canFire(player, phase, mode, playerCount)",
+        "function Gate.canDamage(attacker, target, model, phase, mode, playerCount)",
+    ):
+        has(duel_gate, token, "Per-bout real Character gate")
+    for token in ("DuelCombatState.begin(a, b)", "DuelCombatState.clear()"):
+        has(match, token, "Lifecycle opens and closes combat ownership")
     for token in (
         'function Readout.scores(userId, aId, bId, aWins, bWins)',
         'function Readout.boutLabel(result, userId, aId, bId)',

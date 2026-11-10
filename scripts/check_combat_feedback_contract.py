@@ -35,7 +35,7 @@ requires(server, (
     'sendFeedback(player, { kind = "Protected", weaponId = weaponId })',
     "if SpawnService.isProtected(targetCharacter) then",
     "sendProtected(attacker, weaponId)",
-    "if duelCanDamage(player, opponent)",
+    "if duelCanDamage(player, opponent, model)",
     'and (opponent or model:GetAttribute("IsArenaBot") == true)',
     "and SpawnService.isProtected(model) then",
     "struckShield = true",

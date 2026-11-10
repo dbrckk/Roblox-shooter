@@ -7,7 +7,7 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local ShotInputPolicy = require(shared:WaitForChild("ShotInputPolicy"))
 local WeaponSpreadPolicy = require(shared:WaitForChild("WeaponSpreadPolicy"))
-local DuelRules = require(shared:WaitForChild("DuelRules"))
+local DuelCombatState = require(script.Parent:WaitForChild("DuelCombatState"))
 local AimStancePolicy = require(shared:WaitForChild("AimStancePolicy"))
 local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
@@ -202,19 +202,17 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
     }, origin, player)
 end
 
--- Duel membership is read from match-server attributes, never supplied
--- by a fire packet. FFA retains its existing human/bot combat rules.
+-- Bound to exact Roblox Characters by MatchService; UserIds alone are not lives.
 local function duelCanFire(player)
-    return DuelRules.canFight(workspace:GetAttribute("IronYardMatchMode"),
-        player.UserId, workspace:GetAttribute("IronYardDuelPlayerA"),
-        workspace:GetAttribute("IronYardDuelPlayerB"), #Players:GetPlayers())
+    return DuelCombatState.canFire(player,
+        workspace:GetAttribute("NeonMatchPhase"),
+        workspace:GetAttribute("IronYardMatchMode"), #Players:GetPlayers())
 end
 
-local function duelCanDamage(attacker, targetPlayer)
-    if not duelCanFire(attacker) then return false end
-    if workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" then return true end
-    return targetPlayer ~= nil and duelCanFire(targetPlayer)
-        and targetPlayer ~= attacker
+local function duelCanDamage(attacker, targetPlayer, targetCharacter)
+    return DuelCombatState.canDamage(attacker, targetPlayer, targetCharacter,
+        workspace:GetAttribute("NeonMatchPhase"),
+        workspace:GetAttribute("IronYardMatchMode"), #Players:GetPlayers())
 end
 
 local function damageHit(attacker, weaponId, config, raycastResult, origin)
@@ -238,7 +236,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
     if targetPlayer == attacker then
         return false
     end
-    if not duelCanDamage(attacker, targetPlayer) then return false end
+    if not duelCanDamage(attacker, targetPlayer, targetCharacter) then return false end
 
     -- Avoid spawn-camping. Server-only protection is removed when its owner fires.
     if SpawnService.isProtected(targetCharacter) then
@@ -463,11 +461,11 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             end
             if humanoid and humanoid.Health > 0 and model ~= character then
                 local opponent = Players:GetPlayerFromCharacter(model)
-                if duelCanDamage(player, opponent)
+                if duelCanDamage(player, opponent, model)
                     and (opponent or model:GetAttribute("IsArenaBot") == true)
                     and SpawnService.isProtected(model) then
                     struckShield = true
-                elseif duelCanDamage(player, opponent)
+                elseif duelCanDamage(player, opponent, model)
                     and (opponent or model:GetAttribute("IsArenaBot") == true) then
                     local entry = victims[humanoid]
                     if not entry then
@@ -496,7 +494,9 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
 
     local anyHit = false
     for humanoid, entry in pairs(victims) do
-        if humanoid.Health > 0 and entry.model.Parent and not SpawnService.isProtected(entry.model) then
+        if humanoid.Health > 0 and entry.model.Parent
+            and duelCanDamage(player, entry.player, entry.model)
+            and not SpawnService.isProtected(entry.model) then
             local damage = math.max(1, math.floor(entry.damage + 0.5))
             local oldHealth = humanoid.Health
             humanoid:TakeDamage(damage)
@@ -591,6 +591,7 @@ local function fireKnife(player, weaponId, config, direction)
             -- Projectile tasks may outlive a round, their original owner or
             -- character. Never apply late damage in a different combat state.
             if launchedEpoch ~= weaponRoundEpoch
+                or not duelCanFire(player)
                 or player.Parent ~= Players
                 or player.Character ~= character
                 or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
