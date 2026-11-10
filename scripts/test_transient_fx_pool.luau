@@ -128,4 +128,41 @@ for index in pairs(qualityActive) do
     count += 1
 end
 assert(count == 24, "Quality downgrade retains only 24 eligible flashes")
+-- Confirmed damage uses this exact pool too. Each accepted hit has
+-- a high-priority core (4) and optional spark(s) (3); no extra instance
+-- or Tween pool is needed even under four-bot crossfire.
+local Feedback = require("../src/shared/CombatVfxProfile")
+local hitSlots = {}
+for _, preset in ipairs({"ECO", "BALANCED", "QUALITY"}) do
+    local cap = Pool.cap(preset, true)
+    local now = 200
+    for shot = 1, 1800 do
+        now += 0.12
+        -- Concurrent local muzzle/tracer traffic fills the same pool.
+        Pool.claim(hitSlots, now, 0.24, cap, 2)
+        local killed = shot % 12 == 0
+        local headshot = shot % 3 == 0
+        local hit = Feedback.hitFeedback(preset, true, 40, headshot, killed)
+        assert(hit and hit.duration > 0 and hit.duration <= 0.5)
+        assert(hit.sparks >= 1 and hit.sparks <= 3)
+        local core = Pool.claim(hitSlots, now, hit.duration, cap, 4)
+        assert(core and core.priority == 4,
+            "Confirmed damage core must be admitted above generic debris")
+        for _ = 1, hit.sparks do
+            local spark = Pool.claim(hitSlots, now, hit.duration, cap, 3)
+            if spark then assert(spark.priority == 3) end
+        end
+        assert(#hitSlots <= Pool.MAX_PARTS and #hitSlots <= 72,
+            "Confirmed-hit effects share existing bounded VFX instances")
+    end
+end
+local coreOnly = {}
+for i = 1, 24 do
+    assert(Pool.claim(coreOnly, 500, 0.25, 24, 4))
+end
+assert(Pool.claim(coreOnly, 500.01, 0.2, 24, 1) == nil,
+    "Debris cannot preempt 24 simultaneous server-confirmed hits")
+assert(Pool.claim(coreOnly, 500.01, 0.2, 24, 4) ~= nil,
+    "New confirmed hits may recycle older high-priority slots")
+print("IRON YARD shared confirmed-hit FX: bounded 24/48/72 mobile pool and core priority: OK")
 print("IRON YARD transient VFX: priorities, 18k shots and idle slot retirement: OK")
