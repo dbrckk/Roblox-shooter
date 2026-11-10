@@ -336,6 +336,7 @@ def main():
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
         "function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)",
+        "function Duel.healthForBout(expectedCharacter, actualCharacter, health, maxHealth)",
         "function Duel.advance(scoreA, scoreB, bouts, result)",
         "function Duel.canFight(mode, userId, a, b, playerCount)",
         "function Duel.recoveryExpired(since, now)",
@@ -371,6 +372,11 @@ def main():
         'transition("DUEL_PREP", DuelRules.PREP_SECONDS)',
         'SpawnService.clearProtection(a.Character)',
         'SpawnService.clearProtection(b.Character)',
+        'duel.liveCharacterA = a.Character',
+        'duel.liveCharacterB = b.Character',
+        'DuelRules.healthForBout(expectedCharacter, c,',
+        'local ah,am=health(a, duel.liveCharacterA)',
+        'local bh,bm=health(b, duel.liveCharacterB)',
         'MovementService.resetDuelMovement(a)',
         'MovementService.resetDuelMovement(b)',
     ):

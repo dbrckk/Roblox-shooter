@@ -30,3 +30,14 @@ for token in (
     "root.AssemblyLinearVelocity = Vector3.zero",
 ):
     assert token in server, "DUEL_PREP movement isolation missing: " + token
+
+
+for token in (
+    "function MovementService.resetDuelMovement(player)",
+    "state.boostFuel = MovementConfig.boostFuelMax",
+    "state.lastSlideAt = -math.huge",
+    "state.lastBoostAt = -math.huge",
+    "root.AssemblyLinearVelocity = Vector3.zero",
+    "sendMovementState(player, state)",
+):
+    assert token in server, "Duel must restore fair starting movement: " + token

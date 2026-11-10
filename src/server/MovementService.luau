@@ -608,6 +608,10 @@ function MovementService.resetDuelMovement(player)
     state.boosting = false
     state.boostDirection = nil
     state.boostStartedAt = -math.huge
+    -- Restore the same tactical movement resources for both competitors.
+    state.boostFuel = MovementConfig.boostFuelMax
+    state.lastSlideAt = -math.huge
+    state.lastBoostAt = -math.huge
     local _, _, root = getCharacterParts(player)
     if root then
         root.AssemblyLinearVelocity = Vector3.zero

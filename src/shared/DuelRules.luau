@@ -12,6 +12,16 @@ function Duel.canStart(players, readyA, readyB)
     return type(players) == "number" and players == 2
         and readyA == true and readyB == true
 end
+-- A replacement character must not count as an extra life during the bout.
+function Duel.healthForBout(expectedCharacter, actualCharacter, health, maxHealth)
+    if expectedCharacter == nil or expectedCharacter ~= actualCharacter then
+        return 0, 100
+    end
+    if not finite(maxHealth) or maxHealth <= 0 then return 0, 100 end
+    if not finite(health) then return 0, maxHealth end
+    return math.clamp(health, 0, maxHealth), maxHealth
+end
+
 function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)
     if not finite(healthA) or not finite(healthB)
         or not finite(maximumA) or not finite(maximumB)

@@ -182,6 +182,8 @@ end
 local function endDuel(reason, winningSide)
     if not duel then return end
     releaseDuelPrep()
+    duel.liveCharacterA = nil
+    duel.liveCharacterB = nil
     local snapshot = RoundStandings.build(duelRows(), round)
     snapshot.mode = "DUEL"
     snapshot.bouts = duel.bouts
@@ -256,6 +258,9 @@ local function startLiveDuelBout()
         transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
         return false
     end
+    -- Lock both participants to the same character generation for this bout.
+    duel.liveCharacterA = a.Character
+    duel.liveCharacterB = b.Character
     -- All shields are removed before the same server tick unlocks fire.
     SpawnService.clearProtection(a.Character)
     SpawnService.clearProtection(b.Character)
@@ -298,6 +303,8 @@ local function finishDuelBout(result)
     -- was already included in duel.bouts at spawn; never count it twice.
     duel.bouts = n
     publishDuelScores()
+    duel.liveCharacterA = nil
+    duel.liveCharacterB = nil
     if complete then
         endDuel("SCORE_LIMIT", winner)
     else
@@ -383,13 +390,14 @@ local function tick()
     elseif phase == "LIVE" then
         if duel then
             local a,b=duelParticipants()
-            local function health(p)
+            local function health(p, expectedCharacter)
                 local c=p and p.Character
                 local h=c and c:FindFirstChildOfClass("Humanoid")
-                return h and h.Health or 0, h and h.MaxHealth or 100
+                return DuelRules.healthForBout(expectedCharacter, c,
+                    h and h.Health or 0, h and h.MaxHealth or 100)
             end
-            local ah,am=health(a)
-            local bh,bm=health(b)
+            local ah,am=health(a, duel.liveCharacterA)
+            local bh,bm=health(b, duel.liveCharacterB)
             local result=DuelRules.boutWinner(ah,am,bh,bm,remaining<=0)
             if result then finishDuelBout(result) end
         else

@@ -293,3 +293,15 @@ de personnage pendant le compte à rebours.
   ou changement de munitions/dégâts côté serveur.
 - Les contrats statiques et la compilation sont vérifiés en CI; les
   animations doivent aussi être contrôlées visuellement dans Roblox Studio.
+
+
+## Correctifs competitifs du duel : identite du combattant et boost
+
+- Chaque manche conserve la reference exacte des deux characters Roblox
+  en LIVE. Une reapparition inattendue ne donne pas une deuxieme vie
+  dans la manche : la nouvelle incarnation est comptabilisee comme hors
+  combat, sans ressusciter le combattant initial.
+- La preparation restaure le carburant complet du boost pour chaque
+  joueur et remet a zero les delais de slide/boost, en plus des vitesses.
+- Tests de logique Luau sur les references, les remplacements, les
+  donnees de sante invalides et controles Python sur les ressources.
