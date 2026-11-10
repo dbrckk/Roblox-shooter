@@ -29,6 +29,9 @@ def main():
     server = source("src/server/WeaponService.luau")
     shot_input = source("src/shared/ShotInputPolicy.luau")
     spread_policy = source("src/shared/WeaponSpreadPolicy.luau")
+    aim_policy = source("src/shared/AimStancePolicy.luau")
+    movement_service = source("src/server/MovementService.luau")
+    rate_policy = source("src/shared/RemoteRatePolicy.luau")
     client = source("src/client/init.client.luau")
     viewmodel = source("src/client/WeaponVisuals.luau")
     hud = source("src/client/HudController.luau")
@@ -282,6 +285,48 @@ def main():
             "Both round reset and character respawn must reset server burst")
     require("spreadDegrees = " not in source("src/client/init.client.luau"),
             "Client should never send/choose weapon dispersion")
+
+    for needle in (
+        "function Aim.ready(aimSince, now, movementAllowed, grounded, planarSpeed)",
+        "function Aim.cone(weaponId, baseDegrees, ready)",
+        "Aim.SETTLE_SECONDS = 0.14", "Aim.MAX_AIM_WALK_SPEED = 23",
+    ):
+        has(aim_policy, needle, "Pure ADS policy")
+    for needle in (
+        'WaitForChild("AimStancePolicy")',
+        'local function onSetAiming(player, enabled)',
+        'RemoteGuard.allow(player, "SetAiming")',
+        'typeof(enabled) ~= "boolean"',
+        'state.aimSince = os.clock()',
+        'state.aimCharacter == character and state.aimWeaponId == weaponId',
+        'local function acceptedAimReady(player, weaponId, character, humanoid, root)',
+        'MovementService.aimMovementAllowed(player)',
+        'humanoid.FloorMaterial ~= Enum.Material.Air',
+        'AimStancePolicy.ready(state.aimSince, os.clock(),',
+        'AimStancePolicy.cone(weaponId, coneDegrees, aimed)',
+        'AimStancePolicy.cone(weaponId, config.spreadDegrees, aimed)',
+        'remotes.SetAiming.OnServerEvent:Connect(onSetAiming)',
+    ):
+        has(server, needle, "Validated server aiming")
+    has(network, 'SetAiming = "RemoteEvent"', "ADS transport")
+    has(rate_policy, 'SetAiming = { rate = 10, burst = 8 }', "ADS flood budget")
+    has(movement_service, "function MovementService.aimMovementAllowed(player)",
+        "Server movement admission for ADS")
+    require(server.count("state.aimSince = nil") == 4,
+        "ADS must reset on scope release, equip, round and respawn")
+    for needle in (
+        "remotes.SetAiming:FireServer(scoped)",
+        "cancelAimForMobility = function()",
+        "if enabled and cancelAimForMobility then",
+        'workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()',
+        'remotes.SetAiming:FireServer(true)',
+    ):
+        has(client, needle, "ADS transition to server")
+    require("payload.scoped" not in server and "payload.aiming" not in server,
+        "Per-shot client requests cannot grant their own ADS buff")
+    require(server.index("if not canFire(player, weaponId, config) then") <
+        server.index("local aimed = acceptedAimReady(player, weaponId,"),
+        "ADS only evaluated on admitted shots")
 
     has(network, 'ReloadWeapon = "RemoteEvent"', "Network ammo remote")
     for needle in (

@@ -29,6 +29,15 @@ assert(Policy.allow(bucket, "EquipWeapon", 10),
     "Weapon swaps must not share fire bucket")
 assert(Policy.allow(bucket, "ReloadWeapon", 10),
     "Reloads must not be blocked by weapon fire")
+local aimProfile = Policy.profile("SetAiming")
+assert(aimProfile.rate >= 8 and aimProfile.burst >= 6)
+local aimBucket = {}
+for _ = 1, aimProfile.burst do
+    assert(Policy.allow(aimBucket, "SetAiming", 20))
+end
+assert(not Policy.allow(aimBucket, "SetAiming", 20))
+assert(Policy.allow(aimBucket, "SetAiming", 20 + 1 / aimProfile.rate))
+assert(Policy.allow(aimBucket, "FireWeapon", 20))
 assert(Policy.profile("MovementUpdate").rate > 13,
     "12.5Hz boost and wallrun updates should pass on normal devices")
 

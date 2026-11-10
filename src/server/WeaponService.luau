@@ -7,11 +7,13 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local ShotInputPolicy = require(shared:WaitForChild("ShotInputPolicy"))
 local WeaponSpreadPolicy = require(shared:WaitForChild("WeaponSpreadPolicy"))
+local AimStancePolicy = require(shared:WaitForChild("AimStancePolicy"))
 local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
+local MovementService = require(script.Parent:WaitForChild("MovementService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
 local BotHearingService = require(script.Parent:WaitForChild("BotHearingService"))
@@ -31,6 +33,9 @@ local function getState(player)
             lastFireAt = {},
             lastSpreadAt = {},
             spreadCount = {},
+            aimSince = nil,
+            aimCharacter = nil,
+            aimWeaponId = nil,
             nextGlobalFireAt = 0,
             magazines = {},
             reloadUntil = {},
@@ -355,6 +360,19 @@ local function canFire(player, weaponId, config)
     return true
 end
 
+-- Only the server confirms ADS after a settled stance, live character,
+-- grounded body and server movement state. Evaluated for admitted shots.
+local function acceptedAimReady(player, weaponId, character, humanoid, root)
+    local state = getState(player)
+    if not root or state.aimCharacter ~= character
+        or state.aimWeaponId ~= weaponId then return false end
+    local v = root.AssemblyLinearVelocity
+    local speed = Vector3.new(v.X, 0, v.Z).Magnitude
+    return AimStancePolicy.ready(state.aimSince, os.clock(),
+        MovementService.aimMovementAllowed(player),
+        humanoid.FloorMaterial ~= Enum.Material.Air, speed)
+end
+
 -- Only after cadence/ammo admission do we advance the burst state.
 -- A client cannot choose a spread value, hitbox, or burst timestamp.
 local function acceptedRaycastSpread(player, weaponId, config)
@@ -395,7 +413,7 @@ local function fireRaycastWeapon(player, weaponId, config, direction, coneDegree
     damageHit(player, weaponId, config, result, origin)
 end
 
-local function firePelletWeapon(player, weaponId, config, direction)
+local function firePelletWeapon(player, weaponId, config, direction, coneDegrees)
     local character, _, head = getLiveCharacter(player)
     if not character then return end
     local origin = head.Position
@@ -410,7 +428,7 @@ local function firePelletWeapon(player, weaponId, config, direction)
     local struckShield = false
 
     for _ = 1, config.pellets do
-        local pelletDirection = randomSpread(direction, config.spreadDegrees)
+        local pelletDirection = randomSpread(direction, coneDegrees)
         local ray = workspace:Raycast(origin, pelletDirection * config.range, params)
         if not firstDirection then
             firstDirection = pelletDirection
@@ -596,9 +614,40 @@ local function onEquipWeapon(player, weaponId)
     local state = getState(player)
     if state.equippedWeaponId ~= weaponId then
         cancelReload(state, state.equippedWeaponId)
+        state.aimSince = nil
+        state.aimCharacter = nil
+        state.aimWeaponId = nil
     end
     state.equippedWeaponId = weaponId
     sendAmmo(player, weaponId)
+end
+
+local function onSetAiming(player, enabled)
+    if not RemoteGuard.allow(player, "SetAiming") then return end
+    if typeof(enabled) ~= "boolean" then return end
+    local state = getState(player)
+    if not enabled then
+        state.aimSince = nil
+        state.aimCharacter = nil
+        state.aimWeaponId = nil
+        return
+    end
+    local phase = workspace:GetAttribute("NeonMatchPhase")
+    if phase ~= "LIVE" and phase ~= "COUNTDOWN" then return end
+    local character = getLiveCharacter(player)
+    local weaponId = state.equippedWeaponId
+    local definition = WeaponConfig.get(weaponId)
+    if not character or not definition
+        or not (definition.aimFov or definition.zoomFieldOfView) then
+        return
+    end
+    -- Repeated requests cannot bypass the settling delay.
+    if state.aimCharacter == character and state.aimWeaponId == weaponId then
+        return
+    end
+    state.aimCharacter = character
+    state.aimWeaponId = weaponId
+    state.aimSince = os.clock()
 end
 
 local function onFireWeapon(player, payload)
@@ -618,7 +667,7 @@ local function onFireWeapon(player, payload)
     end
 
     -- A dead character cannot fire or consume its rate limit.
-    local liveCharacter, _, liveHead = getLiveCharacter(player)
+    local liveCharacter, liveHumanoid, liveHead, liveRoot = getLiveCharacter(player)
     if not liveCharacter then return end
     if not canFire(player, weaponId, config) then
         return
@@ -632,9 +681,16 @@ local function onFireWeapon(player, payload)
     SpawnService.clearProtection(player.Character)
     if config.kind == "Raycast" then
         local coneDegrees = acceptedRaycastSpread(player, weaponId, config)
-        fireRaycastWeapon(player, weaponId, config, direction, coneDegrees)
+        local aimed = acceptedAimReady(player, weaponId,
+            liveCharacter, liveHumanoid, liveRoot)
+        local adjusted = AimStancePolicy.cone(weaponId, coneDegrees, aimed)
+        fireRaycastWeapon(player, weaponId, config, direction, adjusted or coneDegrees)
     elseif config.kind == "Pellet" then
-        firePelletWeapon(player, weaponId, config, direction)
+        local aimed = acceptedAimReady(player, weaponId,
+            liveCharacter, liveHumanoid, liveRoot)
+        local adjusted = AimStancePolicy.cone(weaponId, config.spreadDegrees, aimed)
+        firePelletWeapon(player, weaponId, config, direction,
+            adjusted or config.spreadDegrees)
     elseif config.kind == "Projectile" then
         fireKnife(player, weaponId, config, direction)
     end
@@ -652,6 +708,9 @@ function WeaponService.resetRound()
         state.lastFireAt = {}
         state.lastSpreadAt = {}
         state.spreadCount = {}
+        state.aimSince = nil
+        state.aimCharacter = nil
+        state.aimWeaponId = nil
         state.nextGlobalFireAt = 0
         if player.Parent then sendAmmo(player, state.equippedWeaponId) end
     end
@@ -666,6 +725,7 @@ function WeaponService.start()
     remotes = PrecisionNet.getRemotes(true)
 
     remotes.EquipWeapon.OnServerEvent:Connect(onEquipWeapon)
+    remotes.SetAiming.OnServerEvent:Connect(onSetAiming)
     remotes.FireWeapon.OnServerEvent:Connect(onFireWeapon)
     remotes.ReloadWeapon.OnServerEvent:Connect(reloadWeapon)
 
@@ -677,6 +737,9 @@ function WeaponService.start()
             state.lastFireAt = {}
             state.lastSpreadAt = {}
             state.spreadCount = {}
+            state.aimSince = nil
+            state.aimCharacter = nil
+            state.aimWeaponId = nil
             state.shotRayCharacter = nil
             state.shotRayParams = nil
             -- Respawn deliberately keeps the prior global shot deadline.

@@ -7,6 +7,7 @@ local PROFILES = {
     FireWeapon = { rate = 18, burst = 12 },
     ReloadWeapon = { rate = 5, burst = 5 },
     SetSprinting = { rate = 10, burst = 6 },
+    SetAiming = { rate = 10, burst = 8 },
     -- Move updates are sent at ~12.5 Hz while boost/wallrun is active.
     MovementAction = { rate = 34, burst = 22 },
     MovementUpdate = { rate = 22, burst = 14 },

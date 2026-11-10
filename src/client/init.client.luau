@@ -30,6 +30,7 @@ local nextLocalGlobalFireAt = 0
 local ammoByWeapon = {}
 local touchWeaponButtons = {}
 local updateTouchVisibility = nil
+local cancelAimForMobility = nil
 local lastReloadRequestAt = -math.huge
 local lastLocalSlideAt = -math.huge
 local lastLocalSlideJumpAt = -math.huge
@@ -317,6 +318,9 @@ local function showLocalBody()
 end
 
 local function setSprinting(enabled)
+    if enabled and cancelAimForMobility then
+        cancelAimForMobility()
+    end
 	if sprinting == enabled then
 		return
 	end
@@ -733,7 +737,7 @@ end
 
 local function setScoped(enabled)
     local config = WeaponConfig.get(currentWeaponId)
-    if enabled and (not config or (not config.aimFov and not config.zoomFieldOfView)) then
+    if enabled and (sprinting or not config or (not config.aimFov and not config.zoomFieldOfView)) then
         enabled = false
     end
     -- Scope state is independent of camera lifetime; a missing camera may
@@ -746,6 +750,11 @@ local function setScoped(enabled)
     applyCameraFov()
     hud:setScoped(scoped)
     visuals:setScoped(scoped)
+    remotes.SetAiming:FireServer(scoped)
+end
+
+cancelAimForMobility = function()
+    if scoped then setScoped(false) end
 end
 
 local function refreshTouchSelection()
@@ -1258,6 +1267,13 @@ end)
 
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	task.defer(enforceFirstPerson)
+end)
+
+-- A new round resets the authoritative aim timer. Reannounce held aim once.
+workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
+    if scoped and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
+        remotes.SetAiming:FireServer(true)
+    end
 end)
 
 RunService.RenderStepped:Connect(function(deltaTime)

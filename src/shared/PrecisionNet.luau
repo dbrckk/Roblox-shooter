@@ -6,6 +6,7 @@ local REMOTE_FOLDER_NAME = "PrecisionRemotes"
 local REMOTES = {
 	EquipWeapon = "RemoteEvent",
 	FireWeapon = "RemoteEvent",
+    SetAiming = "RemoteEvent",
     ReloadWeapon = "RemoteEvent",
 	MovementAction = "RemoteEvent",
 	MovementState = "RemoteEvent",

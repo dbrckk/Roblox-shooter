@@ -637,6 +637,13 @@ local function onMovementAction(player, payload)
 	end
 end
 
+-- Read-only eligibility; clients cannot supply a mobility flag to the gun.
+function MovementService.aimMovementAllowed(player)
+    local state = movementStateByPlayer[player]
+    return state ~= nil and not state.sprinting and not state.sliding
+        and not state.wallRunning and not state.boosting
+end
+
 function MovementService.start()
 	if started then
 		return

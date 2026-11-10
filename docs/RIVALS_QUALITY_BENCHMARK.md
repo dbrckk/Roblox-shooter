@@ -166,3 +166,28 @@ non concernées, horloge/paramètres invalides, 50 000 coups simulés;
 contrat Python vérifiant le chemin d'admission puis le raycast.
 Validation en moteur restante : 50, 100, 200 studs sur cible,
 tir par tap-fire vs automatique, recul ressenti et latence Android/PC.
+
+
+## ADS server-side validé — 10 novembre 2026
+
+La visée n'est plus seulement un zoom local : un événement dédié SetAiming
+(10 par seconde, capacité 8) annonce l'intention de viser. Le serveur enregistre
+l'arme et le personnage, puis ne valide le bonus qu'après 140 ms de visée.
+Le client ne décide jamais des dégâts, du cône, du temps ou de la cible.
+Le bonus est suspendu lorsque le serveur constate sprint, glissade, wallrun,
+boost, saut ou vitesse horizontale supérieure à 23 studs/s.
+
+- AR-24 : cône réduit de 30 % par rapport au bloom de rafale serveur.
+- Shotgun B-8 : cône des huit plombs réduit de 14 %.
+- Pistolet et sniper (0 dispersion) : réglages inchangés; couteau non concerné.
+- Réinitialisation à la désactivation, au changement d'arme, au respawn et
+  au démarrage de manche. Une visée conservée pendant le countdown est
+  réannoncée côté client lorsque la manche passe en LIVE.
+- Le sprint volontaire annule la visée locale. Toutes les réductions sont
+  calculées uniquement après admission du tir, sans raycast ou boucle ajoutés.
+- Tests : 40 000 tirs de simulation, paramètres invalides, mobilité, délais,
+  limites de fréquence, et contrats client-serveur.
+
+Essais restant à effectuer dans Studio puis Android : tir rafale et contrôlé,
+ADS après sprint, saut, réapparition et changement d'arme; vérifier la
+latence ressentie et la précision à moyenne et longue portée.
