@@ -104,6 +104,14 @@ for phrase in (
 ):
     assert phrase in nav, "Missing nav workload or safety hook: " + phrase
 for phrase in (
+    "local function finite(value)",
+    "if not finite(previousX) or not finite(previousZ)",
+    "or not finite(currentX) or not finite(currentZ)",
+):
+    assert phrase in motion, "No-allocation motion signal validation missing: " + phrase
+assert "local values = {" not in motion, (
+    "Server R6 pose signals must validate scalars without table allocations")
+for phrase in (
     "function Motion.intervalSquared(nearestPlayerDistanceSquared)",
     "function Motion.nextPoseAt(now, nearestPlayerDistanceSquared, slot)",
     "and nearestPlayerDistanceSquared <= 155 * 155",
