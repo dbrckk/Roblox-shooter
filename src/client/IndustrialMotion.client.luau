@@ -9,12 +9,10 @@ local Workspace = game:GetService("Workspace")
 
 local player = Players.LocalPlayer
 local Motion = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GantryMotion"))
-local arena = Workspace:WaitForChild("NeonStrikeArena", 30)
-local decor = arena and arena:WaitForChild("NeonStrikeDecor", 30)
-if not decor then
-    warn("[IRON YARD] Optional gantry motion disabled: arena art unavailable")
-    return
-end
+-- Optional crane art can arrive late or be replaced after a round reload.
+-- Never pin this client to a destroyed first-generation decor folder.
+local decor = nil
+local decorConnections = {}
 
 local rigs = setmetatable({}, { __mode = "k" })
 -- A streamed Model may arrive before its attributes and beacon Parts.
@@ -28,7 +26,7 @@ local function retireRig(candidate)
     -- On an attribute or beacon change, restore the original authoring
     -- pivot before capturing a new rig; otherwise re-registration can
     -- accumulate cosmetic offsets. No server gameplay Part is touched.
-    if rig.moving and candidate:IsDescendantOf(decor) then
+    if rig.moving and decor and candidate:IsDescendantOf(decor) then
         candidate:PivotTo(rig.base)
     end
     if rig.light then rig.light:Destroy() end
@@ -45,7 +43,7 @@ local function forgetCandidate(candidate)
 end
 
 local function register(candidate)
-    if not candidate:IsA("Model")
+    if not decor or not candidate:IsA("Model")
         or not candidate:IsDescendantOf(decor)
         or candidate:GetAttribute("IronYardGantryMover") ~= true then return end
     local index = candidate:GetAttribute("IronYardGantryIndex")
@@ -80,7 +78,9 @@ local function register(candidate)
 end
 
 local function watchCandidate(candidate)
-    if not candidate:IsA("Model") or pendingModels[candidate] then return end
+    if not decor or not candidate:IsA("Model")
+        or not candidate:IsDescendantOf(decor)
+        or pendingModels[candidate] then return end
     local connections = {}
     pendingModels[candidate] = connections
     table.insert(connections,
@@ -103,42 +103,67 @@ local function watchCandidate(candidate)
     register(candidate)
 end
 
-for _, candidate in ipairs(decor:GetChildren()) do watchCandidate(candidate) end
-decor.ChildAdded:Connect(watchCandidate)
-decor.ChildRemoved:Connect(forgetCandidate)
-decor.DescendantRemoving:Connect(function(item)
-    if not item:IsA("BasePart") then return end
-    local parent = item.Parent
-    if not parent or not parent:IsA("Model") then return end
-    local rig = rigs[parent]
-    if rig and rig.beacon == item then
-        -- The new beacon may already be parented while the old one is
-        -- leaving. Retry AFTER removal so FindFirstChild cannot bind back
-        -- to the departing Part. If the whole rig leaves, this is a no-op.
-        retireRig(parent)
-        task.defer(function()
-            if parent:IsDescendantOf(decor) then
+local function refreshDecor()
+    local arena = Workspace:FindFirstChild("NeonStrikeArena")
+    local current = arena and arena:FindFirstChild("NeonStrikeDecor")
+    if current == decor then return end
+
+    for _, connection in ipairs(decorConnections) do
+        connection:Disconnect()
+    end
+    table.clear(decorConnections)
+    -- Pending candidate connections are strong and must be disconnected
+    -- before allowing an obsolete arena/rig to be garbage collected.
+    for candidate in pairs(pendingModels) do forgetCandidate(candidate) end
+    for candidate in pairs(rigs) do retireRig(candidate) end
+
+    decor = current
+    if not decor then return end
+    for _, candidate in ipairs(decor:GetChildren()) do
+        watchCandidate(candidate)
+    end
+    table.insert(decorConnections, decor.ChildAdded:Connect(watchCandidate))
+    table.insert(decorConnections, decor.ChildRemoved:Connect(forgetCandidate))
+    table.insert(decorConnections, decor.DescendantRemoving:Connect(function(item)
+        if not item:IsA("BasePart") then return end
+        local parent = item.Parent
+        if not parent or not parent:IsA("Model") then return end
+        local rig = rigs[parent]
+        if rig and rig.beacon == item then
+            -- The replacement beacon can arrive before the old one leaves.
+            retireRig(parent)
+            task.defer(function()
+                if decor and parent:IsDescendantOf(decor) then
+                    register(parent)
+                end
+            end)
+        end
+    end))
+    table.insert(decorConnections, decor.DescendantAdded:Connect(function(candidate)
+        if candidate:IsA("BasePart") then
+            local parent = candidate.Parent
+            if parent and parent:IsA("Model") and parent.Parent == decor then
+                watchCandidate(parent)
                 register(parent)
             end
-        end)
-    end
-end)
-decor.DescendantAdded:Connect(function(candidate)
-    if candidate:IsA("BasePart") then
-        local parent = candidate.Parent
-        if parent and parent:IsA("Model") and parent.Parent == decor then
-            -- A beacon may stream after its Model. Try registration for
-            -- every arriving Part: only four gantry candidates can match.
-            watchCandidate(parent)
-            register(parent)
         end
-    end
-end)
+    end))
+end
+refreshDecor()
 
 local accumulated = 0
 local isTouch = UserInputService.TouchEnabled
 local interval = UserInputService.TouchEnabled and 1 / 15 or 1 / 24
-RunService.Heartbeat:Connect(function(dt)
+local nextDecorPollAt = 0
+local heartbeatConnection = RunService.Heartbeat:Connect(function(dt)
+    local now = os.clock()
+    if now >= nextDecorPollAt then
+        -- The identity check is O(1) and runs twice per second, not at
+        -- 15/24 Hz with the cranes' cosmetic pose calculations.
+        nextDecorPollAt = now + 0.5
+        refreshDecor()
+    end
+    if not decor then return end
     accumulated += dt
     if accumulated < interval then return end
     -- Drop excess backlog after a slow frame, never burst animations to
@@ -148,7 +173,6 @@ RunService.Heartbeat:Connect(function(dt)
     if not camera then return end
     local cameraPosition = camera.CFrame.Position
     local quality = player:GetAttribute("IronYardGraphicsPreset") or "BALANCED"
-    local now = os.clock()
     local elapsed = nil -- GetServerTimeNow is needed only if a rig actually animates.
 
     for model, rig in pairs(rigs) do
@@ -225,4 +249,14 @@ RunService.Heartbeat:Connect(function(dt)
             end
         end
     end
+end)
+
+-- No prior-generation decor subscriptions, pending candidate watchers, or
+-- local beacon lights may outlive a destroyed animation controller.
+script.Destroying:Connect(function()
+    heartbeatConnection:Disconnect()
+    for _, connection in ipairs(decorConnections) do connection:Disconnect() end
+    table.clear(decorConnections)
+    for candidate in pairs(pendingModels) do forgetCandidate(candidate) end
+    for candidate in pairs(rigs) do retireRig(candidate) end
 end)
