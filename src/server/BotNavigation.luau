@@ -2,11 +2,11 @@
 -- Uses capsule checks, asynchronous PathfindingService and safe ground detours.
 local PathfindingService = game:GetService("PathfindingService")
 local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Planner = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotAvoidancePlan"))
 local BotPerfService = require(script.Parent:WaitForChild("BotPerfService"))
 local Budget = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotPathBudget"))
+local EnvironmentRaycast = require(script.Parent:WaitForChild("BotEnvironmentRaycast"))
 
 local BotNavigation = {}
 local rnd = Random.new()
@@ -47,19 +47,10 @@ local function requestMove(bot, goal, now, force)
     end
 end
 
+-- Both path and cover probes reuse this bot's collision-safe terrain
+-- filter. The shared service observes join/leave and respawn invalidations.
 local function environmentParams(bot)
-    local ignore = { bot.model }
-    local bots = Workspace:FindFirstChild("NeonStrikeBots")
-    if bots then table.insert(ignore, bots) end
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then table.insert(ignore, player.Character) end
-    end
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = ignore
-    params.IgnoreWater = true
-    params.RespectCanCollide = true
-    return params
+    return EnvironmentRaycast.params(bot)
 end
 
 -- Module-level helper avoids a closure allocation for each sampled route.
