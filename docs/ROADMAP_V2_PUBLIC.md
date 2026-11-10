@@ -484,3 +484,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Toute addition/suppression de détail marque l'inventaire comme modifié ; le prochain balayage recalcule alors les secteurs concernés. Les changements de preset ECO/BALANCED/QUALITY et tout déplacement réel de caméra déclenchent aussi un balayage complet, sans retard de seuil artificiel.
 - [x] Aucun changement aux collisions, hitboxes, bots, dégâts ou règles du serveur. Contrat de régression Python mis à jour pour interdire l'oubli d'invalidation ; build Rojo et CI validés.
 - [ ] Mesurer dans Roblox sur Android le coût du LOD avec caméra fixe puis en déplacement rapide ; valider le streaming et les changements de qualité visuellement.
+
+
+### L3.18 — streaming des décors à caméra rapide et LOD borné (10 novembre 2026)
+
+- [x] Les détails 3D reçus via le streaming sont désormais classés avec la position **actuelle** de la caméra ; le dernier point d'échantillonnage à 1 Hz n'est utilisé qu'en secours si `CurrentCamera` n'est pas disponible. L'ancienne position pouvait dater d'une seconde après une propulsion rapide et masquer à tort des détails proches.
+- [x] Ajout d'une fréquence de contrôle LOD **adaptative et plafonnée** : cadence ordinaire de 1 Hz (et aucune boucle de secteurs coûteuse à l'arrêt grâce au cache précédent) ; 4 Hz maximum lorsque la caméra s'est déplacée d'au moins 20 studs depuis le dernier échantillonnage, ou après un changement de qualité. Les bots conservent strictement leurs contrôles LOD à 1 Hz. Aucun rattrapage d'images manquées n'est exécuté.
+- [x] La visibilité immédiate des pièces streamées conserve les mêmes seuils et la même hystérésis de détail ; les silhouettes majeures, les collisions, les hitboxes et la navigation serveur restent inchangées.
+- [x] Tests Luau sur 60 s simulées, plafond 4 Hz, état statique, transitions ECO/QUALITY, caméra remplacée/absente et apparition de détails proches/lointains lors de déplacements rapides ; vérification des contrats Python et build Rojo.
+- [ ] Sur Android, tester une séquence propulsion + demi-tour dans chaque zone, les détails qui streament en entrant/sortant de portée, les transitions de presets et les temps d'image P95/P99. La réussite de la CI n'établit pas de gains FPS mesurés.
