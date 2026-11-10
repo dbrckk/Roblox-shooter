@@ -71,4 +71,48 @@ approach, brace = M.coverPose(true, 2, 0, false, true)
 near(brace, 0, nil, "Non-defensive bot keeps neutral combat pose")
 approach, brace = M.coverPose(true, 2, 0/0, true, true)
 near(brace, 0, nil, "Invalid speed fails closed")
-print("IRON YARD grounded R6 turns, impact rebound, true cover approach and stance: OK")
+-- The 4 bots cannot all line up at 15Hz in normal 30Hz server frames.
+-- Absolute phase slots protect against drift and preserve both LOD rates.
+local function verifyStagger(distanceSquared, totalSeconds, minimumUpdates)
+    local deadlines = {}
+    local counts = {}
+    for slot = 1, 4 do
+        deadlines[slot] = M.nextPoseAt(0, distanceSquared, slot)
+        counts[slot] = 0
+    end
+    local worstFrame = 0
+    for frame = 1, totalSeconds * 30 do
+        local now = frame / 30
+        local thisFrame = 0
+        for slot = 1, 4 do
+            if now + 1e-9 >= deadlines[slot] then
+                thisFrame += 1
+                counts[slot] += 1
+                local nextAt = M.nextPoseAt(now, distanceSquared, slot)
+                assert(nextAt > now, "Scheduler must move strictly forward")
+                deadlines[slot] = nextAt
+            end
+        end
+        worstFrame = math.max(worstFrame, thisFrame)
+    end
+    assert(worstFrame <= 2,
+        "Normal 30Hz server cadence must not batch 3-4 bot poses together")
+    for slot = 1, 4 do
+        assert(counts[slot] >= minimumUpdates,
+            "Stagger must not starve a combatant's visual animation")
+    end
+end
+verifyStagger(100 * 100, 8, 112)
+verifyStagger(250 * 250, 8, 57)
+near(M.intervalSquared(155 * 155), 1 / 15, nil, "Near LOD inclusive threshold")
+near(M.intervalSquared(155 * 155 + 0.001), 1 / 8, nil, "Far LOD threshold")
+near(M.intervalSquared(math.huge), 1 / 8, nil, "No nearby live player")
+near(M.intervalSquared(0 / 0), 1 / 8, nil, "Invalid proximity fails far")
+assert(M.nextPoseAt(-1, 0, 1) == nil)
+assert(M.nextPoseAt(0/0, 0, 1) == nil)
+assert(M.nextPoseAt(math.huge, 0, 1) == nil)
+for slot = 1, 4 do
+    local n = M.nextPoseAt(37.123, 90 * 90, slot)
+    assert(n > 37.123 and n - 37.123 <= 1 / 15 + 1e-9)
+end
+print("IRON YARD bot poses: 4-slot phase staggering, squared distance, 8/15Hz: OK")

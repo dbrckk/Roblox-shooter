@@ -104,4 +104,29 @@ function Motion.interval(nearestPlayerDistance)
     return 1 / 8
 end
 
+-- Avoid four square roots for each bot proximity refresh. The radius remains
+-- EXACTLY 155 studs: this changes no animation LOD threshold.
+function Motion.intervalSquared(nearestPlayerDistanceSquared)
+    if type(nearestPlayerDistanceSquared) == "number"
+        and nearestPlayerDistanceSquared == nearestPlayerDistanceSquared
+        and nearestPlayerDistanceSquared >= 0
+        and nearestPlayerDistanceSquared <= 155 * 155 then
+        return 1 / 15
+    end
+    return 1 / 8
+end
+
+-- Deterministic staggering across four server-authored bot slots. A shared
+-- absolute clock prevents update phases from slowly converging after lag.
+-- It does not touch the 5Hz tactical loop, damage or navigation cadence.
+function Motion.nextPoseAt(now, nearestPlayerDistanceSquared, slot)
+    if type(now) ~= "number" or now ~= now
+        or now < 0 or now == math.huge then return nil end
+    local interval = Motion.intervalSquared(nearestPlayerDistanceSquared)
+    local botSlot = type(slot) == "number" and slot >= 1
+        and slot <= 4 and slot % 1 == 0 and slot or 1
+    local phase = (botSlot - 1) * interval / 4
+    return (math.floor((now - phase) / interval) + 1) * interval + phase
+end
+
 return Motion

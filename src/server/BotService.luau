@@ -386,7 +386,7 @@ local function createBot(slot)
         lateralBlend = 0,
         aimBlend = 0,
         isAiming = false,
-        nextAnimationAt = 0,
+        nextAnimationAt = BotMotionProfile.nextPoseAt(os.clock(), 0, slot),
         animationAt = os.clock(),
         stuckMonitor = nil,
         stuckMonitorGoal = nil,
@@ -922,7 +922,8 @@ function BotService.resetRound()
             bot.airBlend = 0
             bot.reloadBlend = 0
             bot.isAiming = false
-            bot.nextAnimationAt = 0
+            bot.nextAnimationAt = BotMotionProfile.nextPoseAt(
+                os.clock(), 0, slot)
             bot.animationAt = os.clock()
             SpawnService.protectCharacter(bot.model, 2.0)
         end
@@ -979,11 +980,15 @@ function BotService.start()
             for _, bot in pairs(slots) do
                 if bot.model.Parent and bot.humanoid.Health > 0
                     and now >= (bot.nextAnimationAt or 0) then
-                    local distance = math.huge
+                    local nearestSquared = math.huge
+                    local botPosition = bot.root.Position
                     for _, root in ipairs(humanRoots) do
-                        distance = math.min(distance, (root.Position - bot.root.Position).Magnitude)
+                        local offset = root.Position - botPosition
+                        nearestSquared = math.min(nearestSquared,
+                            offset:Dot(offset))
                     end
-                    bot.nextAnimationAt = now + BotMotionProfile.interval(distance)
+                    bot.nextAnimationAt = BotMotionProfile.nextPoseAt(
+                        now, nearestSquared, bot.slot)
                     local poseSample = BotPerfService.begin()
                     BotAnimation.step(bot, now, bot.isAiming == true)
                     BotPerfService.count("pose")

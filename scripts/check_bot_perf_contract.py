@@ -15,6 +15,7 @@ frame_window = src("src/shared/ClientFrameWindow.luau")
 net = src("src/shared/PrecisionNet.luau")
 boot = src("src/server/init.server.luau")
 bot = src("src/server/BotService.luau")
+motion = src("src/shared/BotMotionProfile.luau")
 nav = src("src/server/BotNavigation.luau")
 tactics = src("src/server/BotTactics.luau")
 
@@ -101,6 +102,26 @@ for phrase in (
     "path:ComputeAsync(start, goal)",
 ):
     assert phrase in nav, "Missing nav workload or safety hook: " + phrase
+for phrase in (
+    "function Motion.intervalSquared(nearestPlayerDistanceSquared)",
+    "function Motion.nextPoseAt(now, nearestPlayerDistanceSquared, slot)",
+    "and nearestPlayerDistanceSquared <= 155 * 155",
+    "local phase = (botSlot - 1) * interval / 4",
+):
+    assert phrase in motion, "Bot animation scheduling contract missing: " + phrase
+for phrase in (
+    "nextAnimationAt = BotMotionProfile.nextPoseAt(os.clock(), 0, slot)",
+    "bot.nextAnimationAt = BotMotionProfile.nextPoseAt(",
+    "now, nearestSquared, bot.slot)",
+    "local offset = root.Position - botPosition",
+    "offset:Dot(offset)",
+    "BotAnimation.step(bot, now, bot.isAiming == true)",
+    "task.wait(1 / 30)",
+):
+    assert phrase in bot, "Staggered server bot pose integration missing: " + phrase
+assert '(root.Position - bot.root.Position).Magnitude' not in bot.split(
+    'for _, bot in pairs(slots) do\n                if bot.model.Parent', 1)[1], (
+    "Cosmetic pose scheduling must use squared distance, not repeated roots")
 assert 'BotPerfService.count("tacticsRay")' in tactics
 assert nav.count('BotPerfService.count("navRay")') == 3
 assert tactics.count('BotPerfService.count("tacticsRay")') == 4
