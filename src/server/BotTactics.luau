@@ -12,6 +12,9 @@ local BotPerfService = require(script.Parent:WaitForChild("BotPerfService"))
 local BotTactics = {}
 local COVER_HOLD_SECONDS = 2.4
 local EDGE_LIMIT = 163
+local COVER_PROBE_FRACTIONS = { 0.25, 0.5, 0.75 }
+local COVER_RAY_ORIGIN_OFFSET = Vector3.new(0, -0.65, 0)
+local COVER_FLOOR_DIRECTION = Vector3.new(0, -11, 0)
 
 local function environmentParams(bot)
     local ignore = { bot.model }
@@ -48,20 +51,24 @@ local function coverApproachClear(bot, destination, params)
     local side = Vector3.new(-direction.Z, 0, direction.X).Unit * 1.25
     -- A single centre ray ignores a humanoid's shoulders. Reject a cover
     -- candidate when a freight wall blocks any of the three walking lanes.
-    for _, lateral in ipairs({ Vector3.zero, side, -side }) do
-        local origin = current + lateral + Vector3.new(0, -0.65, 0)
+    -- Preserve centre/right/left clearance while avoiding a per-candidate
+    -- table allocation on every guarded cover/strafe evaluation.
+    for index = 1, 3 do
+        local lateral = index == 1 and Vector3.zero
+            or (index == 2 and side or -side)
+        local origin = current + lateral + COVER_RAY_ORIGIN_OFFSET
         BotPerfService.count("tacticsRay")
         if Workspace:Raycast(origin, direction, params) then return false end
     end
     -- A walkable endpoint alone is insufficient if there is a catwalk gap.
     -- Three bounded ground probes, rather than one midpoint, prevent unsafe
     -- retreat steps over short drops and exposed catwalk edges.
-    for _, fraction in ipairs({ 0.25, 0.5, 0.75 }) do
+    for _, fraction in ipairs(COVER_PROBE_FRACTIONS) do
         local sample = current + direction * fraction
         BotPerfService.count("tacticsRay")
         local surface = Workspace:Raycast(
             Vector3.new(sample.X, current.Y + 4, sample.Z),
-            Vector3.new(0, -11, 0), params)
+            COVER_FLOOR_DIRECTION, params)
         if not surface or surface.Normal.Y < 0.68
             or math.abs(surface.Position.Y + 3.4 - current.Y) > 3.5 then
             return false
