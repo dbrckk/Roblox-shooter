@@ -1,61 +1,73 @@
--- IRON YARD / Roblox Studio Command Bar: install four imported original GLBs.
--- Requires the OWNER to have imported the four GLBs via Studio 3D Importer.
--- Select ALL FOUR top-level imported models in Explorer before running.
--- Never executes scripts from an imported package, never accepts missing PBR.
+-- IRON YARD / Roblox Studio Command Bar: install owner-imported original GLBs.
+-- Select matching LOD0 + LOD1 models for any subset of the five weapons.
+-- Existing approved categories are preserved through a sanitized clone.
+-- Never copy scripts, attachments, unknown objects, or unvalidated meshes.
 local Selection=game:GetService("Selection")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local expected={
-    Pistol={LOD0={"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
-        LOD1={"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"}},
-    Knife={LOD0={"IRONYARD_Knife_Static"},LOD1={"IRONYARD_Knife_Static"}},
+    Pistol={"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
+    Knife={"IRONYARD_Knife_Static"},
+    AssaultRifle={"IRONYARD_AssaultRifle_Static",
+        "IRONYARD_AssaultRifle_ChargingHandle","IRONYARD_AssaultRifle_Magazine"},
+    Shotgun={"IRONYARD_Shotgun_Static","IRONYARD_Shotgun_PumpAction"},
+    Sniper={"IRONYARD_Sniper_Static","IRONYARD_Sniper_Bolt"},
 }
 local requiredMaps={"ColorMap","NormalMap","RoughnessMap","MetalnessMap"}
 local selected=Selection:Get()
-assert(#selected==4,"Select four original GLB roots: Pistol/Knife LOD0 and LOD1")
+assert(#selected>=2 and #selected<=10 and #selected%2==0,
+    "Select matched LOD0 + LOD1 original GLBs (2, 4, 6, 8 or 10 models)")
+
 local function validAppearance(mesh)
     local a=mesh:FindFirstChildOfClass("SurfaceAppearance")
     if not a then return false end
     for _,key in ipairs(requiredMaps) do
         local id=a[key]
-        if typeof(id)~="string" or id=="" or id=="rbxassetid://0" then return false end
+        if typeof(id)~="string" or id=="" or id=="rbxassetid://0"
+            or id=="0" then return false end
     end
     return true
 end
+
 local function identify(model)
     local n=string.lower(model.Name):gsub("[^a-z0-9]","")
-    local weapon=n:find("pistol",1,true) and "Pistol"
+    local weapon=n:find("assaultrifle",1,true) and "AssaultRifle"
+        or n:find("shotgun",1,true) and "Shotgun"
+        or n:find("sniper",1,true) and "Sniper"
+        or n:find("pistol",1,true) and "Pistol"
         or n:find("knife",1,true) and "Knife" or nil
     local lod=n:find("lod0",1,true) and "LOD0"
         or n:find("lod1",1,true) and "LOD1" or nil
-    assert(weapon and lod,"Imported root must include weapon name and LOD0/LOD1")
+    assert(weapon and lod,"Root must include a supported weapon and LOD0/LOD1")
     return weapon,lod
 end
-local stage=Instance.new("Folder")
-stage.Name="_IronYardWeaponTemplatesStaging"
-local used={}
-for _,root in ipairs(selected) do
-    assert(root:IsA("Model"),"Each source GLB must be a Model")
-    local weapon,lod=identify(root)
-    local key=weapon.."_"..lod
-    assert(not used[key],"Repeated original GLB variant: "..key)
-    used[key]=true
-    local names=expected[weapon][lod]
+
+local function collectMeshes(root, weapon)
     local found={}
     for _,child in ipairs(root:GetDescendants()) do
         if child:IsA("MeshPart") then
-            for _,name in ipairs(names) do
+            for _,name in ipairs(expected[weapon]) do
                 if string.lower(child.Name)==string.lower(name) then
                     assert(not found[name],"Duplicate mesh "..name)
-                    assert(child.MeshId~="" and validAppearance(child),
-                        "Import an actual MeshId and four PBR textures for "..name)
+                    assert(child.MeshId~="" and validAppearance(child)
+                        and child.Size.Magnitude>=0.03 and child.Size.Magnitude<=10,
+                        "Import a real mesh and four maps for "..name)
                     found[name]=child
                 end
             end
         end
     end
-    for _,name in ipairs(names) do
-        assert(found[name],"Missing imported mesh: "..name)
+    for _,name in ipairs(expected[weapon]) do
+        assert(found[name],"Missing required original imported mesh: "..name)
     end
+    return found
+end
+
+local stage=Instance.new("Folder")
+stage.Name="_IronYardWeaponTemplatesStaging"
+local seen={}
+local replaced={}
+local function installVariant(source,weapon,lod)
+    local found=collectMeshes(source,weapon)
     local category=stage:FindFirstChild(weapon)
     if not category then
         category=Instance.new("Folder")
@@ -72,34 +84,67 @@ for _,root in ipairs(selected) do
     origin.CanCollide=false
     origin.CanQuery=false
     origin.CanTouch=false
-    origin.CFrame=root:GetPivot()
+    origin.CFrame=source:GetPivot()
     origin.Parent=template
     template.PrimaryPart=origin
-    for _,name in ipairs(names) do
+    for _,name in ipairs(expected[weapon]) do
         local clone=found[name]:Clone()
-        local primary=clone:FindFirstChildOfClass("SurfaceAppearance")
+        local appearance=clone:FindFirstChildOfClass("SurfaceAppearance")
         for _,item in ipairs(clone:GetDescendants()) do
-            if item~=primary or item.Parent~=clone then item:Destroy() end
+            if item~=appearance or item.Parent~=clone then item:Destroy() end
         end
         clone.Name=name
+        clone.Anchored=true
         clone.CanCollide=false
         clone.CanQuery=false
         clone.CanTouch=false
-        clone.Anchored=true
         clone.CastShadow=false
         clone.Parent=template
     end
     template:SetAttribute("IronYardStudioApproved",true)
     template.Parent=category
 end
-for _,category in ipairs({"Pistol","Knife"}) do
-    for _,lod in ipairs({"LOD0","LOD1"}) do
-        assert(used[category.."_"..lod],"Incomplete source GLB quartet")
+
+for _,root in ipairs(selected) do
+    assert(root:IsA("Model"),"Select each top-level GLB Model")
+    local weapon,lod=identify(root)
+    local key=weapon.."_"..lod
+    assert(not seen[key],"Duplicate original GLB variant: "..key)
+    seen[key]=true
+    replaced[weapon]=true
+    installVariant(root,weapon,lod)
+end
+
+for weapon in pairs(replaced) do
+    assert(seen[weapon.."_LOD0"] and seen[weapon.."_LOD1"],
+        "Both LOD0 and LOD1 are required for "..weapon)
+end
+
+-- Preserve unselected categories only if the prior saved kit is COMPLETE.
+-- Every retained mesh is reconstructed through the same whitelist.
+local previous=ReplicatedStorage:FindFirstChild("IronYardWeaponTemplates")
+if previous then
+    for weapon in pairs(expected) do
+        if not replaced[weapon] then
+            local folder=previous:FindFirstChild(weapon)
+            local low=folder and folder:FindFirstChild("LOD1")
+            local high=folder and folder:FindFirstChild("LOD0")
+            if low and high and low:IsA("Model") and high:IsA("Model")
+                and low:GetAttribute("IronYardStudioApproved")==true
+                and high:GetAttribute("IronYardStudioApproved")==true
+                and low:FindFirstChild("WeaponOrigin")
+                and high:FindFirstChild("WeaponOrigin") then
+                installVariant(high,weapon,"LOD0")
+                installVariant(low,weapon,"LOD1")
+            end
+        end
     end
 end
+
+-- Stage all categories before replacing the published replicated kit.
 stage.Parent=ReplicatedStorage
-local old=ReplicatedStorage:FindFirstChild("IronYardWeaponTemplates")
-if old then old:Destroy() end
+if previous then previous:Destroy() end
 stage.Name="IronYardWeaponTemplates"
-print("IRON YARD: four PBR weapon templates installed. Save/publish the Studio place.")
-print("The existing Part viewmodels remain a safe fallback for any unavailable mesh.")
+print("IRON YARD: validated weapon PBR kit installed in ReplicatedStorage.")
+print("Save/publish the place from the owner account, then test Android + PC.")
+print("Weapons missing an approved kit continue using procedural viewmodels.")
