@@ -410,7 +410,9 @@ def main():
         'Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(function()',
     ):
         has(duel_supply, token, "Fair-play medical disable in duel")
-    has(match, 'if winningPlayer and reason == "SCORE_LIMIT" then',
+    has(match, 'if winningPlayer and winningPlayer.Parent == Players',
+        "Only present combatants can receive duel victories")
+    has(match, 'and reason == "SCORE_LIMIT" then',
         "Forfeits and spawn failures must not farm progression awards")
     has(match, '(duel ~= nil and phase ~= "RESULTS")',
         "No forced duel ready state during active competition")
