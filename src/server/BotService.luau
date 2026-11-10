@@ -27,6 +27,7 @@ local BotHearingService = require(script.Parent:WaitForChild("BotHearingService"
 local BotPerfService = require(script.Parent:WaitForChild("BotPerfService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local DeathNotice = require(script.Parent:WaitForChild("DeathNotice"))
+local CombatFxRelay = require(script.Parent:WaitForChild("CombatFxRelay"))
 local folder = nil
 local slots = {}
 local roundKills = {}
@@ -607,7 +608,7 @@ local function shoot(bot, target, aimPoint, dt)
     local traceHumanoid = traceModel and traceModel:FindFirstChildOfClass("Humanoid")
     local worldImpact = ray ~= nil and traceHumanoid == nil
     -- Visual-only effects; never trusted for hit registration.
-    remotes.WeaponFx:FireAllClients({
+    CombatFxRelay.send(remotes.WeaponFx, {
         kind = "BotTracer",
         weaponId = "AssaultRifle",
         origin = origin,
@@ -616,7 +617,7 @@ local function shoot(bot, target, aimPoint, dt)
         length = ray and (ray.Position - origin).Magnitude or config.MaximumAttackDistance,
         impactNormal = worldImpact and ray.Normal or nil,
         impactMaterial = worldImpact and ray.Material.Name or nil,
-    })
+    }, origin, nil)
     if not ray then return end
     local hitModel = ray.Instance:FindFirstAncestorOfClass("Model")
     local humanoid = hitModel and hitModel:FindFirstChildOfClass("Humanoid")
