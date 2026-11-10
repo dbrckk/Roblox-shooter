@@ -207,15 +207,22 @@ local function targetInfo(model)
     return humanoid, root, head
 end
 
+local function rayParams(ignore)
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { ignore }
+    params.IgnoreWater = true
+    return params
+end
+
 -- Target acquisition balances line-of-sight, distance and target persistence.
 -- Bots no longer chase the nearest enemy through an opaque warehouse wall.
 local function getTargetModel(bot, limit)
     local now = os.clock()
     local origin = bot.head.Position
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = { bot.model }
-    params.IgnoreWater = true
+    -- The bot's own immutable exclusion filter is shared by target LOS
+    -- and both firing rays. Do not allocate a new filter every 5Hz tick.
+    local params = bot.combatRaycastParams
     local sightings = {}
 
     local function consider(model)
@@ -291,15 +298,6 @@ local function getTargetModel(bot, limit)
     return best, aimPoint
 end
 
-local function rayParams(ignore)
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = { ignore }
-    params.IgnoreWater = true
-    return params
-end
-
-
 -- The staged defeat animation is owned by BotDeathAnimation, and runs
 -- only after the dead body is made non-blocking for players and projectiles.
 
@@ -310,6 +308,7 @@ local function createBot(slot)
         slot = slot,
         name = model.Name,
         model = model,
+        combatRaycastParams = rayParams(model),
         humanoid = humanoid,
         root = root,
         head = head,
@@ -565,7 +564,7 @@ local function shoot(bot, target, aimPoint, dt)
     local alignment = bot.aimDirection.Unit:Dot(direction.Unit)
     if not BotEngagementPlan.aimReady(alignment, direction.Magnitude) then return end
     -- Do not spend ammo firing through the cover between head and muzzle.
-    local shotParams = rayParams(bot.model)
+    local shotParams = bot.combatRaycastParams
     BotPerfService.count("muzzleRay")
     local muzzleBlock = Workspace:Raycast(origin, direction, shotParams)
     if not muzzleBlock or not muzzleBlock.Instance:IsDescendantOf(target) then return end
