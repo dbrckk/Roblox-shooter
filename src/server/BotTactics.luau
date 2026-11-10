@@ -1,7 +1,6 @@
 -- IRON YARD / bounded, server-owned combat movement for AI opponents.
 -- Decisions use only previously observed enemy positions. No through-wall tracking.
 local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BotCombatResponse = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotCombatResponse"))
 local BotEngagementPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotEngagementPlan"))
@@ -9,6 +8,7 @@ local BotCoverPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChi
 local BotSoundSearchPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotSoundSearchPlan"))
 
 local BotPerfService = require(script.Parent:WaitForChild("BotPerfService"))
+local EnvironmentRaycast = require(script.Parent:WaitForChild("BotEnvironmentRaycast"))
 local BotTactics = {}
 local COVER_HOLD_SECONDS = 2.4
 local EDGE_LIMIT = 163
@@ -16,19 +16,10 @@ local COVER_PROBE_FRACTIONS = { 0.25, 0.5, 0.75 }
 local COVER_RAY_ORIGIN_OFFSET = Vector3.new(0, -0.65, 0)
 local COVER_FLOOR_DIRECTION = Vector3.new(0, -11, 0)
 
+-- Cover and sound-search probes share the navigation service's
+-- per-bot filter, including up-to-date human respawns and bot folder.
 local function environmentParams(bot)
-    local ignore = { bot.model }
-    local folder = Workspace:FindFirstChild("NeonStrikeBots")
-    if folder then table.insert(ignore, folder) end
-    for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then table.insert(ignore, player.Character) end
-    end
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = ignore
-    params.IgnoreWater = true
-    params.RespectCanCollide = true
-    return params
+    return EnvironmentRaycast.params(bot)
 end
 
 local function groundedGoal(bot, proposed, params)
