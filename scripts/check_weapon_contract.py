@@ -70,6 +70,47 @@ def main():
     has(server, 'or player.Parent ~= Players',
         "In-flight player projectiles must stop after PlayerRemoving")
 
+    # A successful hitscan/shotgun/bot shot needs ONE WeaponFx broadcast,
+    # not a separate FireSound broadcast followed by a tracer broadcast.
+    # Thrown knives do not send PlayerTracer and keep FireSound on its own.
+    for needle in (
+        "local function broadcastFireFx(player, weaponId, origin, soundOnly)",
+        "BotHearingService.record(player.Character, weaponId, origin)",
+        "if soundOnly then",
+        'kind = "FireSound"',
+        'kind = "PlayerTracer"',
+        "broadcastTrace(player, weaponId, origin, shotDirection, config.range, result)",
+        "broadcastFireFx(player, weaponId, start, true)",
+        "broadcastFireFx(player, weaponId, origin, true)",
+    ):
+        has(server, needle, "Consolidated hitscan audio / knife-only audio")
+    require(server.count("broadcastFireFx(player, weaponId, origin)") == 2,
+            "Raycast and shotgun shots must emit sound using their tracer packet")
+    require(server.count("broadcastFireFx(player, weaponId, origin, true)") == 1,
+            "Only in-flight knife launch needs its separate audio packet")
+    require(server.count("remotes.WeaponFx:FireAllClients({") == 2,
+            "Only PlayerTracer and knife-only FireSound should broadcast FX")
+    require(bot.count("remotes.WeaponFx:FireAllClients({") == 1
+            and 'kind = "BotTracer"' in bot
+            and 'weaponId = "AssaultRifle"' in bot
+            and 'kind = "FireSound"' not in bot
+            and 'BotHearingService.record(bot.model, "AssaultRifle", origin)' in bot,
+            "Bot audio and tracer must share one authoritative packet")
+    player_audio = client.index('elseif message.kind == "PlayerTracer"')
+    player_budget = client.index("local remoteAccepted = not ownShot and RemoteCombatFxBudget.allow(")
+    bot_audio = client.index('elseif message.kind == "BotTracer"')
+    bot_budget = client.index("local botFxBudget = CombatVfxProfile.budget(")
+    require(player_audio < client.index("visuals:playFireSound(message.weaponId, message.origin)",
+                                        player_audio) < player_budget,
+            "Remote player audio must play even when the tracer budget is exhausted")
+    require(bot_audio < client.index("visuals:playFireSound(message.weaponId, message.origin)",
+                                     bot_audio) < bot_budget,
+            "Bot audio must remain independent of the cosmetic tracer budget")
+    has(client, "if message.shooterUserId ~= player.UserId then",
+        "Locally predicted shot audio must not play twice")
+    has(client, 'message.kind == "FireSound"', "Knife-only audio packet remains supported")
+
+
     order = re.search(r"WeaponConfig.Order\s*=\s*\{([^}]+)\}", config)
     require(order is not None, "Weapon order missing")
     names = re.findall(r'"([A-Za-z]+)"', order.group(1))
