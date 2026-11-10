@@ -222,17 +222,33 @@ def main():
     for weapon in ("Pistol", "AssaultRifle", "Shotgun", "Sniper"):
         require(f'WeaponFeel.mechanism("{weapon}", shotAge)' not in viewmodel,
                 "Do not evaluate inactive weapon mechanisms each frame")
-    require(viewmodel.count("TweenService:Create(") == 2,
-            "Only confirmed hit glints may still use TweenService; transient Parts are pooled")
-    # Three intentional Debris calls remain: confirmed-hit core/spark and
-    # spatialized sound. Tracer, pellet, fragment, dust and muzzle effects
-    # must use the reusable pool instead of per-shot scheduled destruction.
-    require(viewmodel.count("Debris:AddItem(") == 3
-            and "Debris:AddItem(tracer," not in viewmodel
-            and "Debris:AddItem(chip," not in viewmodel
-            and "Debris:AddItem(fin," not in viewmodel
-            and "Debris:AddItem(dot," not in viewmodel,
-            "Transient FX must not schedule per-shot debris cleanup")
+    # Confirmed local damage now shares the prioritized reusable FX pool.
+    # No gunfire event should allocate temporary Parts, Tweens or Debris
+    # timers; the only remaining Debris lifetime is spatial audio.
+    require("TweenService:Create(" not in viewmodel
+            and "TweenService = " not in viewmodel,
+            "All combat glints must use pooled Quad.Out render updates")
+    require(viewmodel.count("Debris:AddItem(") == 1
+            and "Debris:AddItem(emitter, mix.lifetime)" in viewmodel,
+            "Only spatial audio may schedule Debris cleanup")
+    confirmed = viewmodel.split("function WeaponVisuals:drawConfirmedHit(", 1)[1].split(
+        "function WeaponVisuals:drawPelletImpacts(", 1)[0]
+    for needle in (
+        "CombatVfxProfile.hitPriority(headshot == true, killed == true)",
+        "CombatVfxProfile.shouldDisplayHit(now,",
+        'name = "IronYardConfirmedHit"',
+        'name = "IronYardHitSpark"',
+        "shape = Enum.PartType.Ball",
+        "priority = 4,",
+        "priority = 3,",
+        "duration = settings.duration",
+        "self:_spawnTransient({",
+    ):
+        require(needle in confirmed, "Server-confirmed hit pool must preserve " + needle)
+    require("Instance.new(" not in confirmed
+            and "Debris:AddItem(" not in confirmed
+            and "TweenService:Create(" not in confirmed,
+            "Confirmed hits must not create or schedule transient Instances")
     has(viewmodel, "self:drawMuzzleFlash(entry.part.Position + direction * 0.25, nil, direction, true)",
         "Own muzzle flash must keep priority over remote debris")
     for key in ("CombatVfxProfile.hitPriority(headshot == true, killed == true)",
