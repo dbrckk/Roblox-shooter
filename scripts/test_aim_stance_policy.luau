@@ -27,7 +27,7 @@ assert(A.cone("Shotgun", -2, true) == nil)
 assert(A.cone("Shotgun", 46, true) == nil)
 local buffed, hip = 0, 0
 for i = 1, 40000 do
-    local t = i / 60
+    local t = 10 + i / 60
     local ready = A.ready(t - 0.15, t, true, true, 20)
     local aimed = A.cone("AssaultRifle", ar.spreadDegrees, ready)
     local normal = A.cone("AssaultRifle", ar.spreadDegrees, false)
