@@ -97,11 +97,12 @@ def knife(m,high):
     p.append(blade(m["gunmetal"]))
     p.append(box("Raised longitudinal blade ridge",(0,.44,.052),(.075,.54,.018),
                  m["armor"],1))
+    # The low mobile LOD retains real machined fasteners, not only boxes.
+    for side in (-1,1):
+        for i in range(2 if high else 1):
+            p.append(cylinder("Grip pin",(side*.13,-.42+i*.29,.0),.028,
+                      .026,m["gunmetal"],16 if high else 12,axis="Z"))
     if high:
-        for side in (-1,1):
-            for i in range(2):
-                p.append(cylinder("Grip pin",(side*.13,-.42+i*.29,.0),.028,
-                          .026,m["gunmetal"],16,axis="Z"))
         for i in range(4):
             p.append(box("Blade jimping",(0,.22+i*.08,.08),(.18,.027,.027),
                          m["carbon"],0))

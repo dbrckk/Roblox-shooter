@@ -49,7 +49,8 @@ def inspect(path,weapon):
             check(idx["count"]%3==0,"Corrupt triangle count")
             triangles+=idx["count"]//3
             materials.add(primitive["material"])
-    check(250<=triangles<=40000,"Mesh triangle budget violated")
+    check(250<=triangles<=40000,
+          f"Mesh triangle budget violated on {weapon}: {triangles} triangles")
     check(len(materials)>=2,"No material segmentation")
     ready=0
     for i in materials:
