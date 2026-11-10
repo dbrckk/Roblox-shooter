@@ -54,6 +54,7 @@ jobs:
           ./luau scripts/test_bot_avoidance.luau
           ./luau scripts/test_bot_path_budget.luau
           ./luau scripts/test_bot_perf_profile.luau
+          ./luau scripts/test_client_frame_window.luau
           ./luau scripts/test_bot_movement_progress.luau
           ./luau scripts/test_bot_combat_response.luau
           ./luau scripts/test_bot_cover_plan.luau
