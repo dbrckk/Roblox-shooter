@@ -15,6 +15,8 @@ for _, setting in ipairs(settings) do
     assert(Pool.cap(setting[1], setting[2]) ==
         b.fragments * Pool.MAX_BOTS)
     assert(Pool.cap(setting[1], setting[2]) == setting[3])
+    assert(Plan.dustFragments(setting[1], setting[2]) == b.fragments,
+        "Death VFX admission and the active pool use the same policy")
 end
 local slots = {}
 for _, args in ipairs({
@@ -46,7 +48,7 @@ assert(Pool.claim(slots, 10.35, 0.36, 2) == nil,
     "Clock rollback must never overwrite an active effect")
 
 -- Concurrent four-bot deaths, repeated round resets, live preset
--- downgrades and 50k fragments never create >16 physical Parts.
+-- downgrades and 50k simulated ticks never create >16 physical Parts.
 local all = {}
 local peak = 0
 for i = 1, 50000 do
@@ -79,4 +81,4 @@ for _ = 1, 16 do assert(Pool.claim(burst, 2000, 0.36, 16)) end
 assert(Pool.claim(burst, 2000.01, 0.36, 16) == nil)
 assert(Pool.claim(burst, 2000.37, 0.36, 4) ~= nil)
 assert(#burst == 16, "Quality reduction must not allocate new Parts")
-print("IRON YARD death dust: 50k fragments, 4 bots, bounded 4/8/12/16 and Quad.Out: OK")
+print("IRON YARD death dust: 50k ticks, 4 bots, bounded 4/8/12/16 and Quad.Out: OK")
