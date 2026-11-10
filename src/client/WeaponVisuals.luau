@@ -9,6 +9,7 @@ local TransientFxPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitFor
 local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
+local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
@@ -91,6 +92,7 @@ function WeaponVisuals.new(WeaponConfig)
     self.cartridgeShots = {}
     self.pendingCartridge = nil
     self.detailTier = nil
+    self.currentWeaponImported = false
     -- Update visible detail immediately on graphics setting changes, without
     -- resetting reload state, recoil, camera aim or the equipped weapon.
     self.detailPresetConnection = Players.LocalPlayer:GetAttributeChangedSignal(
@@ -165,7 +167,7 @@ function WeaponVisuals:_addDetailGeometry(model, weaponId)
 end
 
 function WeaponVisuals:_syncDetailTier()
-    if not self.model
+    if not self.model or self.currentWeaponImported
         or (self.currentWeaponId ~= "Pistol" and self.currentWeaponId ~= "Knife") then
         return
     end
@@ -471,6 +473,82 @@ function WeaponVisuals:_createKnife(model)
     self:_addDetailGeometry(model, "Knife")
 end
 
+-- Load ONLY owner-installed PBR MeshParts from the replicated Studio kit.
+-- Nothing is downloaded or script-executed, and the original Part gun stays
+-- usable if the imported model, permissions or SurfaceAppearance are incomplete.
+function WeaponVisuals:_createImportedWeapon(model, weaponId)
+    local templates = ReplicatedStorage:FindFirstChild("IronYardWeaponTemplates")
+    local category = templates and templates:FindFirstChild(weaponId)
+    if not category then return false end
+    local lod = WeaponMeshPolicy.lod(
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled)
+    local template = category:FindFirstChild(lod)
+    if not template or not template:IsA("Model")
+        or template:GetAttribute("IronYardStudioApproved") ~= true then
+        return false
+    end
+    local origin = template:FindFirstChild("WeaponOrigin")
+    if not origin or not origin:IsA("BasePart") then return false end
+    local required = WeaponMeshPolicy.Required[weaponId]
+    if not required then return false end
+    -- Validate every source before cloning the first piece.
+    local selected = {}
+    for _, name in ipairs(required) do
+        local part = template:FindFirstChild(name)
+        if not part or not part:IsA("MeshPart") or part.MeshId == ""
+            or part.Size.Magnitude < 0.03 or part.Size.Magnitude > 10 then
+            return false
+        end
+        local appearance = part:FindFirstChildOfClass("SurfaceAppearance")
+        if not appearance or not WeaponMeshPolicy.mapsReady({
+            ColorMap=appearance.ColorMap, NormalMap=appearance.NormalMap,
+            RoughnessMap=appearance.RoughnessMap,
+            MetalnessMap=appearance.MetalnessMap,
+        }) then return false end
+        table.insert(selected, part)
+    end
+    if weaponId == "Pistol" then
+        self:_addArms(model, nil,
+            CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
+    else
+        self:_addArms(model, nil, CFrame.new(0.02, -0.32, 0.22)
+            * CFrame.Angles(math.rad(-21), math.rad(7), math.rad(-8)))
+    end
+    for _, sourcePart in ipairs(selected) do
+        local clone = sourcePart:Clone()
+        local appearance = clone:FindFirstChildOfClass("SurfaceAppearance")
+        for _, descendant in ipairs(clone:GetDescendants()) do
+            if descendant ~= appearance or descendant.Parent ~= clone then
+                descendant:Destroy()
+            end
+        end
+        configurePart(clone)
+        clone.Name = sourcePart.Name == "IRONYARD_Pistol_Slide"
+            and "Slide" or "WeaponBody"
+        clone.Parent = model
+        table.insert(self.parts, {
+            part=clone,
+            offset=origin.CFrame:ToObjectSpace(sourcePart.CFrame),
+            baseTransparency=clone.Transparency,
+            baseColor=clone.Color,
+        })
+    end
+    if weaponId == "Pistol" then
+        -- Invisible anchors preserve shell ejection and muzzle flash while
+        -- the imported moving glissiere replaces multiple Roblox Parts.
+        self:_addPart(model, "Part", "Muzzle",
+            Vector3.new(0.02, 0.02, 0.02), Color3.fromRGB(25, 25, 25),
+            CFrame.new(0, 0.16, -1.06), MATERIAL_SMOOTH, 1)
+        self:_addPart(model, "Part", "EjectionPort",
+            Vector3.new(0.02, 0.02, 0.02), Color3.fromRGB(25, 25, 25),
+            CFrame.new(0.07, 0.27, -0.32), MATERIAL_SMOOTH, 1)
+    end
+    self.currentWeaponImported = true
+    model:SetAttribute("IronYardWeaponSource", "PBR_MESH")
+    return true
+end
+
 function WeaponVisuals:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
     self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap
@@ -483,6 +561,7 @@ function WeaponVisuals:setWeapon(weaponId)
     self.reloadBlend = 0
     self.lastCameraPosition = nil
 	self:_clearModel()
+    self.currentWeaponImported = false
 
 	local model = Instance.new("Model")
 	model.Name = weaponId .. "Viewmodel"
@@ -496,10 +575,17 @@ function WeaponVisuals:setWeapon(weaponId)
     elseif weaponId == "Sniper" then
 		self:_createSniper(model)
 	elseif weaponId == "Knife" then
-		self:_createKnife(model)
+        if not self:_createImportedWeapon(model, "Knife") then
+            self:_createKnife(model)
+        end
 	else
-		self:_createPistol(model)
+        if not self:_createImportedWeapon(model, "Pistol") then
+            self:_createPistol(model)
+        end
 	end
+    if not self.currentWeaponImported then
+        model:SetAttribute("IronYardWeaponSource", "PROCEDURAL_PARTS")
+    end
     self:_applyCareerFinish()
     self:_syncScopeVisibility()
 end
