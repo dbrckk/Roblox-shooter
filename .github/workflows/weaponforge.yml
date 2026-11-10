@@ -22,7 +22,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender python3-numpy
       - name: Bake original 512px physically-based maps
         shell: bash
         run: |
