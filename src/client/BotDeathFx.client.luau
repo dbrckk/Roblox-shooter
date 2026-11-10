@@ -8,9 +8,30 @@ local RunService = game:GetService("RunService")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local Plan = require(shared:WaitForChild("BotDeathPlan"))
 local DustPool = require(shared:WaitForChild("BotDeathDustPool"))
+local Lifecycle = require(shared:WaitForChild("BotDeathFxLifecycle"))
 
 local player = Players.LocalPlayer
-local bound = setmetatable({}, { __mode = "k" })
+local folder = Workspace:WaitForChild("NeonStrikeBots")
+local lifecycle = Lifecycle.new()
+-- Pending attribute subscriptions are explicit, not weak-keyed: a signal
+-- closure can otherwise retain a streamed-out model indefinitely.
+local pendingAttributes = {}
+local folderAddedConnection = nil
+local folderRemovedConnection = nil
+
+local function retireBot(model)
+    local pending = pendingAttributes[model]
+    if pending then
+        pending:Disconnect()
+        pendingAttributes[model] = nil
+    end
+    local entry = Lifecycle.retire(lifecycle, model)
+    if entry and entry.connection then
+        entry.connection:Disconnect()
+        entry.connection = nil
+    end
+end
+
 local dustSlots = {}
 local activeDustIndices = {}
 local nextAnimationAt = 0
@@ -43,6 +64,13 @@ local animationConnection = RunService.RenderStepped:Connect(function()
 end)
 
 script.Destroying:Connect(function()
+    if folderAddedConnection then folderAddedConnection:Disconnect() end
+    if folderRemovedConnection then folderRemovedConnection:Disconnect() end
+    for model in pairs(lifecycle.byModel) do retireBot(model) end
+    for model, pending in pairs(pendingAttributes) do
+        pending:Disconnect()
+        pendingAttributes[model] = nil
+    end
     animationConnection:Disconnect()
     for _, slot in ipairs(dustSlots) do
         if slot.part then slot.part:Destroy() end
@@ -113,22 +141,54 @@ local function dustAt(model)
 end
 
 local function bind(model)
-    if not model:IsA("Model") or bound[model] then return end
-    if model:GetAttribute("IsArenaBot") ~= true then return end
-    bound[model] = true
+    if not model:IsA("Model") or model.Parent ~= folder then return end
+    local botAttribute = model:GetAttribute("IsArenaBot")
+    if botAttribute ~= true then
+        -- Streaming may deliver the Model before IsArenaBot. Watch only
+        -- unresolved candidates, and disconnect on arrival or removal.
+        if botAttribute == nil and not pendingAttributes[model] then
+            pendingAttributes[model] =
+                model:GetAttributeChangedSignal("IsArenaBot"):Connect(function()
+                    local pending = pendingAttributes[model]
+                    if pending then pending:Disconnect() end
+                    pendingAttributes[model] = nil
+                    if model.Parent == folder then bind(model) end
+                end)
+        end
+        return
+    end
+    local pending = pendingAttributes[model]
+    if pending then
+        pending:Disconnect()
+        pendingAttributes[model] = nil
+    end
+
+    local entry = Lifecycle.track(lifecycle, model, folder)
+    if not entry then return end
     task.spawn(function()
-        local humanoid = model:WaitForChild("Humanoid", 5)
-        if not humanoid or not model.Parent then return end
-        humanoid.Died:Connect(function()
-            -- Match the server's settle pose; do not generate at the instant
-            -- of impact or when a character is destroyed for round reset.
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+            or model:WaitForChild("Humanoid", 5)
+        -- WaitForChild can resume after a streamed-out/replaced bot returns.
+        -- Its old task cannot install a listener over the replacement.
+        if not humanoid or humanoid.Parent ~= model
+            or not Lifecycle.active(lifecycle, model, entry, folder) then return end
+
+        entry.connection = humanoid.Died:Connect(function()
+            if not Lifecycle.active(lifecycle, model, entry, folder)
+                or entry.deathQueued then return end
+            entry.deathQueued = true
+            -- Match the server's settle pose. A bot removed by a round
+            -- reset, streaming, or respawn must never spawn delayed dust.
             task.delay(0.64, function()
-                if model.Parent then dustAt(model) end
+                if Lifecycle.active(lifecycle, model, entry, folder)
+                    and humanoid.Parent == model and humanoid.Health <= 0 then
+                    dustAt(model)
+                end
             end)
         end)
     end)
 end
 
-local folder = Workspace:WaitForChild("NeonStrikeBots")
-folder.ChildAdded:Connect(bind)
+folderAddedConnection = folder.ChildAdded:Connect(bind)
+folderRemovedConnection = folder.ChildRemoved:Connect(retireBot)
 for _, child in ipairs(folder:GetChildren()) do bind(child) end
