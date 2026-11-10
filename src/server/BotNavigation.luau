@@ -19,6 +19,10 @@ local DETOUR_RECHECK_SECONDS = 1.35
 local DETOUR_HOLD_SECONDS = 2.4
 local MAX_GROUND_DELTA = 3.2
 local EDGE_LIMIT = 162
+local GROUND_PROBE_DISTANCES = { 7, 14, 22, 30 }
+local GROUND_RAY_DIRECTION = Vector3.new(0, -12, 0)
+local LOW_CAPSULE_OFFSET = Vector3.new(0, -1.2, 0)
+local HIGH_CAPSULE_OFFSET = Vector3.new(0, 1.1, 0)
 
 local function setMode(bot, mode)
     if bot.navMode == mode then return end
@@ -67,25 +71,31 @@ local function directRouteClear(bot, goal, cachedParams)
     if flat.Magnitude <= 2 then return true end
     local side = Vector3.new(-flat.Z, 0, flat.X).Unit * 1.3
     local params = cachedParams or environmentParams(bot)
-    local low = Vector3.new(0, -1.2, 0)
-    local high = Vector3.new(0, 1.1, 0)
-    for _, offset in ipairs({ low, low + side, low - side, high + side, high - side }) do
+    -- Same five capsule rays, ordered from centre to the shoulders.
+    -- Compute directions directly instead of allocating an offset table
+    -- for every 0.2s movement decision and detour candidate.
+    local function blockedAt(offset)
         BotPerfService.count("navRay")
-        if Workspace:Raycast(origin + offset, flat, params) then
-            return false
-        end
+        return Workspace:Raycast(origin + offset, flat, params) ~= nil
+    end
+    if blockedAt(LOW_CAPSULE_OFFSET)
+        or blockedAt(LOW_CAPSULE_OFFSET + side)
+        or blockedAt(LOW_CAPSULE_OFFSET - side)
+        or blockedAt(HIGH_CAPSULE_OFFSET + side)
+        or blockedAt(HIGH_CAPSULE_OFFSET - side) then
+        return false
     end
     -- Capsule clearance does not imply the FLOOR exists. Especially from
     -- catwalks, an empty lane can lead straight off an exposed platform.
     -- Two near-future ground probes stop movement BEFORE the edge while
     -- keeping the raycast budget independent of total route distance.
     local direction = flat.Unit
-    for _, lookahead in ipairs({ 7, 14, 22, 30 }) do
+    for _, lookahead in ipairs(GROUND_PROBE_DISTANCES) do
         local distance = math.min(lookahead, flat.Magnitude)
         local sample = origin + direction * distance
         local downFrom = Vector3.new(sample.X, origin.Y + 4.5, sample.Z)
         BotPerfService.count("navRay")
-        local floor = Workspace:Raycast(downFrom, Vector3.new(0, -12, 0), params)
+        local floor = Workspace:Raycast(downFrom, GROUND_RAY_DIRECTION, params)
         if not floor or floor.Normal.Y < 0.68
             or math.abs(floor.Position.Y + 3.4 - origin.Y) > MAX_GROUND_DELTA then
             return false
@@ -101,7 +111,7 @@ local function walkableCandidate(bot, raw, params)
     -- Grounding rejects roof tops, drops, voids and different catwalk heights.
     local castFrom = Vector3.new(raw.X, bot.root.Position.Y + 4.5, raw.Z)
     BotPerfService.count("navRay")
-    local hit = Workspace:Raycast(castFrom, Vector3.new(0, -12, 0), params)
+    local hit = Workspace:Raycast(castFrom, GROUND_RAY_DIRECTION, params)
     if not hit or hit.Normal.Y < 0.68 then return nil end
     local grounded = hit.Position + Vector3.new(0, 3.4, 0)
     if math.abs(grounded.Y - bot.root.Position.Y) > MAX_GROUND_DELTA then
