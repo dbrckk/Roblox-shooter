@@ -18,6 +18,7 @@ server = get("src/server/WeaponService.luau")
 config = get("src/shared/WeaponConfig.luau")
 ejection = get("src/shared/CartridgeEjectionPolicy.luau")
 ads = get("src/shared/WeaponAimPose.luau")
+scope_fov = get("src/shared/ScopeFovPolicy.luau")
 hud = get("src/client/HudController.luau")
 crosshair = get("src/shared/CrosshairFeedbackPolicy.luau")
 
@@ -124,6 +125,23 @@ assert "local aimOffset = CFrame.new(-0.40, 0.13, -0.14)" not in visuals
 assert "if currentWeaponId ~= weaponId and scoped then" in client
 assert client.index("if currentWeaponId ~= weaponId and scoped then") < client.index(
     "currentWeaponId = weaponId", client.index("local function equipWeapon("))
+assert "function Scope.fieldOfView(baseFov, scoped, config)" in scope_fov
+for needle in (
+    'WaitForChild("ScopeFovPolicy")',
+    "ScopeFovPolicy.fieldOfView(baseFieldOfView, scoped, config)",
+    "local function applyCameraFov()",
+    "if camera.FieldOfView ~= target then",
+    "local function setScoped(enabled)",
+    "if enabled == scoped then",
+    "setScoped(false)\n\t\tenforceFirstPerson()",
+    'workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()',
+    "task.defer(enforceFirstPerson)",
+):
+    assert needle in client, f"Camera FOV and respawn resilience missing: {needle}"
+assert "if camera and not scoped then" not in client, (
+    "Camera replacement must also restore scoped magnification")
+assert "if not camera then\n\t\treturn\n\tend\n\n\tlocal config" not in client, (
+    "Missing camera must not prevent scope state cleanup")
 assert "visuals:playFireSound(weaponId, ray.Origin, true)" in client, (
     "Locally predicted shot must never be culled as a remote shot"
 )

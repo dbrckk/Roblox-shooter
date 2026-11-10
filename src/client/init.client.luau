@@ -8,6 +8,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
+local ScopeFovPolicy = require(shared:WaitForChild("ScopeFovPolicy"))
 local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget"))
 local remoteFxState = RemoteCombatFxBudget.new()
@@ -76,10 +77,15 @@ local function applyMouseSensitivity()
 end
 
 local function applyCameraFov()
-	local camera = getCamera()
-	if camera and not scoped then
-		camera.FieldOfView = baseFieldOfView
-	end
+    local camera = getCamera()
+    if not camera then return end
+    -- Roblox may replace CurrentCamera during respawn / cutscenes while ADS.
+    -- Reapply the current weapon's scope FOV, not only the hip-fire default.
+    local config = WeaponConfig.get(currentWeaponId)
+    local target = ScopeFovPolicy.fieldOfView(baseFieldOfView, scoped, config)
+    if camera.FieldOfView ~= target then
+        camera.FieldOfView = target
+    end
 end
 
 local function applyMenuMouseState(isOpen)
@@ -726,29 +732,20 @@ local function requestJumpMovement()
 end
 
 local function setScoped(enabled)
-	local camera = getCamera()
-	if not camera then
-		return
-	end
-
-	local config = WeaponConfig.get(currentWeaponId)
+    local config = WeaponConfig.get(currentWeaponId)
     if enabled and (not config or (not config.aimFov and not config.zoomFieldOfView)) then
         enabled = false
     end
-
-	if enabled == scoped then
-		return
-	end
-
-	scoped = enabled
-	if scoped then
-		camera.FieldOfView = config.zoomFieldOfView or config.aimFov or baseFieldOfView
-	else
-		camera.FieldOfView = baseFieldOfView
-	end
-
-	hud:setScoped(scoped)
-	visuals:setScoped(scoped)
+    -- Scope state is independent of camera lifetime; a missing camera may
+    -- not leave the HUD or viewmodel in a stale aim state.
+    if enabled == scoped then
+        applyCameraFov()
+        return
+    end
+    scoped = enabled
+    applyCameraFov()
+    hud:setScoped(scoped)
+    visuals:setScoped(scoped)
 end
 
 local function refreshTouchSelection()
@@ -1239,7 +1236,10 @@ remotes.MovementState.OnClientEvent:Connect(function(message)
 end)
 
 player.CharacterAdded:Connect(function()
-	task.defer(function()
+    task.defer(function()
+        -- Respawn with the same equipped weapon used to preserve sniper ADS
+        -- and an outdated scope overlay. Always release ADS on a new life.
+        setScoped(false)
 		enforceFirstPerson()
 		setSprinting(false)
 		stopLocalWallRun(false)

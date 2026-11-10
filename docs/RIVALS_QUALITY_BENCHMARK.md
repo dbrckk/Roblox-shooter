@@ -123,3 +123,21 @@ La mire de tir sans zoom réagit désormais visuellement aux coups tirés, à la
 Les quatre segments sont repositionnés seulement quand leur rayon arrondi change (et pas plus souvent que toutes les 45 ms), via le RenderStepped existant. Aucun Tween ni nouvel événement réseau. En ADS, les quatre barres laissent place à un point central discret et cerclé ; le sniper conserve sa lunette. Les tests Luau simulent 3 600 images et cinq armes, puis la CI vérifie le câblage.
 
 À vérifier en moteur : emplacement du point ADS avec les mires, comportement sur très petits écrans, lisibilité dans les hautes lumières et absence de gêne dans les duels. Aucune métrique FPS réelle n'est affirmée.
+
+
+## Robustesse caméra / respawn / ADS — 10 novembre 2026
+
+- Correction : le FOV de la caméra remplacée par Roblox reprend maintenant
+  systématiquement la valeur de la visée du **vrai équipement actif**.
+  Une nouvelle caméra pendant le zoom sniper ne rétablit plus le FOV standard.
+- Correction : chaque réapparition annule l'état ADS précédent, même si le joueur
+  rééquipe la même arme. Le HUD, la lunette et le zoom ne peuvent plus persister
+  après une mort ou un respawn.
+- Correction : absence temporaire de Workspace.CurrentCamera n'empêche plus la
+  remise à zéro de l'état local, du HUD et du viewmodel.
+- Politique client pure testée : 1 2000-samples simulated camera rebind, changement
+  des valeurs de FOV, données invalides et équipement sans visée. Aucun impact
+  sur les raycasts serveur, les dégâts, la cadence ou le réseau.
+- À contrôler dans le moteur Roblox : se faire éliminer pendant l'ADS sniper
+  et pistolet, réapparaître, changer de caméra et d'arme, vérifier le FOV
+  et le réticule sur Android et PC.
