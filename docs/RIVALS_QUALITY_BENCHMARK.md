@@ -106,3 +106,11 @@ leurs vrais meshes/textures n'ont donc **pas été activés** dans Roblox par ce
   à RenderStepped. Les nouvelles pièces sont strictement cosmétiques.
 - La CI compile et teste la géométrie numérique, mais ne valide pas
   encore visuellement le centrage sur Android ou PC.
+
+
+## Lunette sniper graduée et responsive (10 novembre 2026)
+
+- Révision de la lunette : quatre lignes séparées, point central, graduations latérales et verticales, sans promettre de compensation balistique calibrée.
+- Taille adaptative (ratio hauteur, 150–350 px), voile périphérique réduit pour distinguer les cibles sur téléphone Android; aucun effet sur les raycasts de combat ou les hitboxes.
+- Confirmations de touches, dégâts et éliminations au-dessus des traits optiques. Tous les éléments sont alloués une seule fois et restent cachés hors ADS sniper.
+- Contrôle d'intégration ajouté à la suite Python du build Rojo; rendu en moteur encore à vérifier.

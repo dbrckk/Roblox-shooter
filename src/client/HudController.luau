@@ -363,33 +363,89 @@ function HudController:setAmmo(weaponId, loaded, capacity, reloading)
 end
 
 function HudController:_buildScopeOverlay()
-	local scopeOverlay = Instance.new("Frame")
-	scopeOverlay.Name = "ScopeOverlay"
-	scopeOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-	scopeOverlay.BackgroundTransparency = 0.45
-	scopeOverlay.BorderSizePixel = 0
-	scopeOverlay.Size = UDim2.fromScale(1, 1)
-	scopeOverlay.Visible = false
-	scopeOverlay.ZIndex = 0
-	scopeOverlay.Parent = self.gui
+    -- A static, client-only optical reticle that adapts to Android viewport sizes.
+    local scopeOverlay = Instance.new("Frame")
+    scopeOverlay.Name = "ScopeOverlay"
+    scopeOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    scopeOverlay.BackgroundTransparency = 0.76
+    scopeOverlay.BorderSizePixel = 0
+    scopeOverlay.Size = UDim2.fromScale(1, 1)
+    scopeOverlay.Visible = false
+    scopeOverlay.ZIndex = 0
+    scopeOverlay.Active = false
+    scopeOverlay.Parent = self.gui
 
-	local scopeRing = Instance.new("Frame")
-	scopeRing.Name = "ScopeRing"
-	scopeRing.AnchorPoint = Vector2.new(0.5, 0.5)
-	scopeRing.BackgroundTransparency = 1
-	scopeRing.BorderSizePixel = 0
-	scopeRing.Position = UDim2.fromScale(0.5, 0.5)
-	scopeRing.Size = UDim2.fromOffset(310, 310)
-	scopeRing.Visible = false
-	scopeRing.ZIndex = 2
-	scopeRing.Parent = self.gui
-	makeStroke(scopeRing, Color3.fromRGB(247, 244, 235), 0.2, 2)
-	makeCorner(scopeRing, 999)
+    local scopeRing = Instance.new("Frame")
+    scopeRing.Name = "ScopeRing"
+    scopeRing.AnchorPoint = Vector2.new(0.5, 0.5)
+    scopeRing.BackgroundTransparency = 1
+    scopeRing.BorderSizePixel = 0
+    scopeRing.Position = UDim2.fromScale(0.5, 0.5)
+    scopeRing.Size = UDim2.fromScale(0.55, 0.55)
+    scopeRing.Visible = false
+    scopeRing.ZIndex = 2
+    scopeRing.Active = false
+    scopeRing.Parent = self.gui
 
-	self.scopeOverlay = scopeOverlay
-	self.scopeRing = scopeRing
+    -- The ring fits the smaller screen dimension. Constraints are declarative,
+    -- with no per-frame size polling, Tweens, raycasts or extra render loops.
+    local aspect = Instance.new("UIAspectRatioConstraint")
+    aspect.AspectRatio = 1
+    aspect.DominantAxis = Enum.DominantAxis.Height
+    aspect.Parent = scopeRing
+    local sizeLimit = Instance.new("UISizeConstraint")
+    sizeLimit.MinSize = Vector2.new(150, 150)
+    sizeLimit.MaxSize = Vector2.new(350, 350)
+    sizeLimit.Parent = scopeRing
+    makeStroke(scopeRing, Color3.fromRGB(236, 232, 218), 0.13, 2)
+    makeCorner(scopeRing, 999)
+
+    local tint = Color3.fromRGB(228, 230, 219)
+    local function segment(name, position, size, opacity)
+        local part = Instance.new("Frame")
+        part.Name = name
+        part.AnchorPoint = Vector2.new(0.5, 0.5)
+        part.Position = position
+        part.Size = size
+        part.BackgroundColor3 = tint
+        part.BackgroundTransparency = opacity or 0
+        part.BorderSizePixel = 0
+        part.Active = false
+        part.ZIndex = 3
+        part.Parent = scopeRing
+        return part
+    end
+
+    -- Split bars preserve a clean sight picture at point-blank range.
+    segment("ScopeLeftStadia", UDim2.fromScale(0.264, 0.5),
+        UDim2.new(0.372, 0, 0, 2))
+    segment("ScopeRightStadia", UDim2.fromScale(0.736, 0.5),
+        UDim2.new(0.372, 0, 0, 2))
+    segment("ScopeTopStadia", UDim2.fromScale(0.5, 0.264),
+        UDim2.new(0, 2, 0.372, 0))
+    segment("ScopeBottomStadia", UDim2.fromScale(0.5, 0.736),
+        UDim2.new(0, 2, 0.372, 0))
+    local center = segment("ScopeCenterDot", UDim2.fromScale(0.5, 0.5),
+        UDim2.fromOffset(3, 3))
+    makeCorner(center, 999)
+    makeStroke(center, Color3.fromRGB(30, 35, 32), 0.1, 1)
+    -- Reference marks are visual cues, not calibrated ballistic holds.
+    for _, x in ipairs({ 0.22, 0.32, 0.68, 0.78 }) do
+        segment("ScopeWindageTick", UDim2.fromScale(x, 0.5),
+            UDim2.fromOffset(1, 9), 0.16)
+    end
+    for _, y in ipairs({ 0.61, 0.71, 0.81 }) do
+        segment("ScopeElevationTick", UDim2.fromScale(0.5, y),
+            UDim2.fromOffset(9, 1), 0.16)
+    end
+
+    -- Trusted damage confirmation remains visible above the reticle.
+    self.hitMarker.ZIndex = 4
+    self.damageReadout.ZIndex = 4
+    self.eliminationConfirmation.ZIndex = 4
+    self.scopeOverlay = scopeOverlay
+    self.scopeRing = scopeRing
 end
-
 function HudController:_buildSettingsMenu()
     local touch = UserInputService.TouchEnabled
     local settingsRect = TouchLayout.SETTINGS_BUTTON

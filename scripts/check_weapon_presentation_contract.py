@@ -18,6 +18,7 @@ server = get("src/server/WeaponService.luau")
 config = get("src/shared/WeaponConfig.luau")
 ejection = get("src/shared/CartridgeEjectionPolicy.luau")
 ads = get("src/shared/WeaponAimPose.luau")
+hud = get("src/client/HudController.luau")
 
 for needle in (
     "function Feel.get(id)", "function Feel.kick(id, current, added)",
@@ -131,6 +132,24 @@ assert "visuals:playFireSound(message.weaponId, message.origin)" in client, (
 assert "self.recoil - deltaTime * 5.5" not in visuals, (
     "Generic 5.5/s recoil no longer belongs in weapon handling"
 )
+for needle in (
+    'scopeRing.Size = UDim2.fromScale(0.55, 0.55)',
+    'Instance.new("UIAspectRatioConstraint")',
+    'aspect.DominantAxis = Enum.DominantAxis.Height',
+    'Instance.new("UISizeConstraint")',
+    'sizeLimit.MinSize = Vector2.new(150, 150)',
+    'sizeLimit.MaxSize = Vector2.new(350, 350)',
+    'segment("ScopeLeftStadia"', 'segment("ScopeRightStadia"',
+    'segment("ScopeTopStadia"', 'segment("ScopeBottomStadia"',
+    'segment("ScopeCenterDot"', 'segment("ScopeWindageTick"',
+    'segment("ScopeElevationTick"', 'self.hitMarker.ZIndex = 4',
+    'self.damageReadout.ZIndex = 4', 'self.eliminationConfirmation.ZIndex = 4',
+    'self.scopeOverlay.Visible = scoped and isOptical',
+    'self.scopeRing.Visible = scoped and isOptical',
+):
+    assert needle in hud, f"Missing optically scoped UI element: {needle}"
+assert 'scopeRing.Size = UDim2.fromOffset(310, 310)' not in hud
+assert 'RenderStepped:Connect' not in hud, "Sniper UI must not add a frame loop"
 assert "targetHumanoid:TakeDamage(damage)" in server
 assert "fireCooldown = 0.115" in config, "Server/weapon cadence not rewritten"
 print("IRON YARD five original viewmodels and bounded spatial audio wiring: OK")
