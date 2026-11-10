@@ -35,7 +35,8 @@ requires(server, (
     'sendFeedback(player, { kind = "Protected", weaponId = weaponId })',
     "if SpawnService.isProtected(targetCharacter) then",
     "sendProtected(attacker, weaponId)",
-    "if (opponent or model:GetAttribute(\"IsArenaBot\") == true)",
+    "if duelCanDamage(player, opponent)",
+    'and (opponent or model:GetAttribute("IsArenaBot") == true)',
     "and SpawnService.isProtected(model) then",
     "struckShield = true",
     "if not anyHit and struckShield then",
@@ -90,7 +91,7 @@ requires(client, (
     'if remoteAccepted then',
     '(ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table"',
 ), "Human/bot remote group admissions and unthrottled own-shot feedback")
-assert(client.count('RemoteCombatFxBudget.allow(') == 2, (
+assert client.count('RemoteCombatFxBudget.allow(') == 2, (
     "Exactly two remote visuals pathways must be admitted once per group"
 ))
 print("IRON YARD actual damage, spawn-shield readout, kill priority and remote FX quotas: OK")
