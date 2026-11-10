@@ -1,0 +1,65 @@
+name: Forge original IRON YARD PBR weapon meshes
+
+on:
+  push:
+    paths:
+      - ".github/workflows/weaponforge.yml"
+      - "tools/weaponforge/**"
+      - "tools/assetforge/generate_maps.py"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  weapon-mesh-kit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install free Blender
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y blender
+      - name: Bake original 512px physically-based maps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/assetforge/generate_maps.py --out build/weapon-kit/textures --size 512
+      - name: Export original real GLB geometry for pistol and knife
+        shell: bash
+        run: |
+          set -euo pipefail
+          blender --background --python-exit-code 7 --threads 2 --python tools/weaponforge/build_weapons.py -- \
+            --out build/weapon-kit --textures build/weapon-kit/textures
+      - name: Verify actual GLB buffers, UV, PBR maps, LOD size and names
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/weaponforge/validate_weapon_exports.py build/weapon-kit
+          cat build/weapon-kit/validation_summary.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload Blender source and GLB LODs
+        uses: actions/upload-artifact@v4
+        with:
+          name: iron-yard-original-weapon-meshes
+          path: build/weapon-kit/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Preserve generated source kit as a GitHub release
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          cd build
+          zip -q -r weapon-mesh-kit.zip weapon-kit
+          tag="iron-yard-weapon-meshes-${GITHUB_SHA:0:12}"
+          gh release create "$tag" weapon-mesh-kit.zip \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Original IRON YARD pistol + knife PBR meshes" \
+            --notes "Original Blender source, 4 GLB LOD models, 512px PBR maps and structural validation. Asset kit only, NOT a published Roblox experience. MeshPart import / owner permission / Studio+Android testing still needed." \
+            --prerelease
+          echo "Permanent source kit: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}" >> "$GITHUB_STEP_SUMMARY"
