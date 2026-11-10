@@ -203,3 +203,8 @@ With all five weapons, verify their first-person models still move smoothly duri
 ## First-person character streaming and accessory removal — 10 November 2026
 
 Join with a local character that has layered accessories and first-person arms. Stream several accessories in/out repeatedly while moving, switching weapons, wall-running and boosting; confirm no invisible face/arms reappear to obstruct the camera and that the visible body remains correctly drawn. Remove an entire Accessory/Model from the local character, then re-add it: no duplicate Part entries should remain in the active per-frame body cache. Repeat respawn 100 times in test automation or an equivalent stress setup. Character Model is scanned once per respawn, not on each RenderStepped. Measure real memory and frame-time in Studio/MicroProfiler; the Luau cache test is only an in-memory regression.
+
+
+## Private Android P95/P99 frame timing — 10 November 2026
+
+In a Studio session or the Roblox creator's live account, open PERF and record FPS, frame P95/P99, worst frame, and count above 33.3ms over the latest 240 frames. Compare three equivalent one-minute routes under four fighting bots (ECO, BALANCED, QUALITY), including weapon swap, sniper ADS, boost and streamed arena entry. Turn PERF off/on between runs to reset the 240-frame history; public players must not receive this diagnostic display or the optional per-frame sampling. The rolling percentile window indicates stutter on the client; it is not a GPU-specific profiler or a measured FPS improvement from CI. After respawning or changing the camera, rotate the phone and confirm the sector compass repositions and tracks the new camera viewport.
