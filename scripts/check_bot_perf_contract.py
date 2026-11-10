@@ -19,6 +19,8 @@ motion = src("src/shared/BotMotionProfile.luau")
 think_cadence = src("src/shared/BotThinkCadence.luau")
 nav = src("src/server/BotNavigation.luau")
 tactics = src("src/server/BotTactics.luau")
+environment = src("src/server/BotEnvironmentRaycast.luau")
+environment_policy = src("src/shared/BotEnvironmentFilterPolicy.luau")
 
 for phrase in (
     'PerformanceDiagnostics = "RemoteEvent"',
@@ -145,5 +147,54 @@ assert nav.count('BotPerfService.count("navRay")') == 3
 assert tactics.count('BotPerfService.count("tacticsRay")') == 4
 assert bot.count('BotPerfService.count("targetRay")') == 2
 assert bot.count('BotPerfService.count("shotRay")') == 1
+
+# Server collision-only probes for pathfinding and combat cover use exactly
+# the same Roblox RaycastParams instance for each bot. The roster is rebuilt
+# only after an observed Player/Character event; the bot-folder reference is
+# checked on every query so round/arena replacement cannot retain the old one.
+for label, script in (("navigation", nav), ("cover", tactics)):
+    assert 'require(script.Parent:WaitForChild("BotEnvironmentRaycast"))' in script, (
+        f"{label} must use the common per-bot terrain collision filter")
+    assert "return EnvironmentRaycast.params(bot)" in script, (
+        f"{label} must not build a separate ignore list per probe")
+    assert "RaycastParams.new()" not in script and "Players:GetPlayers()" not in script, (
+        f"{label} may not allocate terrain filters or scan player lists per probe")
+    assert script.count("local function environmentParams(bot)") == 1
+for needle in (
+    'WaitForChild("BotEnvironmentFilterPolicy")',
+    "local generation = Policy.new()",
+    "Players.PlayerAdded:Connect(watchPlayer)",
+    "Players.PlayerRemoving:Connect(unwatchPlayer)",
+    "player.CharacterAdded:Connect(invalidateRoster)",
+    "player.CharacterRemoving:Connect(invalidateRoster)",
+    "connection:Disconnect()",
+    "local function activeCharacters()",
+    "if rosterGeneration == generation.generation then return roster end",
+    "for _, player in ipairs(Players:GetPlayers()) do",
+    "local folder = Workspace:FindFirstChild(\"NeonStrikeBots\")",
+    "Policy.stale(bot.environmentRaycastParams,",
+    "local params = bot.environmentRaycastParams",
+    "params = RaycastParams.new()",
+    "params.FilterType = Enum.RaycastFilterType.Exclude",
+    "params.IgnoreWater = true",
+    "params.RespectCanCollide = true",
+    "params.FilterDescendantsInstances = ignore",
+    "bot.environmentFilterGeneration = version",
+    "bot.environmentFilterModel = model",
+    "bot.environmentFilterFolder = folder",
+):
+    assert needle in environment, "Incomplete invalidated bot raycast cache: " + needle
+assert environment.count("RaycastParams.new()") == 1, (
+    "Each bot must allocate a terrain filter only on first use")
+assert environment.count("params.FilterDescendantsInstances = ignore") == 1, (
+    "Update only when the roster, model, or folder generation changes")
+for needle in (
+    "function Policy.new()",
+    "function Policy.invalidate(state)",
+    "function Policy.stale(params, lastGeneration, generation,",
+    "lastGeneration ~= generation",
+    "lastModel ~= model or lastFolder ~= folder",
+):
+    assert needle in environment_policy, "Shared invalidation policy missing: " + needle
 
 print("IRON YARD private 5s bot profiler: authorized, bounded, opt-in, wired: OK")
