@@ -5,10 +5,15 @@ local b = { Name = "new" }
 local h1, h2 = {}, {}
 local state = Life.new()
 assert(not Life.bind(state, nil))
+assert(not Life.retire(state, nil))
+assert(not Life.recordDeath(state, 0, nil, nil, nil, true),
+    "No real Humanoid means no death award")
 local first = Life.bind(state, a)
 assert(first == 1)
 assert(not Life.bindHumanoid(state, first, a, h1, b))
 assert(Life.bindHumanoid(state, first, a, h1, a))
+assert(not Life.bindHumanoid(state, first, a, h2, a),
+    "A second Humanoid may not replace one bound to the same generation")
 assert(not Life.recordDeath(state, first, a, h1, a, false),
     "Warmup / RESULTS cannot count a human death")
 assert(not Life.recordDeath(state, first, a, h2, a, true))
