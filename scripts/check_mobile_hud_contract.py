@@ -55,7 +55,8 @@ for needle in (
 
 for needle in (
     'top.Visible = playerGui:GetAttribute("IronYardBriefingOpen") ~= true',
-    'playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(update)',
+    'playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(function()',
+    '    update()\n    duelLabel()\nend)',
 ):
     assert needle in match, f"Score overlay still collides with briefing: {needle}"
 
