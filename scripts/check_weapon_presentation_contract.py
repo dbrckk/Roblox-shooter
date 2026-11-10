@@ -107,6 +107,31 @@ assert 'return {' not in reload_visual, "No per-frame allocation of shell pose t
 assert 'local loadingShell = self.currentWeaponId' not in visuals, (
     "Shotgun reload viewmodel must consume scalar motion, not tables")
 
+# Scoped rifle and AR-24 viewmodels gained deterministic detail geometry.
+# These create geometry only on equip, never in combat frame callbacks.
+for needle in (
+    '"ScopeRingFront"',
+    '"ScopeRingRear"',
+    '"ScopeEyepiece"',
+    '"BoltHandle"',
+    '"BoltHandleKnob"',
+    'or partName == "BoltHandleKnob") and self.currentWeaponId == "Sniper"',
+    '"ReceiverDeflector"',
+    '"SelectorDial"',
+    '"GasBlock"',
+    '"VentLeft" .. i',
+    '"VentRight" .. i',
+    '"RailTooth" .. i',
+    'for i = 1, 3 do',
+):
+    assert needle in visuals, f"Detailed 3D firearm part missing: {needle}"
+assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
+    "Precision models must not add a second frame loop"
+)
+# The material-detail loops are authored inside equip-time constructor functions.
+assert visuals.index('"VentLeft" .. i') < visuals.index('function WeaponVisuals:_createShotgun')
+assert visuals.index('"ScopeRingFront"') < visuals.index('function WeaponVisuals:_createAssaultRifle')
+
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
     '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',

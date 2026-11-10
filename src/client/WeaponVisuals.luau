@@ -137,12 +137,13 @@ function WeaponVisuals:_applyCareerFinish()
         Handguard=true, StockPad=true, RecoilPad=true, PumpAction=true,
         PumpGrooveA=true, PumpGrooveB=true, ScopeFront=true, ForeRail=true,
         ChargingHandle=true, MuzzleRing=true, Guard=true, ShellCarrier=true,
-        GripPanelLeft=true,
+        GripPanelLeft=true, BoltHandleKnob=true, ScopeEyepiece=true,
     }
     local panels = {
         Receiver=true, Slide=true, Frame=true, Bolt=true, UpperRail=true,
         Barrel=true, TubeMagazine=true, BladeSpine=true, ScopeBody=true,
-        MuzzleBrake=true,
+        MuzzleBrake=true, ReceiverDeflector=true, BoltHandle=true,
+        GasBlock=true, ScopeRingFront=true, ScopeRingRear=true,
     }
     for _, entry in ipairs(self.parts) do
         local name = entry.part.Name
@@ -253,6 +254,27 @@ function WeaponVisuals:_createSniper(model)
     self:_addPart(model, "Part", "ScopeLens", Vector3.new(0.28, 0.04, 0.28), Color3.fromRGB(81, 112, 127), CFrame.new(0, 0.32, -0.94) * scopeAxis, MATERIAL_SMOOTH, 0.25, Enum.PartType.Cylinder)
     self:_addPart(model, "Part", "ScopeAdjustmentTurret", Vector3.new(0.14, 0.18, 0.14), Color3.fromRGB(63, 72, 76), CFrame.new(0, 0.57, -0.37), MATERIAL_METAL, nil, Enum.PartType.Cylinder)
     self:_addPart(model, "Part", "ScopeAdjustmentCap", Vector3.new(0.17, 0.035, 0.17), Color3.fromRGB(30, 35, 38), CFrame.new(0, 0.68, -0.37), MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    -- Distinct round scope bands, ocular assembly and real bolt handle.
+    -- These five mechanical pieces inherit the same single viewmodel root.
+    self:_addPart(model, "Part", "ScopeRingFront",
+        Vector3.new(0.35, 0.055, 0.35), Color3.fromRGB(88, 94, 102),
+        CFrame.new(0, 0.32, -0.65) * scopeAxis,
+        MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "ScopeRingRear",
+        Vector3.new(0.35, 0.055, 0.35), Color3.fromRGB(88, 94, 102),
+        CFrame.new(0, 0.32, -0.12) * scopeAxis,
+        MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "ScopeEyepiece",
+        Vector3.new(0.33, 0.12, 0.33), Color3.fromRGB(41, 47, 54),
+        CFrame.new(0, 0.32, 0.09) * scopeAxis,
+        MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "BoltHandle",
+        Vector3.new(0.25, 0.065, 0.09), Color3.fromRGB(136, 141, 147),
+        CFrame.new(0.38, 0.10, -0.22), MATERIAL_METAL)
+    self:_addPart(model, "Part", "BoltHandleKnob",
+        Vector3.new(0.15, 0.15, 0.15), Color3.fromRGB(48, 54, 59),
+        CFrame.new(0.54, 0.10, -0.22), MATERIAL_SMOOTH,
+        nil, Enum.PartType.Ball)
 	self:_addPart(model, "Part", "ForeRail", Vector3.new(0.42, 0.08, 0.78), Color3.fromRGB(36, 42, 50), CFrame.new(0, -0.12, -0.86), MATERIAL_METAL)
 end
 
@@ -281,6 +303,37 @@ function WeaponVisuals:_createAssaultRifle(model)
     self:_addPart(model, "Part", "FrontSight", Vector3.new(0.13, 0.23, 0.11), charcoal, CFrame.new(0, 0.30, -1.91), MATERIAL_METAL)
     self:_addPart(model, "Part", "RearSight", Vector3.new(0.13, 0.19, 0.14), charcoal, CFrame.new(0, 0.32, -0.05), MATERIAL_METAL)
     self:_addPart(model, "Part", "ChargingHandle", Vector3.new(0.25, 0.09, 0.18), steel, CFrame.new(0, 0.20, 0.18), MATERIAL_METAL)
+    -- Tapered ejection deflector, rotating safety dial and gas block turn
+    -- the flat receiver into recognizable industrial firearm geometry.
+    self:_addPart(model, "WedgePart", "ReceiverDeflector",
+        Vector3.new(0.09, 0.14, 0.16), steel,
+        CFrame.new(0.275, 0.08, -0.12) * CFrame.Angles(0, math.pi, 0),
+        MATERIAL_METAL)
+    self:_addPart(model, "Part", "SelectorDial",
+        Vector3.new(0.04, 0.13, 0.13), charcoal,
+        CFrame.new(0.24, -0.07, 0.025),
+        MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "GasBlock",
+        Vector3.new(0.19, 0.20, 0.25), steel,
+        CFrame.new(0, 0.14, -1.92), MATERIAL_METAL)
+    -- Six recessed ventilation cuts align with the existing handguard.
+    -- This surface detail is fixed at equip, not allocated on firing.
+    for i = 1, 3 do
+        local z = -1.06 - (i - 1) * 0.24
+        self:_addPart(model, "Part", "VentLeft" .. i,
+            Vector3.new(0.014, 0.09, 0.13), charcoal,
+            CFrame.new(-0.257, 0.03, z), MATERIAL_SMOOTH)
+        self:_addPart(model, "Part", "VentRight" .. i,
+            Vector3.new(0.014, 0.09, 0.13), charcoal,
+            CFrame.new(0.257, 0.03, z), MATERIAL_SMOOTH)
+    end
+    -- Raised rail teeth break the silhouette without adding an optic
+    -- obstruction to the rear iron-sight / ADS camera axis.
+    for i = 1, 3 do
+        self:_addPart(model, "Part", "RailTooth" .. i,
+            Vector3.new(0.29, 0.025, 0.045), steel,
+            CFrame.new(0, 0.253, -0.27 - (i - 1) * 0.32), MATERIAL_METAL)
+    end
 end
 
 function WeaponVisuals:_createShotgun(model)
@@ -636,7 +689,8 @@ function WeaponVisuals:_render(deltaTime)
         elseif (partName == "PumpAction" or partName == "PumpGrooveA"
             or partName == "PumpGrooveB") and self.currentWeaponId == "Shotgun" then
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
-        elseif partName == "Bolt" and self.currentWeaponId == "Sniper" then
+        elseif (partName == "Bolt" or partName == "BoltHandle"
+            or partName == "BoltHandleKnob") and self.currentWeaponId == "Sniper" then
             localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * actionTravel,
                 0, feel.actionTravel * actionTravel)
         end

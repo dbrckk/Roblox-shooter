@@ -408,3 +408,20 @@ requête réseau ou instance Roblox lors de chaque mise à jour.
   de Character, sans accumulation d'effets ni de boucles de frame.
 - La logique texte est testable hors de Roblox et est couverte par
   une suite Luau et les contrats de branchement mobile.
+
+
+## Precision des silhouettes : AR-24 et fusil de precision
+
+- Le fusil d'assaut AR-24 possede une deflection d'ejection en WedgePart,
+  un selecteur cylindrique, un bloc des gaz metallique, six ouvertures de
+  ventilation et trois dents sur le rail superieur. Les visees existantes
+  et les axes de tir serveur ne changent pas.
+- Le fusil de precision obtient deux bagues cylindriques de lunette,
+  un oculaire metallique et un vrai levier de culasse termine par
+  une boule. Le levier et la boule suivent la courbe de recul mecanique
+  deja utilisee par la culasse, sans nouvelle boucle d'animation.
+- Toutes les formes sont uniquement locales et non collidables, adaptees
+  aux couleurs de finition de l'operateur. Les details ne s'allouent
+  qu'a l'equipement du viewmodel, pas aux tirs.
+- Les contrats de presentation imposent le maintien d'une seule
+  connexion RenderStepped et verifient les pieces ajoutees.
