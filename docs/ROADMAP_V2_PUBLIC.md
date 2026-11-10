@@ -467,3 +467,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] La connexion aux changements de taille de `CurrentCamera` est désormais recréée après remplacement de la caméra, avec libération de l'ancien abonnement. Les textes de secteur et cap du HUD tactique ne sont plus réécrits lorsqu'ils sont identiques.
 - [x] Tests Luau : quantiles exacts nearest-rank, 240 entrées tournantes, pics à 33/50 ms, reset et entrées invalides. Contrôles Python des câblages et sécurité du panneau, puis compilation et build Rojo CI.
 - [ ] Enregistrer sur Android, avec le compte créateur, des sessions comparables de 60 secondes et quatre bots : FPS, P95, P99, nombre d'images lentes, ECO/BALANCED/QUALITY. Cette mise à jour rend les ralentissements mesurables, mais n'est pas une preuve de gain FPS.
+
+
+### L3.17 — répartition des calculs serveur des quatre bots (10 novembre 2026)
+
+- [x] Les quatre mises à jour tactiques (visibilité des ennemis, sélection de cible, couverture et navigation) ne sont plus toutes déclenchées dans la même tranche de 200 ms. La boucle distribue les vérifications sur quatre tranches de 50 ms ; chaque bot continue à prendre ses décisions à la fréquence cible de 5 Hz. Tir, cadence d'arme, vitesse, dégâts et autorité serveur ne sont pas modifiés.
+- [x] Nouveau planificateur pur `BotThinkCadence` : phases déterministes propres aux slots 1 à 4, temps absolu pour éviter une convergence progressive des phases, délai minimum de 75 % de l'intervalle pour empêcher les décisions répétées trop rapidement à la suite d'une image serveur retardée. Réinitialisation correcte lors de la création d'un bot et d'un nouveau round.
+- [x] Les mises à jour de pose R6 à 15 Hz près du joueur et 8 Hz au loin sont également étalées par slot ; le contrôle de proximité est fait sur les distances au carré sans changer le seuil de 155 studs.
+- [x] Tests Luau sur 10 secondes de combat à cadence régulière, 4 bots, équité de fréquence, cas de retard, bornes du planificateur, 8/15 Hz des poses, et contrôles statiques du vrai câblage serveur ; compilation complète et build Rojo CI.
+- [ ] Dans Roblox Studio/serveur public, mesurer avec les outils PERF l'impact réel sur les pics `thinkMs`, `poseMs` et le P95/P99 client avec quatre bots sous le même scénario. Les tests garantissent une répartition logique, pas une amélioration chiffrée des FPS.
