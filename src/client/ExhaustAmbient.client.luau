@@ -54,6 +54,7 @@ local function refreshDecor()
         if slot and slot.part then slot.part.Parent = nil end
         activeVaporIndices[index] = nil
     end
+    VaporPool.retireAll(vaporSlots)
     table.clear(emitters)
     table.clear(registered)
     decor = current
