@@ -1,6 +1,5 @@
 local Debris = game:GetService("Debris")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -679,40 +678,39 @@ function WeaponVisuals:drawConfirmedHit(position, headshot, killed)
     if toward.Magnitude < 0.1 then return end
     local direction = toward.Unit
     local center = position + direction * 0.12
-    local core = Instance.new("Part")
-    core.Name = "IronYardConfirmedHit"
-    configurePart(core)
-    core.Shape = Enum.PartType.Ball
-    core.Material = MATERIAL_NEON
-    core.Color = color
-    core.Size = Vector3.new(settings.radius, settings.radius, settings.radius)
-    core.Transparency = 0.08
-    core.CFrame = CFrame.new(center)
-    core.Parent = workspace
-    TweenService:Create(core, TweenInfo.new(settings.duration), {
-        Size = Vector3.new(settings.radius * 1.9,
+    -- Confirmed hits used to create up to four new Parts, Tweens and
+    -- Debris timers on every accepted shot. The existing bounded local
+    -- VFX pool already renders the same Quad.Out expansion/fade curve.
+    -- Reserve its highest priority for real server-confirmed damage:
+    -- cosmetic debris must never displace the actual hit confirmation.
+    self:_spawnTransient({
+        name = "IronYardConfirmedHit",
+        origin = CFrame.new(center),
+        size = Vector3.new(settings.radius, settings.radius, settings.radius),
+        endSize = Vector3.new(settings.radius * 1.9,
             settings.radius * 1.9, settings.radius * 1.9),
-        Transparency = 1,
-    }):Play()
-    Debris:AddItem(core, settings.duration + 0.03)
+        shape = Enum.PartType.Ball,
+        material = MATERIAL_NEON,
+        color = color,
+        alpha = 0.08,
+        duration = settings.duration,
+        priority = 4,
+    })
 
     for i = 1, settings.sparks do
-        local streak = Instance.new("Part")
-        streak.Name = "IronYardHitSpark"
-        configurePart(streak)
-        streak.Material = MATERIAL_NEON
-        streak.Color = color
-        streak.Transparency = 0.18
-        streak.Size = Vector3.new(0.025, 0.025, settings.radius * 2.4)
         local angle = (i - 1) * math.pi / math.max(2, settings.sparks)
-        streak.CFrame = CFrame.lookAt(center, center + direction)
-            * CFrame.Angles(0, 0, angle)
-        streak.Parent = workspace
-        TweenService:Create(streak, TweenInfo.new(settings.duration), {
-            Transparency = 1,
-            Size = Vector3.new(0.018, 0.018, settings.radius * 0.5),
-        }):Play()
-        Debris:AddItem(streak, settings.duration + 0.03)
+        self:_spawnTransient({
+            name = "IronYardHitSpark",
+            origin = CFrame.lookAt(center, center + direction)
+                * CFrame.Angles(0, 0, angle),
+            size = Vector3.new(0.025, 0.025, settings.radius * 2.4),
+            endSize = Vector3.new(0.018, 0.018, settings.radius * 0.5),
+            material = MATERIAL_NEON,
+            color = color,
+            alpha = 0.18,
+            duration = settings.duration,
+            priority = 3,
+        })
     end
 end
 
