@@ -10,6 +10,7 @@ root = Path(__file__).resolve().parents[1]
 nav = (root / "src/server/BotNavigation.luau").read_text(encoding="utf-8")
 budget = (root / "src/shared/BotPathBudget.luau").read_text(encoding="utf-8")
 service = (root / "src/server/BotService.luau").read_text(encoding="utf-8")
+environment = (root / "src/server/BotEnvironmentRaycast.luau").read_text(encoding="utf-8")
 
 for needle in (
     'require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BotPathBudget"))',
@@ -35,13 +36,23 @@ for needle in (
     "followDetour(bot, goal, now, params)",
     "directRouteClear(bot, detour, params)",
     "local params = environmentParams(bot)",
-    "params.RespectCanCollide = true",
+    'require(script.Parent:WaitForChild("BotEnvironmentRaycast"))',
+    "return EnvironmentRaycast.params(bot)",
     "Workspace:Raycast(",
     "PathfindingService:CreatePath(",
     "path:ComputeAsync(start, goal)",
     "computedPath.Blocked:Connect(",
 ):
     assert needle in nav, f"Navigation safety or performance integration missing: {needle}"
+
+for needle in (
+    "params.RespectCanCollide = true",
+    "params.IgnoreWater = true",
+    "params.FilterType = Enum.RaycastFilterType.Exclude",
+    "params.FilterDescendantsInstances = ignore",
+    "Policy.stale(bot.environmentRaycastParams,",
+):
+    assert needle in environment, f"Shared terrain collision filter safety missing: {needle}"
 
 assert nav.count("bot.humanoid:MoveTo(") == 1, (
     "Only the coalescing requestMove helper may send Humanoid commands"
