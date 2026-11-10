@@ -51,21 +51,21 @@ local function applyGraphics()
     Lighting.ColorShift_Top = Color3.fromRGB(12, 8, 2)
     Lighting.ColorShift_Bottom = Color3.fromRGB(4, 7, 9)
 end
-player:GetAttributeChangedSignal("IronYardGraphicsPreset"):Connect(applyGraphics)
+local graphicsConnection =
+    player:GetAttributeChangedSignal("IronYardGraphicsPreset"):Connect(applyGraphics)
 applyGraphics()
 
-local arena = Workspace:WaitForChild("NeonStrikeArena", 45)
-local decor = arena and arena:WaitForChild("NeonStrikeDecor", 45)
-if not decor then
-    warn("[IRON YARD] Optional local industrial lights unavailable; daylight grading active")
-    return
-end
-
+-- The arena/decor tree may stream out or be rebuilt between rounds.
+-- Keep daylight grading active even if optional fixtures have not yet
+-- arrived, and reconnect automatically when the folder appears.
+local decor = nil
+local decorAddedConnection = nil
 local registered = setmetatable({}, { __mode = "k" })
 local fixtures = {}
 
 local function register(part)
-    if not part:IsA("BasePart")
+    if not decor or not part:IsA("BasePart")
+        or not part:IsDescendantOf(decor)
         or part:GetAttribute("IronYardLightFixture") ~= true
         or registered[part] then
         return
@@ -74,8 +74,40 @@ local function register(part)
     table.insert(fixtures, { part = part, lamp = nil })
 end
 
-for _, descendant in ipairs(decor:GetDescendants()) do register(descendant) end
-decor.DescendantAdded:Connect(register)
+local function refreshDecor()
+    local arena = Workspace:FindFirstChild("NeonStrikeArena")
+    local current = arena and arena:FindFirstChild("NeonStrikeDecor")
+    if current == decor then return end
+
+    if decorAddedConnection then
+        decorAddedConnection:Disconnect()
+        decorAddedConnection = nil
+    end
+    -- Destroy lights from the obsolete arena before dropping its Parts.
+    -- A weak-key registry alone cannot release entries still in fixtures.
+    for _, entry in ipairs(fixtures) do
+        if entry.lamp then entry.lamp:Destroy() end
+    end
+    table.clear(fixtures)
+    table.clear(registered)
+    decor = current
+    if decor then
+        decorAddedConnection = decor.DescendantAdded:Connect(register)
+        for _, descendant in ipairs(decor:GetDescendants()) do
+            register(descendant)
+        end
+    end
+end
+refreshDecor()
+
+script.Destroying:Connect(function()
+    graphicsConnection:Disconnect()
+    if decorAddedConnection then decorAddedConnection:Disconnect() end
+    for _, entry in ipairs(fixtures) do
+        if entry.lamp then entry.lamp:Destroy() end
+    end
+    table.clear(fixtures)
+end)
 
 local function tuneLocalSpot(lamp, part)
     -- Warehouse: restrained warm task lighting for material relief.
@@ -104,9 +136,8 @@ end
 -- follows the local camera and never consumes replicated server work.
 local function updateFixtures()
     local camera = Workspace.CurrentCamera
-    if not camera or not settings then return end
+    if not camera or not settings or not decor then return end
 
-    local current = {}
     local distances = {}
     -- Clean up streamed-out or replaced fixtures instead of accumulating
     -- stale entries during long sessions and arena reloads.
@@ -118,13 +149,13 @@ local function updateFixtures()
             table.remove(fixtures, i)
         end
     end
+    local eye = camera.CFrame.Position
     for _, entry in ipairs(fixtures) do
-        table.insert(current, entry)
-        table.insert(distances, (entry.part.Position - camera.CFrame.Position).Magnitude)
+        distances[#distances + 1] = (entry.part.Position - eye).Magnitude
     end
     local selected = Profile.activeFixtureIndices(distances,
         player:GetAttribute("IronYardGraphicsPreset"), touch)
-    for index, entry in ipairs(current) do
+    for index, entry in ipairs(fixtures) do
         if selected[index] then
             if not entry.lamp then entry.lamp = createLocalSpot(entry.part) end
             -- Refresh in place after ECO/BAL/QUALITY changes: no light
@@ -138,6 +169,7 @@ local function updateFixtures()
 end
 
 while script.Parent do
+    refreshDecor()
     updateFixtures()
     task.wait(1.2)
 end
