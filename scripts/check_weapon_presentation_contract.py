@@ -134,6 +134,38 @@ assert visuals.index('"ScopeRingFront"') < visuals.index('function WeaponVisuals
 
 # Reproducible first-person mechanical detailing is device-L0D bounded.
 detail_plan = get("src/shared/WeaponDetailPlan.luau")
+mesh_policy = get("src/shared/WeaponMeshPolicy.luau")
+studio_importer = get("tools/studio/install_weapon_meshes.lua")
+for needle in (
+    'function P.lod(preset,touch)',
+    'function P.mapsReady(m)',
+    'function P.namesComplete(weapon,names)',
+    'Pistol={"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"}',
+):
+    assert needle in mesh_policy, f"Owner mesh runtime import policy missing: {needle}"
+for needle in (
+    'function WeaponVisuals:_createImportedWeapon(model, weaponId)',
+    'IronYardWeaponTemplates',
+    'IronYardStudioApproved',
+    'WeaponMeshPolicy.mapsReady({',
+    'not part:IsA("MeshPart")',
+    'if descendant ~= appearance or descendant.Parent ~= clone then',
+    'configurePart(clone)',
+    'self.currentWeaponImported = true',
+    'model:SetAttribute("IronYardWeaponSource", "PBR_MESH")',
+    'if not self:_createImportedWeapon(model, "Pistol") then',
+    'if not self:_createImportedWeapon(model, "Knife") then',
+    'model:SetAttribute("IronYardWeaponSource", "PROCEDURAL_PARTS")',
+):
+    assert needle in visuals, f"Secure PBR first-person path missing: {needle}"
+for needle in (
+    'assert(#selected==4',
+    'MeshId~="" and validAppearance(child)',
+    'item:Destroy()',
+    'staging',
+):
+    assert needle in studio_importer, f"Secure Studio import missing: {needle}"
+
 for needle in (
     'function Plan.tier(preset, touch)',
     'function Plan.get(weapon, preset, touch)',
