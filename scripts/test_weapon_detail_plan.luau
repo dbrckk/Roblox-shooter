@@ -2,6 +2,9 @@ local Plan = require("../src/shared/WeaponDetailPlan")
 local expected = {
     Pistol = {4,10,15},
     Knife = {4,9,14},
+    AssaultRifle = {0,6,12},
+    Shotgun = {0,5,11},
+    Sniper = {0,5,11},
 }
 for name, counts in pairs(expected) do
     for tier=1,3 do
@@ -34,6 +37,17 @@ assert(Plan.get("Knife","QUALITY",true) == Plan.get("Knife","BALANCED",false))
 assert(Plan.get("Pistol","QUALITY",true) == Plan.get("Pistol","QUALITY",false))
 assert(Plan.get("Knife","ECO",false) == Plan.get("Knife","ECO",true))
 assert(Plan.get("Unknown","QUALITY",false)==nil)
+for _, id in ipairs({"AssaultRifle","Shotgun","Sniper"}) do
+    assert(#Plan.get(id,"ECO",true)==0,
+        "ECO must not add permanent viewmodel Parts on long guns")
+    local mobile=Plan.get(id,"BALANCED",true)
+    local desktop=Plan.get(id,"QUALITY",false)
+    for i=1,#mobile do assert(mobile[i]==desktop[i]) end
+    for _=1,10000 do
+        assert(Plan.get(id,"BALANCED",true)==mobile,
+            "Long-gun cosmetic LOD is cached, not recomputed each shot")
+    end
+end
 assert(Plan.tier("ECO",false)==1 and Plan.tier("BALANCED",true)==2)
 assert(Plan.tier("BALANCED",false)==3)
 -- Switching ECO <-> BALANCED <-> QUALITY changes only allowed details.
@@ -47,4 +61,4 @@ assert(eco~=balanced and balanced~=quality,
 for i=1,25000 do
     assert(Plan.get("Pistol","BALANCED",true)==Plan.get("Pistol","BALANCED",true))
 end
-print("IRON YARD detail plan: Pistol 4/10/15, Knife 4/9/14, cached LOD, 25k lookups OK")
+print("IRON YARD detail plan: all 5 weapons tiered, ECO long-gun zero, cached LOD OK")
