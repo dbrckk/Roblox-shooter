@@ -293,7 +293,11 @@ def main():
         "local function chooseDetour(bot, goal, params)",
         "local function walkableCandidate(bot, raw, params)",
         "Capsule clearance does not imply the FLOOR exists",
-        "for _, lookahead in ipairs({ 7, 14, 22, 30 }) do",
+        "local GROUND_PROBE_DISTANCES = { 7, 14, 22, 30 }",
+        "for _, lookahead in ipairs(GROUND_PROBE_DISTANCES) do",
+        "local function capsuleRayBlocked(origin, offset, flat, params)",
+        "capsuleRayBlocked(origin, LOW_CAPSULE_OFFSET, flat, params)",
+        "capsuleRayBlocked(origin, HIGH_CAPSULE_OFFSET - side, flat, params)",
         "floor.Normal.Y < 0.68",
         "Planner.offsets(bot.strafeSign, attempt)",
         "directRouteClear(bot, grounded, params)",
@@ -304,6 +308,40 @@ def main():
         'bot.model:SetAttribute("IronYardNavMode", mode)',
     ):
         has(navigation, needle, "Ground-checked detours and bounded path retries")
+    # Five capsule checks + four forward ground checks must remain.
+    # Inline table literals in these loops previously allocated a new
+    # sequence for every 0.2s decision; no checks have been dropped.
+    require(navigation.count("capsuleRayBlocked(origin,") == 6,
+            "All five route-capsule rays must remain (plus helper definition)")
+    require("ipairs({ low, low + side, low - side, high + side, high - side })"
+            not in navigation and "ipairs({ 7, 14, 22, 30 })" not in navigation,
+            "No per-route capsule or floor distance table allocations")
+    for needle in (
+        "local COVER_PROBE_FRACTIONS = { 0.25, 0.5, 0.75 }",
+        "for _, fraction in ipairs(COVER_PROBE_FRACTIONS) do",
+        "for index = 1, 3 do",
+        "index == 2 and side or -side",
+        'BotPerfService.count("tacticsRay")',
+    ):
+        has(tactics, needle, "Keep three cover lanes and floor probes without new tables")
+    require("ipairs({ Vector3.zero, side, -side })" not in tactics
+            and "ipairs({ 0.25, 0.5, 0.75 })" not in tactics,
+            "No per-candidate cover/ground-table allocations")
+    for needle in (
+        "local function rayParams(ignore)",
+        "combatRaycastParams = rayParams(model)",
+        "local params = bot.combatRaycastParams",
+        "local shotParams = bot.combatRaycastParams",
+        "BotPerfService.count(\"targetRay\")",
+        "BotPerfService.count(\"shotRay\")",
+    ):
+        has(bot, needle, "Bot lifetime must share immutable LOS + shot raycast filter")
+    require(bot.count("RaycastParams.new()") == 1
+            and "local shotParams = rayParams(bot.model)" not in bot,
+            "Bot shots and tactical decisions cannot allocate ray filters per tick")
+    require(bot.index("local function rayParams(ignore)")
+            < bot.index("local function getTargetModel(bot, limit)"),
+            "Cached bot raycast creation must precede the targeting function")
     has(bot, "bot.pathFailures = 0", "Reset failure backoff on changed enemy")
     selection = source("src/shared/BotTargetSelection.luau")
     for needle in ("local distance = visible and entry.distance or entry.memoryDistance",
