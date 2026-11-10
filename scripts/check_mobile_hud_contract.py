@@ -16,6 +16,7 @@ combat_policy = read("src/shared/CombatReadoutPolicy.luau")
 controller = read("src/client/HudController.luau")
 client = read("src/client/init.client.luau")
 match = read("src/client/MatchHud.client.luau")
+tactical = read("src/client/TacticalHud.client.luau")
 briefing = read("src/client/Briefing.client.luau")
 
 for needle in (
@@ -113,4 +114,13 @@ for needle in (
     assert needle in match, f"Match HUD must reject stale stats and duplicate writes: {needle}"
 assert 'stats:WaitForChild("Eliminations", 10)' in match, (
     "Leaderstats replication remains asynchronous, never assume instant availability")
+for needle in (
+    'local function connectCamera()',
+    'if cameraConnection then',
+    'cameraConnection:Disconnect()',
+    'Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(connectCamera)',
+    'if sectorTitle.Text ~= newTitle then',
+    'if heading.Text ~= newHeading then',
+):
+    assert needle in tactical, f"Tactical compass camera lifecycle missing: {needle}"
 print("IRON YARD mobile presets, stable readouts and bounded HUD redraws: OK")
