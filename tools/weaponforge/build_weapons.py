@@ -134,7 +134,8 @@ def pbr(name, folder):
 def build(weapon,lod,out,textures):
     bpy.ops.object.select_all(action="SELECT")
     bpy.ops.object.delete(use_global=False)
-    bpy.data.materials.clear()
+    for material in list(bpy.data.materials):
+        bpy.data.materials.remove(material)
     mats={n:pbr(n,textures) for n in ("gunmetal","carbon","armor","accent_sand")}
     if weapon=="pistol": pistol(mats,lod=="LOD0")
     else: knife(mats,lod=="LOD0")
