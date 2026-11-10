@@ -207,6 +207,9 @@ for weapon in ("AssaultRifle", "Shotgun", "Sniper"):
 assert 'self.currentWeaponId ~= "Pistol" and self.currentWeaponId ~= "Knife"' not in visuals, (
     "Live graphics quality must update long-gun detail without re-equipping"
 )
+assert 'added.baseTransparency, self.lastViewmodelHidden == true' in visuals, (
+    "New sniper detail must not leak into the optical scope on quality change"
+)
 
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
