@@ -18,6 +18,7 @@ local BotNavigation = require(script.Parent:WaitForChild("BotNavigation"))
 local BotTactics = require(script.Parent:WaitForChild("BotTactics"))
 local BotCombatResponse = require(shared:WaitForChild("BotCombatResponse"))
 local BotMotionProfile = require(shared:WaitForChild("BotMotionProfile"))
+local BotThinkCadence = require(shared:WaitForChild("BotThinkCadence"))
 local BotMovementProgress = require(shared:WaitForChild("BotMovementProgress"))
 local BotEngagementPlan = require(shared:WaitForChild("BotEngagementPlan"))
 local BotTargetSelection = require(shared:WaitForChild("BotTargetSelection"))
@@ -353,7 +354,8 @@ local function createBot(slot)
         nextFireAt = 0,
         ammoRemaining = config.MagazineSize,
         reloadUntil = 0,
-        nextThinkAt = 0,
+        nextThinkAt = BotThinkCadence.firstAt(
+            os.clock(), config.ThinkInterval, slot),
         nextPathAt = 0,
         pathRevision = 0,
         pathing = false,
@@ -665,7 +667,8 @@ local function updateBot(bot, dt)
     if not bot.model.Parent or bot.humanoid.Health <= 0 then return end
     local now = os.clock()
     if now < bot.nextThinkAt then return end
-    bot.nextThinkAt = now + config.ThinkInterval
+    bot.nextThinkAt = BotThinkCadence.nextAt(
+        now, config.ThinkInterval, bot.slot)
     local thinkSample = BotPerfService.begin()
     serviceReload(bot, now)
     observeRecentHit(bot, now)
@@ -872,6 +875,8 @@ function BotService.resetRound()
             bot.deaths = 0
             bot.ammoRemaining = config.MagazineSize
             bot.reloadUntil = 0
+            bot.nextThinkAt = BotThinkCadence.firstAt(
+                os.clock(), config.ThinkInterval, slot)
             bot.target = nil
             bot.targetSwitchedAt = -math.huge
             bot.shotsSinceReposition = 0
@@ -958,7 +963,10 @@ function BotService.start()
             for _, bot in pairs(slots) do
                 updateBot(bot, dt)
             end
-            task.wait(config.ThinkInterval)
+            -- Four light dispatcher checks per 0.2s spread costly
+            -- target LOS/path decisions over four 50ms server slices.
+            -- Each bot still performs its own tactics at 5Hz.
+            task.wait(config.ThinkInterval / config.MaxBots)
         end
     end)
 

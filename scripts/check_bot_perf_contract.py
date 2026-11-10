@@ -16,6 +16,7 @@ net = src("src/shared/PrecisionNet.luau")
 boot = src("src/server/init.server.luau")
 bot = src("src/server/BotService.luau")
 motion = src("src/shared/BotMotionProfile.luau")
+think_cadence = src("src/shared/BotThinkCadence.luau")
 nav = src("src/server/BotNavigation.luau")
 tactics = src("src/server/BotTactics.luau")
 
@@ -122,6 +123,15 @@ for phrase in (
 assert '(root.Position - bot.root.Position).Magnitude' not in bot.split(
     'for _, bot in pairs(slots) do\n                if bot.model.Parent', 1)[1], (
     "Cosmetic pose scheduling must use squared distance, not repeated roots")
+for phrase in (
+    "Cadence.SLOTS = 4",
+    "Cadence.MIN_GAP_FRACTION = 0.75",
+    "function Cadence.firstAt(now, interval, slot)",
+    "function Cadence.nextAt(now, interval, slot)",
+):
+    assert phrase in think_cadence, "Server tactical scheduler contract missing: " + phrase
+assert "task.wait(config.ThinkInterval / config.MaxBots)" in bot
+assert "bot.nextThinkAt = BotThinkCadence.nextAt(" in bot
 assert 'BotPerfService.count("tacticsRay")' in tactics
 assert nav.count('BotPerfService.count("navRay")') == 3
 assert tactics.count('BotPerfService.count("tacticsRay")') == 4

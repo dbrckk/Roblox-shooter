@@ -63,9 +63,16 @@ for needle in (
     "Budget.MOVE_DELTA = 1.25",
 ):
     assert needle in budget, f"Server nav bound missing: {needle}"
-assert "task.wait(config.ThinkInterval)" in service, (
-    "Five-hertz bot tactical cadence must remain intact"
+assert "task.wait(config.ThinkInterval / config.MaxBots)" in service, (
+    "Four tactical brains must be staggered over 20Hz scheduler slices"
 )
+for needle in (
+    'require(shared:WaitForChild("BotThinkCadence"))',
+    "nextThinkAt = BotThinkCadence.firstAt(",
+    "bot.nextThinkAt = BotThinkCadence.nextAt(",
+    "now, config.ThinkInterval, bot.slot)",
+):
+    assert needle in service, f"Five-hertz per-bot cadence integration missing: {needle}"
 assert "BotAnimation.step(bot, now, bot.isAiming == true)" in service, (
     "Existing visible bot animations must remain untouched"
 )
