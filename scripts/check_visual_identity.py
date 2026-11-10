@@ -132,6 +132,7 @@ def main():
     for needle in ("Pool.MAX_PARTS = 12",
                    "function Pool.cap(settings)",
                    "function Pool.claim(slots, now, cap)",
+                   "function Pool.retireAll(slots)",
                    "function Pool.alpha(slot, now, visible)",
                    "return 1 - (1 - t) * (1 - t)"):
         check(needle in wisp_pool, "Missing bounded Quad.Out vapor policy: " + needle)
@@ -153,6 +154,7 @@ def main():
         check('Workspace:WaitForChild("NeonStrikeArena"' not in source_text,
               "Optional decor must be discovered after delayed streaming: " + label)
     for needle in ("table.clear(emitters)", "table.clear(activeVaporIndices)",
+                   "VaporPool.retireAll(vaporSlots)",
                    "if camera and decor then", "if not part or not decor",
                    "if slot and slot.part then slot.part.Parent = nil end"):
         check(needle in exhaust, "Old-arena vapor must stop and release Parts: " + needle)
