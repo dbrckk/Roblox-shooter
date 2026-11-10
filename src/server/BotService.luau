@@ -596,14 +596,10 @@ local function shoot(bot, target, aimPoint, dt)
     end
     -- Just like players, firing immediately forfeits spawn protection.
     SpawnService.clearProtection(bot.model)
-    -- Reuse the existing client audio channel; bots remain server-controlled.
+    -- One authoritative visual/audio broadcast per accepted bot shot.
+    -- The BotTracer payload contains the muzzle origin and weapon type,
+    -- so a separate FireSound packet would duplicate RemoteEvent traffic.
     BotHearingService.record(bot.model, "AssaultRifle", origin)
-    remotes.WeaponFx:FireAllClients({
-        kind = "FireSound",
-        shooterUserId = 0,
-        weaponId = "AssaultRifle",
-        origin = origin,
-    })
     BotPerfService.count("shotRay")
     local ray = Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, shotParams)
     -- The impact material is sampled only when a static/world object was hit.
@@ -613,6 +609,7 @@ local function shoot(bot, target, aimPoint, dt)
     -- Visual-only effects; never trusted for hit registration.
     remotes.WeaponFx:FireAllClients({
         kind = "BotTracer",
+        weaponId = "AssaultRifle",
         origin = origin,
         direction = rayDirection,
         color = Color3.fromRGB(244, 202, 132),
