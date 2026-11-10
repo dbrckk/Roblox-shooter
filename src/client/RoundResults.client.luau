@@ -174,8 +174,14 @@ local function render()
     title.Text = isDuel and (isWinner and "DUEL VICTORY" or "DUEL COMPLETE")
         or (isWinner and "VICTORY" or ("ROUND " .. tostring(round) .. " COMPLETE"))
     title.TextColor3 = isWinner and green or amber
-    winnerLabel.Text = winner == "DRAW" and "MATCH DRAW"
-        or ("WINNER  /  " .. string.sub(tostring(winner), 1, 30))
+    if isDuel and snapshot and snapshot.reason == "SPAWN_TIMEOUT" then
+        winnerLabel.Text = "DUEL CANCELLED / RESPAWN UNAVAILABLE"
+    elseif isDuel and snapshot and snapshot.reason == "LOBBY_CHANGED" then
+        winnerLabel.Text = "DUEL CANCELLED / LOBBY CHANGED"
+    else
+        winnerLabel.Text = winner == "DRAW" and "MATCH DRAW"
+            or ("WINNER  /  " .. string.sub(tostring(winner), 1, 30))
+    end
     local myStanding = nil
     local participants = snapshot and #snapshot.standings or 0
     if snapshot then

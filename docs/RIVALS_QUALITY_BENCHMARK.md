@@ -222,3 +222,32 @@ n'interrompt les joueurs qui ne l'ont pas choisi.
   réunis dans la même instance peuvent lancer cette première version.
   Les tests de logique et le build Rojo ne remplacent pas un essai Roblox
   sur deux vrais clients.
+
+
+## 1v1 : anti-blocage des manches et fair-play (10 novembre 2026)
+
+Le mode duel ne doit plus tomber sur les points de spawn FFA ou tourner
+indéfiniment pendant les pauses :
+
+- **Points opposés prévalidés ensemble** : six paires d'emplacements séparés,
+  avec alternance A/B des côtés d'une manche à l'autre. Avant de déplacer
+  le premier joueur, le serveur vérifie les douze points contre la géométrie
+  solide tout en ignorant les deux avatars transitoires. Si aucune paire
+  sûre n'existe, la manche ne démarre pas (pas de spawn FFA aléatoire).
+  Une simulation Luau explore 4096 masques de collision x 8 manches.
+- **Attente bornée à 20 secondes** : en cas de réapparition manquante ou de
+  géométrie obstruant tous les points, le serveur termine la série avec
+  le motif SPAWN_TIMEOUT sans déclarer de faux vainqueur ni laisser le
+  serveur en pause permanente.
+- **Consentement renouvelé** : les deux demandes « JOIN 1v1 DUEL »
+  sont consommées au début de la série. Pour jouer une revanche, les
+  deux joueurs doivent choisir de nouveau. Les requêtes adverses de
+  préparation ne peuvent pas être activées en plein duel ou dans un
+  serveur de plus de deux joueurs.
+- **Équité** : les stations médicales sont désactivées pendant les 1v1,
+  et leur prompt l'indique. Les forfaits, interruptions de lobby et
+  erreurs de respawn ne créditent pas une victoire XP gratuite ; une
+  vraie victoire à cinq manches reste récompensée.
+- Les tests en CI vérifient les limites de temps, la sélection physique,
+  la non-répétition des consentements, les remotes et l'attribution.
+  Essais Roblox à deux vrais joueurs toujours nécessaires.

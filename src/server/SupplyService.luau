@@ -100,11 +100,13 @@ local function create(parent, index, x, z)
 
     local station = { model = model, console = console, readyAt = 0, revision = 0 }
     local function setReady(ready)
-        prompt.Enabled = ready
+        local duelActive = Workspace:GetAttribute("IronYardMatchMode") == "DUEL"
+        prompt.Enabled = ready and not duelActive
         light.Color = ready and COLOR.green or COLOR.off
         label.TextColor3 = ready and COLOR.green or COLOR.white
-        label.Text = ready and "MEDICAL  /  +40 HP\nREADY"
-            or "MEDICAL  /  +40 HP\nRECHARGING"
+        label.Text = duelActive and "MEDICAL  /  CLOSED IN DUEL"
+            or (ready and "MEDICAL  /  +40 HP\nREADY"
+                or "MEDICAL  /  +40 HP\nRECHARGING")
         model:SetAttribute("IronYardMedicalReadyAt", station.readyAt)
     end
     station.reset = function()
@@ -113,10 +115,14 @@ local function create(parent, index, x, z)
         setReady(true)
     end
     station.reset()
+    Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(function()
+        setReady(station.readyAt <= Workspace:GetServerTimeNow())
+    end)
 
     -- One non-yielding supply transaction is shared by humans and AI.
     -- A globally consumed station cannot be redeemed twice in one tick.
     station.use = function(character, humanoid, root, player)
+        if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then return false end
         if not character or not character.Parent or not humanoid or not root
             or not humanoid:IsDescendantOf(character)
             or not root:IsDescendantOf(Workspace) then return false end

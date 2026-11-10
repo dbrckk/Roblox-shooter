@@ -331,11 +331,14 @@ def main():
     duel_rules = source("src/shared/DuelRules.luau")
     match_hud = source("src/client/MatchHud.client.luau")
     duel_spawn = source("src/server/SpawnService.luau")
+    duel_spawn_plan = source("src/shared/DuelSpawnPlan.luau")
+    duel_supply = source("src/server/SupplyService.luau")
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
         "function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)",
         "function Duel.advance(scoreA, scoreB, bouts, result)",
         "function Duel.canFight(mode, userId, a, b, playerCount)",
+        "function Duel.recoveryExpired(since, now)",
     ):
         has(duel_rules, token, "Pure first-to-five duel rules")
     for token in (
@@ -355,12 +358,37 @@ def main():
         'WeaponService.resetRound()',
         'Workspace:SetAttribute("IronYardMatchMode", mode)',
         'transition("DUEL_BREAK", DUEL_BREAK_SECONDS)',
+        'DuelRules.recoveryExpired(duel and duel.waitSince, os.clock())',
+        'endDuel("SPAWN_TIMEOUT", nil)',
+        'players[1]:SetAttribute("IronYardDuelReady", false)',
+        'players[2]:SetAttribute("IronYardDuelReady", false)',
+        'duel.waitSince = nil',
+        'duel.waitSince = os.clock()',
     ):
         has(match, token, "Duel lifecycle without FFA regression")
     for token in (
         'function SpawnService.placeDuelPair(a, b, bout)',
+        'clearAt(position, aChar, bChar)',
+        'DuelSpawnPlan.select(clear, bout)',
+        'SpawnService.place(a, aChar, first, second, bChar)',
+        'SpawnService.place(b, bChar, second, first, aChar)',
     ):
-        has(duel_spawn, token, "Opposite duel spawn pads")
+        has(duel_spawn, token, "Collision-safe opposite duel spawns")
+    for token in (
+        'function Plan.select(clear, bout)',
+        'Plan.PAIRS = {{1,4}, {2,3}, {5,8}, {6,7}, {9,10}, {11,12}}',
+    ):
+        has(duel_spawn_plan, token, "Validated opposing spawn pad policy")
+    for token in (
+        'prompt.Enabled = ready and not duelActive',
+        'if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then return false end',
+        'Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(function()',
+    ):
+        has(duel_supply, token, "Fair-play medical disable in duel")
+    has(match, 'if winningPlayer and reason == "SCORE_LIMIT" then',
+        "Forfeits and spawn failures must not farm progression awards")
+    has(match, '(duel ~= nil and phase ~= "RESULTS")',
+        "No forced duel ready state during active competition")
     for token in (
         'DuelRules.canFight(workspace:GetAttribute("IronYardMatchMode")',
         'if not duelCanDamage(attacker, targetPlayer) then return false end',

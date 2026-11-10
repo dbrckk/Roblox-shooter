@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpawnSafety = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SpawnSafety"))
+local DuelSpawnPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelSpawnPlan"))
 
 local SpawnService = {}
 local started = false
@@ -54,10 +55,12 @@ local function livePositions(excludeCharacter)
     return positions, ignoredCharacters
 end
 
-local function clearAt(position, character)
+local function clearAt(position, character, otherCharacter)
     local overlap = OverlapParams.new()
     overlap.FilterType = Enum.RaycastFilterType.Exclude
-    overlap.FilterDescendantsInstances = { character }
+    local ignored = { character }
+    if otherCharacter then table.insert(ignored, otherCharacter) end
+    overlap.FilterDescendantsInstances = ignored
     overlap.RespectCanCollide = true
     overlap.MaxParts = 1
     -- Search starts above the floor; the arena base is not an obstacle.
@@ -149,13 +152,13 @@ function SpawnService.clearProtection(character)
     end
 end
 
-function SpawnService.place(player, character, preferredPosition, faceToward)
+function SpawnService.place(player, character, preferredPosition, faceToward, otherCharacter)
     if not character or player.Character ~= character or not character.Parent then return false end
     local root = character:FindFirstChild("HumanoidRootPart")
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid or humanoid.Health <= 0 then return false end
     local position = typeof(preferredPosition) == "Vector3"
-        and clearAt(preferredPosition, character) and preferredPosition
+        and clearAt(preferredPosition, character, otherCharacter) and preferredPosition
         or safestPosition(character)
     local yaw = rng:NextNumber(-math.pi, math.pi)
     root.AssemblyLinearVelocity = Vector3.zero
@@ -198,13 +201,29 @@ end
 
 function SpawnService.placeDuelPair(a, b, bout)
     if not a or not b or a == b then return false end
-    local aChar,bChar=a.Character,b.Character
-    if not aChar or not bChar then return false end
-    local first = bout % 2 == 1 and candidates[1] or candidates[4]
-    local second = bout % 2 == 1 and candidates[4] or candidates[1]
-    -- Choose opposite known-safe arena pads; swap sides each bout.
-    return SpawnService.place(a,aChar,first,second)
-        and SpawnService.place(b,bChar,second,first)
+    local aChar, bChar = a.Character, b.Character
+    if not aChar or not bChar
+        or not aChar:IsDescendantOf(Workspace)
+        or not bChar:IsDescendantOf(Workspace) then return false end
+    local function combatReady(character)
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        return humanoid and humanoid.Health > 0
+            and character:FindFirstChild("HumanoidRootPart") ~= nil
+    end
+    if not combatReady(aChar) or not combatReady(bChar) then return false end
+
+    -- Validate BOTH pads before teleporting either player. Player bodies
+    -- are ignored as temporary obstacles, but physical cover is not.
+    -- Missing pads cannot silently fall back to a close FFA spawn.
+    local clear = {}
+    for i, position in ipairs(candidates) do
+        clear[i] = clearAt(position, aChar, bChar)
+    end
+    local firstIndex, secondIndex = DuelSpawnPlan.select(clear, bout)
+    if not firstIndex then return false end
+    local first, second = candidates[firstIndex], candidates[secondIndex]
+    return SpawnService.place(a, aChar, first, second, bChar)
+        and SpawnService.place(b, bChar, second, first, aChar)
 end
 
 function SpawnService.placePlayers()

@@ -177,7 +177,11 @@ local function endDuel(reason, winningSide)
     Workspace:SetAttribute("IronYardFinalStandings", HttpService:JSONEncode(snapshot))
     local winningPlayer = snapshot.winnerUserId > 0
         and Players:GetPlayerByUserId(snapshot.winnerUserId) or nil
-    if winningPlayer then CombatAwards.recordVictory(winningPlayer) end
+    -- No XP for a staged disconnect, blocked spawn, or interrupted lobby.
+    -- Genuine first-to-five series keep their ordinary victory reward.
+    if winningPlayer and reason == "SCORE_LIMIT" then
+        CombatAwards.recordVictory(winningPlayer)
+    end
     transition("RESULTS", RESULTS_SECONDS, snapshot.winner,
         snapshot.winnerUserId)
 end
@@ -196,6 +200,7 @@ local function startDuelBout()
     if not SpawnService.placeDuelPair(a,b,duel.bouts+1) then return false end
     WeaponService.resetRound()
     duel.bouts += 1
+    duel.waitSince = nil
     publishDuelScores()
     transition("LIVE", DUEL_BOUT_SECONDS)
     return true
@@ -205,8 +210,11 @@ local function startDuelSeries(players)
     duel = {
         aId=players[1].UserId, bId=players[2].UserId,
         aName=players[1].DisplayName, bName=players[2].DisplayName,
-        aWins=0, bWins=0, bouts=0,
+        aWins=0, bWins=0, bouts=0, waitSince=os.clock(),
     }
+    -- Duel choices are consumed; a rematch requires two fresh opt-ins.
+    players[1]:SetAttribute("IronYardDuelReady", false)
+    players[2]:SetAttribute("IronYardDuelReady", false)
     mode = "DUEL"
     Workspace:SetAttribute("IronYardMatchMode", mode)
     publishDuelScores()
@@ -233,6 +241,7 @@ local function finishDuelBout(result)
     if complete then
         endDuel("SCORE_LIMIT", winner)
     else
+        duel.waitSince = os.clock()
         transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
     end
 end
@@ -331,7 +340,11 @@ local function tick()
             end
         end
     elseif phase == "DUEL_BREAK" and remaining <= 0 then
-        if not startDuelBout() then transition("DUEL_BREAK", 1) end
+        if DuelRules.recoveryExpired(duel and duel.waitSince, os.clock()) then
+            endDuel("SPAWN_TIMEOUT", nil)
+        elseif not startDuelBout() then
+            transition("DUEL_BREAK", 1)
+        end
     elseif phase == "RESULTS" and remaining <= 0 then
         duel = nil
         mode = "FFA"
@@ -349,6 +362,10 @@ function MatchService.start()
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end
         if player.Parent ~= Players then return end
+        -- No new ready flags during an active 1v1 or with 3+ players.
+        -- Release requests are always accepted. RESULTS allows rematches.
+        if enabled and (#Players:GetPlayers() > 2 or
+            (duel ~= nil and phase ~= "RESULTS")) then return end
         player:SetAttribute("IronYardDuelReady", enabled)
     end)
     Workspace:SetAttribute("IronYardMatchMode", mode)

@@ -36,5 +36,13 @@ for i=1,D.MAX_BOUTS do
   else assert(complete and winner=="DRAW") end
   sa,sb,bouts=na,nb,nc
 end
+assert(not D.recoveryExpired(10,10))
+assert(not D.recoveryExpired(10,29.999))
+assert(D.recoveryExpired(10,30))
+assert(D.recoveryExpired(10,35))
+assert(not D.recoveryExpired(10,8))
+assert(D.recoveryExpired(nil,50))
+assert(D.recoveryExpired(10,0/0))
+assert(D.recoveryExpired(-1,50))
 assert(D.advance(0,0,0/0,"A")==nil)
 print("IRON YARD duel rules: first-to-five, draws, forfeit selection and participant isolation OK")

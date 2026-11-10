@@ -2,6 +2,7 @@
 local Duel = {}
 Duel.WIN_LIMIT = 5
 Duel.MAX_BOUTS = 24
+Duel.RECOVERY_TIMEOUT_SECONDS = 20
 
 local function finite(n)
     return type(n) == "number" and n == n and n >= 0 and n < math.huge
@@ -39,6 +40,13 @@ function Duel.advance(scoreA, scoreB, bouts, result)
         or scoreB >= Duel.WIN_LIMIT and "B" or "DRAW"
     return scoreA, scoreB, bouts, completed, completed and winner or nil
 end
+-- A missing avatar or fully obstructed duel spawn cannot hang a public
+-- server forever in the between-bout phase. Server clock only.
+function Duel.recoveryExpired(since, now)
+    if not finite(since) or not finite(now) then return true end
+    return now - since >= Duel.RECOVERY_TIMEOUT_SECONDS
+end
+
 function Duel.canFight(mode, userId, a, b, playerCount)
     if mode ~= "DUEL" then return true end
     return playerCount == 2 and type(userId) == "number"
