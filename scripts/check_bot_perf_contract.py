@@ -11,6 +11,7 @@ def src(path):
 service = src("src/server/BotPerfService.luau")
 profile = src("src/shared/BotPerfProfile.luau")
 client = src("src/client/PerfOverlay.client.luau")
+frame_window = src("src/shared/ClientFrameWindow.luau")
 net = src("src/shared/PrecisionNet.luau")
 boot = src("src/server/init.server.luau")
 bot = src("src/server/BotService.luau")
@@ -58,6 +59,24 @@ for phrase in (
     'panel.Visible = false',
 ):
     assert phrase in client, "Android owner-only FPS panel missing: " + phrase
+for phrase in (
+    'local FrameWindow = require(Shared:WaitForChild("ClientFrameWindow"))',
+    'FrameWindow.push(frameWindow, dt)',
+    'FrameWindow.snapshot(frameWindow)',
+    'FrameWindow.clear(frameWindow)',
+    '"P95: %.0fms  P99: %.0fms',
+    '">33ms: %d / %d images',
+):
+    assert phrase in client, "Client percentile profiler wiring missing: " + phrase
+for phrase in (
+    "FrameWindow.CAPACITY = 240",
+    "function FrameWindow.push(window, seconds)",
+    "function FrameWindow.snapshot(window)",
+    "function FrameWindow.clear(window)",
+    "sorted[math.ceil(count * 0.95)]",
+    "sorted[math.ceil(count * 0.99)]",
+):
+    assert phrase in frame_window, "Bounded frame sampler missing: " + phrase
 assert "BotPerfService.start()" in boot, "Server profiler must initialize on game start"
 for phrase in (
     'BotPerfService.count("think")',
