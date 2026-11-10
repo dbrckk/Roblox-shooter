@@ -102,6 +102,7 @@ jobs:
           ./luau scripts/test_aim_stance_policy.luau
           ./luau scripts/test_shot_input_policy.luau
           ./luau scripts/test_weapon_feel_profile.luau
+          ./luau scripts/test_weapon_detail_plan.luau
           ./luau scripts/test_weapon_aim_pose.luau
           ./luau scripts/test_scope_fov_policy.luau
           ./luau scripts/test_crosshair_feedback_policy.luau

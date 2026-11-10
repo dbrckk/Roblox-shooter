@@ -425,3 +425,27 @@ requête réseau ou instance Roblox lors de chaque mise à jour.
   qu'a l'equipement du viewmodel, pas aux tirs.
 - Les contrats de presentation imposent le maintien d'une seule
   connexion RenderStepped et verifient les pieces ajoutees.
+
+
+## Pistolet et couteau : details fins avec LOD automatique
+
+- Le pistolet possede desormais sa deuxieme plaquette de crosse,
+  sa bague de bouche cylindrique, son cache de rail et sa securite
+  de detente. Les configurations plus riches revelent des vis
+  de fixation et des stries arriere/avant du bloc-culasse ; toutes
+  les stries suivent le vrai mouvement du slide lors du tir.
+- Le couteau comporte un pommeau renforce, des plaquettes de
+  prise en main, des rivets, une gorge longitudinale sur la lame
+  et des encoches de dos en configuration haute qualite.
+- Le module de donnees WeaponDetailPlan ajoute en mode ECO
+  seulement quatre details par arme ; sur Android BALANCED dix
+  details au pistolet et neuf au couteau ; en QUALITE / ordinateur
+  jusqu'a quinze et quatorze. Aucun ajout de boucle RenderStepped,
+  d'envoi reseau ni de physique.
+- Les couleurs s'adaptent aux finitions de carriere deja acquises.
+  Le niveau de detail des pieces est choisi lors de l'equipement :
+  apres avoir change de preset graphique, re-equiper l'arme applique
+  le nouveau niveau sans ralentir chaque frame du combat.
+- Test Luau des tailles, materiaux, formes, unicite de chaque piece
+  et de 25 000 consultations de plans caches ; contrat Python
+  de cablage et de cycle d'animation.

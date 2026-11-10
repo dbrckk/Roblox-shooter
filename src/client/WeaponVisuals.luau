@@ -8,6 +8,7 @@ local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitFo
 local TransientFxPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TransientFxPool"))
 local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
+local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
@@ -125,6 +126,29 @@ function WeaponVisuals:_addPart(model, className, name, size, color, offset, mat
 	return part
 end
 
+-- Apply small original shape details at equip only. The pure detail plan
+-- limits physical Part counts by ECO/BALANCED/QUALITY and device type;
+-- every piece remains uncollidable and receives the camera-root pose.
+function WeaponVisuals:_addDetailGeometry(model, weaponId)
+    local plans = WeaponDetailPlan.get(weaponId,
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled)
+    if not plans then return end
+    for _, spec in ipairs(plans) do
+        local className = spec.shape == "Wedge" and "WedgePart" or "Part"
+        local shape = spec.shape ~= "Wedge" and Enum.PartType[spec.shape] or nil
+        local pos, ang = spec.position, spec.angles
+        local offset = CFrame.new(pos[1],pos[2],pos[3])
+            * CFrame.Angles(math.rad(ang[1]),math.rad(ang[2]),math.rad(ang[3]))
+        self:_addPart(model, className, spec.name,
+            Vector3.new(spec.size[1],spec.size[2],spec.size[3]),
+            rgb(spec.color), offset,
+            spec.finish == "dark" and MATERIAL_SMOOTH or MATERIAL_METAL,
+            nil, shape)
+        self.parts[#self.parts].finishRole = spec.finish
+    end
+end
+
 -- Rank-gated finishes recolor only first-person visual Parts, not weapons
 -- or armor collision. Applying on level change does not rebuild an active gun.
 function WeaponVisuals:_applyCareerFinish()
@@ -148,7 +172,13 @@ function WeaponVisuals:_applyCareerFinish()
     for _, entry in ipairs(self.parts) do
         local name = entry.part.Name
         local color = entry.baseColor
-        if string.find(name, "Forearm", 1, true)
+        if entry.finishRole == "accent" then
+            color = accent
+        elseif entry.finishRole == "panel" then
+            color = entry.baseColor:Lerp(metal, 0.62)
+        elseif entry.finishRole == "dark" then
+            color = entry.baseColor
+        elseif string.find(name, "Forearm", 1, true)
             or string.find(name, "Sleeve", 1, true) then
             color = fabric
         elseif string.find(name, "Glove", 1, true)
@@ -236,6 +266,7 @@ function WeaponVisuals:_createPistol(model)
 	self:_addPart(model, "Part", "TriggerGuard", Vector3.new(0.32, 0.05, 0.24), Color3.fromRGB(22, 25, 31), CFrame.new(0, -0.18, -0.2), MATERIAL_METAL)
 	self:_addPart(model, "Part", "FrontSight", Vector3.new(0.08, 0.08, 0.06), Color3.fromRGB(210, 204, 183), CFrame.new(0, 0.3, -0.7), MATERIAL_METAL)
 	self:_addPart(model, "Part", "RearSight", Vector3.new(0.16, 0.06, 0.05), Color3.fromRGB(220, 230, 242), CFrame.new(0, 0.3, 0.1), MATERIAL_SMOOTH)
+    self:_addDetailGeometry(model, "Pistol")
 end
 
 function WeaponVisuals:_createSniper(model)
@@ -397,6 +428,7 @@ function WeaponVisuals:_createKnife(model)
 	self:_addPart(model, "WedgePart", "Blade", Vector3.new(0.34, 0.08, 0.92), Color3.fromRGB(218, 225, 235), CFrame.new(0, 0.02, -0.6) * CFrame.Angles(0, math.rad(180), 0), MATERIAL_METAL)
 	self:_addPart(model, "Part", "BladeSpine", Vector3.new(0.08, 0.04, 0.74), Color3.fromRGB(182, 189, 184), CFrame.new(0, 0.07, -0.58), MATERIAL_METAL, 0.25)
 	self:_addPart(model, "Part", "Guard", Vector3.new(0.5, 0.08, 0.1), Color3.fromRGB(76, 83, 94), CFrame.new(0, 0, -0.18), MATERIAL_METAL)
+    self:_addDetailGeometry(model, "Knife")
 end
 
 function WeaponVisuals:setWeapon(weaponId)
@@ -683,7 +715,9 @@ function WeaponVisuals:_render(deltaTime)
         elseif partName == "ChargingHandle" and self.currentWeaponId == "AssaultRifle" then
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif (partName == "Slide" or partName == "EjectionPort"
-            or partName == "Extractor") and self.currentWeaponId == "Pistol" then
+            or partName == "Extractor"
+            or string.sub(partName, 1, 11) == "SlideDetail")
+            and self.currentWeaponId == "Pistol" then
             -- Mechanism and ejection anchor must remain attached to the slide.
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif (partName == "PumpAction" or partName == "PumpGrooveA"

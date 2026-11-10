@@ -132,6 +132,29 @@ assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 
 assert visuals.index('"VentLeft" .. i') < visuals.index('function WeaponVisuals:_createShotgun')
 assert visuals.index('"ScopeRingFront"') < visuals.index('function WeaponVisuals:_createAssaultRifle')
 
+# Reproducible first-person mechanical detailing is device-L0D bounded.
+detail_plan = get("src/shared/WeaponDetailPlan.luau")
+for needle in (
+    'function Plan.tier(preset, touch)',
+    'function Plan.get(weapon, preset, touch)',
+    'CACHE[weapon][tier] = allowed',
+    'if preset == "ECO" then return 1 end',
+    'if touch == true and preset ~= "QUALITY" then return 2 end',
+):
+    assert needle in detail_plan, f"Weapon detail tier plan missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponDetailPlan")',
+    'function WeaponVisuals:_addDetailGeometry(model, weaponId)',
+    'self:_addDetailGeometry(model, "Pistol")',
+    'self:_addDetailGeometry(model, "Knife")',
+    'or string.sub(partName, 1, 11) == "SlideDetail"',
+    'self.parts[#self.parts].finishRole = spec.finish',
+):
+    assert needle in visuals, f"Viewmodel cosmetic detail rendering missing: {needle}"
+assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
+    "Details must use the existing viewmodel renderer"
+)
+
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
     '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',
