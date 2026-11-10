@@ -373,3 +373,24 @@ requête réseau ou instance Roblox lors de chaque mise à jour.
 - Le nouveau profil purement Luau est couvert par les tests de materiaux,
   les limites de deplacement et les budgets. Le volume de Parts reste
   limite par TransientFxPool.cap (24/48/72 Android).
+
+
+## B-8 shotgun : cartouches, boitier et rechargement synchronise
+
+- Le fusil a pompe B-8 presente deux douilles de 12-gauge sur le
+  porte-cartouches, chacune avec son culot dore distinct.
+- Son boitier comprend desormais un port d'ejection droit et
+  une trappe inferieure de chargement. Les douilles expulsees
+  utilisent le port comme ancre et le moment mecanique de pompe
+  existant (39 centiemes apres le tir).
+- Pendant le rechargement confirme par WeaponFeedback Ammo,
+  une cartouche mobile est presentee puis inseree dans le boitier.
+  Elle est masquee immediatement lors de l'annulation, d'un
+  changement d'arme et en preset ECO. Animation purement locale
+  et cosmetique : les six munitions et la duree de 2,55 s
+  restent entierement determinees par WeaponService.
+- Aucun nouvel appel reseau, Part genere a chaque cartouche,
+  Raycast ni boucle RenderStepped. Les 8 elements supplementaires
+  du premier-personnage sont detruits/recrees seulement au changement
+  de viewmodel. Un test de 10 000 positions verifie la trajectoire,
+  le bornage, la visibilite et le comportement du preset ECO.

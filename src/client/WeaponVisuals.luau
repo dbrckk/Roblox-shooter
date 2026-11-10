@@ -10,6 +10,7 @@ local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
+local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
 local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 
@@ -300,6 +301,37 @@ function WeaponVisuals:_createShotgun(model)
     self:_addPart(model, "Part", "TubeMagazine", Vector3.new(0.19, 0.19, 1.41), steel, CFrame.new(0, -0.18, -1.43), MATERIAL_METAL)
     self:_addPart(model, "Part", "MuzzleRing", Vector3.new(0.31, 0.31, 0.12), charcoal, CFrame.new(0, 0.10, -2.31), MATERIAL_METAL)
     self:_addPart(model, "Part", "ShellCarrier", Vector3.new(0.08, 0.21, 0.43), sand, CFrame.new(-0.30, 0.02, -0.10), MATERIAL_SMOOTH)
+    -- Two visible crimson 12-gauge shells with independent brass heads.
+    -- Fixed local viewmodel Parts; there is no per-round allocation.
+    local shellAxis = CFrame.Angles(math.pi / 2, 0, 0)
+    for i = 1, 2 do
+        local z = -0.23 + (i - 1) * 0.22
+        self:_addPart(model, "Part", "CarrierShellBody" .. i,
+            Vector3.new(0.12, 0.18, 0.12), Color3.fromRGB(142, 46, 35),
+            CFrame.new(-0.36, 0.02, z) * shellAxis,
+            MATERIAL_SMOOTH, nil, Enum.PartType.Cylinder)
+        self:_addPart(model, "Part", "CarrierShellBrass" .. i,
+            Vector3.new(0.125, 0.052, 0.125), Color3.fromRGB(195, 154, 87),
+            CFrame.new(-0.36, 0.02, z + 0.104) * shellAxis,
+            MATERIAL_METAL, nil, Enum.PartType.Cylinder)
+    end
+    -- A real mechanical port also becomes the casing ejection anchor.
+    self:_addPart(model, "Part", "ShotgunEjectionPort",
+        Vector3.new(0.027, 0.12, 0.28), Color3.fromRGB(14, 17, 17),
+        CFrame.new(0.264, 0.085, -0.18), MATERIAL_SMOOTH)
+    self:_addPart(model, "Part", "ShotgunLoadingPort",
+        Vector3.new(0.25, 0.018, 0.33), Color3.fromRGB(17, 20, 21),
+        CFrame.new(0, -0.181, -0.06), MATERIAL_SMOOTH)
+    -- Server Ammo feedback alone enables this held/inserted cartridge.
+    -- Its initial transparency of 1 keeps it absent outside reload.
+    self:_addPart(model, "Part", "LoadingShellBody",
+        Vector3.new(0.13, 0.23, 0.13), Color3.fromRGB(166, 46, 37),
+        CFrame.new(-0.35, -0.29, 0.24) * shellAxis,
+        MATERIAL_SMOOTH, 1, Enum.PartType.Cylinder)
+    self:_addPart(model, "Part", "LoadingShellBrass",
+        Vector3.new(0.138, 0.055, 0.138), Color3.fromRGB(205, 171, 96),
+        CFrame.new(-0.35, -0.29, 0.38) * shellAxis,
+        MATERIAL_METAL, 1, Enum.PartType.Cylinder)
     self:_addPart(model, "Part", "Sight", Vector3.new(0.09, 0.13, 0.10), sand, CFrame.new(0, 0.25, -2.12), MATERIAL_METAL)
     self:_addPart(model, "Part", "RearSight", Vector3.new(0.19, 0.09, 0.14), charcoal, CFrame.new(0, 0.24, -0.28), MATERIAL_METAL)
 end
@@ -567,6 +599,10 @@ function WeaponVisuals:_render(deltaTime)
     local supportMotion = self.currentWeaponId == "Shotgun"
         and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)
         or CFrame.new()
+    local loadingShell = self.currentWeaponId == "Shotgun"
+        and ShotgunReloadVisual.sample(progress, self.reloadActive,
+            Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"))
+        or nil
 
     for _, entry in ipairs(self.parts) do
         local localOffset = entry.offset
@@ -575,6 +611,17 @@ function WeaponVisuals:_render(deltaTime)
             -- All glove, strap and sleeve elements move as ONE support hand;
             -- otherwise the previous left glove remained behind during reloads.
             localOffset = localOffset * workingHand * supportMotion
+        elseif (partName == "LoadingShellBody" or partName == "LoadingShellBrass")
+            and self.currentWeaponId == "Shotgun" then
+            if loadingShell then
+                localOffset = localOffset * CFrame.new(
+                    loadingShell.x, loadingShell.y, loadingShell.z)
+                    * CFrame.Angles(0, 0, loadingShell.roll)
+            end
+            local targetAlpha = loadingShell and not self.lastViewmodelHidden and 0 or 1
+            if entry.part.Transparency ~= targetAlpha then
+                entry.part.Transparency = targetAlpha
+            end
         elseif (partName == "Magazine" or partName == "MagazineBase")
             and self.currentWeaponId ~= "Shotgun" then
             localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip * feel.magazineTravel,

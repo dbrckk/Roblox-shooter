@@ -1,0 +1,30 @@
+local Visual = require("../src/shared/ShotgunReloadVisual")
+assert(Visual.sample(0.5, false, "QUALITY") == nil)
+assert(Visual.sample(0.5, true, "ECO") == nil)
+assert(Visual.sample(0.2, true, "QUALITY") == nil)
+assert(Visual.sample(0.8, true, "QUALITY") == nil)
+assert(Visual.sample(0/0, true, "QUALITY") == nil)
+assert(Visual.sample(math.huge, true, "QUALITY") == nil)
+assert(Visual.sample(-0.5, true, "QUALITY") == nil)
+local start = Visual.sample(0.27, true, "QUALITY")
+local mid = Visual.sample(0.505, true, "BALANCED")
+local finish = Visual.sample(0.74, true, "QUALITY")
+assert(start ~= nil and mid ~= nil and finish ~= nil)
+assert(math.abs(start.x) < 0.001 and math.abs(start.z) < 0.001)
+assert(mid.x > 0.10 and mid.x < 0.13)
+assert(mid.z < -0.12 and mid.z > -0.14)
+assert(math.abs(mid.y - 0.065) < 0.00001)
+assert(math.abs(finish.x - 0.23) < 0.00001)
+assert(math.abs(finish.z + 0.26) < 0.00001)
+assert(math.abs(finish.roll + 0.28) < 0.00001)
+for i = 0, 10000 do
+    local progress = i / 10000
+    local state = Visual.sample(progress, true, "BALANCED")
+    if state then
+        assert(state.x >= 0 and state.x <= 0.23)
+        assert(state.y >= -0.00001 and state.y <= 0.065001)
+        assert(state.z <= 0 and state.z >= -0.26)
+        assert(state.roll <= 0 and state.roll >= -0.28)
+    end
+end
+print("IRON YARD shotgun: server-confirmed reload, 10k bounded shell poses and ECO gating OK")

@@ -79,6 +79,31 @@ for needle in (
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 
+# The cosmetic reload must use real server Ammo state and no new animation loop.
+reload_visual = get("src/shared/ShotgunReloadVisual.luau")
+for needle in (
+    "function Visual.sample(progress, reloading, graphicsPreset)",
+    'graphicsPreset == "ECO"',
+    'reloading ~= true',
+):
+    assert needle in reload_visual, f"Shotgun loading policy missing: {needle}"
+for needle in (
+    'WaitForChild("ShotgunReloadVisual")',
+    '"ShotgunEjectionPort"',
+    '"ShotgunLoadingPort"',
+    '"CarrierShellBody" .. i',
+    '"CarrierShellBrass" .. i',
+    '"LoadingShellBody"',
+    '"LoadingShellBrass"',
+    'ShotgunReloadVisual.sample(progress, self.reloadActive,',
+    'local targetAlpha = loadingShell and not self.lastViewmodelHidden and 0 or 1',
+    'if entry.part.Transparency ~= targetAlpha then',
+):
+    assert needle in visuals, f"Shotgun reload model / visible mechanism missing: {needle}"
+assert 'Shotgun = { anchor = "ShotgunEjectionPort"' in ejection
+assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1
+assert 'FireServer' not in reload_visual and 'Instance.new' not in reload_visual
+
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
     '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',

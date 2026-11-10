@@ -9,7 +9,7 @@ local SHELLS = {
     Pistol = { anchor = "EjectionPort", duration = 0.40,
         delay = 0, size = {0.19, 0.08, 0.08}, tint = {205, 161, 83},
         arc = 0.28, spin = 7.0 },
-    Shotgun = { anchor = "Receiver", duration = 0.47,
+    Shotgun = { anchor = "ShotgunEjectionPort", duration = 0.47,
         delay = 0.39, size = {0.33, 0.15, 0.15}, tint = {139, 43, 34},
         arc = 0.44, spin = 5.2 },
     Sniper = { anchor = "Bolt", duration = 0.46,
