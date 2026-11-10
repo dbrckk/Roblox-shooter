@@ -195,6 +195,22 @@ assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 
     "Details must use the existing viewmodel renderer"
 )
 
+# Rifle, shotgun and sniper use the exact same equip-time detail renderer.
+# The LOD switch must not be limited to the pistol and knife.
+for weapon in ("AssaultRifle", "Shotgun", "Sniper"):
+    assert f'self:_addDetailGeometry(model, "{weapon}")' in visuals, (
+        f"{weapon}: missing authored adaptive first-person detail"
+    )
+    assert f'{weapon} = {{}}' in detail_plan, (
+        f"{weapon}: missing capped device-specific detail plan"
+    )
+assert 'self.currentWeaponId ~= "Pistol" and self.currentWeaponId ~= "Knife"' not in visuals, (
+    "Live graphics quality must update long-gun detail without re-equipping"
+)
+assert 'added.baseTransparency, self.lastViewmodelHidden == true' in visuals, (
+    "New sniper detail must not leak into the optical scope on quality change"
+)
+
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
     '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',
