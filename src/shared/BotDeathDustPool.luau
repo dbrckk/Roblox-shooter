@@ -13,9 +13,8 @@ end
 -- Budget four simultaneous defeats, based on the same per-bot LOD
 -- fragments as the existing public art policy. Never exceed 16 Parts.
 function Pool.cap(preset, touch)
-    local budget = Plan.dustBudget(preset, touch, 0)
     return math.min(Pool.MAX_PARTS,
-        budget and budget.fragments * Pool.MAX_BOTS or 0)
+        Plan.dustFragments(preset, touch) * Pool.MAX_BOTS)
 end
 
 -- Recycle only expired particles, never cut off still-visible dust.
