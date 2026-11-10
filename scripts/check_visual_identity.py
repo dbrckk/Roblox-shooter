@@ -135,6 +135,33 @@ def main():
                    "function Pool.alpha(slot, now, visible)",
                    "return 1 - (1 - t) * (1 - t)"):
         check(needle in wisp_pool, "Missing bounded Quad.Out vapor policy: " + needle)
+    # Optional fixtures may disappear during streaming or an arena rebuild.
+    # Neither local visual controller may retain the first decor folder.
+    for label, source_text in (("lighting", clientLighting), ("exhaust", exhaust)):
+        for needle in (
+            'Workspace:FindFirstChild("NeonStrikeArena")',
+            'arena:FindFirstChild("NeonStrikeDecor")',
+            "local function refreshDecor()",
+            "if current == decor then return end",
+            "decorAddedConnection:Disconnect()",
+            "table.clear(registered)",
+            "script.Destroying:Connect(function()",
+            "refreshDecor()",
+        ):
+            check(needle in source_text, "Missing decor rebuild cleanup in " + label
+                  + ": " + needle)
+        check('Workspace:WaitForChild("NeonStrikeArena"' not in source_text,
+              "Optional decor must be discovered after delayed streaming: " + label)
+    for needle in ("table.clear(emitters)", "table.clear(activeVaporIndices)",
+                   "if camera and decor then", "if not part or not decor",
+                   "if slot and slot.part then slot.part.Parent = nil end"):
+        check(needle in exhaust, "Old-arena vapor must stop and release Parts: " + needle)
+    for needle in ("table.clear(fixtures)", "entry.lamp:Destroy()",
+                   "if not camera or not settings or not decor then return end",
+                   "graphicsConnection:Disconnect()", "if decor then",
+                   "for _, descendant in ipairs(decor:GetDescendants()) do"):
+        check(needle in clientLighting,
+              "Old-arena lamp cleanup or new fixture discovery missing: " + needle)
     entrance = source("src/server/WarehouseEntranceArt.luau")
     entrance_plan = source("src/shared/WarehouseEntrancePlan.luau")
     for needle in ('local WarehouseEntranceArt = require(script.Parent:WaitForChild("WarehouseEntranceArt"))',
@@ -425,9 +452,9 @@ def main():
                    'local function retireRig(candidate)',
                    'decor.DescendantRemoving:Connect(function(item)',
                    'rig and rig.beacon == item',
-                   'if parent:IsDescendantOf(decor) then',
+                   'if decor and parent:IsDescendantOf(decor) then',
                    'register(parent)',
-                   'if rig.moving and candidate:IsDescendantOf(decor) then',
+                   'if rig.moving and decor and candidate:IsDescendantOf(decor) then',
                    'Motion.sampleInterval(',
                    'local distanceSquared = offset:Dot(offset)',
                    'rig.nextUpdateAt = now + period',
@@ -438,6 +465,23 @@ def main():
                    'if modeChanged then rig.beacon.Transparency = 0.55 end'):
         check(needle in industrialMotion,
               "Gantry runtime must skip inactive expensive animation and lights: " + needle)
+    for needle in (
+        "local function refreshDecor()",
+        'Workspace:FindFirstChild("NeonStrikeArena")',
+        'arena:FindFirstChild("NeonStrikeDecor")',
+        "if current == decor then return end",
+        "table.clear(decorConnections)",
+        "for candidate in pairs(pendingModels) do forgetCandidate(candidate) end",
+        "for candidate in pairs(rigs) do retireRig(candidate) end",
+        "nextDecorPollAt = now + 0.5",
+        "if not decor then return end",
+        "script.Destroying:Connect(function()",
+        "heartbeatConnection:Disconnect()",
+    ):
+        check(needle in industrialMotion,
+              "Stale crane rigs must be released on arena replacement: " + needle)
+    check('Workspace:WaitForChild("NeonStrikeArena"' not in industrialMotion,
+          "Cosmetic cranes must recover from late arena streaming")
     check('Instance.new("PointLight")' in industrialMotion,
           "Nearby desktop QUALITY cranes retain visible amber lighting")
     check("RemoteEvent" not in industrialMotion and "CanCollide =" not in industrialMotion,
