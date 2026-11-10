@@ -147,7 +147,9 @@ local function updatePosition()
     local model = player.Character
     local root = model and model:FindFirstChild("HumanoidRootPart")
     if not root then
-        sectorTitle.Text = "SECTOR  /  DEPLOYING"
+        if sectorTitle.Text ~= "SECTOR  /  DEPLOYING" then
+            sectorTitle.Text = "SECTOR  /  DEPLOYING"
+        end
     else
         local x, z = root.Position.X, root.Position.Z
         local name = "PROCESSING FLOOR"
@@ -157,14 +159,17 @@ local function updatePosition()
                 break
             end
         end
-        sectorTitle.Text = "SECTOR  /  " .. name
+        local newTitle = "SECTOR  /  " .. name
+        if sectorTitle.Text ~= newTitle then sectorTitle.Text = newTitle end
     end
     local camera = Workspace.CurrentCamera
     if camera then
         local look = camera.CFrame.LookVector
         local deg = (math.deg(math.atan2(look.X, -look.Z)) + 360) % 360
         local section = math.floor((deg + 22.5) / 45) % 8 + 1
-        heading.Text = string.format("HEADING %s  /  %03d", compass[section], math.floor(deg + 0.5))
+        local newHeading = string.format(
+            "HEADING %s  /  %03d", compass[section], math.floor(deg + 0.5))
+        if heading.Text ~= newHeading then heading.Text = newHeading end
     end
 end
 
@@ -173,13 +178,24 @@ Workspace:GetAttributeChangedSignal("IronYardStandings"):Connect(showStandings)
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(showStandings)
 showStandings()
 adjustScale()
-local camera = Workspace.CurrentCamera
-if camera then
-    camera:GetPropertyChangedSignal("ViewportSize"):Connect(adjustScale)
-end
-Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+-- On some respawns Roblox replaces CurrentCamera. Disconnect the old
+-- viewport subscription so the new camera owns HUD sizing.
+local cameraConnection = nil
+local function connectCamera()
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = nil
+    end
+    local current = Workspace.CurrentCamera
+    if current then
+        cameraConnection = current:GetPropertyChangedSignal(
+            "ViewportSize"):Connect(adjustScale)
+    end
     adjustScale()
-end)
+    refreshHudVisibility()
+end
+Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(connectCamera)
+connectCamera()
 -- Throttled location UI: no per-frame parsing, no remote request.
 task.spawn(function()
     while gui.Parent do
