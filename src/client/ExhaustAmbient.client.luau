@@ -4,12 +4,13 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
-local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local player = Players.LocalPlayer
-local Profile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("EnvironmentProfile"))
+local shared = ReplicatedStorage:WaitForChild("Shared")
+local Profile = require(shared:WaitForChild("EnvironmentProfile"))
+local VaporPool = require(shared:WaitForChild("ExhaustWispPool"))
 local arena = Workspace:WaitForChild("NeonStrikeArena", 45)
 local decor = arena and arena:WaitForChild("NeonStrikeDecor", 45)
 if not decor then
@@ -19,6 +20,12 @@ end
 
 local registered = setmetatable({}, { __mode = "k" })
 local emitters = {}
+local vaporSlots = {}
+local activeVaporIndices = {}
+local animationStepAt = 0
+local START_SIZE = Vector3.new(0.66, 0.36, 0.66)
+local END_SIZE = Vector3.new(2.18, 1.04, 2.18)
+local VAPOR_COLOR = Color3.fromRGB(189, 197, 193)
 
 local function register(part)
     if not part:IsA("BasePart")
@@ -36,39 +43,75 @@ for _, descendant in ipairs(decor:GetDescendants()) do
 end
 decor.DescendantAdded:Connect(register)
 
-local function makeWisp(entry, index)
+-- One pool serves every rooftop exhaust, whatever the current quality
+-- preset. Animation is local only and never enters hit registration.
+local function makeWisp(entry, index, now, cap)
     local part = entry.part
-    if not part or not part:IsDescendantOf(decor) then return end
-    -- The cap is just above this duct's top. Do not spawn vapor inside
-    -- a walkable lane or at the origin of a bullet ray.
+    if not part or not part:IsDescendantOf(decor) then return false end
+    local slot, slotIndex = VaporPool.claim(vaporSlots, now, cap)
+    if not slot then return false end
+
     local side = index % 2 == 0 and 1 or -1
+    -- Keep the vapor above the duct, never in walkable combat lanes.
     local from = part.Position + Vector3.new(
         side * 0.37, part.Size.Y * 0.5 + 1.15, -side * 0.25)
-    local puff = Instance.new("Part")
-    puff.Name = "IronYardExhaustWisp"
-    puff.Shape = Enum.PartType.Ball
-    puff.Anchored = true
-    puff.CanCollide = false
-    puff.CanQuery = false
-    puff.CanTouch = false
-    puff.CastShadow = false
-    puff.Material = Enum.Material.SmoothPlastic
-    puff.Color = Color3.fromRGB(189, 197, 193)
+    local puff = slot.part
+    if not puff then
+        puff = Instance.new("Part")
+        puff.Name = "IronYardExhaustWisp"
+        puff.Shape = Enum.PartType.Ball
+        puff.Anchored = true
+        puff.CanCollide = false
+        puff.CanQuery = false
+        puff.CanTouch = false
+        puff.CastShadow = false
+        puff.Material = Enum.Material.SmoothPlastic
+        puff.Color = VAPOR_COLOR
+        slot.part = puff
+    end
+    slot.fromPosition = from
+    slot.toPosition = from + Vector3.new(side * 0.78, 3.15, 0.62)
+    activeVaporIndices[slotIndex] = true
+    puff.Size = START_SIZE
     puff.Transparency = 0.78
-    puff.Size = Vector3.new(0.66, 0.36, 0.66)
     puff.Position = from
     puff.Parent = Workspace
-
-    local duration = 1.08
-    TweenService:Create(puff,
-        TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-        {
-            Position = from + Vector3.new(side * 0.78, 3.15, 0.62),
-            Size = Vector3.new(2.18, 1.04, 2.18),
-            Transparency = 1,
-        }):Play()
-    Debris:AddItem(puff, duration + 0.04)
+    return true
 end
+
+-- Quad.Out is the same interpolation as the old TweenInfo. Capped at 30Hz
+-- for a maximum of 12 soft vapor blobs. The idle path does no pool work.
+local animationConnection = RunService.RenderStepped:Connect(function()
+    if not next(activeVaporIndices) then return end
+    local now = os.clock()
+    if now < animationStepAt then return end
+    animationStepAt = now + 1 / 30
+    local cap = VaporPool.cap(Profile.get(
+        player:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled))
+    for index in pairs(activeVaporIndices) do
+        local slot = vaporSlots[index]
+        local eased = slot and VaporPool.alpha(slot, now, index <= cap)
+        local puff = slot and slot.part
+        if eased and puff then
+            puff.Position = slot.fromPosition:Lerp(slot.toPosition, eased)
+            puff.Size = START_SIZE:Lerp(END_SIZE, eased)
+            puff.Transparency = 0.78 + 0.22 * eased
+        else
+            activeVaporIndices[index] = nil
+            if puff and puff.Parent then puff.Parent = nil end
+        end
+    end
+end)
+
+-- A removed LocalScript must not orphan local Workspace Parts.
+script.Destroying:Connect(function()
+    animationConnection:Disconnect()
+    for _, slot in ipairs(vaporSlots) do
+        if slot.part then slot.part:Destroy() end
+    end
+    table.clear(activeVaporIndices)
+end)
 
 -- Tiny bounded 5Hz work, rather than allocating an emitter for every
 -- decorative rooftop part or doing per-frame geometry/physics updates.
@@ -85,7 +128,8 @@ while script.Parent do
         end
         local preset = player:GetAttribute("IronYardGraphicsPreset")
         local settings = Profile.get(preset, UserInputService.TouchEnabled)
-        if settings.exhausts > 0 then
+        local cap = VaporPool.cap(settings)
+        if cap > 0 then
             local distances = {}
             for _, entry in ipairs(emitters) do
                 distances[#distances + 1] =
@@ -96,7 +140,7 @@ while script.Parent do
             local now = os.clock()
             for i, entry in ipairs(emitters) do
                 if selected[i] and now >= entry.nextAt then
-                    makeWisp(entry, i)
+                    makeWisp(entry, i, now, cap)
                     entry.nextAt = now + settings.exhaustInterval + (i % 3) * 0.10
                 end
             end
