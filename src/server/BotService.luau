@@ -236,7 +236,7 @@ local function getTargetModel(bot, limit)
         local direction = head.Position - origin
         local visible = false
         local visibleAimPoint = nil
-        if direction.Magnitude <= limit then
+        if direction:Dot(direction) <= limit * limit then
             BotPerfService.count("targetRay")
             local ray = Workspace:Raycast(origin, direction, params)
             visible = ray ~= nil and ray.Instance:IsDescendantOf(model)
