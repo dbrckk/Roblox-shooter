@@ -331,7 +331,7 @@ def main():
     has(network, 'ReloadWeapon = "RemoteEvent"', "Network ammo remote")
     for needle in (
         "local function randomSpread(direction, spreadDegrees)",
-        "local function firePelletWeapon(player, weaponId, config, direction)",
+        "local function firePelletWeapon(player, weaponId, config, direction, coneDegrees)",
         "for _ = 1, config.pellets do",
         "state.magazines[weaponId] = loaded - 1",
         "state.reloadUntil[weaponId] = os.clock() + config.reloadSeconds",
