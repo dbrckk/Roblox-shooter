@@ -73,6 +73,7 @@ jobs:
           ./luau scripts/test_impact_mark_pool.luau
           ./luau scripts/test_transient_fx_pool.luau
           ./luau scripts/test_remote_combat_fx_budget.luau
+          ./luau scripts/test_combat_fx_audience.luau
           ./luau scripts/test_combat_feedback_policy.luau
           ./luau scripts/test_environment_profile.luau
           ./luau scripts/test_exhaust_wisp_pool.luau
