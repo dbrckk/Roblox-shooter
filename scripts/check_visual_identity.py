@@ -113,10 +113,28 @@ def main():
                    '"ROOF / louver blade "'):
         check(needle in art, "Missing non-colliding rooftop exhaust identity")
     exhaust = source("src/client/ExhaustAmbient.client.luau")
+    wisp_pool = source("src/shared/ExhaustWispPool.luau")
     for needle in ("Profile.activeExhaustIndices(", 'puff.CanQuery = false',
-                   'puff.CanCollide = false', "Debris:AddItem(puff,",
-                   'part:GetAttribute("IronYardExhaustVent") ~= true'):
-        check(needle in exhaust, "Missing local-only exhaust/culling protection: " + needle)
+                   'puff.CanCollide = false', 'puff.CanTouch = false',
+                   'part:GetAttribute("IronYardExhaustVent") ~= true',
+                   'shared:WaitForChild("ExhaustWispPool")',
+                   "VaporPool.cap(settings)",
+                   "VaporPool.claim(vaporSlots, now, cap)",
+                   "VaporPool.alpha(slot, now, index <= cap)",
+                   "if not next(activeVaporIndices) then return end",
+                   "animationStepAt = now + 1 / 30",
+                   "activeVaporIndices[index] = nil",
+                   "if puff and puff.Parent then puff.Parent = nil end",
+                   "script.Destroying:Connect(function()"):
+        check(needle in exhaust, "Missing pooled non-colliding vapor: " + needle)
+    check("TweenService" not in exhaust and "Debris" not in exhaust,
+          "Ambient vapor must not allocate Tweens or scheduled Debris per emission")
+    for needle in ("Pool.MAX_PARTS = 12",
+                   "function Pool.cap(settings)",
+                   "function Pool.claim(slots, now, cap)",
+                   "function Pool.alpha(slot, now, visible)",
+                   "return 1 - (1 - t) * (1 - t)"):
+        check(needle in wisp_pool, "Missing bounded Quad.Out vapor policy: " + needle)
     entrance = source("src/server/WarehouseEntranceArt.luau")
     entrance_plan = source("src/shared/WarehouseEntrancePlan.luau")
     for needle in ('local WarehouseEntranceArt = require(script.Parent:WaitForChild("WarehouseEntranceArt"))',
