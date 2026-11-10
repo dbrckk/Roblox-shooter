@@ -68,6 +68,7 @@ jobs:
           ./luau scripts/test_bot_death_plan.luau
           ./luau scripts/test_bot_death_dust_pool.luau
           ./luau scripts/test_bot_death_fx_lifecycle.luau
+          ./luau scripts/test_player_death_lifecycle.luau
           ./luau scripts/test_combat_vfx_profile.luau
           ./luau scripts/test_impact_mark_pool.luau
           ./luau scripts/test_transient_fx_pool.luau
