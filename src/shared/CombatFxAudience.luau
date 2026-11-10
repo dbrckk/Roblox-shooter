@@ -6,6 +6,7 @@
 local Audience = {}
 Audience.MAX_DISTANCE = 256
 Audience.MAX_DISTANCE_SQUARED = Audience.MAX_DISTANCE * Audience.MAX_DISTANCE
+Audience.ROSTER_REFRESH_SECONDS = 0.15
 
 local function finite(n)
     return type(n) == "number" and n == n
@@ -29,6 +30,15 @@ function Audience.wants(origin, listener, isShooter, isActive)
     local dy = origin.Y - listener.Y
     local dz = origin.Z - listener.Z
     return dx * dx + dy * dy + dz * dz <= Audience.MAX_DISTANCE_SQUARED
+end
+
+-- A roster snapshot caches only expensive Player/Character/Humanoid/Root
+-- lookups, never root positions or health values. Both are read LIVE per
+-- accepted shot, so sprinting, boosting and death affect every packet.
+function Audience.needsRosterRefresh(now, previous, dirty)
+    if dirty == true or not finite(now) or not finite(previous)
+        or now < previous then return true end
+    return now - previous >= Audience.ROSTER_REFRESH_SECONDS
 end
 
 function Audience.deliveryMode(included, total)
