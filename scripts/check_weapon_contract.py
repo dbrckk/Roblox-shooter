@@ -354,6 +354,8 @@ def main():
         'RemoteGuard.allow(player, "SetDuelReady")',
         'local function startDuelSeries(players)',
         'local function startDuelBout()',
+        'if not duel and mode == "FFA" then',
+        'local candidates = readyPlayers()',
         'local function finishDuelBout(result)',
         'local function endDuel(reason, winningSide)',
         'DuelRules.boutWinner(ah,am,bh,bm,remaining<=0)',
@@ -418,6 +420,7 @@ def main():
     ):
         has(server, token, "All duel hit paths bound to original rigs")
     for token in (
+        "local function validId(id)",
         "function Gate.begin(a, b)",
         "function Gate.clear()",
         "function Gate.canFire(player, phase, mode, playerCount)",

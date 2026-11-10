@@ -40,4 +40,16 @@ assert(not Gate.begin(a,a))
 assert(not Gate.begin(a,{UserId=17,Character={}}))
 assert(not Gate.begin(a,{UserId=25,Character=firstA}))
 assert(not Gate.canFire(a,"LIVE","DUEL",2))
+local studioA = {UserId=-1,Character={}}
+local studioB = {UserId=-2,Character={}}
+assert(Gate.begin(studioA,studioB))
+assert(Gate.canFire(studioA,"LIVE","DUEL",2))
+assert(Gate.canDamage(studioA,studioB,studioB.Character,"LIVE","DUEL",2))
+studioA.Character = {}
+assert(not Gate.canFire(studioA,"LIVE","DUEL",2))
+Gate.clear()
+assert(not Gate.begin({UserId=0,Character={}},studioB))
+assert(not Gate.begin({UserId=0/0,Character={}},studioB))
+assert(not Gate.begin({UserId=0.5,Character={}},studioB))
+assert(not Gate.begin({UserId=math.huge,Character={}},studioB))
 print("IRON YARD duel combat: 1000 checks, rig generations and all damage channels OK")

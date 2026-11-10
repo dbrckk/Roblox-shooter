@@ -2,8 +2,8 @@
 -- Never uses local predicted shots or raw/unverified client scores.
 local Readout = {}
 local function validId(n)
-    return type(n) == "number" and n == n and n > 0
-        and n < math.huge and n % 1 == 0
+    return type(n) == "number" and n == n and n ~= 0
+        and math.abs(n) < math.huge and n % 1 == 0
 end
 local function score(n)
     if type(n) ~= "number" or n ~= n or n < 0 or n > 5

@@ -34,6 +34,13 @@ assert(D.canFight("DUEL",2,1,2,2))
 assert(not D.canFight("DUEL",3,1,2,3))
 assert(not D.canFight("DUEL",1,1,2,3))
 assert(not D.canFight("DUEL",1,1,1,2))
+assert(D.canFight("DUEL",-1,-1,-2,2))
+assert(D.canFight("DUEL",-2,-1,-2,2))
+assert(not D.canFight("DUEL",0,-1,-2,2))
+assert(not D.canFight("DUEL",-3,-1,-2,2))
+assert(not D.canFight("DUEL",1,0,1,2))
+assert(not D.canFight("DUEL",0/0,-1,-2,2))
+assert(not D.canFight("DUEL",1.5,1.5,2,2))
 local a,b,n=0,0,0
 for i=1,9 do
   local nextA,nextB,nextN,done,win = D.advance(a,b,n,i%2==0 and "B" or "A")

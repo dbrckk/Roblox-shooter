@@ -401,6 +401,15 @@ local function tick()
             startRound()
         end
     elseif phase == "LIVE" then
+        -- The two humans explicitly requested a duel; start now rather
+        -- than forcing them to wait out the remainder of a four-minute FFA.
+        if not duel and mode == "FFA" then
+            local candidates = readyPlayers()
+            if candidates then
+                startDuelSeries(candidates)
+                return
+            end
+        end
         if duel then
             local a,b=duelParticipants()
             local function health(p, expectedCharacter)

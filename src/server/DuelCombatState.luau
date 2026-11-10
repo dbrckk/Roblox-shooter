@@ -1,6 +1,11 @@
 -- IRON YARD: server-only duel identity gate. No Roblox services needed.
 local Gate = {}
 local bout = nil
+-- Local Roblox Studio testing uses negative UserIds; public IDs are positive.
+local function validId(id)
+    return type(id) == "number" and id == id and id ~= 0
+        and math.abs(id) < math.huge and id % 1 == 0
+end
 
 function Gate.clear()
     bout = nil
@@ -9,8 +14,8 @@ end
 function Gate.begin(a, b)
     Gate.clear()
     if a == nil or b == nil or a == b
-        or type(a.UserId) ~= "number" or type(b.UserId) ~= "number"
-        or a.UserId <= 0 or b.UserId <= 0 or a.UserId == b.UserId
+        or not validId(a.UserId) or not validId(b.UserId)
+        or a.UserId == b.UserId
         or not a.Character or not b.Character
         or a.Character == b.Character then return false end
     bout = {a = a, b = b, aChar = a.Character, bChar = b.Character}

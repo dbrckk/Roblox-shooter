@@ -68,7 +68,12 @@ end
 
 function Duel.canFight(mode, userId, a, b, playerCount)
     if mode ~= "DUEL" then return true end
-    return playerCount == 2 and type(userId) == "number"
-        and userId > 0 and a ~= b and (userId == a or userId == b)
+    local function validId(id)
+        return type(id) == "number" and id == id and id ~= 0
+            and math.abs(id) < math.huge and id % 1 == 0
+    end
+    return playerCount == 2 and validId(userId)
+        and validId(a) and validId(b) and a ~= b
+        and (userId == a or userId == b)
 end
 return Duel

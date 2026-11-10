@@ -8,7 +8,11 @@ function RoundStandings.build(rawEntries, roundNumber)
         local kills = math.max(0, math.floor(tonumber(entry.eliminations) or 0))
         local deaths = math.max(0, math.floor(tonumber(entry.deaths) or 0))
         local isBot = entry.bot == true
-        local userId = isBot and 0 or math.max(0, math.floor(tonumber(entry.userId) or 0))
+        -- Studio local test users have negative IDs, unlike public players.
+        local rawId = tonumber(entry.userId)
+        local validId = rawId and rawId == rawId and rawId ~= 0
+            and math.abs(rawId) < math.huge and rawId % 1 == 0
+        local userId = (not isBot and validId) and rawId or 0
         table.insert(rows, {
             name = tostring(entry.name or "Operator"),
             eliminations = kills,

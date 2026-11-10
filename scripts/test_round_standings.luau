@@ -43,6 +43,13 @@ assert(botWin.winner == "[BOT] Hawk" and botWin.winnerUserId == 0,
 local zero = R.build({ row("Solo", 0, 0, false, 345, 345) }, 5)
 assert(zero.winner == "DRAW" and zero.winnerUserId == 0,
     "Zero eliminations cannot win")
+local studio = R.build({
+    row("StudioGuest1", 5, 0, false, -1, -1),
+    row("StudioGuest2", 2, 2, false, -2, -2),
+}, 10)
+assert(studio.standings[1].userId == -1
+    and studio.standings[2].userId == -2)
+assert(studio.winnerUserId == -1)
 local empty = R.build({}, 5)
 assert(empty.winner == "DRAW" and #empty.standings == 0, "Empty lobby")
 print("IRON YARD final scoreboard ranking, ties, rewards and snapshot isolation: OK")
