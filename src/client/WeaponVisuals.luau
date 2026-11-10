@@ -9,6 +9,7 @@ local TransientFxPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitFor
 local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
+local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
 
 local WeaponVisuals = {}
@@ -83,6 +84,8 @@ function WeaponVisuals.new(WeaponConfig)
     -- A bounded list of remote emitters only. The local weapon's feedback
     -- has absolute priority and does not consume these slots.
     self.remoteSoundEmitters = {}
+    self.cartridgeShots = {}
+    self.pendingCartridge = nil
     -- Server-authored rank only affects the cosmetic local viewmodel.
     self.finishConnection = Players.LocalPlayer:GetAttributeChangedSignal(
         "IronYardProgressLevel"):Connect(function()
@@ -293,6 +296,7 @@ end
 
 function WeaponVisuals:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
+    self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap
 	self.equipStartedAt = os.clock()
 	self.recoil = 0
     self.reloadActive = false
@@ -356,11 +360,58 @@ function WeaponVisuals:setReloading(weaponId, active)
     self.reloadActive = active == true
 end
 
+-- Locate the actual animated first-person part for the ejector. A missing
+-- viewmodel anchor never creates a casing at the camera origin.
+function WeaponVisuals:_ejectCartridge(plan)
+    if not self.model or not plan then return end
+    local ejector = nil
+    for _, entry in ipairs(self.parts) do
+        if entry.part.Name == plan.anchor and entry.part.Parent == self.model then
+            ejector = entry.part
+            break
+        end
+    end
+    if not ejector then return end
+
+    local from = ejector.CFrame * CFrame.new(0.12, 0.08, 0)
+    local to = from * CFrame.new(0.76, -0.48, 0.34)
+        * CFrame.Angles(1.5, 0.8, 1.2)
+    self:_spawnTransient({
+        name = "IronYardSpentCartridge",
+        origin = from, target = to,
+        size = Vector3.new(plan.size[1], plan.size[2], plan.size[3]),
+        endSize = Vector3.new(plan.size[1], plan.size[2], plan.size[3]),
+        shape = Enum.PartType.Cylinder,
+        material = MATERIAL_METAL,
+        color = Color3.fromRGB(plan.tint[1], plan.tint[2], plan.tint[3]),
+        alpha = 0, duration = plan.duration, priority = 1,
+        arcHeight = plan.arc, spinAngle = plan.spin, linear = true,
+    })
+end
+
 function WeaponVisuals:kick(weaponId)
     local config = self.WeaponConfig.get(weaponId)
     if not config or weaponId ~= self.currentWeaponId then return end
     self.recoil = WeaponFeel.kick(weaponId, self.recoil, config.recoilKick or 0.08)
     self.fireStartedAt = os.clock()
+    local count = (self.cartridgeShots[weaponId] or 0) + 1
+    self.cartridgeShots[weaponId] = count
+    local plan = CartridgeEjection.plan(weaponId,
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled, count)
+    if plan then
+        if plan.delay > 0 then
+            -- Pump/bolt action releases the spent shell on its mechanical beat.
+            -- A new shot/weapon swap replaces or cancels stale pending FX.
+            self.pendingCartridge = { at = self.fireStartedAt + plan.delay,
+                weaponId = weaponId, plan = plan }
+        else
+            self.pendingCartridge = nil
+            self:_ejectCartridge(plan)
+        end
+    else
+        self.pendingCartridge = nil
+    end
 end
 
 function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingPose)
@@ -414,6 +465,13 @@ function WeaponVisuals:_render(deltaTime)
     -- Pool opacity/expiry is serviced at 8 Hz, not via a Tween and Debris
     -- allocation for every bullet. Reuses the existing RenderStepped hook.
     local clock = os.clock()
+    local pending = self.pendingCartridge
+    if pending and clock >= pending.at then
+        self.pendingCartridge = nil
+        if pending.weaponId == self.currentWeaponId then
+            self:_ejectCartridge(pending.plan)
+        end
+    end
     if #self.impactMarks > 0 and clock >= self.nextImpactMarkUpdateAt then
         self.nextImpactMarkUpdateAt = clock + 0.125
         self:_updateImpactMarks(clock)
@@ -553,6 +611,9 @@ function WeaponVisuals:_spawnTransient(spec)
     slot.toSize = spec.endSize
     slot.fromAlpha = spec.alpha
     slot.linear = spec.linear == true
+    -- Reset when a pooled shell is reused as a tracer/impact/muzzle flash.
+    slot.arcHeight = spec.arcHeight or 0
+    slot.spinAngle = spec.spinAngle or 0
     part.Parent = workspace
     return true
 end
@@ -568,7 +629,15 @@ function WeaponVisuals:_updateTransientFx(now)
         if t and part then
             -- Original standard TweenInfo uses Quad.Out; tracers use Linear.
             local blend = slot.linear and t or (1 - (1 - t) * (1 - t))
-            part.CFrame = slot.fromCFrame:Lerp(slot.toCFrame, blend)
+            local transform = slot.fromCFrame:Lerp(slot.toCFrame, blend)
+            if slot.arcHeight > 0 then
+                transform *= CFrame.new(0,
+                    CartridgeEjection.arc(t, slot.arcHeight), 0)
+            end
+            if slot.spinAngle ~= 0 then
+                transform *= CFrame.Angles(0, slot.spinAngle * t, slot.spinAngle * t * 0.6)
+            end
+            part.CFrame = transform
             part.Size = slot.fromSize:Lerp(slot.toSize, blend)
             part.Transparency = slot.fromAlpha
                 + (1 - slot.fromAlpha) * blend

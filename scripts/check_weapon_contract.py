@@ -108,9 +108,10 @@ def main():
         "validNumber(dx) and validNumber(dy) and validNumber(dz)",
     ):
         has(shot_input, needle, "Bounded camera aim origin; fallback under high latency")
-    require(server.index("direction = convergeCameraAim(") <
-            server.index("if not canFire(player, weaponId, config) then"),
-            "Aim hint must be resolved before consuming server ammo/cooldown")
+    require(server.index("if not canFire(player, weaponId, config) then") <
+            server.index("direction = convergeCameraAim(") <
+            server.index("SpawnService.clearProtection(player.Character)"),
+            "Only admitted shots may spend convergence raycasts")
     require(server.count("local origin = head.Position") == 2,
             "Rifle and shotgun must keep server-owned Head origins")
     require("local start = head.Position" in server,

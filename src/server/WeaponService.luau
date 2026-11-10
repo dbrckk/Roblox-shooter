@@ -602,11 +602,13 @@ local function onFireWeapon(player, payload)
     -- A dead character cannot fire or consume its rate limit.
     local liveCharacter, _, liveHead = getLiveCharacter(player)
     if not liveCharacter then return end
-    direction = convergeCameraAim(player, payload, direction, config,
-        liveCharacter, liveHead)
     if not canFire(player, weaponId, config) then
         return
     end
+    -- Only ACCEPTED shots may spend extra camera-convergence raycasts.
+    -- Rejected spam, empty magazines and reloads do not perform them.
+    direction = convergeCameraAim(player, payload, direction, config,
+        liveCharacter, liveHead)
 
     -- Shooting forfeits the temporary defensive shield; no invincible attackers.
     SpawnService.clearProtection(player.Character)

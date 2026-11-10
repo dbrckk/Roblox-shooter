@@ -16,6 +16,7 @@ visuals = get("src/client/WeaponVisuals.luau")
 client = get("src/client/init.client.luau")
 server = get("src/server/WeaponService.luau")
 config = get("src/shared/WeaponConfig.luau")
+ejection = get("src/shared/CartridgeEjectionPolicy.luau")
 
 for needle in (
     "function Feel.get(id)", "function Feel.kick(id, current, added)",
@@ -66,6 +67,32 @@ for needle in (
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 
+for needle in (
+    "function Policy.plan(weaponId, preset, touch, shotNumber)",
+    'preset == "ECO"', "function Policy.arc(progress, height)",
+    "AssaultRifle =", "Pistol =", "Shotgun =", "Sniper =",
+):
+    assert needle in ejection, f"Spent-shell policy missing: {needle}"
+for needle in (
+    'WaitForChild("CartridgeEjectionPolicy")',
+    "function WeaponVisuals:_ejectCartridge(plan)",
+    'name = "IronYardSpentCartridge"',
+    "shape = Enum.PartType.Cylinder",
+    "priority = 1",
+    "slot.arcHeight = spec.arcHeight or 0",
+    "slot.spinAngle = spec.spinAngle or 0",
+    "CartridgeEjection.arc(t, slot.arcHeight)",
+    "local pending = self.pendingCartridge",
+    "self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap",
+    "function WeaponVisuals:kick(weaponId)",
+    "CartridgeEjection.plan(weaponId,",
+    "self:_ejectCartridge(pending.plan)",
+):
+    assert needle in visuals, f"Client casings not wired: {needle}"
+assert visuals.count("function WeaponVisuals:_ejectCartridge(plan)") == 1
+assert visuals.index("self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap") < (
+    visuals.index("function WeaponVisuals:_ejectCartridge(plan)"))
+assert "FireServer" not in ejection and "Instance.new" not in ejection
 assert "visuals:playFireSound(weaponId, ray.Origin, true)" in client, (
     "Locally predicted shot must never be culled as a remote shot"
 )

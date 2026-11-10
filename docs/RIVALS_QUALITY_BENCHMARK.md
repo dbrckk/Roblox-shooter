@@ -46,3 +46,28 @@ admissible. Elle réutilise le filtre du personnage déjà mis en cache. Pas de 
 
 La CI compile les modules, vérifie la politique mathématique et les contrats d'intégration.
 Elle ne remplace ni le test moteur ni les mesures de FPS/latence.
+
+
+## Itération suivante — animation des douilles + budget de visée (10 novembre 2026)
+
+- Quatre armes à feu éjectent des douilles métalliques purement locales et originales :
+  fusil automatique, pistolet, fusil à pompe (après pompe), sniper (après verrou).
+  Le couteau n'éjecte rien. Les modèles existants fournissent le point d'origine
+  (EjectionPort, Receiver ou Bolt) sans nouveau mesh externe ni asset payant.
+- Trajectoire courte avec élévation puis retombée et rotation, sans collision :
+  le pool VFX existant anime les douilles puis les recycle, sans nouveau RenderStepped,
+  appel réseau, Tween ou Debris. Les douilles ont priorité 1 (elles cèdent aux impacts
+  et flashs), sont désactivées en ECO et sont échantillonnées à une sur deux pour
+  l'AR-24 sur Android BALANCED. Les autres armes restent visibles.
+- Les transitions d'arme annulent toute douille retardée (pompe/verrou), et les effets
+  recyclés réinitialisent les paramètres d'arc/rotation.
+- Correction performance : la convergence de caméra issue de l'itération précédente
+  se calcule désormais uniquement **après** admission par les cooldowns/munitions serveur.
+  Les tirs refusés n'ajoutent aucun raycast.
+- Validation automatique : tests Luau (quatre armes, admission 18 000 tirs simulés,
+  limites Android et courbe), compilation, contrat d'intégration et build Rojo.
+- **À vérifier en moteur** : cadrage réel des douilles sur Android/PC, cohérence du
+  temps d'éjection du shotgun/sniper, comportement sous changement d'arme rapide
+  et coûts FPS sur 100 tirs continus. Les sons restent provisoires et ne sont
+  pas revendiqués de niveau RIVALS tant que des échantillons originaux licenciés
+  ne sont pas disponibles.
