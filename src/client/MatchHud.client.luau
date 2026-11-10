@@ -51,6 +51,8 @@ local header = label("Status", 16, UDim2.new(1, -12, 0, 28), UDim2.fromOffset(6,
 local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(248, 248, 241))
 
 local eliminations = nil
+local statsConnection = nil
+local statsGeneration = 0
 local function update()
     -- The first-match mission occupies this exact top lane temporarily,
     -- never stack both cards over the mobile weapon selection.
@@ -63,33 +65,48 @@ local function update()
     local kills = eliminations and eliminations.Value or 0
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
+    local headerText, detailText
     if phase == "WAITING" then
-        header.Text = "IRON YARD  |  FREIGHT TERMINAL"
-        detail.Text = "WAITING FOR OPERATORS"
+        headerText = "IRON YARD  |  FREIGHT TERMINAL"
+        detailText = "WAITING FOR OPERATORS"
     elseif phase == "COUNTDOWN" then
-        header.Text = string.format("ROUND %d  |  STARTING", count + 1)
-        detail.Text = string.format("FIRST TO %d ELIMINATIONS   /   %ds", target, seconds)
+        headerText = string.format("ROUND %d  |  STARTING", count + 1)
+        detailText = string.format("FIRST TO %d ELIMINATIONS   /   %ds", target, seconds)
     elseif phase == "LIVE" then
-        header.Text = string.format("ROUND %d  |  %s", count, clock)
+        headerText = string.format("ROUND %d  |  %s", count, clock)
         local character = player.Character
         local shieldEnd = character and character:GetAttribute("NeonSpawnProtectedUntil") or 0
         local secondsOfShield = math.max(0, math.ceil(shieldEnd - Workspace:GetServerTimeNow()))
         local suffix = secondsOfShield > 0 and ("  |  SHIELD " .. secondsOfShield .. "s") or ""
-        detail.Text = string.format("KILLS %d/%d   |   %d BOTS", kills, target, botCount) .. suffix
+        detailText = string.format("KILLS %d/%d   |   %d BOTS", kills, target, botCount) .. suffix
     else
-        header.Text = "ROUND FINISHED"
+        headerText = "ROUND FINISHED"
         local who = Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
-        detail.Text = (who == "DRAW" and "DRAW" or "WINNER: " .. who) .. "  |  " .. clock
+        detailText = (who == "DRAW" and "DRAW" or "WINNER: " .. who) .. "  |  " .. clock
     end
+    -- Server attributes may replicate redundantly. Only dirty text
+    -- reaches Roblox UI properties; score/time changes remain immediate.
+    if header.Text ~= headerText then header.Text = headerText end
+    if detail.Text ~= detailText then detail.Text = detailText end
 end
 
 local function connectStats(stats)
+    statsGeneration += 1
+    local generation = statsGeneration
+    if statsConnection then
+        statsConnection:Disconnect()
+        statsConnection = nil
+    end
+    eliminations = nil
     local kills = stats:FindFirstChild("Eliminations") or stats:WaitForChild("Eliminations", 10)
+    -- A replacement leaderstats may arrive while the old WaitForChild
+    -- is yielding. Never bind the obsolete value to the current HUD.
+    if generation ~= statsGeneration or stats.Parent ~= player then return end
     if kills then
         eliminations = kills
-        kills:GetPropertyChangedSignal("Value"):Connect(update)
-        update()
+        statsConnection = kills:GetPropertyChangedSignal("Value"):Connect(update)
     end
+    update()
 end
 
 local existing = player:FindFirstChild("leaderstats")
