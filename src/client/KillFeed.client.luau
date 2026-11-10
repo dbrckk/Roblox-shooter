@@ -138,4 +138,5 @@ script.Destroying:Connect(function()
     if cameraConnection then cameraConnection:Disconnect() end
     for _, row in ipairs(entries) do row:Destroy() end
     table.clear(entries)
+    gui:Destroy()
 end)
