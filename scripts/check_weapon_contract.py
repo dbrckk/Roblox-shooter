@@ -27,6 +27,7 @@ def main():
     config = source("src/shared/WeaponConfig.luau")
     network = source("src/shared/PrecisionNet.luau")
     server = source("src/server/WeaponService.luau")
+    shot_input = source("src/shared/ShotInputPolicy.luau")
     client = source("src/client/init.client.luau")
     viewmodel = source("src/client/WeaponVisuals.luau")
     hud = source("src/client/HudController.luau")
@@ -69,6 +70,38 @@ def main():
             "Death events must be guarded by the active life generation")
     has(server, 'or player.Parent ~= Players',
         "In-flight player projectiles must stop after PlayerRemoving")
+
+    # Hot path: only the thrown knife needs its own mutable RaycastParams,
+    # because that projectile also excludes its own Part. Hitscan/pellet
+    # weapons must reuse a read-only filter for the current character.
+    for needle in (
+        'WaitForChild("ShotInputPolicy")',
+        "if not ShotInputPolicy.validDirection(",
+        "direction.X, direction.Y, direction.Z) then return nil end",
+        "local function shotRaycastParams(player, character)",
+        "if state.shotRayCharacter ~= character or not state.shotRayParams then",
+        "state.shotRayParams = makeRaycastParams({ character })",
+        "state.shotRayCharacter = character",
+        "return state.shotRayParams",
+        "state.shotRayParams = nil",
+        "state.shotRayCharacter = nil",
+        "player.CharacterRemoving:Connect(function(character)",
+    ):
+        has(server, needle, "Allocation-free server fire hot path")
+    require(server.count("local params = shotRaycastParams(player, character)") == 2,
+            "Rifle/sniper/pistol and shotgun must reuse character raycast filters")
+    require(server.count("makeRaycastParams({ character })") == 2,
+            "Only one cached hitscan filter and one mutable knife filter permitted")
+    require("ipairs({ direction.X, direction.Y, direction.Z })" not in server,
+            "Client aim validation must never allocate per-shot coordinate arrays")
+    for needle in (
+        "function Policy.validDirection(x, y, z)",
+        "return validNumber(x) and validNumber(y) and validNumber(z)",
+        "x * x + y * y + z * z >= 0.000001",
+        "n >= -1000000",
+        "n <= 1000000",
+    ):
+        has(shot_input, needle, "Nonfinite and tiny client shot vectors must be rejected")
 
     # A successful hitscan/shotgun/bot shot needs ONE WeaponFx broadcast,
     # not a separate FireSound broadcast followed by a tracer broadcast.
