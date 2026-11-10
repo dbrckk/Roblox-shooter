@@ -17,7 +17,9 @@ needles = (
     'if tier == "Detail" then',
     "ArtSectorRegistry.add(entry.registry, item, item.Position)",
     "ArtSectorRegistry.remove(entry.registry, item)",
-    "local eye = entry.lastEye",
+    "local liveEye = camera and camera.CFrame.Position",
+    "ArtLOD.streamedHidden(item.Position,",
+    "liveEye, entry.lastEye, artHideBeyond, artUnhideBefore)",
     "ArtLOD.hiddenSquared(offset:Dot(offset),",
     "local initialParts = folder:GetDescendants()",
     "task.spawn(function()",
@@ -49,6 +51,10 @@ for needle in (
     "if needsSweep then",
     "entry.lastSweepEye = position",
     "entry.dirty = false",
+    "ArtLOD.shouldPollArt(now, lastArtPollAt, eye, lastArtPollEye,",
+    "task.wait(0.1)",
+    "if now >= nextBotPollAt then",
+    "nextBotPollAt = now + 1",
 ):
     assert needle in src, f"Stationary camera LOD invalidation missing: {needle}"
 assert src.count("entry.dirty = true") >= 3, (
@@ -72,4 +78,16 @@ for needle in (
     assert needle in registry, f"Missing per-sector cleanup: {needle}"
 assert "Policy.CellSize = 48" in policy and "Policy.MotionMargin = 8" in policy, (
     "Spatial density and moving-art padding preserved")
+for needle in (
+    "Policy.ArtPollSeconds = 1",
+    "Policy.FastPollSeconds = 0.25",
+    "Policy.FastTravelStuds = 20",
+    "function Policy.shouldPollArt(",
+    "function Policy.streamedHidden(",
+    ">= Policy.FastTravelStuds * Policy.FastTravelStuds",
+):
+    assert needle in policy, f"Missing rapid-camera safe update policy: {needle}"
+assert src.count("folder:GetDescendants()") == 1
+assert "if entry.dirty then" not in src, (
+    "Only dirty sector invalidation is not enough after fast camera movement")
 print("IRON YARD incremental art LOD: stream-in, group cleanup and safe core geometry: OK")
