@@ -517,12 +517,27 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
         }) then return false end
         table.insert(selected, part)
     end
+    -- Preserve the original hand positions when a validated imported mesh
+    -- replaces a procedural firearm. No imported script/rig is executed.
     if weaponId == "Pistol" then
         self:_addArms(model, nil,
             CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
-    else
+    elseif weaponId == "Knife" then
         self:_addArms(model, nil, CFrame.new(0.02, -0.32, 0.22)
             * CFrame.Angles(math.rad(-21), math.rad(7), math.rad(-8)))
+    elseif weaponId == "AssaultRifle" then
+        self:_addArms(model,
+            CFrame.new(-0.32, -0.31, -0.66) * CFrame.Angles(math.rad(-8), 0, 0),
+            CFrame.new(0.07, -0.36, 0.09) * CFrame.Angles(math.rad(-10), 0, 0))
+    elseif weaponId == "Shotgun" then
+        self:_addArms(model,
+            CFrame.new(-0.29, -0.35, -0.83) * CFrame.Angles(math.rad(-8), 0, 0),
+            CFrame.new(0.08, -0.40, 0.13) * CFrame.Angles(math.rad(-11), 0, 0))
+    elseif weaponId == "Sniper" then
+        self:_addArms(model,
+            CFrame.new(-0.34, -0.3, -0.58)
+                * CFrame.Angles(math.rad(-6), math.rad(-4), math.rad(3)),
+            CFrame.new(0.08, -0.38, 0.06) * CFrame.Angles(math.rad(-11), 0, 0))
     end
     for _, sourcePart in ipairs(selected) do
         local clone = sourcePart:Clone()
@@ -533,8 +548,9 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
             end
         end
         configurePart(clone)
-        clone.Name = sourcePart.Name == "IRONYARD_Pistol_Slide"
-            and "Slide" or "WeaponBody"
+        -- Reuse the existing one-pass mechanical animation by matching
+        -- the names the renderer already understands; static shells never move.
+        clone.Name = WeaponMeshPolicy.runtimeName(sourcePart.Name)
         clone.Parent = model
         table.insert(self.parts, {
             part=clone,
@@ -543,15 +559,35 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
             baseColor=clone.Color,
         })
     end
+    -- Existing local FX and reload samples must keep functional anchors.
+    -- All are fully transparent non-colliding client-owned primitives.
+    local function anchor(name, offset)
+        self:_addPart(model, "Part", name,
+            Vector3.new(0.02, 0.02, 0.02), Color3.fromRGB(25, 25, 25),
+            offset, MATERIAL_SMOOTH, 1)
+    end
     if weaponId == "Pistol" then
-        -- Invisible anchors preserve shell ejection and muzzle flash while
-        -- the imported moving glissiere replaces multiple Roblox Parts.
-        self:_addPart(model, "Part", "Muzzle",
-            Vector3.new(0.02, 0.02, 0.02), Color3.fromRGB(25, 25, 25),
-            CFrame.new(0, 0.16, -1.06), MATERIAL_SMOOTH, 1)
-        self:_addPart(model, "Part", "EjectionPort",
-            Vector3.new(0.02, 0.02, 0.02), Color3.fromRGB(25, 25, 25),
-            CFrame.new(0.07, 0.27, -0.32), MATERIAL_SMOOTH, 1)
+        anchor("Muzzle", CFrame.new(0, 0.16, -1.06))
+        anchor("EjectionPort", CFrame.new(0.07, 0.27, -0.32))
+    elseif weaponId == "AssaultRifle" then
+        anchor("FlashHider", CFrame.new(0, 0.03, -2.61))
+        anchor("EjectionPort", CFrame.new(0.222, 0.09, -0.27))
+    elseif weaponId == "Shotgun" then
+        anchor("MuzzleRing", CFrame.new(0, 0.10, -2.31))
+        anchor("ShotgunEjectionPort", CFrame.new(0.264, 0.085, -0.18))
+        -- Server-confirmed reload still animates one visible shell, as it
+        -- does for the procedural shotgun. Never create it per round/frame.
+        local shellAxis = CFrame.Angles(math.pi / 2, 0, 0)
+        self:_addPart(model, "Part", "LoadingShellBody",
+            Vector3.new(0.13, 0.23, 0.13), Color3.fromRGB(166, 46, 37),
+            CFrame.new(-0.35, -0.29, 0.24) * shellAxis,
+            MATERIAL_SMOOTH, 1, Enum.PartType.Cylinder)
+        self:_addPart(model, "Part", "LoadingShellBrass",
+            Vector3.new(0.138, 0.055, 0.138), Color3.fromRGB(205, 171, 96),
+            CFrame.new(-0.35, -0.29, 0.38) * shellAxis,
+            MATERIAL_METAL, 1, Enum.PartType.Cylinder)
+    elseif weaponId == "Sniper" then
+        anchor("MuzzleBrake", CFrame.new(0, 0.03, -2.35))
     end
     self.currentWeaponImported = true
     model:SetAttribute("IronYardWeaponSource", "PBR_MESH")
@@ -578,11 +614,17 @@ function WeaponVisuals:setWeapon(weaponId)
 	self.model = model
 
 	if weaponId == "AssaultRifle" then
-        self:_createAssaultRifle(model)
+        if not self:_createImportedWeapon(model, "AssaultRifle") then
+            self:_createAssaultRifle(model)
+        end
     elseif weaponId == "Shotgun" then
-        self:_createShotgun(model)
+        if not self:_createImportedWeapon(model, "Shotgun") then
+            self:_createShotgun(model)
+        end
     elseif weaponId == "Sniper" then
-		self:_createSniper(model)
+        if not self:_createImportedWeapon(model, "Sniper") then
+            self:_createSniper(model)
+        end
 	elseif weaponId == "Knife" then
         if not self:_createImportedWeapon(model, "Knife") then
             self:_createKnife(model)

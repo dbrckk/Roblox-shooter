@@ -159,10 +159,13 @@ for needle in (
 ):
     assert needle in visuals, f"Secure PBR first-person path missing: {needle}"
 for needle in (
-    'assert(#selected==4',
-    'MeshId~="" and validAppearance(child)',
+    'assert(#selected>=2 and #selected<=10 and #selected%2==0',
+    'child.MeshId~="" and validAppearance(child)',
     'item:Destroy()',
     'local stage=Instance.new("Folder")',
+    'if previous then previous:Destroy() end',
+    'installVariant(high,weapon,"LOD0")',
+    'installVariant(low,weapon,"LOD1")',
 ):
     assert needle in studio_importer, f"Secure Studio import missing: {needle}"
 
@@ -194,6 +197,21 @@ for needle in (
 assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
     "Details must use the existing viewmodel renderer"
 )
+
+# Five authored PBR meshes, retaining original animation and FX on import.
+for weapon in ("AssaultRifle", "Shotgun", "Sniper"):
+    assert f'if not self:_createImportedWeapon(model, "{weapon}") then' in visuals
+    assert f'{weapon}={{' in mesh_policy
+for needle in (
+    'clone.Name = WeaponMeshPolicy.runtimeName(sourcePart.Name)',
+    'anchor("FlashHider"',
+    'anchor("ShotgunEjectionPort"',
+    'anchor("MuzzleBrake"',
+    'self:_addPart(model, "Part", "LoadingShellBody"',
+    'self:_addPart(model, "Part", "LoadingShellBrass"',
+):
+    assert needle in visuals, f"Imported PBR weapon animation/ejection missing: {needle}"
+
 
 # Rifle, shotgun and sniper use the exact same equip-time detail renderer.
 # The LOD switch must not be limited to the pistol and knife.

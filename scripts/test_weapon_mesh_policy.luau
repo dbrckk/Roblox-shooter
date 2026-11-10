@@ -9,6 +9,24 @@ assert(not P.namesComplete("Pistol",{IRONYARD_Pistol_Static=true}))
 assert(P.namesComplete("Knife",{IRONYARD_Knife_Static=true}))
 assert(not P.namesComplete("Knife",{IRONYARD_Knife_Static="true"}))
 assert(not P.namesComplete("Unknown",{}))
+for _,name in ipairs({"AssaultRifle","Shotgun","Sniper"}) do
+    assert(#P.Required[name] >= 2, name .. " must have separate mechanical meshes")
+    local complete = {}
+    for _,piece in ipairs(P.Required[name]) do
+        complete[piece] = true
+    end
+    assert(P.namesComplete(name, complete))
+    local missing = P.Required[name][#P.Required[name]]
+    complete[missing] = nil
+    assert(not P.namesComplete(name, complete))
+end
+assert(P.runtimeName("IRONYARD_Pistol_Slide")=="Slide")
+assert(P.runtimeName("IRONYARD_AssaultRifle_ChargingHandle")=="ChargingHandle")
+assert(P.runtimeName("IRONYARD_AssaultRifle_Magazine")=="Magazine")
+assert(P.runtimeName("IRONYARD_Shotgun_PumpAction")=="PumpAction")
+assert(P.runtimeName("IRONYARD_Sniper_Bolt")=="Bolt")
+assert(P.runtimeName("IRONYARD_Sniper_Static")=="WeaponBody")
+assert(P.runtimeName("unexpected")=="WeaponBody")
 local m={ColorMap="rbxassetid://111",NormalMap="rbxassetid://222",
     RoughnessMap="rbxassetid://333",MetalnessMap="rbxassetid://444"}
 assert(P.mapsReady(m))

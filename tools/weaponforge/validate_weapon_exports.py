@@ -8,6 +8,10 @@ import sys
 REQUIRED={
  "pistol":{"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
  "knife":{"IRONYARD_Knife_Static"},
+ "assault_rifle":{"IRONYARD_AssaultRifle_Static","IRONYARD_AssaultRifle_ChargingHandle",
+                  "IRONYARD_AssaultRifle_Magazine"},
+ "shotgun":{"IRONYARD_Shotgun_Static","IRONYARD_Shotgun_PumpAction"},
+ "sniper":{"IRONYARD_Sniper_Static","IRONYARD_Sniper_Bolt"},
 }
 def check(ok,message):
     if not ok: raise ValueError(message)
@@ -71,6 +75,9 @@ def main(root):
     root=Path(root)
     manifest=json.loads((root/"manifest.json").read_text())
     check(manifest["textureResolution"]==512,"Unexpected mobile texture size")
+    check(set(manifest["weapons"])==set(REQUIRED), "Unexpected weapon manifest")
+    check(len(manifest.get("exports",[]))==2*len(REQUIRED),
+          "Missing complete ten-GLB export manifest")
     report={}
     for weapon in REQUIRED:
         report[weapon]={}
@@ -82,6 +89,9 @@ def main(root):
               "LOD0 must exceed LOD1 in geometry")
     check((root/"weapons_source.blend").stat().st_size>10000,
           "Missing editable Blender source")
+    for weapon in REQUIRED:
+        check((root/("iron_yard_"+weapon+"_source.blend")).stat().st_size>10000,
+              "Missing per-weapon Blender source: "+weapon)
     (root/"validation_summary.json").write_text(json.dumps(report,indent=2)+"\n")
     print("IRON YARD weapon geometry / GLB PBR audit OK",report)
 
