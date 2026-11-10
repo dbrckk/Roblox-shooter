@@ -51,8 +51,16 @@ function Plan.duration(stages)
     return total
 end
 
--- No networked dust: only a single client-side floor probe per death, with
--- transient FX allocated inside the selected mobile/desktop graphics budget.
+-- One shared fragment count for both admission at death and the reusable
+-- pool's live quality cap. Never allocate a budget table during animation.
+function Plan.dustFragments(preset, touch)
+    if preset == "ECO" then return 1 end
+    if touch then return preset == "QUALITY" and 3 or 2 end
+    return preset == "QUALITY" and 4 or 3
+end
+
+-- No networked dust: only a single client-side floor probe per death;
+-- selected fragments are recycled by the client within the graphics budget.
 function Plan.dustBudget(preset, touch, distance)
     if type(distance) ~= "number" or distance ~= distance
         or distance < 0 or distance == math.huge then return nil end
@@ -61,9 +69,7 @@ function Plan.dustBudget(preset, touch, distance)
         or (touch and 95 or 145)
     if distance > maximum then return nil end
     return {
-        fragments = preset == "ECO" and 1
-            or (touch and (preset == "QUALITY" and 3 or 2)
-                or (preset == "QUALITY" and 4 or 3)),
+        fragments = Plan.dustFragments(preset, touch),
         duration = 0.36,
     }
 end
