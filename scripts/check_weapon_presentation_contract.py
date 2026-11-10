@@ -162,7 +162,7 @@ for needle in (
     'assert(#selected==4',
     'MeshId~="" and validAppearance(child)',
     'item:Destroy()',
-    'staging',
+    'local stage=Instance.new("Folder")',
 ):
     assert needle in studio_importer, f"Secure Studio import missing: {needle}"
 
