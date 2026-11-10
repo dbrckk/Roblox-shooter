@@ -48,18 +48,29 @@ local function updateFeedLayout()
         and Workspace:GetAttribute("NeonMatchPhase") == "LIVE"
         and gui.Parent:GetAttribute("IronYardBriefingOpen") ~= true
 end
-Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(updateFeedLayout)
-gui.Parent:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(updateFeedLayout)
-Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+local matchConnection =
+    Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(updateFeedLayout)
+local briefingConnection =
+    gui.Parent:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(updateFeedLayout)
+
+-- CurrentCamera can be replaced repeatedly across respawns. Keeping each
+-- old ViewportSize listener retains dead Camera instances for the session.
+local cameraConnection = nil
+local function reconnectCamera()
+    if cameraConnection then
+        cameraConnection:Disconnect()
+        cameraConnection = nil
+    end
     local camera = Workspace.CurrentCamera
     if camera then
-        camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateFeedLayout)
+        cameraConnection = camera:GetPropertyChangedSignal(
+            "ViewportSize"):Connect(updateFeedLayout)
     end
     updateFeedLayout()
-end)
-local camera = Workspace.CurrentCamera
-if camera then camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateFeedLayout) end
-updateFeedLayout()
+end
+local currentCameraConnection = Workspace:GetPropertyChangedSignal(
+    "CurrentCamera"):Connect(reconnectCamera)
+reconnectCamera()
 
 local function addEntry(info)
     if typeof(info) ~= "table" or typeof(info.attacker) ~= "string" or typeof(info.target) ~= "string" then
@@ -117,4 +128,14 @@ local function addEntry(info)
     end)
 end
 
-remotes.KillFeed.OnClientEvent:Connect(addEntry)
+local killFeedConnection = remotes.KillFeed.OnClientEvent:Connect(addEntry)
+
+script.Destroying:Connect(function()
+    killFeedConnection:Disconnect()
+    currentCameraConnection:Disconnect()
+    matchConnection:Disconnect()
+    briefingConnection:Disconnect()
+    if cameraConnection then cameraConnection:Disconnect() end
+    for _, row in ipairs(entries) do row:Destroy() end
+    table.clear(entries)
+end)
