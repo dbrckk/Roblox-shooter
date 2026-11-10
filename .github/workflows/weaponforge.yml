@@ -28,7 +28,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/assetforge/generate_maps.py --out build/weapon-kit/textures --size 512
-      - name: Export original real GLB geometry for pistol and knife
+      - name: Export five original real GLB weapons with mechanical submeshes
         shell: bash
         run: |
           set -euo pipefail
@@ -59,7 +59,7 @@ jobs:
           tag="iron-yard-weapon-meshes-${GITHUB_SHA:0:12}"
           gh release create "$tag" weapon-mesh-kit.zip \
             --repo "$GITHUB_REPOSITORY" \
-            --title "Original IRON YARD pistol + knife PBR meshes" \
-            --notes "Original Blender source, 4 GLB LOD models, 512px PBR maps and structural validation. Asset kit only, NOT a published Roblox experience. MeshPart import / owner permission / Studio+Android testing still needed." \
+            --title "Original IRON YARD five-weapon PBR mesh pack" \
+            --notes "Original Blender sources, 10 GLB LOD models, moving mechanical submeshes, 512px PBR maps and structural validation. Asset kit only, NOT a published Roblox experience. MeshPart import / owner permission / Studio+Android testing still needed." \
             --prerelease
           echo "Permanent source kit: https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}" >> "$GITHUB_STEP_SUMMARY"
