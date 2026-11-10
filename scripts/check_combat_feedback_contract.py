@@ -93,5 +93,5 @@ requires(client, (
 ), "Human/bot remote group admissions and unthrottled own-shot feedback")
 assert client.count('RemoteCombatFxBudget.allow(') == 2, (
     "Exactly two remote visuals pathways must be admitted once per group"
-))
+)
 print("IRON YARD actual damage, spawn-shield readout, kill priority and remote FX quotas: OK")
