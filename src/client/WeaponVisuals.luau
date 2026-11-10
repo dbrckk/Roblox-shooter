@@ -647,6 +647,9 @@ function WeaponVisuals:_spawnTransient(spec)
     -- Reset when a pooled shell is reused as a tracer/impact/muzzle flash.
     slot.arcHeight = spec.arcHeight or 0
     slot.spinAngle = spec.spinAngle or 0
+    -- Reset impact movement when this Part is recycled for another effect.
+    slot.gravityDrop = spec.gravityDrop or 0
+    slot.flicker = spec.flicker or 0
     part.Parent = workspace
     return true
 end
@@ -667,13 +670,19 @@ function WeaponVisuals:_updateTransientFx(now)
                 transform *= CFrame.new(0,
                     CartridgeEjection.arc(t, slot.arcHeight), 0)
             end
+            if slot.gravityDrop > 0 then
+                -- Analytic falling arc, no mass, collisions or Heartbeat tasks.
+                transform += Vector3.new(0, -slot.gravityDrop * t * t, 0)
+            end
             if slot.spinAngle ~= 0 then
                 transform *= CFrame.Angles(0, slot.spinAngle * t, slot.spinAngle * t * 0.6)
             end
             part.CFrame = transform
             part.Size = slot.fromSize:Lerp(slot.toSize, blend)
-            part.Transparency = slot.fromAlpha
-                + (1 - slot.fromAlpha) * blend
+            local baseAlpha = slot.fromAlpha + (1 - slot.fromAlpha) * blend
+            part.Transparency = math.clamp(baseAlpha
+                + slot.flicker * (1 - baseAlpha) * math.abs(math.sin(t * 24)),
+                0, 1)
             if not part.Parent then part.Parent = workspace end
         else
             -- Expired or excluded by a reduced graphics cap: retire this
@@ -785,6 +794,20 @@ function WeaponVisuals:drawConfirmedHit(position, headshot, killed)
     -- VFX pool already renders the same Quad.Out expansion/fade curve.
     -- Reserve its highest priority for real server-confirmed damage:
     -- cosmetic debris must never displace the actual hit confirmation.
+    if settings.eliminationRing then
+        self:_spawnTransient({
+            name = "IronYardEliminationRing",
+            origin = CFrame.lookAt(center, center + direction)
+                * CFrame.Angles(0, math.pi * 0.5, 0),
+            size = Vector3.new(0.018, settings.radius * 2, settings.radius * 2),
+            endSize = Vector3.new(0.012, settings.radius * 4, settings.radius * 4),
+            shape = Enum.PartType.Cylinder,
+            material = MATERIAL_NEON,
+            color = color,
+            alpha = 0.38, duration = settings.duration,
+            priority = 3,
+        })
+    end
     self:_spawnTransient({
         name = "IronYardConfirmedHit",
         origin = CFrame.new(center),
@@ -866,6 +889,7 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
     self.lastImpactAt = now
 
     local surface = CombatVfxProfile.surface(materialName)
+    local motion = CombatVfxProfile.fragmentMotion(materialName)
     local n = normal.Unit
     local tint = colorFromChannels(surface.debris)
     local reference = math.abs(n.Y) > 0.88 and Vector3.xAxis or Vector3.yAxis
@@ -908,6 +932,9 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
                 and MATERIAL_NEON or MATERIAL_SMOOTH,
             color = tint, alpha = surface.sparks and 0.02 or 0.16,
             duration = surface.sparks and 0.18 or 0.28, priority = 1,
+            gravityDrop = motion.gravity * self.random:NextNumber(0.65, 1),
+            spinAngle = motion.spin * self.random:NextNumber(-1, 1),
+            flicker = motion.flicker,
         })
     end
 

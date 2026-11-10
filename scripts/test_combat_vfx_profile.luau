@@ -37,12 +37,39 @@ assert(Vfx.tracer(180).duration < Vfx.tracer(500).duration,
     "tracer travel grows with flight distance")
 eq(Vfx.tracer(0), nil, "no degenerate tracer")
 eq(Vfx.tracer(1500).duration, 0.15, "long tracer caps its lifetime")
+-- Five materials have visibly distinct but bounded flight curves without
+-- changing surface collision or creating a networked physical projectile.
+local metalMotion = Vfx.fragmentMotion("CorrodedMetal")
+local woodMotion = Vfx.fragmentMotion("WoodPlanks")
+local glassMotion = Vfx.fragmentMotion("Glass")
+local earthMotion = Vfx.fragmentMotion("Sand")
+local stoneMotion = Vfx.fragmentMotion("Concrete")
+assert(metalMotion.gravity < glassMotion.gravity
+    and glassMotion.gravity < woodMotion.gravity
+    and woodMotion.gravity < stoneMotion.gravity
+    and stoneMotion.gravity < earthMotion.gravity)
+assert(metalMotion.flicker > glassMotion.flicker
+    and glassMotion.flicker > woodMotion.flicker)
+assert(woodMotion.spin > stoneMotion.spin
+    and stoneMotion.spin > metalMotion.spin)
+assert(Vfx.fragmentMotion("not-a-material") == stoneMotion)
+for _, material in ipairs({"Metal","Wood","Glass","Concrete","Ground"}) do
+    local motion = Vfx.fragmentMotion(material)
+    assert(motion.gravity >= 0 and motion.gravity <= 1)
+    assert(motion.spin >= 0 and motion.spin <= 3)
+    assert(motion.flicker >= 0 and motion.flicker <= 0.4)
+end
 local hit = Vfx.hitFeedback("BALANCED", true, 32, false, false)
 assert(hit and hit.sparks == 1 and hit.duration <= 0.2)
 local headHit = Vfx.hitFeedback("QUALITY", false, 50, true, false)
 assert(headHit.radius > hit.radius, "Headshots are visible")
 local killHit = Vfx.hitFeedback("QUALITY", false, 50, false, true)
 assert(killHit.duration > hit.duration, "Eliminations remain legible")
+assert(killHit.eliminationRing and not headHit.eliminationRing)
+assert(Vfx.hitFeedback("ECO", true, 30, true, true).eliminationRing == false,
+    "Economy mobile setting does not create extra elimination ring")
+assert(Vfx.hitFeedback("BALANCED", true, 30, false, true).eliminationRing,
+    "Confirmed elimination has its own phone-safe ring")
 eq(Vfx.hitFeedback("ECO", true, 80, false, false), nil, "ECO range culling")
 eq(Vfx.pelletVisualCount("ECO", true, 30), 1, "One ECO pellet")
 eq(Vfx.pelletVisualCount("BALANCED", true, 30), 2, "Two mobile pellets")

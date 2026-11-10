@@ -27,6 +27,20 @@ local SURFACES = {
         sparks = false, glimmer = false, spread = 0.48 },
 }
 
+-- Material-specific trajectories stay procedural and share the existing
+-- reusable Part pool. These tables never create physics debris or raycasts.
+local MOTION = {
+    METAL = { gravity = 0.09, spin = 0.25, flicker = 0.32 },
+    WOOD = { gravity = 0.58, spin = 2.40, flicker = 0 },
+    GLASS = { gravity = 0.37, spin = 1.85, flicker = 0.12 },
+    EARTH = { gravity = 0.84, spin = 1.10, flicker = 0 },
+    STONE = { gravity = 0.68, spin = 0.95, flicker = 0 },
+}
+
+function Profile.fragmentMotion(materialName)
+    return MOTION[MATERIALS[materialName] or "STONE"]
+end
+
 local ECO = { maxDistance = 70, cooldown = 0.16, fragments = 1,
     marks = 10, markSeconds = 3.4, muzzleFins = 0, muzzleLight = false }
 local MOBILE = { maxDistance = 115, cooldown = 0.10, fragments = 2,
@@ -60,6 +74,9 @@ function Profile.hitFeedback(preset, touch, distance, headshot, killed)
     return {
         duration = killed and 0.26 or (headshot and 0.20 or 0.16),
         sparks = close and 1 or ((touch and 1 or 2) + (killed and 1 or 0)),
+        -- One extra recycled ring on a confirmed elimination except ECO.
+        -- Readable on mobile without ParticleEmitters or new remotes.
+        eliminationRing = killed == true and preset ~= "ECO",
         radius = (killed and 0.31 or (headshot and 0.26 or 0.19))
             * (close and 0.62 or 1),
     }

@@ -356,3 +356,20 @@ joueurs, et au moment de demander une revanche.
 Le bandeau conserve une largeur maximale de 340 px, gagne 10 px
 en hauteur pour les jauges, et n'ajoute aucune boucle RenderStepped,
 requête réseau ou instance Roblox lors de chaque mise à jour.
+
+
+## Effets de combat : ricochets physiques cosmetiques et confirmations fatales
+
+- Les impacts metal, bois, verre, terre et beton utilisent desormais des
+  trajectoires individuelles : chute quadratique, rotation du fragment
+  et scintillement pour les etincelles. La trajectoire est calculee sur
+  les Parts deja alloues par le pool de VFX, jamais par des projectiles
+  physiques, des RemoteEvents supplementaires ou des Tweens par impact.
+- L'etincelle metallique reste breve et vive ; les eclats de verre
+  pivotent et scintillent ; bois, beton et terre tombent plus vite.
+- Une elimination *confirmee par le serveur* affiche en plus une
+  expansion annulaire 3D face a la camera, par recyclage du meme pool.
+  Cette couronne n'apparait pas avec le preset ECO.
+- Le nouveau profil purement Luau est couvert par les tests de materiaux,
+  les limites de deplacement et les budgets. Le volume de Parts reste
+  limite par TransientFxPool.cap (24/48/72 Android).

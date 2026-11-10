@@ -688,6 +688,18 @@ def main():
     for weapon in ("Pistol", "AssaultRifle", "Shotgun", "Sniper"):
         require(f'WeaponFeel.mechanism("{weapon}", shotAge)' not in viewmodel,
                 "Do not evaluate inactive weapon mechanisms each frame")
+    for needle in (
+        "CombatVfxProfile.fragmentMotion(materialName)",
+        "gravityDrop = motion.gravity * self.random:NextNumber(0.65, 1)",
+        "spinAngle = motion.spin * self.random:NextNumber(-1, 1)",
+        "slot.gravityDrop = spec.gravityDrop or 0",
+        "slot.flicker = spec.flicker or 0",
+        "if slot.gravityDrop > 0 then",
+        "slot.flicker * (1 - baseAlpha)",
+        'name = "IronYardEliminationRing"',
+        "if settings.eliminationRing then",
+    ):
+        has(viewmodel, needle, "Material-specific pooled impact dynamics and fatal ring")
     # Confirmed local damage now shares the prioritized reusable FX pool.
     # No gunfire event should allocate temporary Parts, Tweens or Debris
     # timers; the only remaining Debris lifetime is spatial audio.
