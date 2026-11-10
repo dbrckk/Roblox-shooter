@@ -365,6 +365,36 @@ def main():
             "Bot death dust must not create per-kill Tween/Debris jobs")
     require(death_fx.count('Instance.new("Part")') == 1,
             "Dust geometry is allocated lazily only when a new pool slot is needed")
+    death_lifecycle = source("src/shared/BotDeathFxLifecycle.luau")
+    for needle in (
+        "function Lifecycle.track(state, model, container)",
+        "function Lifecycle.active(state, model, entry, container)",
+        "function Lifecycle.retire(state, model)",
+        "state.byModel[model] = nil",
+        "entry.active = false",
+    ):
+        has(death_lifecycle, needle, "Streaming-safe bot death binding policy")
+    for needle in (
+        'shared:WaitForChild("BotDeathFxLifecycle")',
+        "local lifecycle = Lifecycle.new()",
+        "local pendingAttributes = {}",
+        'model:GetAttributeChangedSignal("IsArenaBot"):Connect(function()',
+        "folder.ChildAdded:Connect(bind)",
+        "folder.ChildRemoved:Connect(retireBot)",
+        "Lifecycle.retire(lifecycle, model)",
+        "entry.connection:Disconnect()",
+        "if not humanoid or humanoid.Parent ~= model",
+        "Lifecycle.active(lifecycle, model, entry, folder)",
+        "or entry.deathQueued then return end",
+        "and humanoid.Parent == model and humanoid.Health <= 0 then",
+        "for model in pairs(lifecycle.byModel) do retireBot(model) end",
+        "if folderAddedConnection then folderAddedConnection:Disconnect() end",
+    ):
+        has(death_fx, needle, "Streaming/respawn cleanup for bot defeat visuals")
+    require('local bound = setmetatable({}, { __mode = "k" })' not in death_fx,
+            "Weak-key bound table cannot safely manage event connections")
+    require(death_fx.count("task.delay(0.64, function()") == 1,
+            "Confirmed death dust remains delayed exactly once per model")
     for needle in ("Pool.MAX_BOTS = 4", "Pool.MAX_PARTS = 16",
                    "function Pool.cap(", "function Pool.claim(",
                    "function Pool.ease(", "return 1 - (1 - t) * (1 - t)"):
