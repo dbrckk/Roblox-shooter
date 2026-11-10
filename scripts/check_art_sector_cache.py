@@ -20,7 +20,7 @@ needles = (
     "local liveEye = camera and camera.CFrame.Position",
     "ArtLOD.streamedHidden(item.Position,",
     "liveEye, entry.lastEye, artHideBeyond, artUnhideBefore)",
-    "ArtLOD.hiddenSquared(offset:Dot(offset),",
+    "ArtLOD.hiddenSquared(distanceSquared,",
     "local initialParts = folder:GetDescendants()",
     "task.spawn(function()",
     "ArtLOD.bootstrapBatch(",
