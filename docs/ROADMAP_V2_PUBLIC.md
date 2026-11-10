@@ -476,3 +476,11 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] Les mises à jour de pose R6 à 15 Hz près du joueur et 8 Hz au loin sont également étalées par slot ; le contrôle de proximité est fait sur les distances au carré sans changer le seuil de 155 studs.
 - [x] Tests Luau sur 10 secondes de combat à cadence régulière, 4 bots, équité de fréquence, cas de retard, bornes du planificateur, 8/15 Hz des poses, et contrôles statiques du vrai câblage serveur ; compilation complète et build Rojo CI.
 - [ ] Dans Roblox Studio/serveur public, mesurer avec les outils PERF l'impact réel sur les pics `thinkMs`, `poseMs` et le P95/P99 client avec quatre bots sous le même scénario. Les tests garantissent une répartition logique, pas une amélioration chiffrée des FPS.
+
+
+### L3.17 — art LOD : suppression des parcours inutiles quand la caméra reste immobile (10 novembre 2026)
+
+- [x] Le contrôle LOD des décors, exécuté une fois par seconde, ne parcourt plus tous les secteurs lorsque la position de caméra et les seuils du preset sont strictement inchangés et qu'aucune pièce de décor n'a été ajoutée ou retirée. Les pièces nouvellement streamées conservent leur application immédiate de visibilité.
+- [x] Toute addition/suppression de détail marque l'inventaire comme modifié ; le prochain balayage recalcule alors les secteurs concernés. Les changements de preset ECO/BALANCED/QUALITY et tout déplacement réel de caméra déclenchent aussi un balayage complet, sans retard de seuil artificiel.
+- [x] Aucun changement aux collisions, hitboxes, bots, dégâts ou règles du serveur. Contrat de régression Python mis à jour pour interdire l'oubli d'invalidation ; build Rojo et CI validés.
+- [ ] Mesurer dans Roblox sur Android le coût du LOD avec caméra fixe puis en déplacement rapide ; valider le streaming et les changements de qualité visuellement.
