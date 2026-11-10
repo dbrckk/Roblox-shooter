@@ -198,3 +198,8 @@ While sprinting, airborne boosting and recharging fuel on a real Android device,
 ## First-person weapon scope visibility and mechanism cost — 9 November 2026
 
 With all five weapons, verify their first-person models still move smoothly during recoil, movement, sprint and reload. Non-sniper ADS must preserve the complete weapon model. Enter the sniper scope and ensure the first-person weapon disappears once; exit and ensure all Parts, including semi-transparent lens/glass and attachments, return to their exact pre-scope opacity. Change weapon rapidly while scoped and shoot with four bots nearby. Opacity updates occur only on equip / scope state changes, not 60 times per second, and only the equipped weapon's firing mechanism is sampled. These pure/source checks do not substitute for a real Roblox Android FPS and visual test.
+
+
+## First-person character streaming and accessory removal — 10 November 2026
+
+Join with a local character that has layered accessories and first-person arms. Stream several accessories in/out repeatedly while moving, switching weapons, wall-running and boosting; confirm no invisible face/arms reappear to obstruct the camera and that the visible body remains correctly drawn. Remove an entire Accessory/Model from the local character, then re-add it: no duplicate Part entries should remain in the active per-frame body cache. Repeat respawn 100 times in test automation or an equivalent stress setup. Character Model is scanned once per respawn, not on each RenderStepped. Measure real memory and frame-time in Studio/MicroProfiler; the Luau cache test is only an in-memory regression.

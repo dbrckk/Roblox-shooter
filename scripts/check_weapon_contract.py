@@ -254,6 +254,16 @@ def main():
                 "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)"):
         has(client, key, "Local and remote gun flashes use shot direction")
     has(client, "visibleRigParts", "Cached first-person rig visibility")
+    for needle in (
+        'WaitForChild("FirstPersonBodyCache")',
+        "FirstPersonBodyCache.add(visibleRigParts, part, hide and 1 or 0)",
+        "FirstPersonBodyCache.remove(visibleRigParts, item)",
+        "FirstPersonBodyCache.clear(visibleRigParts)",
+        "character.DescendantRemoving:Connect(untrackFirstPersonItem)",
+        "for _, entry in ipairs(visibleRigParts.list) do",
+        "if part:IsDescendantOf(character)",
+    ):
+        has(client, needle, "Streamed first-person body cache must release removed Parts")
     # Confirm a reload effect is driven by authoritative server ammo state,
     # and weapon bob uses character ground/velocity rather than a ticking clock.
     has(viewmodel, "function WeaponVisuals:setReloading(weaponId, active)", "Reload animation API")

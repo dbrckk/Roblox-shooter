@@ -12,6 +12,7 @@ local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget"))
 local remoteFxState = RemoteCombatFxBudget.new()
 local TouchLayout = require(shared:WaitForChild("TouchLayout"))
+local FirstPersonBodyCache = require(shared:WaitForChild("FirstPersonBodyCache"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
 local WeaponVisuals = require(script:WaitForChild("WeaponVisuals"))
@@ -228,31 +229,62 @@ end
 -- controller can overwrite LocalTransparencyModifier each render frame, so
 -- only the cached parts (not GetDescendants) are reconciled after camera updates.
 local visibleRig = nil
-local visibleRigConnection = nil
-local visibleRigParts = {}
+local visibleRigConnections = {}
+local visibleRigParts = FirstPersonBodyCache.new()
 
 local function addFirstPersonPart(part)
-    if not part:IsA("BasePart") then return end
+    if not part:IsA("BasePart") or not visibleRig
+        or not part:IsDescendantOf(visibleRig) then return end
     local name = string.lower(part.Name)
     local isArm = string.find(name, "arm") ~= nil or string.find(name, "hand") ~= nil
     local hide = part.Name == "Head" or part.Name == "HumanoidRootPart" or isArm
         or part:FindFirstAncestorWhichIsA("Accessory") ~= nil
-    table.insert(visibleRigParts, { part = part, transparency = hide and 1 or 0 })
+    FirstPersonBodyCache.add(visibleRigParts, part, hide and 1 or 0)
+end
+
+local function trackFirstPersonItem(item)
+    if item:IsA("BasePart") then
+        addFirstPersonPart(item)
+    elseif item:IsA("Accessory") or item:IsA("Model") or item:IsA("Folder") then
+        -- Roblox may add a pre-populated Accessory/Model in one operation.
+        -- DescendantAdded may also fire for its children: add is idempotent.
+        for _, descendant in ipairs(item:GetDescendants()) do
+            addFirstPersonPart(descendant)
+        end
+    end
+end
+
+local function untrackFirstPersonItem(item)
+    if item:IsA("BasePart") then
+        FirstPersonBodyCache.remove(visibleRigParts, item)
+    elseif item:IsA("Accessory") or item:IsA("Model") or item:IsA("Folder") then
+        -- A whole streamed accessory can leave at once. Only scan that
+        -- departing subtree, never the entire character each frame.
+        for _, descendant in ipairs(item:GetDescendants()) do
+            if descendant:IsA("BasePart") then
+                FirstPersonBodyCache.remove(visibleRigParts, descendant)
+            end
+        end
+    end
 end
 
 local function ensureBodyVisibility(character)
     if visibleRig == character then return end
-    if visibleRigConnection then
-        visibleRigConnection:Disconnect()
-        visibleRigConnection = nil
+    for _, connection in ipairs(visibleRigConnections) do
+        connection:Disconnect()
     end
+    table.clear(visibleRigConnections)
     visibleRig = character
-    table.clear(visibleRigParts)
+    FirstPersonBodyCache.clear(visibleRigParts)
     if not character then return end
+    -- Only whole-character traversal: initial registration on respawn.
     for _, part in ipairs(character:GetDescendants()) do
         addFirstPersonPart(part)
     end
-    visibleRigConnection = character.DescendantAdded:Connect(addFirstPersonPart)
+    table.insert(visibleRigConnections,
+        character.DescendantAdded:Connect(trackFirstPersonItem))
+    table.insert(visibleRigConnections,
+        character.DescendantRemoving:Connect(untrackFirstPersonItem))
 end
 
 local function showLocalBody()
@@ -260,9 +292,10 @@ local function showLocalBody()
     ensureBodyVisibility(character)
     if not humanoid then return end
 
-    for _, entry in ipairs(visibleRigParts) do
+    for _, entry in ipairs(visibleRigParts.list) do
         local part = entry.part
-        if part.Parent and part.LocalTransparencyModifier ~= entry.transparency then
+        if part:IsDescendantOf(character)
+            and part.LocalTransparencyModifier ~= entry.transparency then
             part.LocalTransparencyModifier = entry.transparency
         end
     end

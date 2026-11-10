@@ -73,6 +73,7 @@ jobs:
           ./luau scripts/test_art_lod_policy.luau
           ./luau scripts/test_art_sector_registry.luau
           ./luau scripts/test_bot_detail_cache.luau
+          ./luau scripts/test_first_person_body_cache.luau
           ./luau scripts/test_yard_wayfinding_plan.luau
           ./luau scripts/test_perimeter_wall_plan.luau
           ./luau scripts/test_warehouse_cladding_plan.luau

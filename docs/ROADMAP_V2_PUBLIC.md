@@ -441,3 +441,12 @@ La publication privée est abandonnée à la demande du propriétaire. Le pipeli
 - [x] L'arrivée d'un nouveau personnage invalide les anciennes demandes de `WaitForChild("Humanoid", 5)` et les anciens événements de santé via un jeton de génération ; les anciens événements ne peuvent plus écraser le nouveau HUD après respawn.
 - [x] Nouveau module pur `CombatReadoutPolicy` et régression Luau sur 10 000 snapshots identiques, armes à munitions faibles, transitions de rechargement, seuils de santé et vie maximale. Contrôles de câblage et build Rojo.
 - [ ] Vérifier visuellement sur Android une rafale de dégâts, la régénération, le changement de chargeur, la mort/réapparition et comparer les temps d'image en combat. Les tests CI ne mesurent pas les FPS.
+
+
+### L3.14 — audit client : nettoyage des références du corps à la première personne (10 novembre 2026)
+
+- [x] Corrigé une liste croissante de `BasePart` du personnage local parcourue à chaque `RenderStepped`. Elle recevait les `DescendantAdded`, mais n'avait pas de gestion des `DescendantRemoving` : accessoires, outils ou membres sortis du personnage pouvaient rester dans le tableau jusqu'au prochain respawn.
+- [x] Nouveau `FirstPersonBodyCache` dense à index direct et retrait par permutation en O(1), sans doublons ni références aux Parts retirées. Les suppressions de conteneurs entiers nettoient leurs sous-arbres ; pas de parcours du personnage complet en boucle.
+- [x] Tous les abonnements sont libérés et l'index purgé lors de chaque changement de Character. La caméra Roblox peut continuer à écraser `LocalTransparencyModifier` : le recalage des seules pièces encore vivantes reste assuré chaque image pour conserver la première personne et les armes visibles.
+- [x] Suite Luau : 4000 Parts streamées et retirées, sorties au milieu de la liste, doublons, reparenting, 100 respawns consécutifs ; contrat de câblage Python, compilation et build Rojo.
+- [ ] Vérification en Studio/Android : accessoires apparaissant/disparaissant pendant un combat, mort et respawn, caméra en première personne, absence de bras/visage qui masquent l'arme. Mesurer le frame-time réel.
