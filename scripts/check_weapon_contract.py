@@ -32,6 +32,43 @@ def main():
     hud = source("src/client/HudController.luau")
     match = source("src/server/MatchService.luau")
     bot = source("src/server/BotService.luau")
+    score_service = source("src/server/ScoreService.luau")
+    death_life = source("src/shared/PlayerDeathLifecycle.luau")
+    for needle in (
+        "function Lifecycle.new()",
+        "function Lifecycle.bind(state, character)",
+        "function Lifecycle.retire(state, character)",
+        "function Lifecycle.bindHumanoid(state, token, character, humanoid, currentCharacter)",
+        "function Lifecycle.recordDeath(state, token, character, humanoid, currentCharacter, live)",
+        "state.recorded = true",
+        "or state.humanoid ~= humanoid or currentCharacter ~= character",
+    ):
+        has(death_life, needle, "Server-owned one-life, one-death score policy")
+    for needle in (
+        'WaitForChild("PlayerDeathLifecycle")',
+        "local playerBindings = {}",
+        "local function retireCharacter(state, character)",
+        "state.deathConnection:Disconnect()",
+        "local function releasePlayer(player)",
+        "state.characterAdded:Disconnect()",
+        "state.characterRemoving:Disconnect()",
+        "playerBindings[player] = nil",
+        "local generation = Life.bind(state.life, character)",
+        "or not Life.bindHumanoid(state.life, generation, character,",
+        "state.deathConnection = humanoid.Died:Connect(onDeath)",
+        "if not Life.recordDeath(state.life, generation, character,",
+        'Workspace:GetAttribute("NeonMatchPhase") == "LIVE"',
+        'local currentStats = player:FindFirstChild("leaderstats")',
+        "CombatAwards.recordDeath(player)",
+        "Players.PlayerRemoving:Connect(releasePlayer)",
+    ):
+        has(score_service, needle, "Server must reject stale or replayed death events")
+    require("player.CharacterAdded:Connect(watchCharacter)" in score_service,
+            "New respawns must rebind a single active Humanoid event")
+    require('humanoid.Died:Connect(function()' not in score_service,
+            "Death events must be guarded by the active life generation")
+    has(server, 'or player.Parent ~= Players',
+        "In-flight player projectiles must stop after PlayerRemoving")
 
     order = re.search(r"WeaponConfig.Order\s*=\s*\{([^}]+)\}", config)
     require(order is not None, "Weapon order missing")
