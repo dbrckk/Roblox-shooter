@@ -252,18 +252,93 @@ for _, attr in ipairs({
     player:GetAttributeChangedSignal(attr):Connect(render)
 end
 
-local function bindStats(stats)
-    for _, name in ipairs({"Eliminations", "Deaths"}) do
-        local value = stats:FindFirstChild(name)
-        if value and value:IsA("IntValue") then
-            value:GetPropertyChangedSignal("Value"):Connect(render)
-        end
+-- leaderstats and their values can arrive late or be replaced between
+-- rounds. A new container must not leave old Value listeners subscribed.
+local activeStats = nil
+local statsAddedConnection = nil
+local statsRemovedConnection = nil
+local statConnections = {}
+local statValues = {}
+
+local function releaseStats()
+    if statsAddedConnection then
+        statsAddedConnection:Disconnect()
+        statsAddedConnection = nil
     end
+    if statsRemovedConnection then
+        statsRemovedConnection:Disconnect()
+        statsRemovedConnection = nil
+    end
+    for name, connection in pairs(statConnections) do
+        connection:Disconnect()
+        statConnections[name] = nil
+    end
+    table.clear(statValues)
+    activeStats = nil
 end
-player.ChildAdded:Connect(function(child)
+
+local function bindValue(value)
+    if not activeStats or value.Parent ~= activeStats
+        or not value:IsA("IntValue")
+        or (value.Name ~= "Eliminations" and value.Name ~= "Deaths") then
+        return
+    end
+    local name = value.Name
+    if statValues[name] == value then return end
+    if statConnections[name] then
+        statConnections[name]:Disconnect()
+        statConnections[name] = nil
+    end
+    statValues[name] = value
+    statConnections[name] = value:GetPropertyChangedSignal("Value"):Connect(function()
+        if activeStats == value.Parent and statValues[name] == value then
+            render()
+        end
+    end)
+    render()
+end
+
+local function bindStats(stats)
+    if activeStats == stats then return end
+    releaseStats()
+    if stats.Parent ~= player then
+        render()
+        return
+    end
+    activeStats = stats
+    statsAddedConnection = stats.ChildAdded:Connect(bindValue)
+    statsRemovedConnection = stats.ChildRemoved:Connect(function(child)
+        local name = child.Name
+        if statValues[name] ~= child then return end
+        if statConnections[name] then
+            statConnections[name]:Disconnect()
+            statConnections[name] = nil
+        end
+        statValues[name] = nil
+        render()
+    end)
+    for _, value in ipairs(stats:GetChildren()) do
+        bindValue(value)
+    end
+    render()
+end
+
+local playerStatsAdded = player.ChildAdded:Connect(function(child)
     if child.Name == "leaderstats" then bindStats(child) end
 end)
-if player:FindFirstChild("leaderstats") then
-    bindStats(player.leaderstats)
-end
+local playerStatsRemoved = player.ChildRemoved:Connect(function(child)
+    if child == activeStats then
+        releaseStats()
+        render()
+    end
+end)
+local existingStats = player:FindFirstChild("leaderstats")
+if existingStats then bindStats(existingStats) end
+
+script.Destroying:Connect(function()
+    playerStatsAdded:Disconnect()
+    playerStatsRemoved:Disconnect()
+    releaseStats()
+    if cameraConnection then cameraConnection:Disconnect() end
+end)
 render()
