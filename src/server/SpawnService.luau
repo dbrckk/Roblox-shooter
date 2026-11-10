@@ -149,16 +149,23 @@ function SpawnService.clearProtection(character)
     end
 end
 
-function SpawnService.place(player, character)
+function SpawnService.place(player, character, preferredPosition, faceToward)
     if not character or player.Character ~= character or not character.Parent then return false end
     local root = character:FindFirstChild("HumanoidRootPart")
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not root or not humanoid or humanoid.Health <= 0 then return false end
-    local position = safestPosition(character)
+    local position = typeof(preferredPosition) == "Vector3"
+        and clearAt(preferredPosition, character) and preferredPosition
+        or safestPosition(character)
     local yaw = rng:NextNumber(-math.pi, math.pi)
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
-    character:PivotTo(CFrame.new(position) * CFrame.Angles(0, yaw, 0))
+    local origin = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+    if typeof(faceToward) == "Vector3" then
+        origin = CFrame.lookAt(position,
+            Vector3.new(faceToward.X, position.Y, faceToward.Z))
+    end
+    character:PivotTo(origin)
     humanoid.Health = humanoid.MaxHealth
     SpawnService.protectCharacter(character, SPAWN_SHIELD_SECONDS)
     return true
@@ -187,6 +194,17 @@ local function watchPlayer(player)
     if player.Character then
         task.defer(onCharacter, player.Character)
     end
+end
+
+function SpawnService.placeDuelPair(a, b, bout)
+    if not a or not b or a == b then return false end
+    local aChar,bChar=a.Character,b.Character
+    if not aChar or not bChar then return false end
+    local first = bout % 2 == 1 and candidates[1] or candidates[4]
+    local second = bout % 2 == 1 and candidates[4] or candidates[1]
+    -- Choose opposite known-safe arena pads; swap sides each bout.
+    return SpawnService.place(a,aChar,first,second)
+        and SpawnService.place(b,bChar,second,first)
 end
 
 function SpawnService.placePlayers()

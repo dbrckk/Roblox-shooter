@@ -7,6 +7,7 @@ local REMOTES = {
 	EquipWeapon = "RemoteEvent",
 	FireWeapon = "RemoteEvent",
     SetAiming = "RemoteEvent",
+    SetDuelReady = "RemoteEvent",
     ReloadWeapon = "RemoteEvent",
 	MovementAction = "RemoteEvent",
 	MovementState = "RemoteEvent",

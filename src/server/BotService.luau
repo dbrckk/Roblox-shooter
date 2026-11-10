@@ -795,7 +795,11 @@ end
 
 local function reconcile()
     local humans = #Players:GetPlayers()
-    local targetCount = humans > 0 and math.min(config.MaxBots, math.max(0, config.MaxCombatants - humans)) or 0
+    local targetCount = humans > 0 and math.min(config.MaxBots,
+        math.max(0, config.MaxCombatants - humans)) or 0
+    if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
+        targetCount = 0
+    end
     for slot = 1, config.MaxBots do
         local bot = slots[slot]
         if slot > targetCount then
@@ -816,6 +820,11 @@ local function reconcile()
         end
     end
     Workspace:SetAttribute("NeonBotCount", alive)
+end
+
+-- The MatchService can retire bots immediately before a 1v1 starts.
+function BotService.reconcileNow()
+    reconcile()
 end
 
 -- Ranked score snapshot includes bots that are temporarily waiting to respawn.
