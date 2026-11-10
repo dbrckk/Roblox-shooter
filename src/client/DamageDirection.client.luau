@@ -84,12 +84,42 @@ local function showDamage(source)
     end)
 end
 
+local hitConnection = nil
+local boundCharacter = nil
+
+local function releaseCharacter()
+    if hitConnection then
+        hitConnection:Disconnect()
+        hitConnection = nil
+    end
+    boundCharacter = nil
+    -- A deferred fade from the previous life must never hide a fresh
+    -- damage indicator or keep animating a removed character's direction.
+    revision += 1
+    for _, tween in ipairs(activeTweens) do tween:Cancel() end
+    table.clear(activeTweens)
+    pointer.Visible = false
+end
+
 local function bindCharacter(character)
-    character:GetAttributeChangedSignal("IronYardLastHitTime"):Connect(function()
-        if player.Character ~= character then return end
+    releaseCharacter()
+    if not character or character ~= player.Character then return end
+    boundCharacter = character
+    hitConnection = character:GetAttributeChangedSignal(
+        "IronYardLastHitTime"):Connect(function()
+        if boundCharacter ~= character or player.Character ~= character then return end
         showDamage(character:GetAttribute("IronYardLastHitPosition"))
     end)
 end
 
-player.CharacterAdded:Connect(bindCharacter)
+local addedConnection = player.CharacterAdded:Connect(bindCharacter)
+local removingConnection = player.CharacterRemoving:Connect(function(character)
+    if boundCharacter == character then releaseCharacter() end
+end)
 if player.Character then bindCharacter(player.Character) end
+
+script.Destroying:Connect(function()
+    addedConnection:Disconnect()
+    removingConnection:Disconnect()
+    releaseCharacter()
+end)
