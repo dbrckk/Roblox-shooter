@@ -8,6 +8,14 @@ Duel.PREP_SECONDS = 3
 local function finite(n)
     return type(n) == "number" and n == n and n >= 0 and n < math.huge
 end
+-- Compare Roblox Player instances, not UserIds; Studio IDs may be negative.
+function Duel.sameParticipants(players, first, second)
+    return type(players) == "table" and #players == 2
+        and first ~= nil and second ~= nil and first ~= second
+        and ((players[1] == first and players[2] == second)
+            or (players[1] == second and players[2] == first))
+end
+
 function Duel.canStart(players, readyA, readyB)
     return type(players) == "number" and players == 2
         and readyA == true and readyB == true

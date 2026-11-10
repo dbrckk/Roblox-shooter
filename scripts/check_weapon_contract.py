@@ -337,6 +337,7 @@ def main():
     duel_supply = source("src/server/SupplyService.luau")
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
+        "function Duel.sameParticipants(players, first, second)",
         "function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)",
         "function Duel.healthForBout(expectedCharacter, actualCharacter, health, maxHealth)",
         "function Duel.advance(scoreA, scoreB, bouts, result)",
@@ -369,6 +370,9 @@ def main():
         'players[1]:SetAttribute("IronYardDuelReady", false)',
         'players[2]:SetAttribute("IronYardDuelReady", false)',
         'duel.waitSince = nil',
+        'duel.waitSince = duel.waitSince or os.clock()',
+        'DuelRules.sameParticipants(Players:GetPlayers(), a, b)',
+        'aPlayer=players[1], bPlayer=players[2]',
         'duel.waitSince = os.clock()',
         'local function releaseDuelPrep()',
         'local function startLiveDuelBout()',
@@ -385,6 +389,8 @@ def main():
         'MovementService.resetDuelMovement(b)',
     ):
         has(match, token, "Duel lifecycle without FFA regression")
+    has(duel_spawn, 'if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',
+        "No delayed FFA placement during duel preparation")
     for token in (
         'function SpawnService.placeDuelPair(a, b, bout)',
         'clearAt(position, aChar, bChar)',

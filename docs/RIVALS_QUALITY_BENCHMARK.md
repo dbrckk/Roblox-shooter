@@ -322,3 +322,19 @@ ne peut modifier un resultat de duel.
 La logique de readout possede un module Luau pur, un test executable
 pour les deux perspectives et les entrées invalides, et des
 verifications d'integration de MatchService/MatchHud dans la CI.
+
+
+## Transition duel : spawns tardifs et interruptions bornees (10 novembre 2026)
+
+- Un callback CharacterAdded differe ne peut plus deplacer un combattant
+  deja engage en duel, ni renouveler son bouclier pendant le countdown.
+  En mode DUEL, seul MatchService peut placer les joueurs.
+- Les references des deux Player qui ont accepte le duel sont conservees.
+  DuelRules.sameParticipants compare les instances reelles, sans
+  dependance a GetPlayerByUserId pour les identites negatives Studio.
+- La duree de recuperation de 20 secondes est cumulative sur toutes les
+  tentatives de preparation ratees. Remplacer son Character durant 3-2-1
+  ne renouvelle plus indefiniment le delai.
+- La recompense de victoire est conditionnee a la presence effective du
+  gagnant dans Players et utilise sa reference d'origine.
+- Tests de logique Luau et contrats Python verifient les controles.

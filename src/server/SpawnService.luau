@@ -189,6 +189,12 @@ local function watchPlayer(player)
                 end
             end
             if player.Character == character and root:IsDescendantOf(Workspace) then
+                -- CharacterAdded callbacks may resume after the duel server
+                -- has already positioned and anchored both combatants.
+                -- A late FFA spawn must not move them or refresh their shield.
+                if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
+                    return
+                end
                 SpawnService.place(player, character)
             end
         end)

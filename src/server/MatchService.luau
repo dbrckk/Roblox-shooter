@@ -62,14 +62,15 @@ end
 
 local function duelParticipants()
     if not duel then return nil, nil end
-    return Players:GetPlayerByUserId(duel.aId),
-        Players:GetPlayerByUserId(duel.bId)
+    -- Preserve original opt-in participants in local Studio test servers.
+    return duel.aPlayer, duel.bPlayer
 end
 
 local function duelPlayersIntact()
-    if not duel or #Players:GetPlayers() ~= 2 then return false end
+    if not duel then return false end
     local a,b = duelParticipants()
-    return a ~= nil and b ~= nil and a.Parent == Players and b.Parent == Players
+    return a and b and a.Parent == Players and b.Parent == Players
+        and DuelRules.sameParticipants(Players:GetPlayers(), a, b)
 end
 
 local function duelRows()
@@ -196,11 +197,13 @@ local function endDuel(reason, winningSide)
         or winningSide == "B" and duel.bName or "DRAW"
     finalResult = snapshot
     Workspace:SetAttribute("IronYardFinalStandings", HttpService:JSONEncode(snapshot))
-    local winningPlayer = snapshot.winnerUserId > 0
-        and Players:GetPlayerByUserId(snapshot.winnerUserId) or nil
+    -- Direct original Player references work for negative Studio user IDs.
+    local winningPlayer = winningSide == "A" and duel.aPlayer
+        or winningSide == "B" and duel.bPlayer or nil
     -- No XP for a staged disconnect, blocked spawn, or interrupted lobby.
     -- Genuine first-to-five series keep their ordinary victory reward.
-    if winningPlayer and reason == "SCORE_LIMIT" then
+    if winningPlayer and winningPlayer.Parent == Players
+        and reason == "SCORE_LIMIT" then
         CombatAwards.recordVictory(winningPlayer)
     end
     transition("RESULTS", RESULTS_SECONDS, snapshot.winner,
@@ -236,7 +239,7 @@ local function startDuelBout()
         entry.root.AssemblyAngularVelocity = Vector3.zero
         entry.root.Anchored = true
     end
-    duel.waitSince = nil
+    -- Retain the recovery deadline over repeated failed preparations.
     transition("DUEL_PREP", DuelRules.PREP_SECONDS)
     return true
 end
@@ -256,7 +259,7 @@ local function startLiveDuelBout()
         prep[2].character, b.Character, liveAndAnchored(prep[2], b))
     releaseDuelPrep()
     if not valid then
-        duel.waitSince = os.clock()
+        duel.waitSince = duel.waitSince or os.clock()
         transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
         return false
     end
@@ -268,11 +271,12 @@ local function startLiveDuelBout()
     SpawnService.clearProtection(a.Character)
     SpawnService.clearProtection(b.Character)
     if not DuelCombatState.begin(a, b) then
-        duel.waitSince = os.clock()
+        duel.waitSince = duel.waitSince or os.clock()
         transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
         return false
     end
     WeaponService.resetRound()
+    duel.waitSince = nil
     duel.bouts += 1
     publishDuelScores()
     transition("LIVE", DUEL_BOUT_SECONDS)
@@ -282,6 +286,7 @@ end
 local function startDuelSeries(players)
     DuelCombatState.clear()
     duel = {
+        aPlayer=players[1], bPlayer=players[2],
         aId=players[1].UserId, bId=players[2].UserId,
         aName=players[1].DisplayName, bName=players[2].DisplayName,
         aWins=0, bWins=0, bouts=0, waitSince=os.clock(),
