@@ -151,10 +151,21 @@ add("Sniper","SniperBoltStop",3,{0.22,-0.03,-0.51},
     {0.065,0.09,0.12},{142,147,146},"panel")
 
 for weapon, entries in pairs(DETAILS) do
+    -- Plans are authored by surface grouping, which can interleave tiers.
+    -- Reorder ONCE at module initialization so higher quality is a strict
+    -- superset with the same object identity as each lower tier.
+    local ordered = {}
+    for detailTier = 1, 3 do
+        for _, part in ipairs(entries) do
+            if part.tier == detailTier then
+                table.insert(ordered, part)
+            end
+        end
+    end
     CACHE[weapon] = {}
     for tier = 1, 3 do
         local allowed = {}
-        for _, part in ipairs(entries) do
+        for _, part in ipairs(ordered) do
             if part.tier <= tier then table.insert(allowed, part) end
         end
         CACHE[weapon][tier] = allowed
