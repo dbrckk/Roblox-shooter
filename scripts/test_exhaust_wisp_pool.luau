@@ -38,6 +38,34 @@ assert(not Pool.claim(slots, 2.0, 2), "Time rollback must not overwrite the pool
 assert(Pool.alpha(second, 2.1, true) ~= nil,
     "Other active wisps continue moving when one is reused")
 
+-- Rebinding the decor must release active slots immediately rather
+-- than leave the new scene without vapor until their old 1.08s expiry.
+assert(Pool.claim(slots, 2.11, 2) == nil)
+assert(Pool.retireAll(nil) == 0)
+assert(Pool.retireAll(slots) == 2)
+assert(Pool.alpha(first, 2.12, true) == nil)
+local resuming, resumedIndex = Pool.claim(slots, 2.12, 2)
+assert(resuming == first and resumedIndex == 1
+    and resuming.part == "same-part",
+    "A replacement vent must reuse an old Part without waiting for expiry")
+
+-- Simulate 1000 arena replacements at intervals shorter than the vapor
+-- lifetime. The same five Parts must serve every replacement.
+local switched = {}
+for cycle = 1, 1000 do
+    local now = 1000 + cycle * 0.01
+    for _ = 1, 5 do
+        assert(Pool.claim(switched, now, 5) ~= nil,
+            "Fresh decor must have immediate vapor admission")
+    end
+    assert(#switched == 5)
+    assert(Pool.claim(switched, now + 0.001, 5) == nil,
+        "Normal active emissions remain non-preemptible")
+    assert(Pool.retireAll(switched) == 5,
+        "Source reset must clear every active deadline")
+end
+assert(#switched == 5, "Arena rebuild must not grow reusable vapor geometry")
+
 -- Same session: 20000 staggered emissions and ECO/QUALITY transitions
 -- cannot allocate beyond its maximum, even if every vent emits.
 local live = {}
