@@ -88,14 +88,54 @@ def main():
             "Raycast and shotgun shots must emit sound using their tracer packet")
     require(server.count("broadcastFireFx(player, weaponId, origin, true)") == 1,
             "Only in-flight knife launch needs its separate audio packet")
-    require(server.count("remotes.WeaponFx:FireAllClients({") == 2,
-            "Only PlayerTracer and knife-only FireSound should broadcast FX")
-    require(bot.count("remotes.WeaponFx:FireAllClients({") == 1
+    require(server.count("CombatFxRelay.send(remotes.WeaponFx, {") == 2,
+            "PlayerTracer and knife-only FireSound must use filtered server routing")
+    require("remotes.WeaponFx:FireAllClients({" not in server,
+            "Never broadcast player shot FX to an entire distant lobby")
+    require(bot.count("CombatFxRelay.send(remotes.WeaponFx, {") == 1
             and 'kind = "BotTracer"' in bot
             and 'weaponId = "AssaultRifle"' in bot
             and 'kind = "FireSound"' not in bot
-            and 'BotHearingService.record(bot.model, "AssaultRifle", origin)' in bot,
-            "Bot audio and tracer must share one authoritative packet")
+            and 'BotHearingService.record(bot.model, "AssaultRifle", origin)' in bot
+            and "remotes.WeaponFx:FireAllClients({" not in bot,
+            "Bot audio and tracer must share one filtered server packet")
+    audience = source("src/shared/CombatFxAudience.luau")
+    relay = source("src/server/CombatFxRelay.luau")
+    for needle in (
+        "Audience.MAX_DISTANCE = 256",
+        "Audience.MAX_DISTANCE_SQUARED = Audience.MAX_DISTANCE * Audience.MAX_DISTANCE",
+        "function Audience.wants(origin, listener, isShooter, isActive)",
+        "if isShooter == true or isActive ~= true then return true end",
+        "if not validPosition(origin) or not validPosition(listener) then",
+        "return dx * dx + dy * dy + dz * dz <= Audience.MAX_DISTANCE_SQUARED",
+        "function Audience.deliveryMode(included, total)",
+    ):
+        has(audience, needle, "Conservative visual-only recipient policy")
+    for needle in (
+        'WaitForChild("CombatFxAudience")',
+        "local function observerPosition(viewer)",
+        'character:FindFirstChildOfClass("Humanoid")',
+        'character:FindFirstChild("HumanoidRootPart")',
+        "function Relay.send(remote, payload, origin, shooter)",
+        "local players = Players:GetPlayers()",
+        "Audience.wants(origin, position, viewer == shooter, active)",
+        "Audience.deliveryMode(#recipients, #players)",
+        'if mode == "ALL" then',
+        'remote:FireAllClients(payload)',
+        'elseif mode == "SOME" then',
+        'remote:FireClient(viewer, payload)',
+        'if viewer.Parent == Players then',
+    ):
+        has(relay, needle, "Route only cosmetic packets and retain crowded-lobby broadcast")
+    for name, content in (("WeaponService", server), ("BotService", bot)):
+        has(content, 'require(script.Parent:WaitForChild("CombatFxRelay"))',
+            "All accepted shots use the server-only recipient router: " + name)
+    require("CombatFxRelay.send(" not in client,
+            "Clients may not choose the recipient list or send combat authority")
+    require("remotes.KillFeed:FireAllClients({" in server
+            and "remotes.KillFeed:FireAllClients({" in bot,
+            "Authoritative global elimination feed must remain broadcast")
+
     player_audio = client.index('elseif message.kind == "PlayerTracer"')
     player_budget = client.index("local remoteAccepted = not ownShot and RemoteCombatFxBudget.allow(")
     bot_audio = client.index('elseif message.kind == "BotTracer"')
