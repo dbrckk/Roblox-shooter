@@ -203,14 +203,12 @@ local function getDetailGroups(folder, initialEye)
                 entry.dirty = true
                 -- Apply visibility immediately to a late-streamed part,
                 -- avoiding a distant visual flash before the next 1Hz poll.
-                local eye = entry.lastEye
-                if eye then
-                    local offset = item.Position - eye
-                    local hidden = ArtLOD.hiddenSquared(offset:Dot(offset),
-                        false, artHideBeyond, artUnhideBefore)
-                    rendered[item] = hidden
-                    item.LocalTransparencyModifier = hidden and 1 or 0
-                end
+                local camera = Workspace.CurrentCamera
+                local liveEye = camera and camera.CFrame.Position
+                local hidden = ArtLOD.streamedHidden(item.Position,
+                    liveEye, entry.lastEye, artHideBeyond, artUnhideBefore)
+                rendered[item] = hidden
+                item.LocalTransparencyModifier = hidden and 1 or 0
             end
         elseif ArtSectorRegistry.remove(entry.registry, item) then
             entry.dirty = true
@@ -336,7 +334,8 @@ local function updateArt()
 end
 
 -- Avoid repeated GetDescendants() and transparency writes for static
--- visibility. The fixed 1 Hz poll now costs one root distance per live bot.
+-- visibility. Bot distance checks remain 1 Hz. Art can be sampled at
+-- most 4 Hz after a large camera movement, while idle art stays at 1 Hz.
 local activeBotFolder = nil
 local folderRemovedConnection = nil
 
@@ -351,14 +350,34 @@ local function connectBotFolder(folder)
     end
 end
 
+local nextBotPollAt = 0
+local lastArtPollAt = nil
+local lastArtPollEye = nil
+local lastArtPollPreset = nil
+
 while true do
-    local folder = Workspace:FindFirstChild("NeonStrikeBots")
-    connectBotFolder(folder)
-    if folder then
-        for _, model in ipairs(folder:GetChildren()) do
-            updateModel(model)
+    local now = os.clock()
+    if now >= nextBotPollAt then
+        local folder = Workspace:FindFirstChild("NeonStrikeBots")
+        connectBotFolder(folder)
+        if folder then
+            for _, model in ipairs(folder:GetChildren()) do
+                updateModel(model)
+            end
         end
+        -- No catch-up bursts after a long or paused client frame.
+        nextBotPollAt = now + 1
     end
-    updateArt()
-    task.wait(1)
+
+    local camera = Workspace.CurrentCamera
+    local eye = camera and camera.CFrame.Position
+    local preset = player:GetAttribute("IronYardGraphicsPreset") or "BALANCED"
+    if ArtLOD.shouldPollArt(now, lastArtPollAt, eye, lastArtPollEye,
+        preset, lastArtPollPreset) then
+        updateArt()
+        lastArtPollAt = now
+        lastArtPollEye = eye
+        lastArtPollPreset = preset
+    end
+    task.wait(0.1)
 end
