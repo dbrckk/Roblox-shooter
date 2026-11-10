@@ -24,7 +24,9 @@ required(bot, (
     "local target, aimPoint = nil, nil",
     "target, aimPoint = getTargetModel(bot, config.MaximumSightDistance)",
     "if phase == \"LIVE\" and target and aimPoint then",
-    "local shotParams = rayParams(bot.model)",
+    "combatRaycastParams = rayParams(model)",
+    "local params = bot.combatRaycastParams",
+    "local shotParams = bot.combatRaycastParams",
     "Workspace:Raycast(origin, direction, shotParams)",
     "Workspace:Raycast(origin, rayDirection * config.MaximumAttackDistance, shotParams)",
 ), "bot combat LOS")
@@ -32,12 +34,17 @@ assert "local function visibleAimPoint(bot, model)" not in bot, (
     "Duplicate target LOS must not be reintroduced as a second aim pass"
 )
 acquisition = bot.split("local function getTargetModel(bot, limit)", 1)[1].split(
-    "\nlocal function rayParams(ignore)", 1
+    "\n-- The staged defeat animation", 1
 )[0]
 assert acquisition.count("Workspace:Raycast(") == 2, (
     "Head and optional torso acquisition must be the only LOS probes per candidate"
 )
-assert "if direction.Magnitude <= limit then" in acquisition
+assert "if direction:Dot(direction) <= limit * limit then" in acquisition, (
+    "Target range must avoid a per-candidate square root before raycasts"
+)
+assert "RaycastParams.new()" not in acquisition, (
+    "5Hz target selection must reuse each bot's immutable LOS filter"
+)
 assert "if not visible then" not in acquisition or "memoryDistance" in acquisition
 assert "if SpawnService.isProtected(model) then return end" in acquisition
 assert "memoryDistance = (bot.lastKnownTargetPosition - bot.root.Position).Magnitude" in acquisition
