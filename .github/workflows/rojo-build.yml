@@ -72,6 +72,7 @@ jobs:
           ./luau scripts/test_remote_combat_fx_budget.luau
           ./luau scripts/test_combat_feedback_policy.luau
           ./luau scripts/test_environment_profile.luau
+          ./luau scripts/test_exhaust_wisp_pool.luau
           ./luau scripts/test_art_lod_policy.luau
           ./luau scripts/test_art_sector_registry.luau
           ./luau scripts/test_bot_detail_cache.luau
