@@ -599,10 +599,12 @@ function WeaponVisuals:_render(deltaTime)
     local supportMotion = self.currentWeaponId == "Shotgun"
         and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)
         or CFrame.new()
-    local loadingShell = self.currentWeaponId == "Shotgun"
-        and ShotgunReloadVisual.sample(progress, self.reloadActive,
+    local shellX, shellY, shellZ, shellRoll
+    if self.currentWeaponId == "Shotgun" then
+        shellX, shellY, shellZ, shellRoll = ShotgunReloadVisual.sample(
+            progress, self.reloadActive,
             Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"))
-        or nil
+    end
 
     for _, entry in ipairs(self.parts) do
         local localOffset = entry.offset
@@ -613,12 +615,11 @@ function WeaponVisuals:_render(deltaTime)
             localOffset = localOffset * workingHand * supportMotion
         elseif (partName == "LoadingShellBody" or partName == "LoadingShellBrass")
             and self.currentWeaponId == "Shotgun" then
-            if loadingShell then
-                localOffset = localOffset * CFrame.new(
-                    loadingShell.x, loadingShell.y, loadingShell.z)
-                    * CFrame.Angles(0, 0, loadingShell.roll)
+            if shellX then
+                localOffset = localOffset * CFrame.new(shellX, shellY, shellZ)
+                    * CFrame.Angles(0, 0, shellRoll)
             end
-            local targetAlpha = loadingShell and not self.lastViewmodelHidden and 0 or 1
+            local targetAlpha = shellX and not self.lastViewmodelHidden and 0 or 1
             if entry.part.Transparency ~= targetAlpha then
                 entry.part.Transparency = targetAlpha
             end

@@ -6,25 +6,26 @@ assert(Visual.sample(0.8, true, "QUALITY") == nil)
 assert(Visual.sample(0/0, true, "QUALITY") == nil)
 assert(Visual.sample(math.huge, true, "QUALITY") == nil)
 assert(Visual.sample(-0.5, true, "QUALITY") == nil)
-local start = Visual.sample(0.27, true, "QUALITY")
-local mid = Visual.sample(0.505, true, "BALANCED")
-local finish = Visual.sample(0.74, true, "QUALITY")
-assert(start ~= nil and mid ~= nil and finish ~= nil)
-assert(math.abs(start.x) < 0.001 and math.abs(start.z) < 0.001)
-assert(mid.x > 0.10 and mid.x < 0.13)
-assert(mid.z < -0.12 and mid.z > -0.14)
-assert(math.abs(mid.y - 0.065) < 0.00001)
-assert(math.abs(finish.x - 0.23) < 0.00001)
-assert(math.abs(finish.z + 0.26) < 0.00001)
-assert(math.abs(finish.roll + 0.28) < 0.00001)
-for i = 0, 10000 do
-    local progress = i / 10000
-    local state = Visual.sample(progress, true, "BALANCED")
-    if state then
-        assert(state.x >= 0 and state.x <= 0.23)
-        assert(state.y >= -0.00001 and state.y <= 0.065001)
-        assert(state.z <= 0 and state.z >= -0.26)
-        assert(state.roll <= 0 and state.roll >= -0.28)
+local x0, y0, z0, roll0 = Visual.sample(0.27, true, "QUALITY")
+local x, y, z, roll = Visual.sample(0.505, true, "BALANCED")
+local xf, yf, zf, rollf = Visual.sample(0.74, true, "QUALITY")
+assert(x0 ~= nil and x ~= nil and xf ~= nil)
+assert(math.abs(x0) < 0.001 and math.abs(z0) < 0.001)
+assert(x > 0.10 and x < 0.13 and z < -0.12 and z > -0.14)
+assert(math.abs(y - 0.065) < 0.00001)
+assert(math.abs(xf - 0.23) < 0.00001)
+assert(math.abs(zf + 0.26) < 0.00001)
+assert(math.abs(rollf + 0.28) < 0.00001)
+assert(type(x) == "number" and type(y) == "number"
+    and type(z) == "number" and type(roll) == "number",
+    "Per-frame sample returns scalar numbers, not newly allocated tables")
+for i = 0, 50000 do
+    local px, py, pz, pr = Visual.sample(i / 50000, true, "BALANCED")
+    if px then
+        assert(px >= 0 and px <= 0.23)
+        assert(py >= -0.00001 and py <= 0.065001)
+        assert(pz <= 0 and pz >= -0.26)
+        assert(pr <= 0 and pr >= -0.28)
     end
 end
-print("IRON YARD shotgun: server-confirmed reload, 10k bounded shell poses and ECO gating OK")
+print("IRON YARD shotgun: 50k allocation-free shell poses, server reload and ECO gating OK")

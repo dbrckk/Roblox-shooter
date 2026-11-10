@@ -95,14 +95,17 @@ for needle in (
     '"CarrierShellBrass" .. i',
     '"LoadingShellBody"',
     '"LoadingShellBrass"',
-    'ShotgunReloadVisual.sample(progress, self.reloadActive,',
-    'local targetAlpha = loadingShell and not self.lastViewmodelHidden and 0 or 1',
+    'shellX, shellY, shellZ, shellRoll = ShotgunReloadVisual.sample(',
+    'local targetAlpha = shellX and not self.lastViewmodelHidden and 0 or 1',
     'if entry.part.Transparency ~= targetAlpha then',
 ):
     assert needle in visuals, f"Shotgun reload model / visible mechanism missing: {needle}"
 assert 'Shotgun = { anchor = "ShotgunEjectionPort"' in ejection
 assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1
 assert 'FireServer' not in reload_visual and 'Instance.new' not in reload_visual
+assert 'return {' not in reload_visual, "No per-frame allocation of shell pose tables"
+assert 'local loadingShell = self.currentWeaponId' not in visuals,
+    "Shotgun reload viewmodel must consume scalar motion, not tables"
 
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
