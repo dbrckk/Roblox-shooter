@@ -51,6 +51,21 @@ function Pool.claim(slots, now, cap)
     return slot, index
 end
 
+-- When an arena folder is replaced, all old wisps are removed from
+-- Workspace immediately. Retire their deadlines too, so fresh vents can
+-- reuse the same Parts at once rather than waiting 1.08 more seconds.
+function Pool.retireAll(slots)
+    if type(slots) ~= "table" then return 0 end
+    local retired = 0
+    for _, slot in ipairs(slots) do
+        if slot.expiresAt and slot.expiresAt > 0 then
+            slot.expiresAt = 0
+            retired += 1
+        end
+    end
+    return retired
+end
+
 -- Exact normalized Tween Quad.Out curve; called only on active slots.
 function Pool.alpha(slot, now, visible)
     if type(slot) ~= "table" or visible ~= true or not finite(now)
