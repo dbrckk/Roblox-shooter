@@ -23,7 +23,9 @@ s, b = Pose.damping(1)
 assert(math.abs(s - 0.35) < 1e-6 and math.abs(b - 0.22) < 1e-6)
 for i = -50, 150 do
     local sway, bob = Pose.damping(i / 100)
-    assert(sway >= 0.35 and sway <= 1 and bob >= 0.22 and bob <= 1)
+    assert(sway >= 0.35 - 1e-10 and sway <= 1 + 1e-10
+        and bob >= 0.22 - 1e-10 and bob <= 1 + 1e-10,
+        "Damping stays in valid range within floating-point precision")
 end
 assert(select(1, Pose.damping(0/0)) == 1)
 assert(select(2, Pose.damping(math.huge)) == 1)
