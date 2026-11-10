@@ -168,7 +168,9 @@ end
 
 function WeaponVisuals:_syncDetailTier()
     if not self.model or self.currentWeaponImported
-        or (self.currentWeaponId ~= "Pistol" and self.currentWeaponId ~= "Knife") then
+        or not WeaponDetailPlan.get(self.currentWeaponId,
+            Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+            UserInputService.TouchEnabled) then
         return
     end
     local preset = Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset")
@@ -349,6 +351,7 @@ function WeaponVisuals:_createSniper(model)
         CFrame.new(0.54, 0.10, -0.22), MATERIAL_SMOOTH,
         nil, Enum.PartType.Ball)
 	self:_addPart(model, "Part", "ForeRail", Vector3.new(0.42, 0.08, 0.78), Color3.fromRGB(36, 42, 50), CFrame.new(0, -0.12, -0.86), MATERIAL_METAL)
+    self:_addDetailGeometry(model, "Sniper")
 end
 
 -- Original procedural firearm meshes; no third-party asset IDs or imported weapons.
@@ -407,6 +410,7 @@ function WeaponVisuals:_createAssaultRifle(model)
             Vector3.new(0.29, 0.025, 0.045), steel,
             CFrame.new(0, 0.253, -0.27 - (i - 1) * 0.32), MATERIAL_METAL)
     end
+    self:_addDetailGeometry(model, "AssaultRifle")
 end
 
 function WeaponVisuals:_createShotgun(model)
@@ -460,6 +464,7 @@ function WeaponVisuals:_createShotgun(model)
         MATERIAL_METAL, 1, Enum.PartType.Cylinder)
     self:_addPart(model, "Part", "Sight", Vector3.new(0.09, 0.13, 0.10), sand, CFrame.new(0, 0.25, -2.12), MATERIAL_METAL)
     self:_addPart(model, "Part", "RearSight", Vector3.new(0.19, 0.09, 0.14), charcoal, CFrame.new(0, 0.24, -0.28), MATERIAL_METAL)
+    self:_addDetailGeometry(model, "Shotgun")
 end
 
 function WeaponVisuals:_createKnife(model)
