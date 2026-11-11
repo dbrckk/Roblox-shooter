@@ -136,6 +136,33 @@ assert visuals.index('"ScopeRingFront"') < visuals.index('function WeaponVisuals
 detail_plan = get("src/shared/WeaponDetailPlan.luau")
 mesh_policy = get("src/shared/WeaponMeshPolicy.luau")
 studio_importer = get("tools/studio/install_weapon_meshes.lua")
+asset_loader = get("src/server/WeaponAssetLoader.luau")
+asset_policy = get("src/shared/WeaponAssetPolicy.luau")
+server_init = get("src/server/init.server.luau")
+weapon_registry = get("src/shared/WeaponAssetIds.luau")
+for needle in (
+    'require(script:WaitForChild("WeaponAssetLoader"))',
+    "WeaponAssetLoader.start()",
+):
+    assert needle in server_init, f"Automated weapon loader not started: {needle}"
+for needle in (
+    'AssetService:LoadAssetAsync(assetId)',
+    'MeshPolicy.mapsReady({',
+    'MeshPolicy.Required[weaponId]',
+    'Policy.sameOwner(Registry,',
+    'Policy.pair(Registry, weaponId)',
+    'task.spawn(loadConfigured)',
+    'clone:FindFirstChildOfClass("SurfaceAppearance")',
+    'descendant:Destroy()',
+    'if root:FindFirstChild(weaponId) then',
+    'template:SetAttribute("IronYardStudioApproved", true)',
+    '"IronYardWeaponMeshStatus"',
+):
+    assert needle in asset_loader, f"Owner PBR runtime loader missing: {needle}"
+assert 'game.CreatorType == Enum.CreatorType.User' in asset_loader
+assert 'function Policy.sameOwner(registry, creatorType, creatorId)' in asset_policy
+assert 'function Policy.pair(registry, weaponId)' in asset_policy
+assert 'ownerUserId = 9774173158' in weapon_registry
 for needle in (
     'function P.lod(preset,touch)',
     'function P.mapsReady(m)',
