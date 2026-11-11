@@ -27,4 +27,15 @@ assert(transitions == 5, "3600 frames admit initial + four mode updates, not per
 assert(P.needsUpdate(nil, P.hidden("AssaultRifle", true)))
 assert(not P.hidden("AssaultRifle", true))
 assert(P.hidden("Sniper", true))
-print("IRON YARD FPS viewmodel: equip/ADS-only visibility over 3600 frames: OK")
+for _, dt in ipairs({0, 1 / 120, 1 / 60, 1 / 30, 0.05}) do
+    assert(math.abs(P.animationDelta(dt) - dt) < 1e-9,
+        "Normal FPS delta must not be modified")
+end
+assert(P.animationDelta(0.2) == 0.05, "Android frame hitch is animation-capped")
+assert(P.animationDelta(10) == 0.05, "Background-tab hitch is animation-capped")
+assert(P.animationDelta(-1) == 0)
+assert(P.animationDelta(0 / 0) == 0)
+assert(P.animationDelta(math.huge) == 0)
+assert(P.animationDelta(-math.huge) == 0)
+assert(P.animationDelta("0.2") == 0)
+print("IRON YARD FPS viewmodel: visibility and hitch-safe cosmetic animation: OK")

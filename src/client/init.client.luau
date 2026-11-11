@@ -1438,7 +1438,10 @@ workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
     end
 end)
 
-RunService.RenderStepped:Connect(function(deltaTime)
+-- Native camera first (priority Camera), then local movement/camera roll/FOV,
+-- then the weapon viewmodel (+2). Avoid a stale gun pose on fast touch turns.
+RunService:BindToRenderStep("IronYardClientCameraFeel",
+    Enum.RenderPriority.Camera.Value + 1, function(deltaTime)
 	if hud and hud:isSettingsOpen() then
 		applyMenuMouseState(true)
 	end

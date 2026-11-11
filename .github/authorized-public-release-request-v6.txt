@@ -1,0 +1,17 @@
+IRON YARD — explicit PUBLIC update authorization, 11 November 2026
+
+Owner requested continuation of production improvements on existing PUBLIC
+Roblox-shooter/IRON YARD, without a private/alpha deployment.
+
+One-shot release content:
+- update native camera, local camera roll/FOV, and imported/procedural first-
+  person viewmodel in a deterministic render order to remove one-frame lag
+- cap cosmetic interpolation steps on Android frame hitches; preserve real
+  server shooting, ammo, hitboxes, deadlines and visual effects
+- regression tests and acceptance notes accompany changes
+
+Only dispatch when the exact new main commit adding this v6 file has passed
+Rojo CI. The publisher must independently refuse non-PUBLIC target, wrong
+Roblox owner, wrong root place/name, stale SHA, and any failed preflight.
+
+No credentials, API secrets, or Roblox identifiers are included.

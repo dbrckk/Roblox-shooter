@@ -116,9 +116,12 @@ function WeaponVisuals.new(WeaponConfig)
         "IronYardProgressLevel"):Connect(function()
             self:_applyCareerFinish()
         end)
-	self.renderConnection = RunService.RenderStepped:Connect(function(deltaTime)
-		self:_render(deltaTime)
-	end)
+	-- Draw after the native camera AND our local camera tilt/FOV pass.
+    -- A naked RenderStepped connection has no guaranteed order vs Camera.
+    RunService:BindToRenderStep("IronYardWeaponViewmodel",
+        Enum.RenderPriority.Camera.Value + 2, function(deltaTime)
+        self:_render(deltaTime)
+    end)
 
 	return self
 end
@@ -872,6 +875,9 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
 	return sprintMotion * bob * swayMotion * fireMotion * reloadMotion * equipMotion
 end
 function WeaponVisuals:_render(deltaTime)
+    -- Preserve actual wall-clock recoil/FX expiry, but cap interpolation after
+    -- Android backgrounding or a frame hitch to avoid single-frame pose snaps.
+    local animationDt = ViewmodelRenderPolicy.animationDelta(deltaTime)
     -- Pool opacity/expiry is serviced at 8 Hz, not via a Tween and Debris
     -- allocation for every bullet. Reuses the existing RenderStepped hook.
     local clock = os.clock()
@@ -908,7 +914,7 @@ function WeaponVisuals:_render(deltaTime)
     local reloadSeconds = reloadConfig and reloadConfig.reloadSeconds or 2
     local progress = math.clamp((now - self.reloadStartedAt) / math.max(reloadSeconds, 0.25), 0, 1)
     local reloadTarget = self.reloadActive and 1 or 0
-    self.reloadBlend += (reloadTarget - self.reloadBlend) * math.clamp(deltaTime * 13, 0, 1)
+    self.reloadBlend += (reloadTarget - self.reloadBlend) * math.clamp(animationDt * 13, 0, 1)
     -- Smooth pose in/out, with a distinct magazine manipulation around mid-reload.
     local reloadPose = self.reloadBlend * math.sin(math.pi * progress * 0.93)
     local magazineDip = self.reloadActive
@@ -926,17 +932,17 @@ function WeaponVisuals:_render(deltaTime)
         local horizontalSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
         moving = math.clamp(horizontalSpeed / math.max(12, humanoid.WalkSpeed), 0, 1)
     end
-    self.stepBlend += (moving - self.stepBlend) * math.clamp(deltaTime * 9, 0, 1)
+    self.stepBlend += (moving - self.stepBlend) * math.clamp(animationDt * 9, 0, 1)
 
 	local offset = WEAPON_OFFSETS[self.currentWeaponId] or WEAPON_OFFSETS.Pistol
     local aimTarget = self.scoped and self.currentWeaponId ~= "Sniper" and 1 or 0
-    self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(deltaTime * 13, 0, 1)
+    self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(animationDt * 13, 0, 1)
     -- Blend the full viewmodel root toward each weapon's rear iron sight.
     -- Sniper keeps its dedicated optical overlay and hidden scoped weapon.
     local rootPose = self.aimPose and offset:Lerp(self.aimPose, self.aimBlend)
         or offset
     local root = camera.CFrame * rootPose
-        * self:_getAnimationCFrame(deltaTime, camera, self.stepBlend, reloadPose)
+        * self:_getAnimationCFrame(animationDt, camera, self.stepBlend, reloadPose)
 
     -- Short, mechanically coherent motions for actual moving weapon parts.
     -- No physics, sounds or network calls: these offsets are client-only.

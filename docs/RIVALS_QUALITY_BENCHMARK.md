@@ -485,3 +485,12 @@ les memes definitions de pieces pour garantir leur identite.
   build Rojo. **L'aspect et le FPS restent à mesurer dans Roblox Studio/Android.**
   Les maillages PBR véritablement intégrés sont toujours la priorité pour
   atteindre une qualité visuelle comparable à RIVALS.
+
+
+## Synchronisation caméra et armes en première personne — 11 novembre 2026
+
+- La caméra native Roblox se met à jour à `Enum.RenderPriority.Camera`. Le traitement local du roulis en slide/wallrun et du FOV passe **ensuite** à priorité Camera + 1, puis la pose du modèle d'arme est calculée à Camera + 2. Un ancien `RenderStepped:Connect` sans priorité pouvait placer l'arme à la position de la frame précédente lors de rotations rapides Android / manette / souris.
+- Le rendu de l'arme conserve sa seule boucle existante : aucun deuxième callback, RemoteEvent, raycast, asset ou coût réseau. La direction du tir, les dégâts et les hitboxes serveur restent inchangés.
+- Seules les interpolations cosmétiques (sway, bob, ADS, rechargement) bornent désormais leur pas à **50 ms** lorsqu'une frame dure anormalement longtemps. Les expirations VFX et la récupération du recul continuent d'utiliser le temps réel.
+- Les tests Luau vérifient les deltas normaux / invalides / saccades ; le contrat d'intégration vérifie l'ordre explicite des deux callbacks et les quatre usages du pas borné.
+- **Validation en moteur encore nécessaire :** rotations rapides Android 30/60 FPS, cadrage ADS mires PBR, wallrun avec caméra inclinée, retour après freeze, 100 tirs en continu et comparaison frame P95/P99 avant/après sur un téléphone réel. Le CI vert ne constitue pas une mesure FPS Roblox.

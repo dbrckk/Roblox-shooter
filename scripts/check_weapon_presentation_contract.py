@@ -141,7 +141,7 @@ for needle in (
 ):
     assert needle in visuals, f"Shotgun reload model / visible mechanism missing: {needle}"
 assert 'Shotgun = { anchor = "ShotgunEjectionPort"' in ejection
-assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
 assert 'FireServer' not in reload_visual and 'Instance.new' not in reload_visual
 assert 'return {' not in reload_visual, "No per-frame allocation of shell pose tables"
 assert 'local loadingShell = self.currentWeaponId' not in visuals, (
@@ -165,7 +165,7 @@ for needle in (
     'for i = 1, 3 do',
 ):
     assert needle in visuals, f"Detailed 3D firearm part missing: {needle}"
-assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1, (
     "Precision models must not add a second frame loop"
 )
 # The material-detail loops are authored inside equip-time constructor functions.
@@ -307,7 +307,7 @@ for needle in (
     'self:_applyCareerFinish()',
 ):
     assert needle in visuals, f"Viewmodel cosmetic detail rendering missing: {needle}"
-assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1, (
     "Details must use the existing viewmodel renderer"
 )
 
@@ -483,7 +483,7 @@ for needle in (
     'and self.currentWeaponId == "Pistol" then',
 ):
     assert needle in visuals, f"Moving first-person weapon part missing: {needle}"
-assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 1, (
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1, (
     "Mechanical motion must reuse the existing single frame loop"
 )
 for needle in (
@@ -598,10 +598,24 @@ assert 'hud:registerPredictedShot(weaponId)' in client
 assert 'hud:updateCrosshair(deltaTime, moveAmount, sprinting)' in client
 assert client.index('hud:registerPredictedShot(weaponId)') < (
     client.index('remotes.FireWeapon:FireServer({', client.index('local function fireWeapon(')))
-assert client.count('RenderStepped:Connect') == 1, (
+assert client.count('RunService:BindToRenderStep("IronYardClientCameraFeel",') == 1, (
     "Hip-fire responsiveness must reuse the existing frame callback")
 assert "FireServer" not in crosshair and "Instance.new" not in crosshair
 
+# Both paths must use deterministic post-camera render priorities.
+# The gameplay/HUD pass may change camera roll/FOV; gun transform follows it.
+assert 'Enum.RenderPriority.Camera.Value + 1' in client
+assert 'Enum.RenderPriority.Camera.Value + 2' in visuals
+assert 'RunService.RenderStepped:Connect' not in visuals
+assert 'RunService.RenderStepped:Connect' not in client
+assert 'ViewmodelRenderPolicy.animationDelta(deltaTime)' in visuals
+for update in (
+    'self.reloadBlend += (reloadTarget - self.reloadBlend) * math.clamp(animationDt * 13',
+    'self.stepBlend += (moving - self.stepBlend) * math.clamp(animationDt * 9',
+    'self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(animationDt * 13',
+    'self:_getAnimationCFrame(animationDt, camera, self.stepBlend, reloadPose)',
+):
+    assert update in visuals, f"Frame-hitch-safe animation integration missing: {update}"
 assert "targetHumanoid:TakeDamage(damage)" in server
 assert "fireCooldown = 0.115" in config, "Server/weapon cadence not rewritten"
 print("IRON YARD five original viewmodels and bounded spatial audio wiring: OK")
