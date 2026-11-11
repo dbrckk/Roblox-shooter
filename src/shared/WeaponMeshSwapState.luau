@@ -4,6 +4,7 @@ local P = {}
 P.Fields = {
     "equipStartedAt", "fireStartedAt", "recoil",
     "reloadActive", "reloadStartedAt", "reloadBlend",
+    "reloadHandX", "reloadHandY", "reloadHandZ",
     "aimBlend", "stepPhase", "stepBlend", "sway",
     "lastCameraPosition", "lastCameraCFrame",
 }

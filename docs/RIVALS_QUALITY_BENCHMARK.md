@@ -506,3 +506,12 @@ Auparavant les flashs de tir locaux et les douilles AR/pistolet étaient émis �
 - **Budget** : une seule boucle RenderStep préexistante, aucune instance réseau, aucun raycast ni allocation par frame supplémentaire ; les effets restent gérés par le pool local déjà limité (ECO désactive les douilles).
 - **Tests** : régressions Luau horaires immédiats/différés, retards, changement d'arme, invalides et contre-ordre dans le contrat d'intégration, compilés en CI.
 - **À confirmer dans Roblox** : tir continu AR/PC/Android, rotations rapides 30/60 FPS, mires ADS PBR, quatre bots, coup de shotgun puis switch immédiat, sniper après verrou, et framerate P95/P99.
+
+
+## Animation manuelle de recharge et support PBR (11 novembre 2026)
+
+- **AR-24** : l'intégralité du bras gauche (avant-bras, manche, gant, protections) quitte progressivement le garde-main pour rejoindre le chargeur physique indépendant, suit son extraction verticale puis revient à sa prise initiale. Les pièces PBR et le modèle procédural utilisent la même chronologie et la même autorité de rechargement serveur.
+- **B-8** : la main de soutien se déplace depuis la pompe vers la cartouche visuelle déjà animée et suit son insertion de 27 % à 74 % de la recharge. Elle retourne ensuite vers la pompe. Pendant une recharge confirmée, la pompe ne doit pas entraîner la main comme lors du cycle de tir. En mode ECO, le mouvement est atténué car la cartouche facultative n'est pas affichée.
+- **Interruption et synchronisation** : la nouvelle pose du bras est amortie par interpolation sur la boucle visuelle déjà existante. Un refus/arrêt serveur fait revenir le bras sans téléportation. Changement d'arme réinitialise le bras; échange tardif entre Part et PBR/LOD sauvegarde les trois composantes d'animation.
+- Aucun changement de cadence, munitions, dégâts, collisions, serveur de tir, input, réseau ou cycle RenderStep. La politique Luau pure n'alloue aucune table ni Instance par image. Tests : trajectoires, bornes, ECO, invalides, interruption et échange LOD.
+- **Contrôle moteur obligatoire :** vérifier le chemin spatial du gant gauche et du chargeur Blender en ADS/hip-fire à 30 et 60 FPS Android, recharge interrompue, interruption par changement d'arme, basculement PBR LOD, visibilité des cartouches ECO/QUALITY. Pas de preuve visuelle moteur à ce stade.

@@ -1,0 +1,13 @@
+IRON YARD — one-shot PUBLIC update request (11 November 2026)
+The owner requested continued production improvement on the existing PUBLIC
+IRON YARD Roblox-shooter experience, without private or alpha staging.
+
+Changes authorized for this exact main commit after GREEN Rojo CI:
+- AR-24 support hand follows its independently animated Blender PBR magazine
+- B-8 shotgun support hand tracks the loading shell and returns to the pump;
+  restrained reload pose on ECO devices without an optional visible shell
+- smooth server-reload cancellation, preserve hand interpolation on PBR LOD swaps
+- regression tests and Android Studio visual acceptance instructions
+
+No combat server change or proprietary materials; no credentials in repository.
+The owner/visibility/place checks and exact-SHA CI release gate are unchanged.

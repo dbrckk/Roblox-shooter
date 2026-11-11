@@ -638,6 +638,37 @@ for update in (
     'self:_getAnimationCFrame(animationDt, camera, self.stepBlend, reloadPose)',
 ):
     assert update in visuals, f"Frame-hitch-safe animation integration missing: {update}"
+# Reload support hands must follow authored mechanical PBR pieces, not
+# restart or teleport after a deferred asset upgrade or server cancel.
+reload_hand = get("src/shared/WeaponReloadHandPlan.luau")
+for needle in (
+    "function Plan.sample(weaponId, progress, active, dip, handTravel, preset)",
+    'weaponId == "AssaultRifle"',
+    'weaponId == "Shotgun"',
+    "smooth(0.27, 0.74, p)",
+    'preset == "ECO"',
+    "return 0, 0, 0",
+):
+    assert needle in reload_hand, f"Reload hand choreography missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponReloadHandPlan")',
+    "WeaponReloadHandPlan.sample(",
+    "local handAlpha = math.clamp(animationDt * 14, 0, 1)",
+    "self.reloadHandX += (handX - self.reloadHandX) * handAlpha",
+    "self.reloadHandY += (handY - self.reloadHandY) * handAlpha",
+    "self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha",
+    "local workingHand = CFrame.new(self.reloadHandX, self.reloadHandY, self.reloadHandZ)",
+    "localOffset = localOffset * workingHand * supportMotion",
+    "and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)",
+):
+    assert needle in visuals, f"Client support hand motion not wired: {needle}"
+for needle in (
+    '"reloadHandX", "reloadHandY", "reloadHandZ"',
+    "WeaponMeshSwapState.capture(self)",
+    "WeaponMeshSwapState.restore(self, previousPose)",
+):
+    assert needle in swap_state or needle in visuals, f"Reload pose not safely preserved: {needle}"
+assert "Instance.new" not in reload_hand and "FireServer" not in reload_hand
 assert "targetHumanoid:TakeDamage(damage)" in server
 assert "fireCooldown = 0.115" in config, "Server/weapon cadence not rewritten"
 print("IRON YARD five original viewmodels and bounded spatial audio wiring: OK")

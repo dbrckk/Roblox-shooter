@@ -21,6 +21,7 @@ local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):Wai
 local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 local WeaponFxFramePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFxFramePolicy"))
+local WeaponReloadHandPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponReloadHandPlan"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -84,6 +85,9 @@ function WeaponVisuals.new(WeaponConfig)
     self.reloadActive = false
     self.reloadStartedAt = 0
     self.reloadBlend = 0
+    self.reloadHandX = 0
+    self.reloadHandY = 0
+    self.reloadHandZ = 0
     self.lastViewmodelHidden = nil
     self.stepPhase = 0
     self.stepBlend = 0
@@ -646,6 +650,7 @@ function WeaponVisuals:setWeapon(weaponId)
 	self.recoil = 0
     self.reloadActive = false
     self.reloadBlend = 0
+    self.reloadHandX, self.reloadHandY, self.reloadHandZ = 0, 0, 0
     self.lastCameraPosition = nil
     self.lastCameraCFrame = nil
 	self:_clearModel()
@@ -944,11 +949,22 @@ function WeaponVisuals:_render(deltaTime)
     -- mechanical firing curves for inactive weapons on RenderStepped.
     local actionTravel = WeaponFeel.mechanism(self.currentWeaponId, shotAge)
     local feel = WeaponFeel.get(self.currentWeaponId)
-    local workingHand = CFrame.new(0.13 * magazineDip * feel.handTravel,
-        -0.22 * magazineDip * feel.handTravel,
-        -0.11 * magazineDip * feel.handTravel)
-    -- All left-hand components ride the shotgun pump on its mechanical beat.
-    local supportMotion = self.currentWeaponId == "Shotgun"
+    -- AR magazine: the left glove reaches the detachable PBR/Part magazine
+    -- and follows its downward travel. Shotgun: the glove follows the visible
+    -- loading shell toward its real port, then returns to the pump. The
+    -- 3D forearm, sleeve, glove and straps keep ONE coherent transform.
+    local handX, handY, handZ = WeaponReloadHandPlan.sample(
+        self.currentWeaponId, progress, self.reloadActive,
+        magazineDip, feel.handTravel,
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"))
+    local handAlpha = math.clamp(animationDt * 14, 0, 1)
+    self.reloadHandX += (handX - self.reloadHandX) * handAlpha
+    self.reloadHandY += (handY - self.reloadHandY) * handAlpha
+    self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha
+    local workingHand = CFrame.new(self.reloadHandX, self.reloadHandY, self.reloadHandZ)
+    -- Pump and support hand move together on a shot; never pump the fore-end
+    -- into the left glove while it is inserting a cartridge.
+    local supportMotion = self.currentWeaponId == "Shotgun" and not self.reloadActive
         and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)
         or CFrame.new()
     local shellX, shellY, shellZ, shellRoll

@@ -104,6 +104,7 @@ jobs:
           ./luau scripts/test_weapon_spread_policy.luau
           ./luau scripts/test_aim_stance_policy.luau
           ./luau scripts/test_shot_input_policy.luau
+          ./luau scripts/test_weapon_reload_hand_plan.luau
           ./luau scripts/test_weapon_feel_profile.luau
           ./luau scripts/test_weapon_sway_policy.luau
           ./luau scripts/test_weapon_detail_plan.luau
