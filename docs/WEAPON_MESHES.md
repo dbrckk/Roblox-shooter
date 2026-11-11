@@ -229,3 +229,39 @@ https://create.roblox.com/docs/cloud/guides/usage-assets
 L'import des GLB sur le compte propriétaire, leur rendu Studio et la
 publication de la place publique sont des validations **distinctes** du
 contrôle hors ligne du pipeline.
+
+## Chargement serveur borné et état réel des armes PBR
+
+Le serveur charge les modèles du propriétaire via
+`AssetService:LoadAssetAsync()` **hors du chemin critique du gameplay**.
+Un ordonnanceur de deux travailleurs maximum traite les armes en parallèle,
+chaque travailleur important séquentiellement les LOD0/LOD1 d'une arme.
+
+Chaque paire est entièrement validée (noms GLB, dimensions, SurfaceAppearance,
+quatre cartes PBR, marqueur d'origine) **avant** d'être répliquée.
+Le serveur évite de retélécharger une paire installée et validée.
+Un ancien kit Studio partiellement installé, en revanche, ne bloque plus
+l'import d'un kit propriétaire correct : il n'est remplacé qu'après réussite
+de la validation complète de la nouvelle paire. Si Roblox refuse un asset,
+le fusil procédural et les autres armes continuent de fonctionner.
+
+Trois attributs `workspace` permettent de diagnostiquer l'installation
+réelle sans ajouter d'interface de développement aux joueurs :
+
+- `IronYardWeaponMeshStatus` : `DISABLED`, `MANUAL`, `LOADING`,
+  `READY`, `PARTIAL` ou `FALLBACK` ;
+- `IronYardWeaponMeshReadyCount` : nombre de paires valides parmi les
+  cinq armes attendues ;
+- `IronYardWeaponMeshPendingCount` : nombre d'armes encore en cours
+  d'import depuis Open Cloud (0 à 5).
+
+Les attributs évoluent en fonction des **paires réellement valides dans
+ReplicatedStorage**, et non de la simple présence d'un identifiant dans GitHub.
+Le client passe automatiquement au mesh PBR dès qu'une paire validée lui
+parvient et que le joueur est inactif (voir la politique de rafraîchissement
+des LOD plus haut). Aucun UI de débogage n'est montré en partie publique.
+
+**Limite :** une compilation Rojo réussie prouve la validité du code Luau
+et des tests hors moteur. Sans autorisation Open Cloud configurée et sans
+exécution Roblox Studio/Android, elle ne certifie pas la vitesse réelle de
+chargement ni la qualité visuelle des modèles.
