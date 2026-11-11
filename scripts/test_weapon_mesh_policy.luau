@@ -38,4 +38,15 @@ for _,name in ipairs(P.Maps) do
     assert(not P.mapsReady(tmp))
 end
 assert(not P.mapsReady(nil) and not P.mapsReady({}))
+-- PBR weapons keep the exact author-authored mesh/material look on
+-- rank/finish upgrades. Only arms, gloves and procedural trim are recolored.
+assert(P.canRetint({isPbrMesh=true})==false)
+assert(P.canRetint({isPbrMesh=false})==true)
+assert(P.canRetint({})==true)
+assert(P.canRetint({isDetail=true})==true)
+assert(P.canRetint({isPbrMesh=true,finishRole="panel"})==false)
+assert(P.canRetint({isPbrMesh=true,finishRole="accent"})==false)
+assert(P.canRetint(nil)==false)
+assert(P.canRetint("bad")==false)
+
 print("IRON YARD weapon MeshPart import policy: PBR validation, named pieces and mobile LOD OK")

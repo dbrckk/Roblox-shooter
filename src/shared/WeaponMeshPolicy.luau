@@ -40,6 +40,14 @@ function P.mapsReady(m)
     return true
 end
 
+-- Blender-authored PBR color maps and the imported MeshPart's base color
+-- are a single artist-approved appearance. Career finishes may recolor
+-- first-person gloves, sleeves and procedural detail, but must not recolor
+-- imported mesh primitives (especially Overlay/transparent map areas).
+function P.canRetint(entry)
+    return type(entry)=="table" and entry.isPbrMesh~=true
+end
+
 function P.namesComplete(weapon,names)
     local required=P.Required[weapon]
     if not required or type(names)~="table" then return false end

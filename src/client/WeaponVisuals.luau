@@ -222,27 +222,29 @@ function WeaponVisuals:_applyCareerFinish()
         GasBlock=true, ScopeRingFront=true, ScopeRingRear=true,
     }
     for _, entry in ipairs(self.parts) do
-        local name = entry.part.Name
-        local color = entry.baseColor
-        if entry.finishRole == "accent" then
-            color = accent
-        elseif entry.finishRole == "panel" then
-            color = entry.baseColor:Lerp(metal, 0.62)
-        elseif entry.finishRole == "dark" then
-            color = entry.baseColor
-        elseif string.find(name, "Forearm", 1, true)
-            or string.find(name, "Sleeve", 1, true) then
-            color = fabric
-        elseif string.find(name, "Glove", 1, true)
-            or string.find(name, "Knuckle", 1, true) then
-            color = glove
-        elseif string.find(name, "WristStrap", 1, true)
-            or accents[name] then
-            color = accent
-        elseif panels[name] then
-            color = entry.baseColor:Lerp(metal, 0.78)
+        if WeaponMeshPolicy.canRetint(entry) then
+            local name = entry.part.Name
+            local color = entry.baseColor
+            if entry.finishRole == "accent" then
+                color = accent
+            elseif entry.finishRole == "panel" then
+                color = entry.baseColor:Lerp(metal, 0.62)
+            elseif entry.finishRole == "dark" then
+                color = entry.baseColor
+            elseif string.find(name, "Forearm", 1, true)
+                or string.find(name, "Sleeve", 1, true) then
+                color = fabric
+            elseif string.find(name, "Glove", 1, true)
+                or string.find(name, "Knuckle", 1, true) then
+                color = glove
+            elseif string.find(name, "WristStrap", 1, true)
+                or accents[name] then
+                color = accent
+            elseif panels[name] then
+                color = entry.baseColor:Lerp(metal, 0.78)
+            end
+            entry.part.Color = color
         end
-        entry.part.Color = color
     end
     self.model:SetAttribute("IronYardCareerFinish", finish.name)
 end
@@ -570,6 +572,9 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
             offset=origin.CFrame:ToObjectSpace(sourcePart.CFrame),
             baseTransparency=clone.Transparency,
             baseColor=clone.Color,
+            -- This entire material primitive is authored in Blender.
+            -- Never apply rank-wide BasePart.Color recolors to its PBR maps.
+            isPbrMesh=true,
         })
       end
     end
@@ -670,9 +675,10 @@ function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
         UserInputService.TouchEnabled)
     if self.currentWeaponImported and self.activeMeshLod == lod then return end
-    local origin = self:_getImportedWeapon(self.currentWeaponId, lod)
+    -- Cheap animation state test first. Avoid re-scanning dozens of material
+    -- MeshParts and four SurfaceAppearance textures while firing or aiming.
     local safe = WeaponMeshRefresh.shouldRefresh(self.currentWeaponImported,
-        self.activeMeshLod, lod, origin ~= nil, {
+        self.activeMeshLod, lod, true, {
             scoped = self.scoped,
             sprinting = self.sprinting,
             reloading = self.reloadActive,
@@ -682,7 +688,9 @@ function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
             sinceShot = now - self.fireStartedAt,
             sinceEquip = now - self.equipStartedAt,
         })
-    if safe then
+    if not safe then return end
+    local origin = self:_getImportedWeapon(self.currentWeaponId, lod)
+    if origin then
         -- This is not an actual equip. Preserve the currently interpolated
         -- camera, hands, aim, recoil and reload pose while rebuilding the
         -- visuals from newly replicated or higher/lower LOD meshes.
