@@ -39,6 +39,11 @@ jobs:
             echo "::error::Explicit PUBLIC release confirmation is required."; exit 1;
           }
 
+      - name: Verify release safeguards without connecting to Roblox
+        run: |
+          python3 scripts/test_public_release.py
+          python3 scripts/test_publish_public_roblox.py
+
       - name: Verify existing PUBLIC universe and the intended creator
         env:
           ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
