@@ -112,6 +112,10 @@ def main():
     })
     recognized = U.matching_committed_ids(example, "a" * 40)
     assert len(recognized) == 10, "Existing signed source registry not parsed"
+    assert all(f"{U.RUNTIME_NAMES[w]} = {{ LOD0 =" in example for w in U.WEAPONS)
+    assert not any(f"        {w} = {{ LOD0 =" in example for w in U.WEAPONS)
+    assert "AssaultRifle = { LOD0 =" in example
+    assert recognized["assault_rifle", "LOD0"] == 104
     assert U.matching_committed_ids(example, "b" * 40) == {}
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
@@ -150,9 +154,9 @@ def main():
         assert module.read_text() == original, "Partial upload changed live registry"
         checkpoint = json.loads((root / "checkpoint.json").read_text())
         assert len(checkpoint["models"]) == 3, "Pending job must survive interruption"
-        assert checkpoint["models"]["Knife/LOD0"]["operationPath"] == (
+        assert checkpoint["models"]["knife/LOD0"]["operationPath"] == (
             "operations/weapon_3")
-        assert "assetId" not in checkpoint["models"]["Knife/LOD0"]
+        assert "assetId" not in checkpoint["models"]["knife/LOD0"]
 
         verified = []
         uploaded = []
@@ -162,7 +166,7 @@ def main():
 
         def resumed(owner, weapon, lod, raw, key, **kwargs):
             uploaded.append((weapon, lod))
-            if (weapon, lod) == ("Knife", "LOD0"):
+            if (weapon, lod) == ("knife", "LOD0"):
                 assert kwargs.get("operation_path") == "operations/weapon_3", (
                     "Resume the recorded pending operation, never POST a second model")
             else:
@@ -179,6 +183,8 @@ def main():
         contents = module.read_text()
         assert "LOD0 = 1001" in contents and "LOD1 = 1002" in contents
         assert "LOD1 = 2008" in contents and "ownerUserId = 9774173158" in contents
+        assert all(f"        {U.RUNTIME_NAMES[w]} = {{ LOD0 =" in contents
+                   for w in U.WEAPONS)
         assert contents.count("LOD0 =") == 5 and contents.count("LOD1 =") == 5
         assert all("operationPath" not in x for x in json.loads(
             (root / "checkpoint.json").read_text())["models"].values())
