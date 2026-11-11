@@ -15,6 +15,7 @@ local state = {
     stepBlend = 0.42,
     sway = "CAMERA_SWAY",
     lastCameraPosition = "CAMERA_POSITION",
+    lastCameraCFrame = "CAMERA_ORIENTATION",
 }
 local before = P.capture(state)
 assert(before.currentWeaponId == nil and before.model == nil)
