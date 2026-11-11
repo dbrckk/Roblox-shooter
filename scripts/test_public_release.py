@@ -41,6 +41,14 @@ def main():
         "rootPlace": "universes/123/places/456",
     }
     publisher.verify_universe(universe, "456")
+    publisher.verify_universe(dict(universe, displayName="IRON YARD"), "456")
+    for impostor in ("IRON YARD Racing", "IRON YARD DEV",
+                     "IRON YARD | Other Experience"):
+        check_fail(
+            lambda name=impostor: publisher.verify_universe(
+                dict(universe, displayName=name), "456"),
+            "Publisher must reject sibling IRON YARD games",
+        )
     for field, bad in (
         ("displayName", "Chaos Survival"),
         ("user", "users/1"),
@@ -66,7 +74,7 @@ def main():
             assert key == "offline-test-key"
             seen.append(method)
             if "cloud/v2/universes/123/places/456" in url:
-                return {"name": "universes/123/places/456"}
+                return {"name": "universes/123/places/456", "root": True}
             if "cloud/v2/universes/123" in url:
                 return universe
             if method == "POST" and "versions?versionType=Published" in url:
