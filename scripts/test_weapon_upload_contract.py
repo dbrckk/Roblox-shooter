@@ -316,7 +316,7 @@ def main():
         # Ten distinct source GLBs must map to ten DISTINCT Roblox Model IDs.
         # A malformed provider response cannot alias two weapons and be pushed.
         module.write_text(original, "utf-8")
-        (root / "checkpoint.json").unlink()
+        (root / "checkpoint.json").unlink(missing_ok=True)
         with mock.patch.dict(os.environ, {"ROBLOX_OPEN_CLOUD_ASSETS_KEY": "fake-key"}), \
                 mock.patch.object(U, "sources", return_value=fake_entries()), \
                 mock.patch.object(U, "upload_model", return_value=9999):
