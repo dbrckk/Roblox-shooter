@@ -1,0 +1,11 @@
+IRON YARD PUBLIC FPS release request after validated CI fixes (2026-11-11).
+
+This exact main commit corrects Luau test-file comment syntax and updates
+the first-person animation integration contract to its new optional
+PBR-source signature. The runtime changes are those already authored
+on main: pistol support-hand reload visibility and sniper bolt-hand
+mechanics, both server-safe, with original existing PBR assets.
+
+Release only on successful full Rojo/Luau CI of this SHA; preserve
+the existing owner, public visibility, target place and secret gates.
+User explicitly authorized public continuation, not private/alpha.

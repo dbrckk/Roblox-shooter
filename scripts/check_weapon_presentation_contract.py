@@ -642,7 +642,7 @@ for update in (
 # restart or teleport after a deferred asset upgrade or server cancel.
 reload_hand = get("src/shared/WeaponReloadHandPlan.luau")
 for needle in (
-    "function Plan.sample(weaponId, progress, active, dip, handTravel, preset)",
+    "function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported)",
     'weaponId == "AssaultRifle"',
     'weaponId == "Shotgun"',
     "smooth(0.27, 0.74, p)",

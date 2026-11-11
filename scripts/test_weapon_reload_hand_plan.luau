@@ -49,7 +49,7 @@ end
 assert(select(1, Hand.sample("Shotgun", 0.5, true, 0, nil, "QUALITY")) == 0)
 print("IRON YARD: PBR/fallback AR magazine and B-8 shell support hands: OK")
 
-// Confirmed pistol reload only; no floating left hand while idle or after cancel.
+-- Confirmed pistol reload only; no floating left hand while idle or after cancel.
 assert(Hand.pistolVisibility(0.0, true) == 0)
 assert(Hand.pistolVisibility(0.40, true) == 1)
 assert(Hand.pistolVisibility(1.0, true) == 0)
@@ -63,8 +63,8 @@ assert(fx > ix and fy < iy and fz ~= iz,
 assert(fy < -0.3 and iy > -0.15)
 assert(select(1, Hand.sample("Pistol", 0.45, false, 1, 1, "QUALITY", true)) == 0)
 
-// Right hand follows the actual timed bolt mechanism, except during ADS
-// and a server-confirmed reload. All values remain bounded and finite.
+-- Right hand follows the actual timed bolt mechanism, except during ADS
+-- and a server-confirmed reload. All values remain bounded and finite.
 local bx, by, bz = Hand.boltGrip("Sniper", 1, false, false)
 assert(bx > 0.25 and by > 0.35 and bz < -0.2)
 local hx, hy, hz = Hand.boltGrip("Sniper", 0.5, false, false)
