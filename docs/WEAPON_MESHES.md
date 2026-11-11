@@ -372,3 +372,30 @@ sur appareil doit inspecter la hausse, l'occlusion du modèle en ADS, le
 champ de vision et les écarts LOD0/LOD1 sur Android et PC. Les tests de
 contrat vérifient la conversion géométrique, le choix de la bonne source
 et la compatibilité du fallback, sans changer les raycasts de dégâts.
+
+## Effets de canon et douilles alignés avec les meshes PBR
+
+Les cinq armes ont conservé leurs modèles Blender originaux et leurs deux LOD.
+Les armes importées ne doivent **pas** utiliser les emplacements du canon et
+de la fenêtre d'éjection des armes de secours en `Part` : les dimensions et
+les positions des pièces sont différentes (particulièrement le sniper).
+
+`src/shared/WeaponPbrFxSockets.luau` donne les positions des sockets PBR
+à partir des coordonnées d'origine des fichiers `tools/weaponforge/`, en
+convertissant `(Blender X, Y, Z)` vers `(Roblox X, Z, -Y)`.
+Lorsqu'un mesh PBR approuvé est réellement chargé, les effets locaux sont
+ancrés sur ces positions ; le chemin procédural conserve ses anciennes
+positions et distances de flash. Le sniper utilise un point dédié à la
+culasse pour la douille retardée (et non le pivot du mesh `Bolt`).
+
+Une seule table statique de noms de canons est réutilisée entre tirs ; aucun
+`RemoteEvent` supplémentaire, objet réseau, nouvelle boucle de rendu ni
+physique de projectile n'est ajouté. Les budgets d'effets mobiles et la
+précision serveur restent inchangés. Les tests Luau de coordonnées et le
+contrat d'intégration sont exécutés dans le build Rojo.
+
+**À vérifier en jeu sur Android et PC :** position physique du flash au bout
+du canon, éjection de la douille au bon instant pendant la mécanique de
+rechargement, transitions PBR LOD0/LOD1 et cohérence avec le viseur. Les
+tests de dépôt valident le raccordement et les positions authored ; ils ne
+remplacent pas des captures Roblox Studio ou des mesures FPS sur téléphone.
