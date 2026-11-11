@@ -154,7 +154,11 @@ for needle in (
     'task.spawn(loadConfigured)',
     'clone:FindFirstChildOfClass("SurfaceAppearance")',
     'descendant:Destroy()',
-    'if root:FindFirstChild(weaponId) then',
+    'LoadPlan.queue(Policy.Weapons, function(weaponId)',
+    'LoadPlan.workers(#queue)',
+    'if validPair(existing, job.weaponId) then',
+    'task.spawn(worker)',
+    'reportStatus(ReplicatedStorage:FindFirstChild(ROOT_NAME), pending, true)',
     'template:SetAttribute("IronYardStudioApproved", true)',
     '"IronYardWeaponMeshStatus"',
 ):
@@ -163,6 +167,23 @@ assert 'game.CreatorType == Enum.CreatorType.User' in asset_loader
 assert 'function Policy.sameOwner(registry, creatorType, creatorId)' in asset_policy
 assert 'function Policy.pair(registry, weaponId)' in asset_policy
 assert 'ownerUserId = 9774173158' in weapon_registry
+load_plan = get("src/shared/WeaponAssetLoadPlan.luau")
+for needle in (
+    "Plan.MAX_WORKERS = 2",
+    "function Plan.queue(weapons, pairFor, isComplete)",
+    "function Plan.status(ready, pending, authorized)",
+    "if pair ~= nil and isComplete(weaponId) ~= true then",
+    'return authorized == true and "FALLBACK" or "DISABLED"',
+):
+    assert needle in load_plan, f"Server asset scheduler policy missing: {needle}"
+assert 'Workspace:SetAttribute("IronYardWeaponMeshReadyCount", ready)' in asset_loader
+assert 'Workspace:SetAttribute("IronYardWeaponMeshPendingCount", pending)' in asset_loader
+assert 'replacement.Parent = root' in asset_loader
+assert 'if existing then existing:Destroy() end' in asset_loader
+assert 'if liveRoot == root then' in asset_loader
+assert 'task.spawn(loadConfigured)' in asset_loader
+assert asset_loader.count('AssetService:LoadAssetAsync(assetId)') == 1
+
 for needle in (
     'function P.lod(preset,touch)',
     'function P.mapsReady(m)',
