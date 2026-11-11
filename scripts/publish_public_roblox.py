@@ -54,8 +54,11 @@ def verify_universe(info: object, place_id: str):
         raise PublishError("Universe lookup returned invalid data")
     name = info.get("displayName") or info.get("display_name") or info.get("name")
     normalized = re.sub(r"[^a-z0-9]", "", str(name).lower())
-    if not normalized.startswith("ironyard"):
-        raise PublishError("Wrong destination: refusing to overwrite a non-IRON YARD game")
+    if normalized != "ironyard":
+        # A different game belonging to the same creator may share the prefix.
+        # Public releases must not overwrite IRON YARD Racing, test clones,
+        # archived editions or another experience after a variable typo.
+        raise PublishError("Wrong destination: Roblox experience must be named exactly IRON YARD")
     owner = info.get("user")
     if isinstance(owner, dict):
         owner = owner.get("path")
@@ -77,8 +80,10 @@ def verify_target(universe_id: str, place_id: str, key: str):
     place = request("GET",
                     f"{API_HOST}/cloud/v2/universes/{universe_id}/places/{place_id}",
                     key)
-    if not isinstance(place, dict) or not place:
-        raise PublishError("Place is absent from the expected universe")
+    if not isinstance(place, dict) or place.get("root") is not True:
+        # Open Cloud v2 exposes a read-only root flag. Never publish a
+        # different place merely because its GET happened to succeed.
+        raise PublishError("Configured place is not the universe's confirmed root place")
     return universe
 
 
@@ -129,7 +134,18 @@ def main(argv=None):
     version = result.get("versionNumber") if isinstance(result, dict) else None
     if not isinstance(version, int) or isinstance(version, bool) or version < 1:
         raise PublishError("Upload response did not confirm a valid place version")
-    verify_target(args.universe_id, args.place_id, key)
+    # Roblox has ALREADY accepted the update at this point. A transient GET
+    # failure must not be misreported as a failed POST, prompting a second
+    # publication of the same build. Always expose the confirmed version.
+    print(f"Roblox accepted PUBLIC IRON YARD place version {version}.")
+    try:
+        verify_target(args.universe_id, args.place_id, key)
+    except PublishError as exc:
+        raise PublishError(
+            f"Place version {version} was ALREADY PUBLISHED; post-publication "
+            f"verification failed ({exc}). Inspect Creator Dashboard version "
+            "history before deciding whether any retry is necessary."
+        ) from None
     public_url = f"https://www.roblox.com/games/{args.place_id}/"
     print(f"Published PUBLIC IRON YARD version {version} from {args.source_commit}.")
     print(f"Experience: {public_url}")
