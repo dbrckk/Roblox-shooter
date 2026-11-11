@@ -121,6 +121,19 @@ local function loadPair(weaponId, ids)
     return staging
 end
 
+local function completeCount(root)
+    if not root or not root:IsA("Folder") then return 0 end
+    local count = 0
+    for _, weaponId in ipairs(Policy.Weapons) do
+        local folder = root:FindFirstChild(weaponId)
+        if folder and templateIsComplete(folder:FindFirstChild("LOD0"), weaponId)
+            and templateIsComplete(folder:FindFirstChild("LOD1"), weaponId) then
+            count += 1
+        end
+    end
+    return count
+end
+
 local function loadConfigured()
     local activated = 0
     for _, weaponId in ipairs(Policy.Weapons) do
@@ -152,7 +165,8 @@ local function loadConfigured()
                         folder.Parent = root
                         activated += 1
                         Workspace:SetAttribute("IronYardWeaponMeshStatus",
-                            activated == #Policy.Weapons and "READY" or "PARTIAL")
+                            completeCount(root) == #Policy.Weapons and "READY"
+                                or "PARTIAL")
                     end
                 end
             end
