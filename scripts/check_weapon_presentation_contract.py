@@ -225,6 +225,46 @@ assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 
     "Details must use the existing viewmodel renderer"
 )
 
+# Late owner-authorized uploads must activate without a weapon swap.
+# A preset change must switch a currently imported viewmodel to its new LOD,
+# but never during combat, reload, aiming, or before full PBR map replication.
+refresh_policy = get("src/shared/WeaponMeshRefreshPolicy.luau")
+for needle in (
+    "function Policy.shouldRefresh(imported, activeLod, wantedLod, available, status)",
+    "status.scoped == true",
+    "status.sprinting == true",
+    "status.reloading == true",
+    "status.pendingCartridge == true",
+    "status.sinceShot < 2.0",
+    "status.sinceEquip < 0.8",
+):
+    assert needle in refresh_policy, f"Non-disruptive hot swap policy missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponMeshRefreshPolicy")',
+    'function WeaponVisuals:_getImportedWeapon(weaponId, lod)',
+    "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)",
+    "self.nextWeaponMeshCheck = now + 1.2",
+    "WeaponMeshRefresh.shouldRefresh(self.currentWeaponImported,",
+    "self.activeMeshLod = lod",
+    'model:SetAttribute("IronYardWeaponLOD", lod)',
+    'self.model:SetAttribute("IronYardWeaponUpgrade", "DEFERRED_IDLE")',
+    "self:_refreshImportedWeaponIfSafe(clock)",
+):
+    assert needle in visuals, f"Deferred PBR LOD refresh not wired: {needle}"
+assert visuals.count("self:_refreshImportedWeaponIfSafe(clock)") == 1, (
+    "Mesh polling must share the original client RenderStepped hook"
+)
+getter = visuals.split("function WeaponVisuals:_getImportedWeapon(weaponId, lod)", 1)[1]
+getter = getter.split("function WeaponVisuals:_createImportedWeapon", 1)[0]
+assert "return false" not in getter, (
+    "An incomplete imported template must be nil, not a truthy refresh status"
+)
+assert getter.count("return nil") >= 5
+assert visuals.index("local origin = self:_getImportedWeapon(self.currentWeaponId, lod)") < (
+    visuals.index("self:setWeapon(weaponId)", visuals.index(
+        "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)"))
+), "Verify complete source before resetting an equipped weapon"
+
 # Five authored PBR meshes, retaining original animation and FX on import.
 for weapon in ("AssaultRifle", "Shotgun", "Sniper"):
     assert f'if not self:_createImportedWeapon(model, "{weapon}") then' in visuals
