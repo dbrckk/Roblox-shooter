@@ -130,10 +130,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile scripts/publish_public_roblox.py scripts/stamp_build.py scripts/test_public_release.py scripts/test_publish_public_roblox.py
+          python3 -m py_compile scripts/publish_public_roblox.py scripts/resolve_public_target.py scripts/test_resolve_public_target.py scripts/stamp_build.py scripts/test_public_release.py scripts/test_publish_public_roblox.py
           python3 scripts/publish_public_roblox.py --help > /dev/null
           python3 scripts/test_public_release.py
           python3 scripts/test_publish_public_roblox.py
+          python3 scripts/test_resolve_public_target.py
           python3 scripts/stamp_build.py --sha "$GITHUB_SHA"
 
       - name: Check PUBLIC Roblox release prerequisites without exposing secrets
