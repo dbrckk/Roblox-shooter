@@ -28,6 +28,35 @@ def main():
     network = source("src/shared/PrecisionNet.luau")
     server = source("src/server/WeaponService.luau")
     shot_input = source("src/shared/ShotInputPolicy.luau")
+    # The first-person client predicts ammo immediately before FireServer;
+    # on a server-rejected but otherwise valid shot, authoritative ammo MUST
+    # be resent. Without this the HUD can remain at zero until respawn.
+    assert 'ammo.loaded = math.max(0, ammo.loaded - 1)' in client
+    assert 'remotes.FireWeapon:FireServer({' in client
+    assert client.index('ammo.loaded = math.max(0, ammo.loaded - 1)') < (
+        client.index('remotes.FireWeapon:FireServer({')
+    )
+    assert 'function WeaponService.start()' in server
+    rejection = server.split(
+        "local function rejectFireWithAmmo(player, weaponId)", 1
+    )[1].split("local function acceptedAimReady(", 1)[0]
+    assert "sendAmmo(player, weaponId)\\n    return false" in rejection
+    assert rejection.count("return rejectFireWithAmmo(player, weaponId)") == 4
+    assert rejection.index("return rejectFireWithAmmo(player, weaponId)") < (
+        rejection.index("state.magazines[weaponId] = loaded - 1")
+    ), "Rejected cooldown / equip / reload shots must not consume server ammo"
+    blocked_reload = server.split("local function reloadWeapon(player, weaponId)", 1)[1]
+    blocked_reload = blocked_reload.split("local function rejectFireWithAmmo", 1)[0]
+    assert 'RemoteGuard.allow(player, "ReloadWeapon")' in blocked_reload
+    assert 'if loaded >= config.magazineSize or (state.reloadUntil[weaponId] or 0) > os.clock() then' in blocked_reload
+    assert blocked_reload.index('sendAmmo(player, weaponId)\\n        return') > (
+        blocked_reload.index("if loaded >= config.magazineSize")
+    ), "Full / already-active reloads must correct a stale predicted client HUD"
+    assert 'if not RemoteGuard.allow(player, "FireWeapon") then return end' in server
+    assert server.index('if not RemoteGuard.allow(player, "FireWeapon") then return end') < (
+        server.index("if not canFire(player, weaponId, config) then")
+    ), "Only rate-admitted valid shots may trigger ammo resynchronization"
+
     spread_policy = source("src/shared/WeaponSpreadPolicy.luau")
     aim_policy = source("src/shared/AimStancePolicy.luau")
     movement_service = source("src/server/MovementService.luau")
