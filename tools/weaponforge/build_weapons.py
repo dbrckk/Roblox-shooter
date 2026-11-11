@@ -161,7 +161,7 @@ def build(weapon,lod,out,textures):
     # deterministic after Roblox Model asset wrapping / Studio glTF import.
     # Model:GetPivot() is a bounding box pivot, NOT the camera-space origin.
     # Its mesh is a non-rendered reference; neither server nor client clones it.
-    box("IRONYARD_WeaponOrigin", (0, 0, 0), (.04, .04, .04),
+    box("IRONYARD_WeaponOrigin", (0, 0, 0), (.10, .10, .10),
         mats["carbon"], 0)
     bpy.ops.object.select_all(action="DESELECT")
     parts=[x for x in bpy.context.scene.objects if x.type=="MESH"]
