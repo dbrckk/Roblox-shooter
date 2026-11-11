@@ -127,3 +127,34 @@ If the Open Cloud key is missing, no remote Roblox request occurs. The
 previously published game stays unchanged and the generated source pack
 remains available from
 [the five-weapon release](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-weapon-meshes-c6ac0d03969f).
+
+
+## Compatible glTF material primitives and live LOD updates
+
+Roblox's official glTF importer can create a nested `Model` per authored mesh
+and **one `MeshPart` per glTF material primitive**. Our authored weapons use
+four PBR material roles, so the original one-part-per-component assumption
+was incorrect. The runtime and Studio installer now share
+`WeaponMeshLayout.luau`: they identify only the expected authored component
+names (including Roblox's `_Node` suffix), validate every material primitive,
+reject duplicate component roots or oversized groups, and sanitize each part.
+The client keeps all material pieces under the *same* mechanical animation
+track (slide, magazine, pump, or bolt). No scripts are imported.
+
+Roblox documents this hierarchy:
+https://create.roblox.com/docs/studio/importer#glTF-import-hierarchy
+
+A server can finish importing an approved model **after** a player equips an
+arm. The client now checks for a completed mesh kit at most once every 1.2 s
+using its existing render callback. If valid, it upgrades from procedural to
+PBR only when the player has not recently fired, aimed, sprinted, or reloaded;
+pending cartridge ejection and blending also prevent interruption. Switching
+between ECO/BALANCED/QUALITY similarly selects LOD1/LOD0 at the next safe idle
+moment without forcing the player to re-equip their gun.
+
+The imported viewmodel sets `IronYardWeaponLOD` to `LOD0` or `LOD1`
+and may set `IronYardWeaponUpgrade=DEFERRED_IDLE` after a safe runtime swap.
+These are local cosmetic diagnostic attributes, not user-facing HUD labels.
+Client transforms, pivot alignment, PBR texture fidelity, visibility and
+Android frame rates still require Roblox Studio + device QA. A green Rojo
+build cannot confirm any live asset import or visual quality.
