@@ -225,6 +225,7 @@ assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 
     "Details must use the existing viewmodel renderer"
 )
 
+layout = get("src/shared/WeaponMeshLayout.luau")
 # PBR weapon origin MUST follow the authored Blender coordinate frame.
 # Roblox's outer Model:GetPivot() can be recentered to the imported bounds.
 weapon_forge = get("tools/weaponforge/build_weapons.py")
