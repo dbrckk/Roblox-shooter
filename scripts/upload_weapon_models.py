@@ -76,8 +76,13 @@ def sources(asset_root):
     return entries
 
 
-def confirmed_asset(response, owner):
-    asset_id = validated_identity(response, owner)
+def model_display_name(weapon, lod):
+    require(weapon in WEAPONS and lod in LODS, "Unknown authored weapon / LOD")
+    return f"IRON YARD {weapon} {lod} Original PBR"
+
+
+def confirmed_asset(response, owner, expected_name=None):
+    asset_id = validated_identity(response, owner, expected_name)
     state = (response.get("moderationResult") or {}).get("moderationState")
     require(state in ("MODERATION_STATE_APPROVED", "Approved"),
             "Asset moderation is not explicitly approved")
@@ -94,8 +99,8 @@ def safe_operation_path(path):
     return path
 
 
-def validated_identity(response, owner):
-    """Read only a plausible Model asset owned by the confirmed creator."""
+def validated_identity(response, owner, expected_name=None):
+    """Verify asset identity, owner, type and optionally exact authored variant."""
     require(isinstance(response, dict), "Asset operation missing response")
     asset_id = response.get("assetId")
     try:
@@ -108,10 +113,13 @@ def validated_identity(response, owner):
     creator = (response.get("creationContext") or {}).get("creator") or {}
     require(str(creator.get("userId")) == str(owner),
             "Asset creator is not the configured experience owner")
+    if expected_name is not None:
+        require(response.get("displayName") == expected_name,
+                "Verified Roblox Model name differs from the authored weapon/LOD")
     return asset_id
 
 
-def poll_operation(path, owner, key, initial=None):
+def poll_operation(path, owner, key, initial=None, *, expected_name=None):
     """Resume a previously created operation. Never POST a second time.
 
     Roblox can finish file processing before moderation is approved. Treat
@@ -128,7 +136,7 @@ def poll_operation(path, owner, key, initial=None):
             if operation.get("error"):
                 raise RuntimeError("Roblox rejected the existing asset operation")
             response = operation.get("response")
-            asset_id = validated_identity(response, owner)
+            asset_id = validated_identity(response, owner, expected_name)
             state = (response.get("moderationResult") or {}).get("moderationState")
             if state in ("MODERATION_STATE_APPROVED", "Approved"):
                 return asset_id
@@ -138,7 +146,7 @@ def poll_operation(path, owner, key, initial=None):
             # necessarily finished. Query by already-verified owner asset ID.
             refreshed = request_json(API + "/assets/" + str(asset_id), key)
             try:
-                return confirmed_asset(refreshed, owner)
+                return confirmed_asset(refreshed, owner, expected_name)
             except ValueError as exc:
                 if str(exc) != "Asset moderation is not explicitly approved":
                     raise
@@ -154,12 +162,14 @@ def poll_operation(path, owner, key, initial=None):
 def upload_model(owner, weapon, lod, raw, key, *, operation_path=None,
                  on_started=None):
     """POST only for an unknown model; persist the path before first poll."""
+    expected_name = model_display_name(weapon, lod)
     if operation_path is not None:
-        return poll_operation(operation_path, owner, key)
+        return poll_operation(operation_path, owner, key,
+                              expected_name=expected_name)
     boundary = "IY-" + uuid.uuid4().hex
     metadata = json.dumps({
         "assetType": "Model",
-        "displayName": f"IRON YARD {weapon} {lod} Original PBR",
+        "displayName": expected_name,
         "description": "Original Blender-authored first-person 3D model with two LOD variants.",
         "creationContext": {"creator": {"userId": str(owner)}},
     }, separators=(",", ":")).encode("utf-8")
@@ -177,13 +187,16 @@ def upload_model(owner, weapon, lod, raw, key, *, operation_path=None,
     path = safe_operation_path(operation.get("path"))
     if on_started is not None:
         on_started(path)
-    return poll_operation(path, owner, key, initial=operation)
+    return poll_operation(path, owner, key, initial=operation,
+                          expected_name=expected_name)
 
 
-def verify_existing(asset_id, owner, key):
+def verify_existing(asset_id, owner, key, weapon, lod):
     require(isinstance(asset_id, int) and asset_id > 0, "Bad saved asset ID")
     response = request_json(API + "/assets/" + str(asset_id), key)
-    return confirmed_asset(response, owner) == asset_id
+    require(confirmed_asset(response, owner, model_display_name(weapon, lod))
+            == asset_id, "Roblox returned a different asset ID")
+    return True
 
 
 def matching_committed_ids(module_text, source_commit):
@@ -280,13 +293,23 @@ def main(argv=None):
             cached = previous.get(f"{weapon}/{lod}", {})
             committed = already.get((weapon, lod))
             if committed is not None and committed > 0:
-                if verify_existing(committed, args.owner_user_id, key):
-                    row["assetId"] = committed
+                # A committed Model ID that fails owner, moderation, name or
+                # identity checks is NOT permission to silently create a new
+                # asset. Stop the release before wasting another Open Cloud
+                # upload (or replacing the live registry with the wrong kit).
+                require(verify_existing(committed, args.owner_user_id, key,
+                                        weapon, lod),
+                        "Committed Roblox asset could not be reverified")
+                row["assetId"] = committed
             elif cached.get("sha256") == row["sha256"]:
                 if isinstance(cached.get("assetId"), int):
-                    # A checkpoint alone cannot authorize arbitrary model IDs.
-                    if verify_existing(cached["assetId"], args.owner_user_id, key):
-                        row["assetId"] = cached["assetId"]
+                    # Checkpoints can contain arbitrary IDs. Verify identity
+                    # and the precise weapon/LOD, never just the creator.
+                    require(verify_existing(cached["assetId"],
+                                            args.owner_user_id, key,
+                                            weapon, lod),
+                            "Checkpoint asset could not be reverified")
+                    row["assetId"] = cached["assetId"]
                 elif "operationPath" in cached:
                     # Never repeat an upload while its operation is pending.
                     row["operationPath"] = safe_operation_path(
