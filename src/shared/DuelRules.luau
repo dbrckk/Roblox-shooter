@@ -57,21 +57,36 @@ function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)
     if math.abs(a - b) < 0.00001 then return "DRAW" end
     return a > b and "A" or "B"
 end
+-- A duel normally finishes at five wins. A hard bout cap prevents
+-- unbounded series of draws, but at that cap a real points leader must
+-- win rather than be incorrectly declared tied. Return the terminal reason
+-- as a sixth value so XP eligibility cannot drift from the scoring rule.
 function Duel.advance(scoreA, scoreB, bouts, result)
     if not finite(scoreA) or not finite(scoreB) or not finite(bouts)
         or scoreA % 1 ~= 0 or scoreB % 1 ~= 0 or bouts % 1 ~= 0
-        or scoreA > Duel.WIN_LIMIT or scoreB > Duel.WIN_LIMIT
-        or bouts > Duel.MAX_BOUTS
+        or scoreA >= Duel.WIN_LIMIT or scoreB >= Duel.WIN_LIMIT
+        or bouts >= Duel.MAX_BOUTS
+        or scoreA + scoreB > bouts
         or (result ~= "A" and result ~= "B" and result ~= "DRAW")
         then return nil end
+
     if result == "A" then scoreA += 1
     elseif result == "B" then scoreB += 1 end
     bouts += 1
-    local completed = scoreA >= Duel.WIN_LIMIT or scoreB >= Duel.WIN_LIMIT
-        or bouts >= Duel.MAX_BOUTS
-    local winner = scoreA >= Duel.WIN_LIMIT and "A"
-        or scoreB >= Duel.WIN_LIMIT and "B" or "DRAW"
-    return scoreA, scoreB, bouts, completed, completed and winner or nil
+
+    local reachedWinLimit = scoreA >= Duel.WIN_LIMIT
+        or scoreB >= Duel.WIN_LIMIT
+    local reachedBoutLimit = bouts >= Duel.MAX_BOUTS
+    local completed = reachedWinLimit or reachedBoutLimit
+    local winner = nil
+    local reason = nil
+    if completed then
+        if scoreA > scoreB then winner = "A"
+        elseif scoreB > scoreA then winner = "B"
+        else winner = "DRAW" end
+        reason = reachedWinLimit and "SCORE_LIMIT" or "BOUT_LIMIT"
+    end
+    return scoreA, scoreB, bouts, completed, winner, reason
 end
 -- A missing avatar or fully obstructed duel spawn cannot hang a public
 -- server forever in the between-bout phase. Server clock only.
