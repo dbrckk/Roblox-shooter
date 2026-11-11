@@ -13,6 +13,7 @@ local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget"))
 local remoteFxState = RemoteCombatFxBudget.new()
 local TouchLayout = require(shared:WaitForChild("TouchLayout"))
+local GamepadCombatPolicy = require(shared:WaitForChild("GamepadCombatPolicy"))
 local FirstPersonBodyCache = require(shared:WaitForChild("FirstPersonBodyCache"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
@@ -31,6 +32,7 @@ local ammoByWeapon = {}
 local touchWeaponButtons = {}
 local updateTouchVisibility = nil
 local cancelAimForMobility = nil
+local clearHeldCombatInput = nil
 local lastReloadRequestAt = -math.huge
 local lastLocalSlideAt = -math.huge
 local lastLocalSlideJumpAt = -math.huge
@@ -113,6 +115,7 @@ hud = HudController.new(player, gui, WeaponConfig, {
 		applyMouseSensitivity()
 	end,
 	onSettingsOpenChanged = function(isOpen)
+        if isOpen and clearHeldCombatInput then clearHeldCombatInput() end
 		applyMenuMouseState(isOpen)
         if updateTouchVisibility then updateTouchVisibility() end
 	end,
@@ -185,6 +188,17 @@ local function getInputMoveDirection()
 	end
 
 	if direction.Magnitude < 0.05 then
+        -- Roblox's native thumbstick and touch joystick already drive
+        -- Humanoid.MoveDirection. Use that server-observable movement for
+        -- boost, airborne steering and wallruns without a second joystick
+        -- implementation or any client-controlled speed multiplier.
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local native = humanoid and humanoid.MoveDirection
+        if native and native.Magnitude >= 0.15 then
+            local planar = Vector3.new(native.X, 0, native.Z)
+            if planar.Magnitude >= 0.15 then return planar.Unit end
+        end
 		return nil
 	end
 
@@ -1033,36 +1047,117 @@ local function updateCameraFeel(deltaTime)
 	camera.FieldOfView += (targetFov - camera.FieldOfView) * math.clamp(deltaTime * 8, 0, 1)
 end
 
--- Desktop automatic weapons fire while the button is held, but semi-automatic
--- guns still need one distinct press. The server enforces all shot cooldowns.
+-- Shared mouse/gamepad fire owner. One automatic-fire task at most:
+-- pressing RT and the mouse together cannot spawn duplicate firing loops.
+-- Semi-auto weapons still require a fresh button press. Server cadence and
+-- authoritative ammo remain the final decision for every request.
 local mouseFireHeld = false
-local function beginMouseFire()
-    if mouseFireHeld then return end
-    mouseFireHeld = true
-    fireWeapon(currentWeaponId)
+local gamepadFireHeld = false
+local gamepadAimHeld = false
+local gamepadSprintHeld = false
+local gamepadJumpHeld = false
+local primaryFireTaskActive = false
+
+local function beginHeldFire(gamepad)
+    local previouslyHeld = mouseFireHeld or gamepadFireHeld
+    if gamepad then
+        if gamepadFireHeld then return end
+        gamepadFireHeld = true
+    else
+        if mouseFireHeld then return end
+        mouseFireHeld = true
+    end
+    if not previouslyHeld then fireWeapon(currentWeaponId) end
+    if primaryFireTaskActive then return end
+    primaryFireTaskActive = true
     task.spawn(function()
-        while mouseFireHeld do
+        while mouseFireHeld or gamepadFireHeld do
             local weapon = WeaponConfig.get(currentWeaponId)
             if not weapon or not weapon.automatic then break end
             task.wait(math.max(0.04, weapon.fireCooldown * 0.40))
-            if mouseFireHeld and not hud:isSettingsOpen() then
+            if (mouseFireHeld or gamepadFireHeld) and not hud:isSettingsOpen() then
                 fireWeapon(currentWeaponId)
             end
         end
+        primaryFireTaskActive = false
     end)
 end
 
-UserInputService.WindowFocusReleased:Connect(function()
+local function releaseControllerInputs()
+    gamepadFireHeld = false
+    gamepadJumpHeld = false
+    if gamepadAimHeld then
+        gamepadAimHeld = false
+        setScoped(false)
+    end
+    if gamepadSprintHeld then
+        gamepadSprintHeld = false
+        setSprinting(false)
+    end
+    stopBoosting()
+end
+
+clearHeldCombatInput = function()
     mouseFireHeld = false
-end)
+    releaseControllerInputs()
+    setScoped(false)
+    setSprinting(false)
+end
+
+UserInputService.WindowFocusReleased:Connect(clearHeldCombatInput)
+UserInputService.GamepadDisconnected:Connect(releaseControllerInputs)
+
+local function onGamepadPressed(input, gameProcessed)
+    if not GamepadCombatPolicy.isGamepad(input.UserInputType.Name) then
+        return false
+    end
+    local action = GamepadCombatPolicy.action(input.KeyCode.Name)
+    if action == "JUMP" then
+        -- Core Roblox jump may mark ButtonA as processed; keep its held
+        -- state for aerial boost but never override native jumping.
+        gamepadJumpHeld = not hud:isSettingsOpen()
+    end
+    if gameProcessed then return true end
+    if action == "SETTINGS" then
+        hud:toggleSettings()
+        return true
+    end
+    if hud:isSettingsOpen() then return true end
+    if action == "FIRE" then
+        beginHeldFire(true)
+    elseif action == "AIM" then
+        gamepadAimHeld = true
+        setScoped(true)
+    elseif action == "RELOAD" then
+        requestReload()
+    elseif action == "NEXT_WEAPON" or action == "PREVIOUS_WEAPON" then
+        local nextId = GamepadCombatPolicy.cycle(WeaponConfig.Order,
+            currentWeaponId, action == "NEXT_WEAPON" and 1 or -1)
+        if nextId then equipWeapon(nextId) end
+    elseif action == "RIFLE" then
+        equipWeapon("AssaultRifle")
+    elseif action == "KNIFE" then
+        equipWeapon("Knife")
+    elseif action == "THROW_KNIFE" then
+        quickThrowKnife()
+    elseif action == "SLIDE" then
+        requestSlide()
+    elseif action == "SPRINT" then
+        gamepadSprintHeld = true
+        setSprinting(true)
+    elseif action == "JUMP" then
+        requestJumpMovement()
+    end
+    return true
+end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if onGamepadPressed(input, gameProcessed) then return end
 	if gameProcessed then
 		return
 	end
 
 	if input.KeyCode == Enum.KeyCode.M then
-        mouseFireHeld = false
 		hud:toggleSettings()
 		return
 	end
@@ -1072,7 +1167,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 	end
 
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        beginMouseFire()
+        beginHeldFire(false)
 	elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 		setScoped(true)
 	elseif input.KeyCode == Enum.KeyCode.Space then
@@ -1099,6 +1194,22 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 UserInputService.InputEnded:Connect(function(input)
+    if GamepadCombatPolicy.isGamepad(input.UserInputType.Name) then
+        local action = GamepadCombatPolicy.action(input.KeyCode.Name)
+        if action == "FIRE" then
+            gamepadFireHeld = false
+        elseif action == "AIM" then
+            gamepadAimHeld = false
+            setScoped(false)
+        elseif action == "SPRINT" then
+            gamepadSprintHeld = false
+            setSprinting(false)
+        elseif action == "JUMP" then
+            gamepadJumpHeld = false
+            stopBoosting()
+        end
+        return
+    end
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
         mouseFireHeld = false
     elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
@@ -1276,7 +1387,12 @@ end)
 
 -- A new round resets the authoritative aim timer. Reannounce held aim once.
 workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
-    if scoped and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
+    local newPhase = workspace:GetAttribute("NeonMatchPhase")
+    if newPhase ~= "LIVE" and newPhase ~= "COUNTDOWN" then
+        -- Releasing an old trigger during results or duel breaks must not
+        -- silently fire shots as soon as the next match starts.
+        clearHeldCombatInput()
+    elseif scoped and newPhase == "LIVE" then
         remotes.SetAiming:FireServer(true)
     end
 end)
@@ -1310,7 +1426,8 @@ RunService.RenderStepped:Connect(function(deltaTime)
 			localBoostFuel + MovementConfig.boostFuelRegenPerSecond * deltaTime
 		)
 		hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)
-	elseif UserInputService:IsKeyDown(Enum.KeyCode.Space) and not localWallRunning then
+	elseif (UserInputService:IsKeyDown(Enum.KeyCode.Space) or gamepadJumpHeld)
+        and not localWallRunning and not hud:isSettingsOpen() then
 		startBoosting()
 	end
 end)
@@ -1407,10 +1524,18 @@ if UserInputService.TouchEnabled then
 
     updateTouchVisibility = function()
         local phase = workspace:GetAttribute("NeonMatchPhase")
-        local enabled = not hud:isSettingsOpen()
+        local playable = not hud:isSettingsOpen()
             and (phase == "LIVE" or phase == "COUNTDOWN")
+        -- An Android Bluetooth pad should not be covered by the virtual
+        -- touchscreen. Return buttons immediately after the user touches
+        -- the display again. Hiding touch UI must not cancel pad ADS.
+        local controllerActive = GamepadCombatPolicy.isGamepad(
+            UserInputService:GetLastInputType().Name)
+        local enabled = playable and not controllerActive
         if not enabled then
             heldFireInput = nil -- stops any running automatic-fire loop
+        end
+        if not playable then
             if scoped then setScoped(false) end
             if sprinting then setSprinting(false) end
         end
@@ -1418,6 +1543,7 @@ if UserInputService.TouchEnabled then
     end
 
     workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(updateTouchVisibility)
+    UserInputService.LastInputTypeChanged:Connect(updateTouchVisibility)
     playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(function()
         -- The briefing is non-blocking, but controls remain clearly visible
         -- in COUNTDOWN and are fully hidden in RESULTS.

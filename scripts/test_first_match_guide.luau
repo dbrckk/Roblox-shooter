@@ -12,4 +12,12 @@ assert(Guide.hint(false, 0, 0):find("WASD", 1, true))
 assert(Guide.hint(true, 1, 0):find("COVER", 1, true))
 assert(Guide.hint(false, 1, 0):find("RELOAD", 1, true))
 assert(Guide.hint(true, 1, 1) == nil, "Experienced player needs no follow-up")
+assert(Guide.hint(false, 0, 0, true):find("RT FIRE", 1, true))
+assert(Guide.hint(true, 0, 0, true):find("LT AIM", 1, true),
+    "Bluetooth gamepad must override mobile touch copy")
+assert(Guide.hint(false, 1, 0, true):find("RELOAD [X]", 1, true))
+assert(Guide.hint(true, 1, 0, true):find("SWITCH [Y]", 1, true))
+assert(Guide.hint(true, 1, 1, true) == nil)
+assert(Guide.hint(true, 0, 0, false):find("RIGHT SIDE", 1, true))
+
 print("IRON YARD first-match objective and contextual mobile/desktop prompts: OK")
