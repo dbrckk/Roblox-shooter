@@ -6,6 +6,8 @@ on:
       - ".github/workflows/weaponforge.yml"
       - "tools/weaponforge/**"
       - "tools/assetforge/generate_maps.py"
+      - "scripts/upload_weapon_models.py"
+      - "scripts/test_weapon_upload_contract.py"
   workflow_dispatch:
 
 permissions:
