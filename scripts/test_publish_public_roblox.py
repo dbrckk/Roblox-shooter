@@ -59,6 +59,8 @@ class PublicReleaseTests(unittest.TestCase):
         P.verify_universe(universe(), PLACE_ID)
         P.verify_universe(universe(user={"path": OWNER}), PLACE_ID)
         P.verify_universe(universe(displayName="Iron Yard"), PLACE_ID)
+        P.verify_universe(universe(
+            displayName="IRON YARD | Competitive Roblox FPS"), PLACE_ID)
         P.verify_universe(universe(visibility="public"), PLACE_ID)
         with mock.patch.object(P, "request", side_effect=[universe(), place()]) as calls:
             self.assertEqual(
@@ -78,7 +80,7 @@ class PublicReleaseTests(unittest.TestCase):
                      "IRONYARD-DEV", "IRON YARD 2", "Other Game", "", None):
             with self.subTest(name=name):
                 with self.assertRaisesRegex(P.PublishError,
-                                            "named exactly IRON YARD"):
+                                            "not an approved IRON YARD experience"):
                     P.verify_universe(universe(displayName=name), PLACE_ID)
 
     def test_wrong_owner_visibility_and_root_rejected(self):
