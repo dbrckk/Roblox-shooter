@@ -11,6 +11,7 @@ local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
 local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
 local WeaponMeshRefresh = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshRefreshPolicy"))
+local WeaponMeshSwapState = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshSwapState"))
 local WeaponMeshLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshLayout"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
@@ -682,9 +683,17 @@ function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
             sinceEquip = now - self.equipStartedAt,
         })
     if safe then
+        -- This is not an actual equip. Preserve the currently interpolated
+        -- camera, hands, aim, recoil and reload pose while rebuilding the
+        -- visuals from newly replicated or higher/lower LOD meshes.
+        -- The real weapon, ammo and all server-owned combat state stay put.
+        local previousPose = WeaponMeshSwapState.capture(self)
         local weaponId = self.currentWeaponId
         self:setWeapon(weaponId)
-        self.model:SetAttribute("IronYardWeaponUpgrade", "DEFERRED_IDLE")
+        WeaponMeshSwapState.restore(self, previousPose)
+        if self.currentWeaponImported then
+            self.model:SetAttribute("IronYardWeaponUpgrade", "DEFERRED_IDLE")
+        end
     end
 end
 
