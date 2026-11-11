@@ -1,0 +1,15 @@
+IRON YARD — authorized upload request, 2026-11-11
+
+Authorized by the owner to update the public Roblox-shooter game and
+upload the original Blender-authored PBR weapon models.
+
+This file is an explicit, one-time GitHub Actions dispatch trigger.
+Changing it on main requests the already existing, owner-verified workflow:
+.github/workflows/upload-weapon-opencloud.yml
+
+Creator user ID: 9774173158
+Source: latest successful forge run validated against current source
+Models: 5 authored weapons x 2 levels of detail (10 owner-owned assets)
+Roblox public place publication: separate workflow and separate verification.
+
+No Open Cloud key or Roblox destination IDs are stored in this file.
