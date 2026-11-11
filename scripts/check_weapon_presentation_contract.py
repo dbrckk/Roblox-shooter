@@ -648,6 +648,9 @@ for needle in (
     "smooth(0.27, 0.74, p)",
     'preset == "ECO"',
     "return 0, 0, 0",
+    'weaponId == "Pistol"',
+    "function Plan.pistolVisibility(progress, active)",
+    "function Plan.boltGrip(weaponId, actionTravel, reloading, scoped)",
 ):
     assert needle in reload_hand, f"Reload hand choreography missing: {needle}"
 for needle in (
@@ -659,6 +662,10 @@ for needle in (
     "self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha",
     "local workingHand = CFrame.new(self.reloadHandX, self.reloadHandY, self.reloadHandZ)",
     "localOffset = localOffset * workingHand * supportMotion",
+    "WeaponReloadHandPlan.pistolVisibility(progress, self.reloadActive)",
+    "WeaponReloadHandPlan.boltGrip(",
+    "localOffset = localOffset * boltHand",
+    "1 - pistolHandVisibility",
     "and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)",
 ):
     assert needle in visuals, f"Client support hand motion not wired: {needle}"
@@ -668,6 +675,10 @@ for needle in (
     "WeaponMeshSwapState.restore(self, previousPose)",
 ):
     assert needle in swap_state or needle in visuals, f"Reload pose not safely preserved: {needle}"
+# The second pistol hand may never leak into the ordinary hip-fire stance.
+assert 'target = 1' in visuals and '1 - pistolHandVisibility' in visuals
+assert visuals.count('CFrame.new(-0.27, -0.54, 0.08)') == 2, (
+    "PBR and procedural pistol must share the same support-hand origin")
 assert "Instance.new" not in reload_hand and "FireServer" not in reload_hand
 assert "targetHumanoid:TakeDamage(damage)" in server
 assert "fireCooldown = 0.115" in config, "Server/weapon cadence not rewritten"

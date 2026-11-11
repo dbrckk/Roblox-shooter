@@ -515,3 +515,11 @@ Auparavant les flashs de tir locaux et les douilles AR/pistolet étaient émis �
 - **Interruption et synchronisation** : la nouvelle pose du bras est amortie par interpolation sur la boucle visuelle déjà existante. Un refus/arrêt serveur fait revenir le bras sans téléportation. Changement d'arme réinitialise le bras; échange tardif entre Part et PBR/LOD sauvegarde les trois composantes d'animation.
 - Aucun changement de cadence, munitions, dégâts, collisions, serveur de tir, input, réseau ou cycle RenderStep. La politique Luau pure n'alloue aucune table ni Instance par image. Tests : trajectoires, bornes, ECO, invalides, interruption et échange LOD.
 - **Contrôle moteur obligatoire :** vérifier le chemin spatial du gant gauche et du chargeur Blender en ADS/hip-fire à 30 et 60 FPS Android, recharge interrompue, interruption par changement d'arme, basculement PBR LOD, visibilité des cartouches ECO/QUALITY. Pas de preuve visuelle moteur à ce stade.
+
+
+## Pistolet et sniper — gestes de recharge et verrou (11 novembre 2026)
+
+- **Pistolet** : une seconde main locale, auparavant absente des deux viewmodels PBR et Part, est désormais créée au même point d'ancrage. Elle reste masquée au repos et devient progressivement visible pendant la recharge confirmée par le serveur. Le fallback procédural suit le chargeur réellement animé ; le pistolet PBR de la version courante conserve son chargeur physiquement solidaire du corps et n'effectue qu'une vérification de prise, sans inventer d'extraction.
+- **Sniper** : pendant le cycle du verrou déclenché par le tir, le gant, l'avant-bras, le bracelet et la manche de la main droite suivent la cinématique mécanique existante. Le geste est absent pendant la recharge ou la visée optique où l'arme est masquée. Aucun second RenderStep, timer ni modification serveur.
+- **Interruption** : la visibilité de la main de pistolet est annulée immédiatement si la recharge est arrêtée par le serveur. Les positions reviennent progressivement à la normale et le changement d'arme réinitialise l'état.
+- **Contrôles ajoutés** : valeurs bornées, trajectoires PBR/procédurales distinctes, main cachée hors recharge, absence de geste sniper sous lunette, validation par Luau et contrats d'intégration. Reste à réaliser un contrôle en jeu (Studio/Android 30/60 FPS) et mesurer le P95/P99.

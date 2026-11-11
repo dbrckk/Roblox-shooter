@@ -313,7 +313,9 @@ function WeaponVisuals:_clearModel()
 end
 
 function WeaponVisuals:_createPistol(model)
-	self:_addArms(model, nil, CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
+	self:_addArms(model,
+        CFrame.new(-0.27, -0.54, 0.08) * CFrame.Angles(math.rad(-8), math.rad(12), 0),
+        CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
 	self:_addPart(model, "Part", "Grip", Vector3.new(0.24, 0.62, 0.24), Color3.fromRGB(24, 27, 34), CFrame.new(0, -0.29, 0.07) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "GripPanelLeft", Vector3.new(0.03, 0.46, 0.18), Color3.fromRGB(50, 57, 70), CFrame.new(-0.135, -0.3, 0.07) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
     -- The sidearm now has a distinct magazine and baseplate that animate
@@ -554,7 +556,8 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
     -- Preserve the original hand positions when a validated imported mesh
     -- replaces a procedural firearm. No imported script/rig is executed.
     if weaponId == "Pistol" then
-        self:_addArms(model, nil,
+        self:_addArms(model,
+            CFrame.new(-0.27, -0.54, 0.08) * CFrame.Angles(math.rad(-8), math.rad(12), 0),
             CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
     elseif weaponId == "Knife" then
         self:_addArms(model, nil, CFrame.new(0.02, -0.32, 0.22)
@@ -749,6 +752,12 @@ function WeaponVisuals:_syncScopeVisibility()
     for _, entry in ipairs(self.parts) do
         local target = ViewmodelRenderPolicy.transparency(
             entry.baseTransparency, hidden)
+        -- Pistol support hand is only visible during a confirmed reload.
+        -- Initially hidden on equip and never leaked by ADS changes.
+        if self.currentWeaponId == "Pistol"
+            and string.sub(entry.part.Name, 1, 4) == "Left" then
+            target = 1
+        end
         if entry.part.Transparency ~= target then
             entry.part.Transparency = target
         end
@@ -956,12 +965,21 @@ function WeaponVisuals:_render(deltaTime)
     local handX, handY, handZ = WeaponReloadHandPlan.sample(
         self.currentWeaponId, progress, self.reloadActive,
         magazineDip, feel.handTravel,
-        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"))
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        self.currentWeaponImported)
     local handAlpha = math.clamp(animationDt * 14, 0, 1)
     self.reloadHandX += (handX - self.reloadHandX) * handAlpha
     self.reloadHandY += (handY - self.reloadHandY) * handAlpha
     self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha
     local workingHand = CFrame.new(self.reloadHandX, self.reloadHandY, self.reloadHandZ)
+    local pistolHandVisibility = self.currentWeaponId == "Pistol"
+        and WeaponReloadHandPlan.pistolVisibility(progress, self.reloadActive) or 0
+    local boltX, boltY, boltZ = WeaponReloadHandPlan.boltGrip(
+        self.currentWeaponId, actionTravel, self.reloadActive, self.scoped)
+    local boltAlpha = boltX / 0.32
+    local boltHand = CFrame.new(boltX, boltY, boltZ)
+        * CFrame.Angles(0, math.rad(15 * boltAlpha),
+            math.rad(-18 * boltAlpha))
     -- Pump and support hand move together on a shot; never pump the fore-end
     -- into the left glove while it is inserting a cartridge.
     local supportMotion = self.currentWeaponId == "Shotgun" and not self.reloadActive
@@ -978,9 +996,21 @@ function WeaponVisuals:_render(deltaTime)
         local localOffset = entry.offset
         local partName = entry.part.Name
         if string.sub(partName, 1, 4) == "Left" then
-            -- All glove, strap and sleeve elements move as ONE support hand;
-            -- otherwise the previous left glove remained behind during reloads.
+            -- One transform for glove, wrist, sleeve, and forearm.
             localOffset = localOffset * workingHand * supportMotion
+            if self.currentWeaponId == "Pistol" then
+                local opacity = math.max(
+                    ViewmodelRenderPolicy.transparency(entry.baseTransparency,
+                        self.lastViewmodelHidden == true),
+                    1 - pistolHandVisibility)
+                if entry.part.Transparency ~= opacity then
+                    entry.part.Transparency = opacity
+                end
+            end
+        elseif string.sub(partName, 1, 5) == "Right"
+            and self.currentWeaponId == "Sniper" then
+            -- The right glove follows the existing bolt action in hip fire.
+            localOffset = localOffset * boltHand
         elseif (partName == "LoadingShellBody" or partName == "LoadingShellBrass")
             and self.currentWeaponId == "Shotgun" then
             if shellX then

@@ -1,0 +1,12 @@
+IRON YARD — explicitly authorized one-shot PUBLIC FPS update (2026-11-11).
+The owner has requested continued production improvements and direct updates
+to the existing PUBLIC IRON YARD game, without private/alpha staging.
+
+Release after exact-main-commit successful Rojo CI:
+- show the pistol support hand ONLY during server-confirmed reload
+- follow physical procedural magazine; preserve the fixed-magazine PBR kit
+- align sniper right-hand gesture to its existing bolt-action shot envelope
+- regression tests for cancellations, ADS, source selection, numeric bounds
+
+No third-party assets, gameplay authority edits, new remotes or secret files.
+Keep owner, destination public visibility and exact-SHA release gates.
