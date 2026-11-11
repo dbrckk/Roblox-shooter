@@ -206,10 +206,11 @@ local function endDuel(reason, winningSide)
     -- Direct original Player references work for negative Studio user IDs.
     local winningPlayer = winningSide == "A" and duel.aPlayer
         or winningSide == "B" and duel.bPlayer or nil
-    -- No XP for a staged disconnect, blocked spawn, or interrupted lobby.
-    -- Genuine first-to-five series keep their ordinary victory reward.
+    -- Neither disconnects nor cancelled spawns award persistent XP.
+    -- Both five-win victories and unique-leader hard-cap finishes are
+    -- legitimate fully played series; a capped DRAW grants no victory.
     if winningPlayer and winningPlayer.Parent == Players
-        and reason == "SCORE_LIMIT" then
+        and (reason == "SCORE_LIMIT" or reason == "BOUT_LIMIT") then
         CombatAwards.recordVictory(winningPlayer)
     end
     transition("RESULTS", RESULTS_SECONDS, snapshot.winner,
@@ -317,7 +318,7 @@ end
 local function finishDuelBout(result)
     if not duel then return end
     DuelCombatState.clear()
-    local a,b,n,complete,winner=DuelRules.advance(
+    local a,b,n,complete,winner,finishReason=DuelRules.advance(
         duel.aWins,duel.bWins,duel.bouts-1,result)
     if not a then return end
     duel.aWins,duel.bWins = a,b
@@ -329,7 +330,7 @@ local function finishDuelBout(result)
     duel.liveCharacterA = nil
     duel.liveCharacterB = nil
     if complete then
-        endDuel("SCORE_LIMIT", winner)
+        endDuel(finishReason, winner)
     else
         duel.waitSince = os.clock()
         transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
