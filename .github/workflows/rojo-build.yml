@@ -98,6 +98,7 @@ jobs:
           ./luau scripts/test_duel_combat_state.luau
           ./luau scripts/test_duel_spawn_plan.luau
           ./luau scripts/test_weapon_cadence.luau
+          ./luau scripts/test_automatic_fire_cadence.luau
           ./luau scripts/test_gamepad_combat_policy.luau
           ./luau scripts/test_weapon_spread_policy.luau
           ./luau scripts/test_aim_stance_policy.luau
