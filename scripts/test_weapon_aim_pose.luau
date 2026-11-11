@@ -29,4 +29,28 @@ for i = -50, 150 do
 end
 assert(select(1, Pose.damping(0/0)) == 1)
 assert(select(2, Pose.damping(math.huge)) == 1)
-print("IRON YARD: iron sight alignment and ADS damping verified")
+-- The real weaponforge rear sights differ from the procedural Part sights.
+-- Camera-space ADS must center the authored optic independently of LOD.
+local importedSights = {
+    AssaultRifle = {0, 0.36, 0.40, 1.28},
+    Pistol = {0, 0.35, 0.30, 1.00},
+    Shotgun = {0, 0.33, 0.31, 1.34},
+}
+for id, expected in pairs(importedSights) do
+    local pbr = Pose.get(id, true)
+    local fallback = Pose.get(id, false)
+    assert(pbr and fallback and pbr ~= fallback,
+        "PBR and primitive weapons require distinct sight alignment")
+    assert(pbr.sightX == expected[1] and pbr.sightY == expected[2]
+        and pbr.sightZ == expected[3] and pbr.eyeRelief == expected[4])
+    assert(math.abs(pbr.sightX + pbr.x) < 1e-7)
+    assert(math.abs(pbr.sightY + pbr.y) < 1e-7)
+    assert(math.abs(pbr.sightZ + pbr.z + pbr.eyeRelief) < 1e-7)
+    assert(Pose.get(id) == fallback,
+        "Old fallback ADS must remain fully compatible")
+    assert(Pose.get(id, "true") == fallback,
+        "Only a validated true imported flag selects the new alignment")
+end
+assert(Pose.get("Sniper", true) == nil, "Sniper uses optical scope")
+assert(Pose.get("Knife", true) == nil, "Knife has no ADS profile")
+print("IRON YARD: fallback/PBR sight alignment and ADS damping verified")
