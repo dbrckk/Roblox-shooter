@@ -124,6 +124,14 @@ end
 local function loadConfigured()
     local activated = 0
     for _, weaponId in ipairs(Policy.Weapons) do
+        -- Never re-download a manually installed asset pair. Besides
+        -- preserving the owner's kit, this avoids ten wasted asset calls
+        -- on populated Studio servers.
+        local current = ReplicatedStorage:FindFirstChild(ROOT_NAME)
+        if current and current:IsA("Folder")
+            and current:FindFirstChild(weaponId) then
+            continue
+        end
         local ids = Policy.pair(Registry, weaponId)
         if ids then
             local folder = loadPair(weaponId, ids)
