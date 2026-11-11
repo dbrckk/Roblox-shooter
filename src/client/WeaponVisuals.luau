@@ -493,30 +493,30 @@ end
 function WeaponVisuals:_getImportedWeapon(weaponId, lod)
     local templates = ReplicatedStorage:FindFirstChild("IronYardWeaponTemplates")
     local category = templates and templates:FindFirstChild(weaponId)
-    if not category then return false end
+    if not category then return nil end
     local template = category:FindFirstChild(lod)
     if not template or not template:IsA("Model")
         or template:GetAttribute("IronYardStudioApproved") ~= true then
-        return false
+        return nil
     end
     local origin = template:FindFirstChild("WeaponOrigin")
-    if not origin or not origin:IsA("BasePart") then return false end
+    if not origin or not origin:IsA("BasePart") then return nil end
     local required = WeaponMeshPolicy.Required[weaponId]
-    if not required then return false end
+    if not required then return nil end
     -- Validate every source before cloning the first piece.
     local selected = {}
     for _, name in ipairs(required) do
         local part = template:FindFirstChild(name)
         if not part or not part:IsA("MeshPart") or part.MeshId == ""
             or part.Size.Magnitude < 0.03 or part.Size.Magnitude > 10 then
-            return false
+            return nil
         end
         local appearance = part:FindFirstChildOfClass("SurfaceAppearance")
         if not appearance or not WeaponMeshPolicy.mapsReady({
             ColorMap=appearance.ColorMap, NormalMap=appearance.NormalMap,
             RoughnessMap=appearance.RoughnessMap,
             MetalnessMap=appearance.MetalnessMap,
-        }) then return false end
+        }) then return nil end
         table.insert(selected, part)
     end
     return origin, selected
