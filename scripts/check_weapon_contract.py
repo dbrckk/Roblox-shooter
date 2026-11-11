@@ -910,7 +910,9 @@ def main():
             and "Debris:AddItem(" not in confirmed
             and "TweenService:Create(" not in confirmed,
             "Confirmed hits must not create or schedule transient Instances")
-    has(viewmodel, "self:drawMuzzleFlash(entry.part.Position + direction * 0.25, nil, direction, true)",
+    has(viewmodel, "local advance = WeaponPbrFxSockets.muzzleAdvance(self.currentWeaponImported)",
+        "Muzzle source must select its appropriate physical flash offset")
+    has(viewmodel, "self:drawMuzzleFlash(entry.part.Position + direction * advance, nil, direction, true)",
         "Own muzzle flash must keep priority over remote debris")
     for key in ("CombatVfxProfile.hitPriority(headshot == true, killed == true)",
                 "CombatVfxProfile.shouldDisplayHit(now,"):

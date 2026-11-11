@@ -20,6 +20,8 @@ assert(Ejection.plan("Shotgun", "BALANCED", true, 1).delay > 0)
 assert(Ejection.plan("Shotgun", "BALANCED", true, 1).anchor == "ShotgunEjectionPort",
     "Spent 12-gauge hull must exit the dedicated receiver port, not its center")
 assert(Ejection.plan("Sniper", "QUALITY", true, 1).delay > 0)
+assert(Ejection.plan("Sniper", "QUALITY", true, 1).anchor == "SniperEjectionPort",
+    "Sniper casing must leave the breech, never the GLB Bolt model pivot")
 assert(Ejection.plan("Pistol", "BALANCED", true, 1).delay == 0)
 for _, value in ipairs({0, -1, 1.5, math.huge, -math.huge, 0/0}) do
     assert(Ejection.plan("Pistol", "QUALITY", false, value) == nil)

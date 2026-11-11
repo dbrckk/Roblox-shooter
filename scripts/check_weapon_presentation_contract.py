@@ -90,6 +90,35 @@ assert set_weapon_body.index('local pose = WeaponAimPose.get(weaponId, self.curr
     set_weapon_body.index('model:SetAttribute("IronYardWeaponSource", "PROCEDURAL_PARTS")')
 ), "Do not select a procedural ADS profile before the imported asset is chosen"
 
+# First-person PBR effects follow the actual authored Blender geometry,
+# not the differently shaped fallback Part gun. This also ensures the
+# delayed sniper casing leaves a dedicated socket rather than a Model pivot.
+pbr_fx = get("src/shared/WeaponPbrFxSockets.luau")
+for needle in (
+    "function Sockets.get(weaponId, socketName)",
+    "function Sockets.muzzleAdvance(isImported)",
+    "Pistol = {", "AssaultRifle = {", "Shotgun = {", "Sniper = {",
+    "SniperEjectionPort = {0.20, 0.07, -0.13}",
+):
+    assert needle in pbr_fx, f"Missing authored PBR FX socket: {needle}"
+for needle in (
+    'WaitForChild("WeaponPbrFxSockets")',
+    "local x, y, z = WeaponPbrFxSockets.get(weaponId, name)",
+    'anchor("Muzzle")', 'anchor("FlashHider")',
+    'anchor("MuzzleRing")', 'anchor("MuzzleBrake")',
+    'anchor("SniperEjectionPort")',
+    '"Part", "SniperEjectionPort",',
+    "local MUZZLE_NAMES = {",
+    "WeaponPbrFxSockets.muzzleAdvance(self.currentWeaponImported)",
+):
+    assert needle in visuals, f"PBR effect placement not wired: {needle}"
+assert 'Sniper = { anchor = "SniperEjectionPort"' in ejection
+assert 'Sniper = { anchor = "Bolt"' not in ejection
+assert "local muzzleNames = {" not in visuals, (
+    "Repeated shots must not allocate a fresh muzzle lookup table")
+assert visuals.count('anchor("SniperEjectionPort")') == 1
+assert visuals.count('WeaponPbrFxSockets.muzzleAdvance(self.currentWeaponImported)') == 1
+
 # The cosmetic reload must use real server Ammo state and no new animation loop.
 reload_visual = get("src/shared/ShotgunReloadVisual.luau")
 for needle in (

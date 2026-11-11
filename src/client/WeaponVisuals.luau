@@ -11,6 +11,7 @@ local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local WeaponSway = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponSwayPolicy"))
 local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
 local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
+local WeaponPbrFxSockets = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponPbrFxSockets"))
 local WeaponMeshRefresh = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshRefreshPolicy"))
 local WeaponMeshSwapState = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshSwapState"))
 local WeaponMeshLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshLayout"))
@@ -46,6 +47,10 @@ local SPRINT_OFFSETS = {
 	Sniper = CFrame.new(0.18, -0.16, 0.16) * CFrame.Angles(math.rad(-13), math.rad(20), math.rad(7)),
 	Knife = CFrame.new(0.08, -0.08, 0.06) * CFrame.Angles(math.rad(-22), math.rad(18), math.rad(18)),
 }
+
+-- One shared lookup across all shots; avoid allocating a table on each trigger.
+local MUZZLE_NAMES = { Muzzle = true, MuzzleBrake = true,
+    MuzzleRing = true, FlashHider = true }
 
 local function configurePart(part)
 	part.Anchored = true
@@ -364,6 +369,10 @@ function WeaponVisuals:_createSniper(model)
         CFrame.new(0.54, 0.10, -0.22), MATERIAL_SMOOTH,
         nil, Enum.PartType.Ball)
 	self:_addPart(model, "Part", "ForeRail", Vector3.new(0.42, 0.08, 0.78), Color3.fromRGB(36, 42, 50), CFrame.new(0, -0.12, -0.86), MATERIAL_METAL)
+    -- The casing must leave the breech, not the animated Bolt's pivot.
+    self:_addPart(model, "Part", "SniperEjectionPort",
+        Vector3.new(0.02, 0.02, 0.02), Color3.fromRGB(25, 25, 25),
+        CFrame.new(0.27, 0.12, -0.22), MATERIAL_SMOOTH, 1)
     self:_addDetailGeometry(model, "Sniper")
 end
 
@@ -582,20 +591,22 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
     end
     -- Existing local FX and reload samples must keep functional anchors.
     -- All are fully transparent non-colliding client-owned primitives.
-    local function anchor(name, offset)
+    local function anchor(name)
+        local x, y, z = WeaponPbrFxSockets.get(weaponId, name)
+        if x == nil then return end
         self:_addPart(model, "Part", name,
             Vector3.new(0.02, 0.02, 0.02), Color3.fromRGB(25, 25, 25),
-            offset, MATERIAL_SMOOTH, 1)
+            CFrame.new(x, y, z), MATERIAL_SMOOTH, 1)
     end
     if weaponId == "Pistol" then
-        anchor("Muzzle", CFrame.new(0, 0.16, -1.06))
-        anchor("EjectionPort", CFrame.new(0.07, 0.27, -0.32))
+        anchor("Muzzle")
+        anchor("EjectionPort")
     elseif weaponId == "AssaultRifle" then
-        anchor("FlashHider", CFrame.new(0, 0.03, -2.61))
-        anchor("EjectionPort", CFrame.new(0.222, 0.09, -0.27))
+        anchor("FlashHider")
+        anchor("EjectionPort")
     elseif weaponId == "Shotgun" then
-        anchor("MuzzleRing", CFrame.new(0, 0.10, -2.31))
-        anchor("ShotgunEjectionPort", CFrame.new(0.264, 0.085, -0.18))
+        anchor("MuzzleRing")
+        anchor("ShotgunEjectionPort")
         -- Server-confirmed reload still animates one visible shell, as it
         -- does for the procedural shotgun. Never create it per round/frame.
         local shellAxis = CFrame.Angles(math.pi / 2, 0, 0)
@@ -608,7 +619,8 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
             CFrame.new(-0.35, -0.29, 0.38) * shellAxis,
             MATERIAL_METAL, 1, Enum.PartType.Cylinder)
     elseif weaponId == "Sniper" then
-        anchor("MuzzleBrake", CFrame.new(0, 0.03, -2.35))
+        anchor("MuzzleBrake")
+        anchor("SniperEjectionPort")
     end
     self.currentWeaponImported = true
     self.activeMeshLod = lod
@@ -1395,12 +1407,11 @@ function WeaponVisuals:drawLocalMuzzleFlash()
     end
     local camera = workspace.CurrentCamera
     if not camera then return end
-    local muzzleNames = { Muzzle = true, MuzzleBrake = true,
-        MuzzleRing = true, FlashHider = true }
     for _, entry in ipairs(self.parts) do
-        if muzzleNames[entry.part.Name] and entry.part.Parent then
+        if MUZZLE_NAMES[entry.part.Name] and entry.part.Parent then
             local direction = camera.CFrame.LookVector
-            self:drawMuzzleFlash(entry.part.Position + direction * 0.25, nil, direction, true)
+            local advance = WeaponPbrFxSockets.muzzleAdvance(self.currentWeaponImported)
+            self:drawMuzzleFlash(entry.part.Position + direction * advance, nil, direction, true)
             return
         end
     end
