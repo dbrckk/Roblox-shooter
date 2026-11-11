@@ -43,10 +43,30 @@ def main():
     valid = {
         "assetId": "123",
         "assetType": "ASSET_TYPE_MODEL",
+        "displayName": "IRON YARD pistol LOD0 Original PBR",
         "creationContext": {"creator": {"userId": "9774173158"}},
         "moderationResult": {"moderationState": "MODERATION_STATE_APPROVED"},
     }
     assert U.confirmed_asset(valid, 9774173158) == 123
+    assert U.confirmed_asset(valid, 9774173158,
+                             U.model_display_name("pistol", "LOD0")) == 123
+    for wrong in ("IRON YARD pistol LOD1 Original PBR",
+                  "IRON YARD shotgun LOD0 Original PBR", "", None):
+        expect_invalid_name = dict(valid, displayName=wrong)
+        try:
+            U.confirmed_asset(expect_invalid_name, 9774173158,
+                              U.model_display_name("pistol", "LOD0"))
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Wrong original weapon / LOD model accepted")
+    for w, lod in (("Unknown", "LOD0"), ("pistol", "LOD2")):
+        try:
+            U.model_display_name(w, lod)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("Invalid authored weapon / LOD accepted")
     for edited in (
         {"assetId": "0"},
         {"assetId": "-1"},
@@ -69,6 +89,7 @@ def main():
     def upload_request(url, key, *, payload=None, content_type=None):
         if payload is not None:
             assert url == U.API + "/assets"
+            assert b'IRON YARD pistol LOD0 Original PBR' in payload
             assert content_type.startswith("multipart/form-data; boundary=IY-")
             assert b'Content-Disposition: form-data; name="request"' in payload
             assert b'Content-Disposition: form-data; name="fileContent"' in payload
@@ -119,6 +140,33 @@ def main():
     assert observed_urls[0].endswith("/assets/123")
     assert observed_urls[1].endswith("/operations/pending-one")
     assert observed_urls[2].endswith("/assets/123")
+
+    # A resumed, previously POSTed operation must be checked for the
+    # SAME exact weapon/LOD before the uploader trusts it as completed.
+    wrong_lod = dict(valid, displayName="IRON YARD pistol LOD1 Original PBR")
+    with mock.patch.object(U, "request_json", return_value={
+            "path": "operations/already_started", "done": True,
+            "response": wrong_lod}) as get:
+        try:
+            U.upload_model(9774173158, "pistol", "LOD0", b"VALID-GLB", "fake",
+                           operation_path="operations/already_started")
+        except ValueError as exc:
+            assert "authored weapon/LOD" in str(exc)
+        else:
+            raise AssertionError("Wrong-LOD completed operation accepted")
+        get.assert_called_once_with(U.API + "/operations/already_started", "fake")
+
+    # A GET asset response may incorrectly point at a different ID,
+    # even when owner and displayName look valid. Never consider it proven.
+    with mock.patch.object(U, "request_json", return_value=dict(
+            valid, assetId="456")) as get:
+        try:
+            U.verify_existing(123, 9774173158, "fake", "pistol", "LOD0")
+        except ValueError as exc:
+            assert "different asset ID" in str(exc)
+        else:
+            raise AssertionError("Mismatched remote asset ID accepted")
+        get.assert_called_once_with(U.API + "/assets/123", "fake")
 
     with mock.patch.object(U, "request_json",
                            side_effect=AssertionError("No network for rejected op")):
@@ -188,8 +236,8 @@ def main():
 
         verified = []
         uploaded = []
-        def verify(asset_id, owner, key):
-            verified.append(asset_id)
+        def verify(asset_id, owner, key, weapon, lod):
+            verified.append((asset_id, weapon, lod))
             return asset_id in (1001, 1002)
 
         def resumed(owner, weapon, lod, raw, key, **kwargs):
@@ -208,6 +256,8 @@ def main():
             assert U.main(flags(root, publish=True)) == 0
         assert len(verified) == 2 and len(uploaded) == 8, \
             "Checkpoint IDs must be remotely reverified before reuse"
+        assert verified == [(1001, "pistol", "LOD0"),
+                            (1002, "pistol", "LOD1")]
         contents = module.read_text()
         assert "LOD0 = 1001" in contents and "LOD1 = 1002" in contents
         assert "LOD1 = 2008" in contents and "ownerUserId = 9774173158" in contents
@@ -217,10 +267,56 @@ def main():
         assert all("operationPath" not in x for x in json.loads(
             (root / "checkpoint.json").read_text())["models"].values())
 
+        # An ID already saved to a checkpoint can point to a different
+        # Model owned by the same user. The uploader must fail closed;
+        # a silent replacement would duplicate assets and corrupt inventory.
+        module.write_text(original, "utf-8")
+        first_entry = fake_entries()["pistol", "LOD0"]
+        (root / "checkpoint.json").write_text(json.dumps({
+            "ownerUserId": 9774173158,
+            "sourceCommit": "a" * 40,
+            "models": {"pistol/LOD0": {
+                "sha256": first_entry["sha256"], "assetId": 123}},
+        }))
+        wrong_model = dict(valid, displayName="IRON YARD shotgun LOD0 Original PBR")
+        with mock.patch.dict(os.environ, {"ROBLOX_OPEN_CLOUD_ASSETS_KEY": "fake-key"}), \
+                mock.patch.object(U, "sources", return_value=fake_entries()), \
+                mock.patch.object(U, "request_json", return_value=wrong_model) as get, \
+                mock.patch.object(U, "upload_model",
+                                  side_effect=AssertionError("Must not POST a duplicate")):
+            try:
+                U.main(flags(root, publish=True))
+            except ValueError as exc:
+                assert "authored weapon/LOD" in str(exc)
+            else:
+                raise AssertionError("Wrong approved owned Model was accepted")
+            get.assert_called_once_with(U.API + "/assets/123", "fake-key")
+        assert module.read_text() == original, "Untrusted cache altered live IDs"
+
+        # The same invariant applies to asset IDs committed in a previously
+        # activated version. Even a transient verification mismatch should
+        # halt the release instead of creating replacement Roblox models.
+        module.write_text(example, "utf-8")
+        (root / "checkpoint.json").unlink(missing_ok=True)
+        with mock.patch.dict(os.environ, {"ROBLOX_OPEN_CLOUD_ASSETS_KEY": "fake-key"}), \
+                mock.patch.object(U, "sources", return_value=fake_entries()), \
+                mock.patch.object(U, "request_json",
+                                  return_value=dict(wrong_model, assetId="100")) as get, \
+                mock.patch.object(U, "upload_model",
+                                  side_effect=AssertionError("No duplicate upload allowed")):
+            try:
+                U.main(flags(root, publish=True))
+            except ValueError as exc:
+                assert "authored weapon/LOD" in str(exc)
+            else:
+                raise AssertionError("Wrong committed Model was accepted")
+            get.assert_called_once_with(U.API + "/assets/100", "fake-key")
+        assert module.read_text() == example, "Bad saved ID rewrote live registry"
+
         # Ten distinct source GLBs must map to ten DISTINCT Roblox Model IDs.
         # A malformed provider response cannot alias two weapons and be pushed.
         module.write_text(original, "utf-8")
-        (root / "checkpoint.json").unlink()
+        (root / "checkpoint.json").unlink(missing_ok=True)
         with mock.patch.dict(os.environ, {"ROBLOX_OPEN_CLOUD_ASSETS_KEY": "fake-key"}), \
                 mock.patch.object(U, "sources", return_value=fake_entries()), \
                 mock.patch.object(U, "upload_model", return_value=9999):
