@@ -621,8 +621,9 @@ function WeaponVisuals:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
     self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap
     self.aimBlend = 0
-    local pose = WeaponAimPose.get(weaponId)
-    self.aimPose = pose and CFrame.new(pose.x, pose.y, pose.z) or nil
+    -- Resolve ADS only AFTER choosing procedural or PBR mesh. Their
+    -- rear sights have different authored positions in weaponforge.
+    self.aimPose = nil
 	self.equipStartedAt = os.clock()
 	self.recoil = 0
     self.reloadActive = false
@@ -663,6 +664,8 @@ function WeaponVisuals:setWeapon(weaponId)
     if not self.currentWeaponImported then
         model:SetAttribute("IronYardWeaponSource", "PROCEDURAL_PARTS")
     end
+    local pose = WeaponAimPose.get(weaponId, self.currentWeaponImported)
+    self.aimPose = pose and CFrame.new(pose.x, pose.y, pose.z) or nil
     self:_applyCareerFinish()
     self:_syncScopeVisibility()
 end
