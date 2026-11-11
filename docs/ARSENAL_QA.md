@@ -147,3 +147,30 @@ annule tir, visée et propulsion. Vérifier également que le menu Roblox
 ne capture pas `ButtonStart` : si c'est le cas, la commande native
 de menu doit primer. Les tests CI couvrent le routage et les contrats,
 pas les événements matériels dans le moteur.
+
+
+## Duels 1v1 : abandon et classement final — 11 novembre 2026
+
+Un ancien défaut déclarait systématiquement **A** vainqueur lorsqu'il ne
+restait qu'un joueur dans la session, puisque `a` et `b` étaient des
+références Roblox sauvegardées et restaient non-nulles même si leurs
+propriétaires avaient quitté le serveur.
+
+La règle `DuelRules.forfeitSide` sélectionne désormais uniquement le
+**joueur original qui est encore présent** : B gagne si A part, A gagne si
+B part. Un serveur vide, un observateur remplaçant ou un troisième joueur
+ne produisent jamais de victoire par abandon.
+
+La carte de résultats affiche le survivant en premier et avec le rang 1,
+même si ses victoires de manches sont inférieures à celles du joueur
+déconnecté. Les comptes de manches réels ne sont pas artificiellement
+modifiés. Une partie interrompue n'octroie **aucun XP de victoire** :
+la récompense persistante reste réservée à une série remportée par
+`SCORE_LIMIT`, sous contrôle du serveur.
+
+Tests ajoutés : abandon de chaque participant, absence de joueurs, tiers
+non autorisé, match annulé, score inférieur du survivant et égalité.
+Pour valider visuellement : lancer un duel Studio deux joueurs, faire
+quitter d'abord A puis B lors de manches séparées ; contrôler le libellé
+du vainqueur et l'ordre du podium. Répéter avec l'arrivée d'un troisième
+joueur, qui doit annuler sans attribuer de gagnant.
