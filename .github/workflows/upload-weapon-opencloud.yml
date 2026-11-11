@@ -37,6 +37,33 @@ jobs:
         with:
           fetch-depth: 50
 
+      - name: Check asset owner and required credentials before downloading artifacts
+        shell: bash
+        env:
+          CREATOR: ${{ inputs.creator_user_id }}
+          ACTIVATE: ${{ inputs.publish_assets }}
+          ASSET_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_ASSETS_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os, re
+          from pathlib import Path
+          registry = Path("src/shared/WeaponAssetIds.luau").read_text("utf-8")
+          declared = re.search(r"\\bownerUserId\\s*=\\s*(\\d+)\\b", registry)
+          if not declared or declared.group(1) != os.environ["CREATOR"]:
+              raise SystemExit("Configured Roblox owner differs from committed owner registry")
+          print("Verified Roblox model owner (not uploading yet).")
+          PY
+          if [[ "$ACTIVATE" == "true" ]]; then
+            if [[ -z "$ASSET_KEY" ]]; then
+              echo "::error::Configure GitHub secret ROBLOX_OPEN_CLOUD_ASSETS_KEY before selecting publish_assets=true"
+              exit 1
+            fi
+            echo "Asset key present; owner-authorized uploads may proceed." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Safe dry-run selected: no Roblox assets will be created." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       - name: Locate a validated forge run (same authored weapon source)
         shell: bash
         env:
