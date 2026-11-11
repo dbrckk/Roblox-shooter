@@ -124,14 +124,14 @@ def verify_existing(asset_id, owner, key):
 def matching_committed_ids(module_text, source_commit):
     # Re-running the same verified forge must not upload ten duplicate assets.
     # These source-controlled IDs are still rechecked against Roblox live data.
-    if not re.search(r'sourceCommit\\s*=\\s*"' + source_commit + r'"',
+    if not re.search(r'sourceCommit\s*=\s*"' + source_commit + r'"',
                      module_text):
         return {}
     rows = {}
     for weapon in WEAPONS:
         match = re.search(
-            rf'\\b{weapon}\\s*=\\s*\\{{\\s*LOD0\\s*=\\s*(\\d+)'
-            rf'\\s*,\\s*LOD1\\s*=\\s*(\\d+)\\s*\\}}', module_text)
+            rf'\b{weapon}\s*=\s*\{{\s*LOD0\s*=\s*(\d+)'
+            rf'\s*,\s*LOD1\s*=\s*(\d+)\s*\}}', module_text)
         if not match:
             return {}
         rows[weapon, "LOD0"] = int(match.group(1))
