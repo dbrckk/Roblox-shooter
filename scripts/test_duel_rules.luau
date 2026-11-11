@@ -70,22 +70,56 @@ assert(not D.canFight("DUEL",0/0,-1,-2,2))
 assert(not D.canFight("DUEL",1.5,1.5,2,2))
 local a,b,n=0,0,0
 for i=1,9 do
-  local nextA,nextB,nextN,done,win = D.advance(a,b,n,i%2==0 and "B" or "A")
+  local nextA,nextB,nextN,done,win,reason = D.advance(a,b,n,i%2==0 and "B" or "A")
   assert(nextA and nextB and nextN==i)
-  if i<9 then assert(not done and win==nil)
-  else assert(done and win=="A") end
+  if i<9 then assert(not done and win==nil and reason==nil)
+  else assert(done and win=="A" and reason=="SCORE_LIMIT") end
   a,b,n=nextA,nextB,nextN
 end
 assert(a==5 and b==4)
 assert(D.advance(a,b,n,"INVALID")==nil)
 local sa,sb,bouts=0,0,0
 for i=1,D.MAX_BOUTS do
-  local na,nb,nc,complete,winner=D.advance(sa,sb,bouts,"DRAW")
+  local na,nb,nc,complete,winner,reason=D.advance(sa,sb,bouts,"DRAW")
   assert(na==0 and nb==0 and nc==i)
-  if i<D.MAX_BOUTS then assert(not complete and winner==nil)
-  else assert(complete and winner=="DRAW") end
+  if i<D.MAX_BOUTS then
+    assert(not complete and winner==nil and reason==nil)
+  else
+    assert(complete and winner=="DRAW" and reason=="BOUT_LIMIT")
+  end
   sa,sb,bouts=na,nb,nc
 end
+
+-- Hard cap is a fairness backstop, NOT an automatic draw.
+-- 23 resolved bouts can include many draws, leaving one side ahead.
+local capA,capB,capN,capDone,capWin,capReason = D.advance(4,2,23,"DRAW")
+assert(capA==4 and capB==2 and capN==D.MAX_BOUTS)
+assert(capDone and capWin=="A" and capReason=="BOUT_LIMIT",
+    "A leads at cap: must win without inventing a fifth elimination")
+capA,capB,capN,capDone,capWin,capReason = D.advance(2,4,23,"DRAW")
+assert(capA==2 and capB==4 and capN==D.MAX_BOUTS)
+assert(capDone and capWin=="B" and capReason=="BOUT_LIMIT")
+capA,capB,capN,capDone,capWin,capReason = D.advance(3,3,23,"DRAW")
+assert(capDone and capWin=="DRAW" and capReason=="BOUT_LIMIT",
+    "Equal real scores remain a draw at the hard cap")
+-- A fifth win on the final allowed bout is still a SCORE_LIMIT victory.
+capA,capB,capN,capDone,capWin,capReason = D.advance(4,3,23,"A")
+assert(capA==5 and capB==3 and capDone and capWin=="A"
+    and capReason=="SCORE_LIMIT")
+capA,capB,capN,capDone,capWin,capReason = D.advance(3,4,23,"B")
+assert(capA==3 and capB==5 and capDone and capWin=="B"
+    and capReason=="SCORE_LIMIT")
+capA,capB,capN,capDone,capWin,capReason = D.advance(3,2,22,"DRAW")
+assert(capA==3 and capB==2 and capN==23
+    and not capDone and capWin==nil and capReason==nil)
+-- Once a series ends there can be no 25th bout or second victory grant.
+assert(D.advance(0,0,D.MAX_BOUTS,"DRAW")==nil)
+assert(D.advance(4,4,D.MAX_BOUTS,"DRAW")==nil)
+assert(D.advance(5,0,5,"DRAW")==nil)
+assert(D.advance(0,5,5,"DRAW")==nil)
+assert(D.advance(3,2,1,"A")==nil, "Corrupt scores cannot exceed bout count")
+assert(D.advance(4,2,23,"UNKNOWN")==nil)
+
 assert(not D.recoveryExpired(10,10))
 assert(not D.recoveryExpired(10,29.999))
 assert(D.recoveryExpired(10,30))

@@ -446,6 +446,8 @@ def main():
         'if not duel and mode == "FFA" then',
         'local candidates = readyPlayers()',
         'local function finishDuelBout(result)',
+        'local a,b,n,complete,winner,finishReason=DuelRules.advance(',
+        'endDuel(finishReason, winner)',
         'local function endDuel(reason, winningSide)',
         'DuelRules.boutWinner(ah,am,bh,bm,remaining<=0)',
         'BotService.reconcileNow()',
@@ -518,8 +520,21 @@ def main():
         has(source("src/server/RoundStandings.luau"), token,
             "Forfeit result podium prioritizes verified survivor without fake wins")
 
-    has(match, 'and reason == "SCORE_LIMIT" then',
-        "Forfeits and spawn failures must not farm progression awards")
+    has(match, 'and (reason == "SCORE_LIMIT" or reason == "BOUT_LIMIT") then',
+        "Only completed score-limit or scored hard-cap duels grant XP")
+    require('endDuel("SCORE_LIMIT", winner)' not in match,
+        "Completed bout reason must come from the pure adjudication")
+    for needle in (
+        'or scoreA >= Duel.WIN_LIMIT or scoreB >= Duel.WIN_LIMIT',
+        'or bouts >= Duel.MAX_BOUTS',
+        'or scoreA + scoreB > bouts',
+        'if scoreA > scoreB then winner = "A"',
+        'elseif scoreB > scoreA then winner = "B"',
+        'else winner = "DRAW" end',
+        'reason = reachedWinLimit and "SCORE_LIMIT" or "BOUT_LIMIT"',
+        'return scoreA, scoreB, bouts, completed, winner, reason',
+    ):
+        has(duel_rules, needle, "Hard cap produces score-based winner and terminal reason")
     has(match, '(duel ~= nil and phase ~= "RESULTS")',
         "No forced duel ready state during active competition")
     for token in (
