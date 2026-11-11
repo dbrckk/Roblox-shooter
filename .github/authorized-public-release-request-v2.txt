@@ -1,0 +1,18 @@
+IRON YARD — renewed explicit PUBLIC release request, 2026-11-11
+
+The owner has authorized updating the existing PUBLIC Roblox-shooter.
+This request replaces the previous one, whose dispatch failed before
+contacting Roblox because the event SHA expression had a leading slash.
+
+Only the EXACT GitHub main commit that ADDS this file and successfully
+passes the 'Rojo build' workflow may dispatch the existing public
+publisher with confirmation PUBLISH IRON YARD PUBLIC.
+
+The publisher must independently verify:
+- existing experience name precisely IRON YARD
+- expected Roblox creator 9774173158
+- PUBLIC visibility and confirmed root place
+- verified Open Cloud key and exact green build commit
+
+If any condition fails, do not publish or create another experience.
+No credentials or destination ID are stored in the repository.
