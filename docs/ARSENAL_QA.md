@@ -174,3 +174,41 @@ Pour valider visuellement : lancer un duel Studio deux joueurs, faire
 quitter d'abord A puis B lors de manches séparées ; contrôler le libellé
 du vainqueur et l'ordre du podium. Répéter avec l'arrivée d'un troisième
 joueur, qui doit annuler sans attribuer de gagnant.
+
+
+## Duels 1v1 : arbitrage de la limite de 24 manches — 11 novembre 2026
+
+Un duel se termine dès que l'un des deux joueurs atteint **5 victoires
+de manche**. Après de nombreuses manches nulles, la série est également
+bornée à **24 manches résolues**, pour ne jamais bloquer un serveur.
+
+**Correction :** lorsqu'aucun joueur n'a encore atteint cinq victoires
+à la vingt-quatrième manche, celui qui possède **le plus de manches
+gagnées remporte la série**. Une égalité parfaite reste un match nul.
+Auparavant, tout duel arrivé à cette limite était marqué `DRAW`,
+même sur un score tel que 4–2 ou 2–4.
+
+L'arbitre `DuelRules.advance` produit maintenant un motif terminal :
+
+- `SCORE_LIMIT` lorsqu'un combattant atteint cinq victoires, y compris
+  à la vingt-quatrième manche ;
+- `BOUT_LIMIT` lorsque la série s'arrête à 24 avec moins de cinq
+  victoires de chaque côté.
+
+Dans les deux cas, **seule une vraie victoire avec un leader unique**
+accorde la récompense serveur habituelle. Les matchs nuls, abandons,
+changements de lobby et échecs de réapparition restent sans prime
+de victoire. Les scores et le classement publiés ne sont pas falsifiés.
+
+L'arbitre rejette également toute tentative d'avancer après la fin de
+série (5 victoires ou 24 manches) et les compteurs incohérents
+(victoires totales supérieures au nombre de manches résolues).
+
+**Vérifications CI :** 4–2, 2–4 et 3–3 à la 24ᵉ manche, cinquième
+victoire exactement à la limite, série normale de 9 manches, match
+nul après 24 égalités, appels répétés après clôture et états invalides.
+
+**Validation en moteur requise :** jouer une série avec égalités
+répétées, vérifier que la bannière de victoire, l'ordre du podium et
+la prime de fin de série affichent le même gagnant. La CI ne reproduit
+pas elle-même 24 manches en réseau Roblox.
