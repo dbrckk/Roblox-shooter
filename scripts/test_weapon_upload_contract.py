@@ -270,7 +270,7 @@ def main():
         # activated version. Even a transient verification mismatch should
         # halt the release instead of creating replacement Roblox models.
         module.write_text(example, "utf-8")
-        (root / "checkpoint.json").unlink()
+        (root / "checkpoint.json").unlink(missing_ok=True)
         with mock.patch.dict(os.environ, {"ROBLOX_OPEN_CLOUD_ASSETS_KEY": "fake-key"}), \
                 mock.patch.object(U, "sources", return_value=fake_entries()), \
                 mock.patch.object(U, "request_json",
