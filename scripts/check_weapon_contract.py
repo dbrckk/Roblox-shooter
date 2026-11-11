@@ -34,6 +34,26 @@ def main():
     rate_policy = source("src/shared/RemoteRatePolicy.luau")
     client = source("src/client/init.client.luau")
     gamepad_policy = source("src/shared/GamepadCombatPolicy.luau")
+    auto_policy = source("src/shared/AutomaticFireCadence.luau")
+    for token in (
+        "function Policy.isAutomatic(weapon)",
+        "function Policy.waitSeconds(weapon)",
+        "Policy.COOLDOWN_MARGIN = 1.035",
+        "Policy.IDLE_POLL_SECONDS = 0.10",
+    ):
+        has(auto_policy, token, "Held AR polling must follow real weapon cadence")
+    for token in (
+        'WaitForChild("AutomaticFireCadence")',
+        "task.wait(AutomaticFireCadence.waitSeconds(weapon))",
+        "task.wait(AutomaticFireCadence.waitSeconds(selected))",
+        "AutomaticFireCadence.isAutomatic(WeaponConfig.get(currentWeaponId))",
+    ):
+        has(client, token, "Shared automatic-fire pacing for mouse, controller and touch")
+    require("fireCooldown * 0.40" not in client,
+            "Do not poll automatic fire 2.5x the configured weapon cadence")
+    require(client.count("AutomaticFireCadence.waitSeconds(") == 2,
+            "Both the mouse/gamepad and touch fire loops must share the cadence")
+
     briefing = source("src/client/Briefing.client.luau")
     guide = source("src/shared/FirstMatchGuide.luau")
     for token in (
