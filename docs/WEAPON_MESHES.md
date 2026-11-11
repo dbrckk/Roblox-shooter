@@ -346,3 +346,29 @@ avec ID différent et récupération d'un checkpoint corrompu.
 **Les autorisations Open Cloud absentes empêchent toujours l'activation.**
 La réussite du workflow de validation ne constitue pas une publication
 Roblox ni une capture du rendu réel.
+
+## Alignement visée ADS distinct pour les meshes PBR — lot public suivant
+
+Les organes de visée du fusil AR-24, du pistolet et du B-8 générés sous
+Blender ne se trouvent pas aux mêmes positions que ceux des anciennes
+armes construites avec des `Part`. Avant cette correction, le client
+réutilisait le décalage ADS des `Part` même lorsqu'un mesh PBR avait
+été sélectionné ; les fers de visée pouvaient alors paraître trop près
+ou trop bas au moment de viser.
+
+`WeaponAimPose.get(weaponId, imported)` distingue maintenant deux jeux de
+mesures : géométrie procédurale inchangée et centres de hausses Blender
+(AR-24 : x=0, hauteur=0,36, arrière=0,40 ; pistolet : 0 / 0,35 / 0,30 ;
+B-8 : 0 / 0,33 / 0,31 en studs, origine exportée). Le profil ne s'active
+**qu'après validation effective du modèle importé**. Le changement de LOD
+recalcule cette pose après le changement de mesh sans toucher à l'état des
+munitions, au recul ou à l'autorité serveur. Sniper et couteau restent
+inchangés.
+
+Ces mesures correspondent au générateur Blender présent dans le dépôt et
+à la conversion d'axes glTF (export Y-up) ; elles ne constituent **pas une
+preuve de calibration visuelle dans Roblox Studio**. Le prochain contrôle
+sur appareil doit inspecter la hausse, l'occlusion du modèle en ADS, le
+champ de vision et les écarts LOD0/LOD1 sur Android et PC. Les tests de
+contrat vérifient la conversion géométrique, le choix de la bonne source
+et la compatibilité du fallback, sans changer les raycasts de dégâts.
