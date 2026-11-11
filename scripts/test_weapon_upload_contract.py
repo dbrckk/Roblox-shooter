@@ -141,6 +141,33 @@ def main():
     assert observed_urls[1].endswith("/operations/pending-one")
     assert observed_urls[2].endswith("/assets/123")
 
+    # A resumed, previously POSTed operation must be checked for the
+    # SAME exact weapon/LOD before the uploader trusts it as completed.
+    wrong_lod = dict(valid, displayName="IRON YARD pistol LOD1 Original PBR")
+    with mock.patch.object(U, "request_json", return_value={
+            "path": "operations/already_started", "done": True,
+            "response": wrong_lod}) as get:
+        try:
+            U.upload_model(9774173158, "pistol", "LOD0", b"VALID-GLB", "fake",
+                           operation_path="operations/already_started")
+        except ValueError as exc:
+            assert "authored weapon/LOD" in str(exc)
+        else:
+            raise AssertionError("Wrong-LOD completed operation accepted")
+        get.assert_called_once_with(U.API + "/operations/already_started", "fake")
+
+    # A GET asset response may incorrectly point at a different ID,
+    # even when owner and displayName look valid. Never consider it proven.
+    with mock.patch.object(U, "request_json", return_value=dict(
+            valid, assetId="456")) as get:
+        try:
+            U.verify_existing(123, 9774173158, "fake", "pistol", "LOD0")
+        except ValueError as exc:
+            assert "different asset ID" in str(exc)
+        else:
+            raise AssertionError("Mismatched remote asset ID accepted")
+        get.assert_called_once_with(U.API + "/assets/123", "fake")
+
     with mock.patch.object(U, "request_json",
                            side_effect=AssertionError("No network for rejected op")):
         try:
