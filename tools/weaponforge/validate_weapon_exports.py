@@ -63,7 +63,7 @@ def inspect(path,weapon):
               "Origin marker geometry exceeds 12.2cm bounding cube")
         marker_triangles+=data["accessors"][primitive["indices"]]["count"]//3
     check(12 <= marker_triangles <= 40,
-          "Origin marker must be a low-poly 4cm cube")
+          "Origin marker must be a low-poly 0.1-stud cube")
 
     triangles=0
     materials=set()
