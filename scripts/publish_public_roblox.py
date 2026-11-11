@@ -54,11 +54,11 @@ def verify_universe(info: object, place_id: str):
         raise PublishError("Universe lookup returned invalid data")
     name = info.get("displayName") or info.get("display_name") or info.get("name")
     normalized = re.sub(r"[^a-z0-9]", "", str(name).lower())
-    if normalized != "ironyard":
-        # A different game belonging to the same creator may share the prefix.
-        # Public releases must not overwrite IRON YARD Racing, test clones,
-        # archived editions or another experience after a variable typo.
-        raise PublishError("Wrong destination: Roblox experience must be named exactly IRON YARD")
+    # The clean title and the previously validated public marketing title
+    # are the only approved names. An arbitrary "Iron Yard ..." prefix can
+    # be a different game of the SAME creator and must never be published.
+    if normalized not in ("ironyard", "ironyardcompetitiverobloxfps"):
+        raise PublishError("Wrong destination: not an approved IRON YARD experience")
     owner = info.get("user")
     if isinstance(owner, dict):
         owner = owner.get("path")
