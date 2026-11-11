@@ -1,0 +1,19 @@
+IRON YARD — PUBLIC production update authorization, 11 November 2026
+
+The owner requested to continue improving the PUBLIC Roblox shooter.
+
+Release content:
+- original owner-uploaded PBR firearms now use source-authored muzzle/ejection
+  sockets instead of the procedural-Part gun sockets
+- sniper casing ejection comes from a dedicated breech location, not the
+  imported bolt mesh pivot
+- no new network events, paid assets, server hit detection or physics
+- Android FX budgets and procedural gun fallback remain unchanged
+
+Authorization applies only to the new main commit adding this numbered
+request file AFTER that exact commit passes Rojo build.
+Only an already PUBLIC IRON YARD owned by Roblox user 9774173158 is
+authorized. Existing publisher must reject mismatched title, creator,
+root place, private destination, stale SHA, or failed CI.
+
+No credential, API key or target identifier is stored here.
