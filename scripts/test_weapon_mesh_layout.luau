@@ -52,7 +52,7 @@ for i,v in ipairs(root.children) do
     if v == duplicate then table.remove(root.children,i) break end
 end
 -- Bound cost and primitive count, even for trusted Roblox package containers.
-for _=1, Layout.MAX_PER_COMPONENT-1 do
+for _=1, Layout.MAX_PER_COMPONENT do
     node("extra", "MeshPart", magazine)
 end
 assert(Layout.collect(root, expected, function() return true end) == nil,
