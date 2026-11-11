@@ -70,3 +70,30 @@ A pure audio admission policy keeps the shooter's own firing sound always audibl
 The client applies **at most one raycast per admitted remote firearm sound** when the distance is 12 studs or greater. The ray excludes player characters, bot models and the camera, and respects physically collidable cover. Obstructed shots use one layer at 40% of the normal mix; clear shots retain their original mix. Audio culling and per-device emitter caps run before the cast, and the local shooter's audio is never occlusion-tested. There is no new server message, new external audio or per-frame raycast.
 
 **Manual Roblox acceptance:** put a second human or bot on the far side of a cargo container; the shot should be less sharp and quieter than a clear shot at the same distance. A non-collidable trim must not muffle the shot; a teammate standing between two clear positions must not simulate a wall. Repeat on Android ECO and QUALITY with 4 bots and check FPS + sound continuity. All bundled shot sounds are currently generic Roblox source assets, not final licensed premium foley.
+
+
+## Correction du compteur de munitions après un tir refusé — 11 novembre 2026
+
+Le client affiche immédiatement une balle consommée pour éviter une sensation
+de latence lors du tir. En cas de différence entre les horloges client et
+serveur, ou d'un changement d'arme pendant le délai de récupération, le
+serveur peut **refuser** ce tir. Avant ce correctif, il ne renvoyait pas
+toujours le chargeur réel. L'interface pouvait alors afficher un chargeur
+trop vide, voire 0 balle alors que le serveur en possédait encore.
+
+Le serveur renvoie maintenant un message `Ammo` **autoritaire** pour chaque
+requête de tir parvenue jusqu'à `canFire` mais rejetée pour arme non équipée,
+cadence de l'arme, cadence globale ou rechargement encore actif.
+La vérification `RemoteGuard.allow(player, "FireWeapon")` reste préalable,
+et le message ne déclenche ni dégâts, ni traceur, ni dépense de cartouche.
+Une demande de rechargement non nécessaire (chargeur déjà plein ou
+rechargement déjà actif) renvoie également le nombre réel de balles :
+cela permet de réparer le HUD si le client pensait être à court de munitions.
+
+**À contrôler dans Roblox Studio puis Android :** alterner rapidement pistolet
+et fusil d'assaut, tirer près de la limite de cadence, interrompre un
+rechargement et vérifier que le HUD ne reste pas bloqué à zéro après une
+correction serveur. Confirmer qu'aucun tir refusé ne produit de dégâts ou
+de récompenses et que le gameplay reste réactif sous latence simulée.
+La CI vérifie le câblage et les conditions de resynchronisation ; elle ne
+remplace pas un test multijoueur réel en réseau.

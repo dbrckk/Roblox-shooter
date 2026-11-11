@@ -326,7 +326,13 @@ local function reloadWeapon(player, weaponId)
     local character = getLiveCharacter(player)
     if not character then return end
     local loaded = getLoaded(state, weaponId, config)
-    if loaded >= config.magazineSize or (state.reloadUntil[weaponId] or 0) > os.clock() then return end
+    if loaded >= config.magazineSize or (state.reloadUntil[weaponId] or 0) > os.clock() then
+        -- The client may have spent a locally predicted shot that the server
+        -- rejected. Reply with the actual magazine count even when there is
+        -- nothing to reload, otherwise its empty HUD can remain stuck.
+        sendAmmo(player, weaponId)
+        return
+    end
 
     cancelReload(state, weaponId)
     local token = state.reloadTokens[weaponId]
@@ -349,16 +355,31 @@ local function reloadWeapon(player, weaponId)
     end)
 end
 
+-- A predicted client shot can be rejected by server timing, despite both
+-- sides using the same cooldown profile. Every VALID, rate-admitted
+-- rejection reconciles ammo once, not a misleading hit or shot effect.
+-- RemoteGuard.FireWeapon already limits spam before this helper is reached.
+local function rejectFireWithAmmo(player, weaponId)
+    sendAmmo(player, weaponId)
+    return false
+end
+
 local function canFire(player, weaponId, config)
     local state = getState(player)
-    if state.equippedWeaponId ~= weaponId then return false end
+    if state.equippedWeaponId ~= weaponId then
+        return rejectFireWithAmmo(player, weaponId)
+    end
     local now = os.clock()
     if now - (state.lastFireAt[weaponId] or -math.huge) < config.fireCooldown then
-        return false
+        return rejectFireWithAmmo(player, weaponId)
     end
     -- Slot cycling cannot bypass the preceding weapon's shot cooldown.
-    if now < (state.nextGlobalFireAt or 0) then return false end
-    if (state.reloadUntil[weaponId] or 0) > now then return false end
+    if now < (state.nextGlobalFireAt or 0) then
+        return rejectFireWithAmmo(player, weaponId)
+    end
+    if (state.reloadUntil[weaponId] or 0) > now then
+        return rejectFireWithAmmo(player, weaponId)
+    end
 
     local loaded = getLoaded(state, weaponId, config)
     if loaded ~= nil then
