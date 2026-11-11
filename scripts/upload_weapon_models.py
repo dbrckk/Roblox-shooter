@@ -16,7 +16,7 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools" / "weaponforge"))
-from validate_weapon_exports import REQUIRED, inspect  # noqa: E402
+from validate_weapon_exports import REQUIRED, ORIGIN_NAME, inspect  # noqa: E402
 from upload_vanguard_models import API, request_json  # noqa: E402
 
 LODS = ("LOD0", "LOD1")
@@ -50,8 +50,9 @@ def sources(asset_root):
             raw = (asset_root / "meshes" / filename).read_bytes()
             require(2048 < len(raw) <= MAX_UPLOAD, "Model is outside Roblox size limits")
             geometry = inspect(asset_root / "meshes" / filename, weapon)
-            require(set(declared[weapon, lod].get("names", [])) == REQUIRED[weapon],
-                    "Model node identity differs from manifest")
+            require(set(declared[weapon, lod].get("names", [])) ==
+                    REQUIRED[weapon] | {ORIGIN_NAME},
+                    "Model node identity/origin differs from manifest")
             require(declared[weapon, lod].get("bytes") == len(raw),
                     "Model bytes differ from source manifest")
             entries[(weapon, lod)] = {
