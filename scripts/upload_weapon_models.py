@@ -219,7 +219,7 @@ def render_module(owner, source_commit, rows):
 
 
 def checkpoint_write(path, owner, source_commit, rows):
-    # The registry checkpoint contains asset IDs and source hashes only, no secret.
+    # Checkpoint holds source hashes, approved asset IDs and pending operation IDs only (never the API key).
     path.parent.mkdir(parents=True, exist_ok=True)
     safe_rows = {}
     for (weapon, lod), row in rows.items():
