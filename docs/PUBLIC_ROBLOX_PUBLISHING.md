@@ -26,3 +26,41 @@ Le dépôt **ne dispose plus de workflow de publication privée**. Il construit 
 - Si un problème critique survient, arrêter les nouveaux déploiements, ouvrir **Creator Dashboard > Creations > IRON YARD > Configure > Places > Place > Version History**. Restaurer une version connue stable **ne la republie pas automatiquement** ; il faut ensuite la publier depuis Studio et redémarrer les serveurs appropriés. Autre option : revenir à un commit GitHub stable, laisser la CI passer, puis lancer un nouveau workflow public manuel pour ce nouveau commit. Ne pas restaurer une version inconnue sans vérification.
 
 Sources officielles : https://create.roblox.com/docs/cloud/guides/usage-place-publishing et https://create.roblox.com/docs/projects/version-history .
+
+
+## Vérifications renforcées de la destination et diagnostic après upload
+
+Le workflow vérifie maintenant l'identité précise de la destination
+**avant toute écriture** :
+
+- seuls les noms publics **IRON YARD** et
+  **IRON YARD | Competitive Roblox FPS** sont autorisés (comparaison
+  sans casse, ponctuation ignorée). Des expériences distinctes telles que
+  « IRON YARD Racing », « IRON YARD Test » ou « Iron Yard 2 » sont refusées,
+  même si elles appartiennent au même utilisateur ;
+- le créateur doit être l'utilisateur Roblox enregistré dans le script,
+  la visibilité doit être **PUBLIC**, et le champ rootPlace doit correspondre
+  à l'identifiant de place configuré ;
+- un second GET de la place doit confirmer explicitement le champ
+  Open Cloud v2 root = true. L'absence de ce champ est un échec sûr,
+  pas une autorisation de publier ;
+- avant le POST, le fichier .rbxlx doit contenir le commit Git exact
+  approuvé et provenir du build Rojo du même commit.
+
+La publication reste **désactivée par défaut**. Les tests hors réseau
+scripts/test_public_release.py et
+scripts/test_publish_public_roblox.py sont lancés par la CI et lors
+d'une tentative de publication, avant la vérification des credentials.
+Ils couvrent les destinations interdites, la confirmation expresse,
+les mauvais fichiers et le parcours GET/POST/GET avec réponses simulées.
+Ils n'utilisent aucune vraie clé et n'envoient aucune requête sur Roblox.
+
+**Point important en cas d'incident réseau :** si Roblox a renvoyé un
+numéro de version valide au POST, la mise à jour est **déjà acceptée**,
+même si une vérification GET effectuée juste après échoue. Le workflow
+signale alors « ALREADY PUBLISHED » avec le numéro de version connu.
+Il faut consulter la **Version History** du Creator Dashboard avant
+de lancer un autre envoi, pour ne pas multiplier les versions du jeu.
+
+Ces contrôles ne remplacent pas un essai sur appareil réel ni
+l'autorisation nécessaire pour publier la place sur Roblox.
