@@ -66,6 +66,9 @@ def main():
         "if native and native.Magnitude >= 0.15 then",
         "UserInputService.LastInputTypeChanged:Connect(updateTouchVisibility)",
         "local enabled = playable and not controllerActive",
+        'if newPhase ~= "LIVE" and newPhase ~= "COUNTDOWN" then',
+        "clearHeldCombatInput()",
+        'elseif scoped and newPhase == "LIVE" then',
     ):
         has(client, token, "Controller input, safe release, camera and mobile UX")
     assert client.index("local primaryFireTaskActive = false") < (
