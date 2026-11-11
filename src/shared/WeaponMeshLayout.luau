@@ -2,6 +2,7 @@
 -- Roblox glTF importer nests a Model per authored mesh and creates a
 -- MeshPart for EACH glTF material primitive. Never assume one part per node.
 local Layout = {}
+Layout.ORIGIN_NAME = "IRONYARD_WeaponOrigin"
 Layout.MAX_PER_COMPONENT = 8
 Layout.MAX_TOTAL = 32
 
@@ -62,6 +63,17 @@ function Layout.collect(root, required, validate)
         if not groups[name] or #groups[name] == 0 then return nil end
     end
     return groups
+end
+
+-- Roblox may wrap uploaded Models and recenter Model:GetPivot().
+-- The authored marker is a tiny physical mesh, so it survives glTF import.
+-- Exactly ONE marker must remain, regardless of Model nesting.
+function Layout.origin(root, validate)
+    if type(validate) ~= "function" then return nil end
+    local groups = Layout.collect(root, {Layout.ORIGIN_NAME}, validate)
+    if not groups then return nil end
+    local matches = groups[Layout.ORIGIN_NAME]
+    return matches and #matches == 1 and matches[1] or nil
 end
 
 return Layout
