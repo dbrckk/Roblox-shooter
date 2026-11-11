@@ -6,6 +6,7 @@ local Debris = game:GetService("Debris")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local ShotInputPolicy = require(shared:WaitForChild("ShotInputPolicy"))
+local FireEpochPolicy = require(shared:WaitForChild("FireEpochPolicy"))
 local WeaponSpreadPolicy = require(shared:WaitForChild("WeaponSpreadPolicy"))
 local DuelCombatState = require(script.Parent:WaitForChild("DuelCombatState"))
 local AimStancePolicy = require(shared:WaitForChild("AimStancePolicy"))
@@ -24,6 +25,7 @@ local WeaponService = {}
 local remotes = nil
 local playerState = {}
 local started = false
+local weaponRoundEpoch = 0
 local weaponRandom = Random.new()
 
 local function getState(player)
@@ -304,6 +306,7 @@ local function sendAmmo(player, weaponId)
     local state = getState(player)
     remotes.WeaponFeedback:FireClient(player, {
         kind = "Ammo", weaponId = weaponId,
+        epoch = weaponRoundEpoch,
         loaded = getLoaded(state, weaponId, config) or -1,
         capacity = config.magazineSize or -1,
         reloading = (state.reloadUntil[weaponId] or 0) > os.clock(),
@@ -573,8 +576,6 @@ local function createKnifeVisual(origin, direction)
     return knife
 end
 
-local weaponRoundEpoch = 0
-
 local function fireKnife(player, weaponId, config, direction)
     local character, _, head = getLiveCharacter(player)
     if not character then
@@ -708,6 +709,17 @@ local function onFireWeapon(player, payload)
         return
     end
 
+    -- Do not admit an in-flight packet from the preceding FFA round or
+    -- duel bout after a new LIVE phase reopens. Invalid/stale packets
+    -- cannot consume shots, ammo, cooldown, or spawn protection.
+    if not FireEpochPolicy.matches(payload.epoch, weaponRoundEpoch) then
+        -- Legitimate high-latency clients may still have an older
+        -- replicated epoch. Send a versioned magazine snapshot so the
+        -- HUD recovers without fabricating a hit or tracer.
+        sendAmmo(player, weaponId)
+        return
+    end
+
     -- A dead character cannot fire or consume its rate limit.
     local liveCharacter, liveHumanoid, liveHead, liveRoot = getLiveCharacter(player)
     if not liveCharacter then return end
@@ -742,6 +754,7 @@ function WeaponService.resetRound()
     BotHearingService.resetRound()
     -- Invalidate in-flight knives before new rounds can accept damage.
     weaponRoundEpoch += 1
+    workspace:SetAttribute("IronYardFireEpoch", weaponRoundEpoch)
     -- All combatants start the next round with full magazines and no
     -- lingering reload or rate-limit state from the prior match.
     for player, state in pairs(playerState) do
@@ -764,6 +777,7 @@ function WeaponService.start()
     end
 
     started = true
+    workspace:SetAttribute("IronYardFireEpoch", weaponRoundEpoch)
     remotes = PrecisionNet.getRemotes(true)
 
     remotes.EquipWeapon.OnServerEvent:Connect(onEquipWeapon)

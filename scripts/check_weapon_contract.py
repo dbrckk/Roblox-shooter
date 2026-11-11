@@ -35,6 +35,48 @@ def main():
     client = source("src/client/init.client.luau")
     gamepad_policy = source("src/shared/GamepadCombatPolicy.luau")
     auto_policy = source("src/shared/AutomaticFireCadence.luau")
+    epoch_policy = source("src/shared/FireEpochPolicy.luau")
+    for token in (
+        "function Policy.valid(epoch)",
+        "function Policy.matches(received, current)",
+        "function Policy.acceptAmmo(received, worldEpoch, latestAmmoEpoch)",
+        "and current > 0 and received == current",
+    ):
+        has(epoch_policy, token, "Pure combat generation policy")
+    for token in (
+        'WaitForChild("FireEpochPolicy")',
+        'local fireEpoch = workspace:GetAttribute("IronYardFireEpoch")',
+        "epoch = fireEpoch,",
+        'if not FireEpochPolicy.valid(fireEpoch) or fireEpoch <= 0 then return end',
+        'if not FireEpochPolicy.acceptAmmo(message.epoch,',
+        'latestAmmoEpoch = message.epoch',
+        'workspace:GetAttributeChangedSignal("IronYardFireEpoch"):Connect(function()',
+        'if latestAmmoEpoch < epoch then',
+        'nextLocalGlobalFireAt = 0',
+    ):
+        has(client, token, "Client must stamp shots and avoid stale ammo snapshots")
+    for token in (
+        'epoch = weaponRoundEpoch,',
+        'if not FireEpochPolicy.matches(payload.epoch, weaponRoundEpoch) then',
+        'workspace:SetAttribute("IronYardFireEpoch", weaponRoundEpoch)',
+        'sendAmmo(player, weaponId)',
+    ):
+        has(server, token, "Server must reject old-round shot packets before ammo mutation")
+    fire = server.split("local function onFireWeapon(player, payload)", 1)[1]
+    fire = fire.split("function WeaponService.resetRound()", 1)[0]
+    require(fire.index(
+        "if not FireEpochPolicy.matches(payload.epoch, weaponRoundEpoch) then"
+    ) < fire.index("if not canFire(player, weaponId, config) then"),
+        "Round-epoch guard must run before magazine/cooldown admission")
+    require(server.index("local weaponRoundEpoch = 0") < (
+        server.index("local function sendAmmo(player, weaponId)")
+    ), "Versioned Ammo must capture the actual local epoch")
+    require(server.index('workspace:SetAttribute("IronYardFireEpoch", weaponRoundEpoch)',
+                         server.index("function WeaponService.resetRound()")) < (
+        server.index("for player, state in pairs(playerState)",
+                     server.index("function WeaponService.resetRound()"))
+    ), "Publish new round epoch before any reset Ammo replies")
+
     for token in (
         "function Policy.isAutomatic(weapon)",
         "function Policy.waitSeconds(weapon)",

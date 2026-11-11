@@ -247,3 +247,45 @@ la régularité en présence de latence et de baisse de FPS.
 
 La CI valide la politique et le câblage, pas des mesures de FPS ni
 la sensation réelle à l'écran.
+
+
+## Isolation des tirs entre manches et duels — 11 novembre 2026
+
+Le serveur publie maintenant un identifiant entier
+`Workspace.IronYardFireEpoch`, incrémenté au **reset autoritaire de
+chaque manche FFA** et au démarrage de **chaque manche de duel 1v1**.
+Ce compteur constitue un numéro de génération, pas une preuve d'identité
+ni une clé de sécurité. Chaque requête `FireWeapon` valide contient
+le compteur connu au moment du tir.
+
+Un ancien paquet `FireWeapon` retardé par une connexion instable peut
+arriver après le passage à une nouvelle phase LIVE. Le serveur vérifie
+alors `FireEpochPolicy.matches(payload.epoch, weaponRoundEpoch)` avant
+les conditions d'arme, munitions, cooldown et raycast : un paquet
+d'une ancienne manche ne peut donc ni consommer une balle du
+nouveau chargeur, ni produire un effet de tir, ni toucher un adversaire,
+ni retirer sa protection de spawn.
+
+Le HUD reçoit aussi la génération du serveur dans chaque message
+`Ammo`. Il ignore les réponses de générations antérieures à celle
+déjà reçue ou répliquée par l'attribut Workspace. Si la nouvelle
+génération arrive avant la confirmation de munitions, le cache local
+est vidé et l'affichage revient au chargeur complet réinitialisé
+par le serveur, en attendant la correction confirmée. À l'inverse,
+une réponse de nouvelle génération arrivée en premier reste
+conservée. Le cooldown local est également réinitialisé pour
+s'aligner sur le cooldown serveur lors d'une nouvelle manche.
+
+**Tests de régression :** compteur non initialisé, ancien numéro,
+numéro futur, valeurs non entières/non finies, réponse Ammo tardive,
+réponse Ammo en avance sur la réplication et 24 manches de duel
+consécutives. Les contrats vérifient que ce contrôle a lieu avant
+l'admission des tirs et les effets serveur.
+
+**QA moteur :** sur deux clients, déclencher un tir juste avant la fin
+d'une manche et simuler une forte latence réseau. Vérifier que le tir
+retardé ne fait aucun dégât, qu'aucune munition de la nouvelle manche
+ne disparaît et que le compteur affiché n'est jamais restauré à
+l'ancien nombre de balles. Refaire avec deux manches 1v1 et vérifier
+le fonctionnement du premier tir légitime de la nouvelle manche.
+La CI ne simule pas de transport RemoteEvent ni de réplication Roblox.
