@@ -126,6 +126,9 @@ enfoncées. Le changement de manette, la perte de focus et
 l'ouverture des paramètres relâchent les commandes maintenues.
 La croix et les boutons changent les armes via `WeaponConfig.Order`,
 avec rebouclage de la dernière à la première arme.
+Les transitions vers RESULTS, WAITING et les pauses de duel annulent
+également les gâchettes maintenues pour éviter un tir automatique à la
+reprise de la manche.
 
 Pour les contrôleurs Bluetooth Android, le passage à la manette
 masque les boutons tactiles ; le retour au tactile les fait réapparaître.
