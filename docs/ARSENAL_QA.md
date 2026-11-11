@@ -97,3 +97,50 @@ correction serveur. Confirmer qu'aucun tir refusé ne produit de dégâts ou
 de récompenses et que le gameplay reste réactif sous latence simulée.
 La CI vérifie le câblage et les conditions de resynchronisation ; elle ne
 remplace pas un test multijoueur réel en réseau.
+
+
+## Prise en charge manette FPS (PC, Xbox et Bluetooth Android) — 11 novembre 2026
+
+La manette utilise la caméra, le déplacement et le saut natifs Roblox ;
+le jeu route uniquement les actions FPS vers les mêmes chemins de
+tir/rechargement/animation sécurisés que la souris et le tactile.
+
+| Commande | Action |
+| --- | --- |
+| Gâchette droite (RT/R2) | Tir tenu pour le fusil automatique, appui individuel pour les armes semi-auto |
+| Gâchette gauche (LT/L2) | Visée maintenue, relâchement = sortie de visée |
+| X / Carré | Recharger |
+| Y / Triangle | Arme suivante |
+| LB / L1, croix gauche | Arme précédente |
+| Croix droite | Arme suivante |
+| Croix haut, croix bas | Fusil d'assaut, couteau |
+| RB / R1 | Lancer rapide de couteau |
+| B / Rond | Glissade |
+| Clic stick gauche (L3) | Sprint maintenu |
+| A / Croix | Saut natif, maintien aérien pour propulsion |
+| Start/Options si non réservé par Roblox | Ouvrir les paramètres |
+
+Les deux sources de tir, souris et RT, partagent **une seule** tâche
+de tir automatique : aucun envoi en doublon lorsque les deux sont
+enfoncées. Le changement de manette, la perte de focus et
+l'ouverture des paramètres relâchent les commandes maintenues.
+La croix et les boutons changent les armes via `WeaponConfig.Order`,
+avec rebouclage de la dernière à la première arme.
+
+Pour les contrôleurs Bluetooth Android, le passage à la manette
+masque les boutons tactiles ; le retour au tactile les fait réapparaître.
+Cette bascule ne doit pas interrompre une visée ou un sprint à la
+manette. Les commandes natives `Humanoid.MoveDirection` permettent
+désormais d'utiliser le stick gauche (ou le joystick tactile) pour
+l'air-control, le boost, la glissade et les wallruns.
+
+**Vérification requise dans Roblox :** connecter une manette sur
+Windows et une manette Bluetooth sur Android. Confirmer que le stick
+droit oriente la caméra, les gâchettes tirent/visent sans entrée
+fantôme, la combinaison souris + manette ne double pas les tirs,
+les boutons Xbox et PlayStation affichent le bon sens,
+le sprint/glissade fonctionnent, et la perte de focus/déconnexion
+annule tir, visée et propulsion. Vérifier également que le menu Roblox
+ne capture pas `ButtonStart` : si c'est le cas, la commande native
+de menu doit primer. Les tests CI couvrent le routage et les contrats,
+pas les événements matériels dans le moteur.
