@@ -44,13 +44,19 @@ jobs:
           python3 scripts/test_public_release.py
           python3 scripts/test_publish_public_roblox.py
 
+      - name: Resolve and independently verify the exact PUBLIC owner destination
+        env:
+          ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
+          CONFIGURED_UNIVERSE_ID: ${{ vars.IRON_YARD_UNIVERSE_ID || secrets.IRON_YARD_UNIVERSE_ID }}
+          CONFIGURED_PLACE_ID: ${{ vars.IRON_YARD_PLACE_ID || secrets.IRON_YARD_PLACE_ID }}
+        run: |
+          python3 scripts/resolve_public_target.py --github-env "$GITHUB_ENV"
+
       - name: Verify existing PUBLIC universe and the intended creator
         env:
           ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
-          UNIVERSE_ID: ${{ vars.IRON_YARD_UNIVERSE_ID }}
-          PLACE_ID: ${{ vars.IRON_YARD_PLACE_ID }}
         run: |
-          python3 scripts/publish_public_roblox.py --universe-id "$UNIVERSE_ID" --place-id "$PLACE_ID" --source-commit "$GITHUB_SHA" --dry-run
+          python3 scripts/publish_public_roblox.py --universe-id "$IRON_YARD_UNIVERSE_ID" --place-id "$IRON_YARD_PLACE_ID" --source-commit "$GITHUB_SHA" --dry-run
 
       - name: Require successful CI for exact source commit
         if: ${{ !inputs.check_only }}
@@ -86,7 +92,5 @@ jobs:
         if: ${{ !inputs.check_only }}
         env:
           ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
-          UNIVERSE_ID: ${{ vars.IRON_YARD_UNIVERSE_ID }}
-          PLACE_ID: ${{ vars.IRON_YARD_PLACE_ID }}
         run: |
-          python3 scripts/publish_public_roblox.py --universe-id "$UNIVERSE_ID" --place-id "$PLACE_ID" --source-commit "$GITHUB_SHA" --place-file iron-yard.rbxlx --confirm-public
+          python3 scripts/publish_public_roblox.py --universe-id "$IRON_YARD_UNIVERSE_ID" --place-id "$IRON_YARD_PLACE_ID" --source-commit "$GITHUB_SHA" --place-file iron-yard.rbxlx --confirm-public
