@@ -59,6 +59,34 @@ def main():
     ):
         expect_invalid(dict(valid, **edited))
     expect_invalid(None)
+    runtime = (Path(__file__).resolve().parents[1] / "src/shared/WeaponAssetPolicy.luau").read_text()
+    assert set(U.RUNTIME_NAMES) == set(U.WEAPONS)
+    for game_name in U.RUNTIME_NAMES.values():
+        assert '"' + game_name + '"' in runtime, (
+            "Generated upload registry must match game's exact weapon IDs")
+
+    recorded_paths = []
+    def upload_request(url, key, *, payload=None, content_type=None):
+        if payload is not None:
+            assert url == U.API + "/assets"
+            assert content_type.startswith("multipart/form-data; boundary=IY-")
+            assert b'Content-Disposition: form-data; name="request"' in payload
+            assert b'Content-Disposition: form-data; name="fileContent"' in payload
+            assert b"Content-Type: model/gltf-binary" in payload
+            assert b"\\r\\n" in payload
+            assert b"GLB-BYTES-FROM-VALIDATED-FORGE" in payload
+            return {"path": "operations/upload_123", "done": False}
+        assert url == U.API + "/operations/upload_123"
+        assert recorded_paths == ["operations/upload_123"], (
+            "Checkpoint callback must run before first network poll")
+        return {"path": "operations/upload_123", "done": True, "response": valid}
+
+    with mock.patch.object(U, "request_json", side_effect=upload_request), \
+            mock.patch.object(U.time, "sleep", return_value=None):
+        assert U.upload_model(9774173158, "pistol", "LOD0",
+                              b"GLB-BYTES-FROM-VALIDATED-FORGE", "fake",
+                              on_started=recorded_paths.append) == 123
+    assert recorded_paths == ["operations/upload_123"]
     assert U.safe_operation_path("operations/AZ-987_123") == "operations/AZ-987_123"
     for bad in ("assets/123", "operations/../assets/1", "operations/foo/bar",
                 "operations/valid?x=1", "", None):
@@ -188,6 +216,21 @@ def main():
         assert contents.count("LOD0 =") == 5 and contents.count("LOD1 =") == 5
         assert all("operationPath" not in x for x in json.loads(
             (root / "checkpoint.json").read_text())["models"].values())
+
+        # Ten distinct source GLBs must map to ten DISTINCT Roblox Model IDs.
+        # A malformed provider response cannot alias two weapons and be pushed.
+        module.write_text(original, "utf-8")
+        (root / "checkpoint.json").unlink()
+        with mock.patch.dict(os.environ, {"ROBLOX_OPEN_CLOUD_ASSETS_KEY": "fake-key"}), \
+                mock.patch.object(U, "sources", return_value=fake_entries()), \
+                mock.patch.object(U, "upload_model", return_value=9999):
+            try:
+                U.main(flags(root, publish=True))
+            except ValueError as exc:
+                assert "same Roblox asset ID" in str(exc)
+            else:
+                raise AssertionError("Duplicated Roblox IDs reached live registry")
+        assert module.read_text() == original
 
         # Malformed owner must not upload even when a key is configured.
         module.write_text("return { ownerUserId = 99, modelIds = {} }")
