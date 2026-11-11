@@ -193,3 +193,39 @@ Même avec ces corrections, les réglages de visée, l'orientation des axes,
 la visibilité PBR et le positionnement des mains doivent être mesurés en
 situation réelle sur Roblox Studio/Android avant toute affirmation de
 qualité AAA ou publication finale.
+
+## Reprise fiable des uploads Open Cloud
+
+Le générateur utilise les slugs de fichiers en minuscules
+(`pistol`, `assault_rifle`, `shotgun`, `sniper`, `knife`),
+**mais Roblox attend les identifiants de jeu**
+`Pistol`, `AssaultRifle`, `Shotgun`, `Sniper`, `Knife`.
+Le script `scripts/upload_weapon_models.py` traduit explicitement ces
+noms en générant `src/shared/WeaponAssetIds.luau`. Un registre comportant
+les clés en minuscules ne rendrait aucun des cinq équipements PBR actif.
+
+Quand Roblox répond à un `POST /assets` en donnant
+`operations/<id>`, le script sauvegarde immédiatement cet identifiant
+d'opération et le SHA-256 de son GLB dans le **checkpoint de GitHub Actions**
+(aucune clé secrète). Si la modération est en attente ou si l'API met trop
+longtemps à répondre, l'exécution suivante reprend `GET /operations/<id>`
+au lieu d'envoyer une nouvelle copie. Le checkpoint est ignoré si le
+créateur, le commit source ou l'empreinte du GLB ne correspondent pas.
+Un ancien identifiant d'asset est lui aussi revérifié auprès de Roblox.
+
+La liste des modèles est écrite dans le registre de jeu **seulement après**
+confirmation explicite de la modération, de la propriété, du type `Model`
+et de dix IDs différents. Les réponses « pending », « rejected »,
+les chemins d'opération arbitraires et les fichiers invalides sont refusés.
+Un contrôle de préparation de la CI indique uniquement si la clé de création
+d'assets est présente dans les Secrets du dépôt (jamais sa valeur).
+
+Ce mécanisme permet de reprendre une opération déjà enregistrée ; il ne
+garantit pas l'absence absolue de doublons si un processus est interrompu
+entre la réponse de création distante et l'écriture du checkpoint local.
+L'API Assets Open Cloud utilise des opérations asynchrones :
+https://create.roblox.com/docs/cloud/guides/usage-assets
+
+L'import des GLB sur le compte propriétaire, leur rendu Studio et la
+publication de la place publique sont des validations **distinctes** du
+contrôle hors ligne du pipeline.
