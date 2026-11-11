@@ -2,7 +2,10 @@
 -- No Roblox services; can be tested with the standalone Luau interpreter.
 local RoundStandings = {}
 
-function RoundStandings.build(rawEntries, roundNumber)
+-- championUserId is an optional, verified duel-forfeit survivor.
+-- It is never passed for normal FFA or score-limit rounds. Keep the actual
+-- bout scores visible, but show the surviving champion first, with rank 1.
+function RoundStandings.build(rawEntries, roundNumber, championUserId)
     local rows = {}
     for _, entry in ipairs(rawEntries) do
         local kills = math.max(0, math.floor(tonumber(entry.eliminations) or 0))
@@ -22,7 +25,23 @@ function RoundStandings.build(rawEntries, roundNumber)
             sortKey = tonumber(entry.sortKey) or 0,
         })
     end
+    local championRow = nil
+    if type(championUserId) == "number"
+        and championUserId == championUserId
+        and championUserId ~= 0 and math.abs(championUserId) < math.huge
+        and championUserId % 1 == 0 then
+        for _, entry in ipairs(rows) do
+            if not entry.bot and entry.userId == championUserId then
+                championRow = entry
+                break
+            end
+        end
+    end
     table.sort(rows, function(a, b)
+        if championRow then
+            if a == championRow then return true end
+            if b == championRow then return false end
+        end
         if a.eliminations ~= b.eliminations then
             return a.eliminations > b.eliminations
         end
@@ -35,7 +54,7 @@ function RoundStandings.build(rawEntries, roundNumber)
     local lastRank = 0
     for index, entry in ipairs(rows) do
         if entry.eliminations ~= lastKills then lastRank = index end
-        entry.rank = lastRank
+        entry.rank = championRow and index or lastRank
         lastKills = entry.eliminations
         entry.sortKey = nil -- not part of the replicated public result
     end
@@ -47,8 +66,10 @@ function RoundStandings.build(rawEntries, roundNumber)
     return {
         round = roundNumber,
         standings = rows,
-        winner = uniqueLead and first.name or "DRAW",
-        winnerUserId = uniqueLead and first.userId or 0,
+        winner = championRow and championRow.name
+            or (uniqueLead and first.name or "DRAW"),
+        winnerUserId = championRow and championRow.userId
+            or (uniqueLead and first.userId or 0),
     }
 end
 

@@ -425,6 +425,7 @@ def main():
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
         "function Duel.sameParticipants(players, first, second)",
+        "function Duel.forfeitSide(activePlayers, first, second)",
         "function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)",
         "function Duel.healthForBout(expectedCharacter, actualCharacter, health, maxHealth)",
         "function Duel.advance(scoreA, scoreB, bouts, result)",
@@ -499,6 +500,24 @@ def main():
         has(duel_supply, token, "Fair-play medical disable in duel")
     has(match, 'if winningPlayer and winningPlayer.Parent == Players',
         "Only present combatants can receive duel victories")
+    for token in (
+        "local side = DuelRules.forfeitSide(Players:GetPlayers(), a, b)",
+        'endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)',
+        'local forfeitChampion = reason == "FORFEIT"',
+        "RoundStandings.build(duelRows(), round, forfeitChampion)",
+        'snapshot.winnerUserId = winningSide == "A" and duel.aId',
+    ):
+        has(match, token, "Survivor-only duel forfeit and consistent podium")
+    require('and (a and "A" or b and "B" or nil)' not in match,
+            "Stale saved Player references cannot select the duel winner")
+    for token in (
+        "function RoundStandings.build(rawEntries, roundNumber, championUserId)",
+        "if a == championRow then return true end",
+        "entry.rank = championRow and index or lastRank",
+    ):
+        has(source("src/server/RoundStandings.luau"), token,
+            "Forfeit result podium prioritizes verified survivor without fake wins")
+
     has(match, 'and reason == "SCORE_LIMIT" then',
         "Forfeits and spawn failures must not farm progression awards")
     has(match, '(duel ~= nil and phase ~= "RESULTS")',

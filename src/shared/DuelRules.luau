@@ -16,6 +16,20 @@ function Duel.sameParticipants(players, first, second)
             or (players[1] == second and players[2] == first))
 end
 
+-- An abandoned 1v1 is won only by the ORIGINAL surviving combatant.
+-- A stale Player reference is truthy even after its owner disconnects;
+-- never infer the winner from the existence of the two saved references.
+-- Spectators, replacement occupants and empty lobbies cannot claim a win.
+function Duel.forfeitSide(activePlayers, first, second)
+    if type(activePlayers) ~= "table" or #activePlayers ~= 1
+        or first == nil or second == nil or first == second then
+        return nil
+    end
+    if activePlayers[1] == first then return "A" end
+    if activePlayers[1] == second then return "B" end
+    return nil
+end
+
 function Duel.canStart(players, readyA, readyB)
     return type(players) == "number" and players == 2
         and readyA == true and readyB == true

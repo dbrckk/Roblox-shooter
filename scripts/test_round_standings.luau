@@ -50,6 +50,37 @@ local studio = R.build({
 assert(studio.standings[1].userId == -1
     and studio.standings[2].userId == -2)
 assert(studio.winnerUserId == -1)
+-- Forfeit from a duel: the original surviving player ranks first even
+-- when they had fewer actual bout wins. Do not fake their scores.
+local forfeitRows = {
+    row("Disconnected A", 4, 0, false, 71, 71),
+    row("Surviving B", 2, 0, false, 72, 72),
+}
+local forfeit = R.build(forfeitRows, 6, 72)
+assert(forfeit.winner == "Surviving B" and forfeit.winnerUserId == 72)
+assert(forfeit.standings[1].userId == 72
+    and forfeit.standings[1].rank == 1 and forfeit.standings[1].eliminations == 2)
+assert(forfeit.standings[2].userId == 71
+    and forfeit.standings[2].rank == 2 and forfeit.standings[2].eliminations == 4)
+-- Normal FFA/duel score-limit uses ordinary scoring, not an arbitrary ID.
+local ordinary = R.build(forfeitRows, 6)
+assert(ordinary.winnerUserId == 71 and ordinary.standings[1].userId == 71)
+local ghost = R.build(forfeitRows, 6, 999)
+assert(ghost.winnerUserId == 71 and ghost.standings[1].userId == 71)
+local fake = R.build(forfeitRows, 6, 0/0)
+assert(fake.winnerUserId == 71)
+local invalid = R.build(forfeitRows, 6, 0)
+assert(invalid.winnerUserId == 71)
+local emptyForfeit = R.build({}, 6, 72)
+assert(emptyForfeit.winner == "DRAW" and emptyForfeit.winnerUserId == 0)
+-- Two equal bout totals still show the confirmed survivor alone as #1.
+local tiedForfeit = R.build({
+    row("A", 3, 1, false, 71, 71),
+    row("B", 3, 0, false, 72, 72),
+}, 6, 71)
+assert(tiedForfeit.winnerUserId == 71 and tiedForfeit.standings[1].rank == 1)
+assert(tiedForfeit.standings[2].rank == 2)
+
 local empty = R.build({}, 5)
 assert(empty.winner == "DRAW" and #empty.standings == 0, "Empty lobby")
 print("IRON YARD final scoreboard ranking, ties, rewards and snapshot isolation: OK")
