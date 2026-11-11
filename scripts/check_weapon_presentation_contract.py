@@ -484,7 +484,7 @@ assert visuals.index("self.pendingCartridge = nil -- cancel unplayed pump/bolt o
     visuals.index("function WeaponVisuals:_ejectCartridge(plan)"))
 assert "FireServer" not in ejection and "Instance.new" not in ejection
 for needle in (
-    "function Pose.get(id)", "function Pose.damping(blend)",
+    "function Pose.get(id, imported)", "function Pose.damping(blend)",
     "sightX = 0, sightY = 0.32, sightZ = -0.05",
     "sightX = 0, sightY = 0.30, sightZ = 0.10",
     "sightX = 0, sightY = 0.24, sightZ = -0.28",
