@@ -5,7 +5,7 @@ P.Fields = {
     "equipStartedAt", "fireStartedAt", "recoil",
     "reloadActive", "reloadStartedAt", "reloadBlend",
     "aimBlend", "stepPhase", "stepBlend", "sway",
-    "lastCameraPosition",
+    "lastCameraPosition", "lastCameraCFrame",
 }
 
 function P.capture(viewmodel)
