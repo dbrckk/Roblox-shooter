@@ -308,6 +308,9 @@ def main(argv=None):
 
     require(all("assetId" in row for row in rows.values()),
             "Incomplete weapon asset set; registry remains unchanged")
+    ids = [rows[weapon, lod]["assetId"] for weapon in WEAPONS for lod in LODS]
+    require(len(set(ids)) == len(ids),
+            "Multiple authored weapons point to the same Roblox asset ID")
     new_module = render_module(args.owner_user_id, args.source_commit, rows)
     staging = args.module.with_suffix(".tmp")
     staging.write_text(new_module, "utf-8")
