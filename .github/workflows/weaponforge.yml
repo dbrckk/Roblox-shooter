@@ -40,6 +40,19 @@ jobs:
           set -euo pipefail
           python3 tools/weaponforge/validate_weapon_exports.py build/weapon-kit
           cat build/weapon-kit/validation_summary.json >> "$GITHUB_STEP_SUMMARY"
+      - name: Validate Open Cloud staging with these actual ten GLBs (offline)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/upload_weapon_models.py \
+            --assets build/weapon-kit \
+            --owner-user-id 9774173158 \
+            --source-commit "$GITHUB_SHA" \
+            --checkpoint build/weapon-kit/checkpoint.json \
+            --module src/shared/WeaponAssetIds.luau
+          test ! -f build/weapon-kit/checkpoint.json
+          echo "Dry-run validated ten uploadable owner-authored GLBs without network." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Blender source and GLB LODs
         uses: actions/upload-artifact@v4
         with:
