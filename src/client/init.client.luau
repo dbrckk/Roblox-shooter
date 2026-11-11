@@ -15,6 +15,7 @@ local remoteFxState = RemoteCombatFxBudget.new()
 local TouchLayout = require(shared:WaitForChild("TouchLayout"))
 local GamepadCombatPolicy = require(shared:WaitForChild("GamepadCombatPolicy"))
 local AutomaticFireCadence = require(shared:WaitForChild("AutomaticFireCadence"))
+local FireEpochPolicy = require(shared:WaitForChild("FireEpochPolicy"))
 local FirstPersonBodyCache = require(shared:WaitForChild("FirstPersonBodyCache"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
@@ -30,6 +31,8 @@ local mouseSensitivity = 1
 local lastLocalFire = {}
 local nextLocalGlobalFireAt = 0
 local ammoByWeapon = {}
+local latestAmmoEpoch = 0
+local observedFireEpoch = 0
 local touchWeaponButtons = {}
 local updateTouchVisibility = nil
 local cancelAimForMobility = nil
@@ -845,6 +848,10 @@ local function fireWeapon(weaponId)
     local _, humanoid = getCharacterParts()
     if not humanoid or humanoid.Health <= 0 then return end
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    local fireEpoch = workspace:GetAttribute("IronYardFireEpoch")
+    -- An unreplicated round generation cannot initiate a predicted shot.
+    -- The actual server uses this snapshot to reject late round packets.
+    if not FireEpochPolicy.valid(fireEpoch) or fireEpoch <= 0 then return end
     if workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
         local a = workspace:GetAttribute("IronYardDuelPlayerA")
         local b = workspace:GetAttribute("IronYardDuelPlayerB")
@@ -897,6 +904,7 @@ local function fireWeapon(weaponId)
 
 	remotes.FireWeapon:FireServer({
 		weaponId = weaponId,
+        epoch = fireEpoch,
 		origin = ray.Origin,
 		direction = ray.Direction.Unit,
 	})
@@ -1248,6 +1256,12 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
         hud:showProtectedFeedback()
     elseif message.kind == "Ammo" and typeof(message.weaponId) == "string"
         and typeof(message.capacity) == "number" and typeof(message.loaded) == "number" then
+        -- Replication of attributes and reliable remotes can interleave.
+        -- Ignore old-round ammo snapshots even if they arrive after the
+        -- server's fresh-magazine response or the newer round attribute.
+        if not FireEpochPolicy.acceptAmmo(message.epoch,
+            workspace:GetAttribute("IronYardFireEpoch"), latestAmmoEpoch) then return end
+        latestAmmoEpoch = message.epoch
         ammoByWeapon[message.weaponId] = {
             loaded = message.loaded,
             capacity = message.capacity,
@@ -1387,6 +1401,29 @@ end)
 
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
 	task.defer(enforceFirstPerson)
+end)
+
+-- FFA rounds and each 1v1 bout have separate authoritative combat epochs.
+-- If the new epoch's Ammo event arrives before this attribute, retain that
+-- already-current snapshot. Otherwise discard stale magazines and display
+-- the server's known full-magazine reset until the next Ammo event arrives.
+observedFireEpoch = workspace:GetAttribute("IronYardFireEpoch") or 0
+workspace:GetAttributeChangedSignal("IronYardFireEpoch"):Connect(function()
+    local epoch = workspace:GetAttribute("IronYardFireEpoch")
+    if not FireEpochPolicy.valid(epoch) or epoch <= observedFireEpoch then return end
+    observedFireEpoch = epoch
+    lastLocalFire = {}
+    nextLocalGlobalFireAt = 0
+    lastReloadRequestAt = -math.huge
+    if latestAmmoEpoch < epoch then
+        ammoByWeapon = {}
+        local config = WeaponConfig.get(currentWeaponId)
+        if config and config.magazineSize then
+            hud:setAmmo(currentWeaponId, config.magazineSize,
+                config.magazineSize, false)
+        end
+        visuals:setReloading(currentWeaponId, false)
+    end
 end)
 
 -- A new round resets the authoritative aim timer. Reannounce held aim once.
