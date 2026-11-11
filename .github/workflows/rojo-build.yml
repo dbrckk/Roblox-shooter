@@ -134,6 +134,7 @@ jobs:
         shell: bash
         env:
           ROBLOX_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
+          ROBLOX_ASSETS_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_ASSETS_KEY }}
           IRON_YARD_UNIVERSE_ID: ${{ vars.IRON_YARD_UNIVERSE_ID }}
           IRON_YARD_PLACE_ID: ${{ vars.IRON_YARD_PLACE_ID }}
         run: |
@@ -145,6 +146,13 @@ jobs:
           else
             echo '- Open Cloud authorization: **configured** (secret value not exposed)' >> "$GITHUB_STEP_SUMMARY"
             echo "::notice::Open Cloud authorization: CONFIGURED"
+          fi
+          if [ -z "$ROBLOX_ASSETS_KEY" ]; then
+            echo '- Weapon PBR assets authorization: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Weapon PBR assets authorization: NOT CONFIGURED"
+          else
+            echo '- Weapon PBR assets authorization: **configured** (secret hidden)' >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::Weapon PBR assets authorization: CONFIGURED"
           fi
           if [ -z "$IRON_YARD_UNIVERSE_ID" ]; then
             echo '- IRON YARD universe destination: **NOT CONFIGURED**' >> "$GITHUB_STEP_SUMMARY"
