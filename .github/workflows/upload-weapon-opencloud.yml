@@ -49,7 +49,7 @@ jobs:
           import os, re
           from pathlib import Path
           registry = Path("src/shared/WeaponAssetIds.luau").read_text("utf-8")
-          declared = re.search(r"\\bownerUserId\\s*=\\s*(\\d+)\\b", registry)
+          declared = re.search(r"\bownerUserId\s*=\s*(\d+)\b", registry)
           if not declared or declared.group(1) != os.environ["CREATOR"]:
               raise SystemExit("Configured Roblox owner differs from committed owner registry")
           print("Verified Roblox model owner (not uploading yet).")
