@@ -28,6 +28,11 @@ def main():
     network = source("src/shared/PrecisionNet.luau")
     server = source("src/server/WeaponService.luau")
     shot_input = source("src/shared/ShotInputPolicy.luau")
+    spread_policy = source("src/shared/WeaponSpreadPolicy.luau")
+    aim_policy = source("src/shared/AimStancePolicy.luau")
+    movement_service = source("src/server/MovementService.luau")
+    rate_policy = source("src/shared/RemoteRatePolicy.luau")
+    client = source("src/client/init.client.luau")
     # The first-person client predicts ammo immediately before FireServer;
     # on a server-rejected but otherwise valid shot, authoritative ammo MUST
     # be resent. Without this the HUD can remain at zero until respawn.
@@ -57,11 +62,6 @@ def main():
         server.index("if not canFire(player, weaponId, config) then")
     ), "Only rate-admitted valid shots may trigger ammo resynchronization"
 
-    spread_policy = source("src/shared/WeaponSpreadPolicy.luau")
-    aim_policy = source("src/shared/AimStancePolicy.luau")
-    movement_service = source("src/server/MovementService.luau")
-    rate_policy = source("src/shared/RemoteRatePolicy.luau")
-    client = source("src/client/init.client.luau")
     viewmodel = source("src/client/WeaponVisuals.luau")
     hud = source("src/client/HudController.luau")
     match = source("src/server/MatchService.luau")
