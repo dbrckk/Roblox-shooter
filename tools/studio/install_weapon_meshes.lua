@@ -59,6 +59,22 @@ local seen={}
 local replaced={}
 local function installVariant(source,weapon,lod)
     local found=collectMeshes(source,weapon)
+    local rootCFrame
+    -- Previously approved Studio kits have a synthetic WeaponOrigin Part.
+    -- Retain it exactly when rebuilding a subset, for compatibility.
+    local existing=source:GetAttribute("IronYardStudioApproved")==true
+        and source:FindFirstChild("WeaponOrigin")
+    if existing and existing:IsA("BasePart") then
+        rootCFrame=existing.CFrame
+    else
+        local marker=WeaponMeshLayout.origin(source, function(mesh)
+            if mesh.MeshId=="" then return false end
+            local extent=mesh.Size.Magnitude
+            return extent==extent and extent>=0.025 and extent<=0.35
+        end)
+        assert(marker,"GLB missing its unique 4cm Blender weapon-origin marker")
+        rootCFrame=marker.CFrame
+    end
     local category=stage:FindFirstChild(weapon)
     if not category then
         category=Instance.new("Folder")
@@ -75,7 +91,7 @@ local function installVariant(source,weapon,lod)
     origin.CanCollide=false
     origin.CanQuery=false
     origin.CanTouch=false
-    origin.CFrame=source:GetPivot()
+    origin.CFrame=rootCFrame
     origin.Parent=template
     template.PrimaryPart=origin
     for _,name in ipairs(expected[weapon]) do
