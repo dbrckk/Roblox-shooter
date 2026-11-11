@@ -228,6 +228,37 @@ assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 
 # Late owner-authorized uploads must activate without a weapon swap.
 # A preset change must switch a currently imported viewmodel to its new LOD,
 # but never during combat, reload, aiming, or before full PBR map replication.
+layout = get("src/shared/WeaponMeshLayout.luau")
+for needle in (
+    "function Layout.componentName(candidate, required)",
+    "function Layout.collect(root, required, validate)",
+    'part:IsA("MeshPart")',
+    'parent:IsA("Model") or parent:IsA("Folder")',
+    "Layout.MAX_PER_COMPONENT = 8",
+    "Layout.MAX_TOTAL = 32",
+    "if owners[key] and owners[key] ~= owner then return nil end",
+):
+    assert needle in layout, f"Roblox multi-primitive glTF import missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponMeshLayout")',
+    'WeaponMeshLayout.collect(template, required, function(part)',
+    'for _, componentName in ipairs(WeaponMeshPolicy.Required[weaponId]) do',
+    'for _, sourcePart in ipairs(selected[componentName]) do',
+):
+    assert needle in visuals, f"Client GLB multi-primitive animation missing: {needle}"
+for needle in (
+    'Layout.collect(package,',
+    'Layout.collect(model, MeshPolicy.Required[weaponId], validMesh)',
+    'for index, part in ipairs(selected[name]) do',
+):
+    assert needle in asset_loader, f"Server GLB nested mesh load missing: {needle}"
+for needle in (
+    'WeaponMeshLayout.collect(root, expected[weapon], function(child)',
+    'for i,sourcePart in ipairs(found[name]) do',
+    'component.Name=name',
+):
+    assert needle in studio_importer, f"Studio multi-primitive install missing: {needle}"
+
 refresh_policy = get("src/shared/WeaponMeshRefreshPolicy.luau")
 for needle in (
     "function Policy.shouldRefresh(imported, activeLod, wantedLod, available, status)",
@@ -270,7 +301,7 @@ for weapon in ("AssaultRifle", "Shotgun", "Sniper"):
     assert f'if not self:_createImportedWeapon(model, "{weapon}") then' in visuals
     assert f'{weapon}={{' in mesh_policy
 for needle in (
-    'clone.Name = WeaponMeshPolicy.runtimeName(sourcePart.Name)',
+    'clone.Name = WeaponMeshPolicy.runtimeName(componentName)',
     'anchor("FlashHider"',
     'anchor("ShotgunEjectionPort"',
     'anchor("MuzzleBrake"',
