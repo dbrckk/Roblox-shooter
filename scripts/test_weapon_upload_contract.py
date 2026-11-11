@@ -55,9 +55,21 @@ def main():
         {"creationContext": {"creator": {"userId": "42"}}},
         {"moderationResult": {"moderationState": "MODERATION_STATE_REJECTED"}},
         {"moderationResult": {"moderationState": "MODERATION_STATE_PENDING"}},
+        {"moderationResult": {}},
     ):
         expect_invalid(dict(valid, **edited))
     expect_invalid(None)
+    assert U.confirmed_asset(
+        dict(valid, moderationResult={"moderationState": "Approved"}),
+        9774173158) == 123
+    example = U.render_module(9774173158, "a" * 40, {
+        (w, lod): {"assetId": 100 + i * 2 + j}
+        for i, w in enumerate(U.WEAPONS)
+        for j, lod in enumerate(U.LODS)
+    })
+    recognized = U.matching_committed_ids(example, "a" * 40)
+    assert len(recognized) == 10, "Existing signed source registry not parsed"
+    assert U.matching_committed_ids(example, "b" * 40) == {}
     with tempfile.TemporaryDirectory() as temp:
         root = Path(temp)
         module = root / "WeaponAssetIds.luau"
