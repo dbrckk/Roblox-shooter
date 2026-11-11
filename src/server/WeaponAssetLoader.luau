@@ -8,6 +8,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local Registry = require(Shared:WaitForChild("WeaponAssetIds"))
 local Policy = require(Shared:WaitForChild("WeaponAssetPolicy"))
 local MeshPolicy = require(Shared:WaitForChild("WeaponMeshPolicy"))
+local Layout = require(Shared:WaitForChild("WeaponMeshLayout"))
 
 local Loader = {}
 local started = false
@@ -35,10 +36,7 @@ local function templateIsComplete(model, weaponId)
     end
     local pivot = model:FindFirstChild("WeaponOrigin")
     if not pivot or not pivot:IsA("BasePart") then return false end
-    for _, name in ipairs(MeshPolicy.Required[weaponId]) do
-        if not validMesh(model:FindFirstChild(name)) then return false end
-    end
-    return true
+    return Layout.collect(model, MeshPolicy.Required[weaponId], validMesh) ~= nil
 end
 
 local function cleanClone(mesh)
@@ -62,18 +60,12 @@ local function importVariant(assetId, weaponId, lod)
     local package = AssetService:LoadAssetAsync(assetId)
     assert(package and package:IsA("Model"), "Asset is not a Roblox Model")
     local success, result = pcall(function()
-        local selected = {}
-        for _, item in ipairs(package:GetDescendants()) do
-            if item:IsA("MeshPart") then
-                for _, name in ipairs(MeshPolicy.Required[weaponId]) do
-                    if item.Name == name then
-                        assert(not selected[name], "Duplicate model mesh " .. name)
-                        assert(validMesh(item), "Mesh/PBR maps missing: " .. name)
-                        selected[name] = item
-                    end
-                end
-            end
-        end
+        -- Roblox glTF imports contain a nested Model for each authored
+        -- mesh, with one MeshPart PER material primitive. This is expected
+        -- for the four-material original GLBs, not a duplicate weapon.
+        local selected = Layout.collect(package,
+            MeshPolicy.Required[weaponId], validMesh)
+        assert(selected, "Missing, invalid or duplicated PBR mesh primitives")
         local template = Instance.new("Model")
         template.Name = lod
         local origin = Instance.new("Part")
@@ -88,10 +80,14 @@ local function importVariant(assetId, weaponId, lod)
         origin.Parent = template
         template.PrimaryPart = origin
         for _, name in ipairs(MeshPolicy.Required[weaponId]) do
-            assert(selected[name], "Required model mesh missing: " .. name)
-            local clone = cleanClone(selected[name])
-            clone.Name = name
-            clone.Parent = template
+            local component = Instance.new("Model")
+            component.Name = name
+            for index, part in ipairs(selected[name]) do
+                local clone = cleanClone(part)
+                clone.Name = name .. "_Primitive" .. index
+                clone.Parent = component
+            end
+            component.Parent = template
         end
         template:SetAttribute("IronYardStudioApproved", true)
         assert(templateIsComplete(template, weaponId))
