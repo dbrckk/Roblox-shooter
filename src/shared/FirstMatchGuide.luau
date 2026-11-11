@@ -6,8 +6,14 @@ function Guide.objective(limit)
     return string.format("FIRST TO %d ELIMINATIONS", math.clamp(n, 1, 100))
 end
 
-function Guide.hint(touch, shots, eliminations)
+function Guide.hint(touch, shots, eliminations, gamepad)
     if (tonumber(eliminations) or 0) > 0 then return nil end
+    if gamepad == true then
+        if (tonumber(shots) or 0) > 0 then
+            return "USE COVER • RELOAD [X] • SWITCH [Y]"
+        end
+        return "LEFT STICK MOVE • RT FIRE • LT AIM"
+    end
     if (tonumber(shots) or 0) > 0 then
         return touch and "KEEP MOVING • USE COVER • RELOAD"
             or "USE COVER • RELOAD [R] • CHANGE WEAPON [1-5]"
