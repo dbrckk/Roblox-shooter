@@ -33,6 +33,61 @@ def main():
     movement_service = source("src/server/MovementService.luau")
     rate_policy = source("src/shared/RemoteRatePolicy.luau")
     client = source("src/client/init.client.luau")
+    gamepad_policy = source("src/shared/GamepadCombatPolicy.luau")
+    briefing = source("src/client/Briefing.client.luau")
+    guide = source("src/shared/FirstMatchGuide.luau")
+    for token in (
+        'ButtonR2 = "FIRE"',
+        'ButtonL2 = "AIM"',
+        'ButtonX = "RELOAD"',
+        'ButtonY = "NEXT_WEAPON"',
+        'ButtonR1 = "THROW_KNIFE"',
+        'ButtonB = "SLIDE"',
+        'ButtonL3 = "SPRINT"',
+        'ButtonA = "JUMP"',
+        'ButtonStart = "SETTINGS"',
+        "function Policy.isGamepad(inputTypeName)",
+        "function Policy.cycle(order, current, direction)",
+    ):
+        has(gamepad_policy, token, "Complete native controller binding policy")
+    for token in (
+        'WaitForChild("GamepadCombatPolicy")',
+        "local function onGamepadPressed(input, gameProcessed)",
+        "GamepadCombatPolicy.isGamepad(input.UserInputType.Name)",
+        "GamepadCombatPolicy.action(input.KeyCode.Name)",
+        "GamepadCombatPolicy.cycle(WeaponConfig.Order,",
+        "if onGamepadPressed(input, gameProcessed) then return end",
+        "local function beginHeldFire(gamepad)",
+        "local primaryFireTaskActive = false",
+        "UserInputService.GamepadDisconnected:Connect(releaseControllerInputs)",
+        "UserInputService.WindowFocusReleased:Connect(clearHeldCombatInput)",
+        "if isOpen and clearHeldCombatInput then clearHeldCombatInput() end",
+        "or gamepadJumpHeld)",
+        "if native and native.Magnitude >= 0.15 then",
+        "UserInputService.LastInputTypeChanged:Connect(updateTouchVisibility)",
+        "local enabled = playable and not controllerActive",
+    ):
+        has(client, token, "Controller input, safe release, camera and mobile UX")
+    assert client.index("local primaryFireTaskActive = false") < (
+        client.index("UserInputService.InputBegan:Connect(function(input, gameProcessed)")
+    ), "Only one automatic-fire task shared by mouse and gamepad"
+    assert client.index("if onGamepadPressed(input, gameProcessed) then return end") < (
+        client.index("if gameProcessed then", client.index(
+            "UserInputService.InputBegan:Connect(function(input, gameProcessed)")
+        )
+    ), "Gamepad dispatch must precede keyboard event processing"
+    assert client.index("if not playable then", client.index(
+        "updateTouchVisibility = function()")) > client.index(
+        "local enabled = playable and not controllerActive"
+    ), "Hiding touch UI for Bluetooth pad must not un-aim a live controller"
+    for token in (
+        'WaitForChild("GamepadCombatPolicy")',
+        "local function controllerActive()",
+        "Guide.hint(UserInputService.TouchEnabled, 1,",
+        "controllerActive() and",
+    ):
+        has(briefing, token, "Player-facing controller onboarding")
+    has(guide, 'if gamepad == true then', "Controller-specific first match tips")
     # The first-person client predicts ammo immediately before FireServer;
     # on a server-rejected but otherwise valid shot, authoritative ammo MUST
     # be resent. Without this the HUD can remain at zero until respawn.
