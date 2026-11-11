@@ -103,11 +103,15 @@ def validated_identity(response, owner, expected_name=None):
     """Verify asset identity, owner, type and optionally exact authored variant."""
     require(isinstance(response, dict), "Asset operation missing response")
     asset_id = response.get("assetId")
-    try:
-        asset_id = int(asset_id)
-    except (TypeError, ValueError):
-        raise ValueError("Asset operation did not return a valid numeric ID") from None
-    require(asset_id > 0, "Invalid Roblox asset ID")
+    # int(1.5) silently becomes 1; bool is also an int in Python. Neither
+    # is a legitimate Roblox asset identifier. Accept only decimal digits.
+    require(not isinstance(asset_id, bool)
+            and (isinstance(asset_id, int)
+                 or (isinstance(asset_id, str) and asset_id.isascii()
+                     and asset_id.isdecimal())),
+            "Asset operation did not return a valid numeric ID")
+    asset_id = int(asset_id)
+    require(0 < asset_id <= 9223372036854775807, "Invalid Roblox asset ID")
     require(response.get("assetType") in ("Model", "ASSET_TYPE_MODEL"),
             "Asset did not resolve to a Model")
     creator = (response.get("creationContext") or {}).get("creator") or {}

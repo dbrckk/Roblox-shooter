@@ -70,6 +70,12 @@ def main():
     for edited in (
         {"assetId": "0"},
         {"assetId": "-1"},
+        {"assetId": 1.5},
+        {"assetId": True},
+        {"assetId": "1.5"},
+        {"assetId": "1e5"},
+        {"assetId": " 123"},
+        {"assetId": "999999999999999999999999999999"},
         {"assetType": "ASSET_TYPE_MESH"},
         {"assetType": ""},
         {"creationContext": {"creator": {"userId": "42"}}},
