@@ -309,3 +309,40 @@ autorisée**. Cela évite des traversées répétées de la hiérarchie
 `ReplicatedStorage` pendant un tir, une visée, un sprint ou un
 rechargement, sans ajouter de boucle par frame. Le fallback procédural
 reste actif tant qu'aucune paire PBR complète n'est disponible.
+
+## Contrôle de provenance avant activation Open Cloud
+
+L'API Assets Open Cloud Roblox accepte les fichiers **`.glb`** comme
+assets de type **Model**, avec le type MIME `model/gltf-binary`.
+La méthode serveur `AssetService:LoadAssetAsync(assetId)` est également
+prise en charge : le format de transport et l'API de lecture sont donc
+conformes aux documentations officielles :
+
+- https://create.roblox.com/docs/cloud/guides/usage-assets
+- https://create.roblox.com/docs/reference/engine/classes/AssetService
+
+Une validation de propriété seule ne suffit cependant pas à garantir que
+l'asset correspond à l'arme prévue. Le script
+`scripts/upload_weapon_models.py` exige maintenant, pour **chaque** paire
+arme/LOD, une identité cohérente : ID, type Model, identifiant exact du
+créateur, modération approuvée et **nom d'asset de la variante d'origine**
+(par exemple `IRON YARD pistol LOD0 Original PBR`).
+
+Ce contrôle s'applique aussi bien à la création initiale, à la reprise
+d'une opération asynchrone et aux IDs restaurés d'un checkpoint qu'aux
+IDs déjà enregistrés dans `WeaponAssetIds.luau`.
+
+**Comportement en cas d'incohérence :** une vérification ratée bloque
+l'activation et laisse le registre existant intact. Elle **ne déclenche
+jamais automatiquement un second POST** pour remplacer un ID sauvegardé,
+afin d'éviter des doublons ou l'association silencieuse d'une autre arme
+du même propriétaire. Le comportement normal est de corriger
+l'asset ou son autorisation, puis relancer le même workflow.
+
+Les tests hors ligne reproduisent explicitement ces erreurs : mauvaise
+variante LOD, Model du bon utilisateur mais d'une autre arme, réponse GET
+avec ID différent et récupération d'un checkpoint corrompu.
+
+**Les autorisations Open Cloud absentes empêchent toujours l'activation.**
+La réussite du workflow de validation ne constitue pas une publication
+Roblox ni une capture du rendu réel.
