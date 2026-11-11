@@ -5,6 +5,8 @@ from pathlib import Path
 import struct
 import sys
 
+ORIGIN_NAME="IRONYARD_WeaponOrigin"
+
 REQUIRED={
  "pistol":{"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
  "knife":{"IRONYARD_Knife_Static"},
@@ -37,8 +39,32 @@ def inspect(path,weapon):
     for view in data.get("bufferViews",[]):
         start=view.get("byteOffset",0)
         check(start+view["byteLength"]<=len(binary),"Broken buffer view")
-    names={node["name"] for node in data.get("nodes",[]) if "mesh" in node}
-    check(names==REQUIRED[weapon],"Wrong mesh names: "+str(names))
+    mesh_nodes=[node for node in data.get("nodes",[]) if "mesh" in node]
+    names=[node.get("name") for node in mesh_nodes]
+    check(len(names)==len(REQUIRED[weapon])+1
+          and set(names)==REQUIRED[weapon] | {ORIGIN_NAME},
+          "Wrong/duplicate source mesh nodes: "+str(names))
+    # Authored Blender origin survives glTF Model wrappers, unlike the
+    # bounding-box-based Roblox Model:GetPivot(). It must be a real
+    # small mesh at the local coordinate origin, not a missing Empty.
+    marker=next(node for node in mesh_nodes if node["name"]==ORIGIN_NAME)
+    check(not any(abs(x)>0.001 for x in marker.get("translation",[0,0,0])),
+          "Origin marker is translated away from the authored root")
+    check(not any(abs(x-1)>0.001 for x in marker.get("scale",[1,1,1])),
+          "Origin marker is scaled away from the authored root")
+    marker_mesh=data["meshes"][marker["mesh"]]
+    marker_triangles=0
+    for primitive in marker_mesh["primitives"]:
+        position=data["accessors"][primitive["attributes"]["POSITION"]]
+        check("min" in position and "max" in position,
+              "Origin marker mesh is missing geometry bounds")
+        check(all(-0.061 <= c <= 0.061
+                  for c in position["min"] + position["max"]),
+              "Origin marker geometry exceeds 12.2cm bounding cube")
+        marker_triangles+=data["accessors"][primitive["indices"]]["count"]//3
+    check(12 <= marker_triangles <= 40,
+          "Origin marker must be a low-poly 0.1-stud cube")
+
     triangles=0
     materials=set()
     for node in data["nodes"]:
@@ -69,7 +95,8 @@ def inspect(path,weapon):
     check(all("bufferView" in im and im.get("mimeType","").startswith("image/")
               for im in images),"GLB images must be embedded")
     return {"triangles":triangles,"bytes":len(payload),
-            "pbrMaterials":ready,"images":len(images)}
+            "pbrMaterials":ready,"images":len(images),
+            "originMarker":ORIGIN_NAME,"originTriangles":marker_triangles}
 
 def main(root):
     root=Path(root)

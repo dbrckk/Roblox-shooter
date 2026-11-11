@@ -58,4 +58,15 @@ end
 assert(Layout.collect(root, expected, function() return true end) == nil,
     "Huge imported multi-primitive groups must be rejected")
 assert(script and unrelated)
-print("IRON YARD glTF primitive grouping: nested nodes, sanitized whitelists, limits OK")
+-- Authored root marker: require exactly one real MeshPart, even when a
+-- GLB importer nests it under a _Node Model with a generic primitive name.
+local originRoot = node("IRONYARD_WeaponOrigin_Node", "Model", root)
+local originPart = node("Material_0", "MeshPart", originRoot)
+assert(Layout.origin(root, function(part) return part == originPart end) == originPart)
+assert(Layout.origin(root, function() return false end) == nil)
+assert(Layout.origin(root, nil) == nil)
+local secondRoot = node("IRONYARD_WeaponOrigin", "Model", root)
+node("Marker_2", "MeshPart", secondRoot)
+assert(Layout.origin(root, function() return true end) == nil,
+    "Duplicated source marker must never become a weapon pivot")
+print("IRON YARD glTF primitives and authored weapon origin: safety checks OK")

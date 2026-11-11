@@ -66,6 +66,12 @@ local function importVariant(assetId, weaponId, lod)
         local selected = Layout.collect(package,
             MeshPolicy.Required[weaponId], validMesh)
         assert(selected, "Missing, invalid or duplicated PBR mesh primitives")
+        local marker = Layout.origin(package, function(mesh)
+            if not mesh:IsA("MeshPart") or mesh.MeshId == "" then return false end
+            local extent = mesh.Size.Magnitude
+            return extent == extent and extent >= 0.025 and extent <= 0.35
+        end)
+        assert(marker, "Missing, duplicated or badly scaled authored weapon origin")
         local template = Instance.new("Model")
         template.Name = lod
         local origin = Instance.new("Part")
@@ -76,7 +82,10 @@ local function importVariant(assetId, weaponId, lod)
         origin.CanCollide = false
         origin.CanQuery = false
         origin.CanTouch = false
-        origin.CFrame = package:GetPivot()
+        -- Model:GetPivot() is determined by the imported Model wrapper
+        -- and bounding box. Only the Blender-authored marker is stable for
+        -- grip, barrel, ADS and recoil offsets between LOD0 and LOD1.
+        origin.CFrame = marker.CFrame
         origin.Parent = template
         template.PrimaryPart = origin
         for _, name in ipairs(MeshPolicy.Required[weaponId]) do
