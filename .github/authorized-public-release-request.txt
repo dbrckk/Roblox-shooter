@@ -1,0 +1,17 @@
+IRON YARD — explicit PUBLIC update authorization, 2026-11-11
+
+The owner asked to improve Roblox-shooter then update the existing
+PUBLIC Roblox game, without deploying an alpha or private version.
+
+Authorize exactly this push's green Rojo build to dispatch the existing
+publish-roblox-public.yml workflow with check_only=false and
+confirmation=PUBLISH IRON YARD PUBLIC.
+
+Safety requirements: verified original owner 9774173158, exact game name
+IRON YARD, existing PUBLIC visibility, confirmed root place, green exact
+commit CI, and all other fail-closed controls in publish_public_roblox.py.
+
+The original five PBR weapons have 10 owner-verified Roblox Model IDs
+committed on main. No new game is created by this request.
+
+Do not print or commit Open Cloud API keys.

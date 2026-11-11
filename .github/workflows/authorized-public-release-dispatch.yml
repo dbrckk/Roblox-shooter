@@ -1,0 +1,55 @@
+name: Dispatch one authorized PUBLIC IRON YARD update after green Rojo CI
+
+on:
+  workflow_run:
+    workflows: ["Rojo build"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: iron-yard-public-release-dispatch
+  cancel-in-progress: false
+
+jobs:
+  dispatch:
+    if: >-
+      github.repository == 'dbrckk/Roblox-shooter' &&
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require an explicit request in the exact successful build commit
+        shell: bash
+        env:
+          GH_TOKEN: \${{ github.token }}
+          APPROVED_SHA: \${{ github.event.workflow_run.head_sha }}
+        run: |
+          set -euo pipefail
+          [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
+          live_sha="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq '.object.sha')"
+          if [[ "$APPROVED_SHA" != "$live_sha" ]]; then
+            echo "Refusing a stale commit: main has changed." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          changed="$(gh api "repos/$GITHUB_REPOSITORY/commits/$APPROVED_SHA" \
+            --jq '[.files[] | select(.filename == ".github/authorized-public-release-request.txt" and .status == "added")] | length')"
+          if [[ "$changed" != "1" ]]; then
+            echo "No newly authorized public release request in this exact green commit." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # This public update was explicitly requested by the owner.
+          # The existing workflow independently checks owner, public
+          # visibility, root place, target name, source commit and CI.
+          gh workflow run publish-roblox-public.yml \
+            --repo "$GITHUB_REPOSITORY" --ref main \
+            --field check_only=false \
+            --field confirmation="PUBLISH IRON YARD PUBLIC"
+          echo "Authorized one-shot public release dispatched for $APPROVED_SHA." \
+            >> "$GITHUB_STEP_SUMMARY"
