@@ -73,7 +73,7 @@ def main():
             assert b'Content-Disposition: form-data; name="request"' in payload
             assert b'Content-Disposition: form-data; name="fileContent"' in payload
             assert b"Content-Type: model/gltf-binary" in payload
-            assert b"\\r\\n" in payload
+            assert b"\r\n" in payload
             assert b"GLB-BYTES-FROM-VALIDATED-FORGE" in payload
             return {"path": "operations/upload_123", "done": False}
         assert url == U.API + "/operations/upload_123"
