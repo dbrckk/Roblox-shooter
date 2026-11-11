@@ -8,6 +8,7 @@ local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitFo
 local TransientFxPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TransientFxPool"))
 local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
+local WeaponSway = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponSwayPolicy"))
 local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
 local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
 local WeaponMeshRefresh = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshRefreshPolicy"))
@@ -81,6 +82,7 @@ function WeaponVisuals.new(WeaponConfig)
     self.stepPhase = 0
     self.stepBlend = 0
     self.lastCameraPosition = nil
+    self.lastCameraCFrame = nil
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
     self.impactMarks = {}
@@ -626,6 +628,7 @@ function WeaponVisuals:setWeapon(weaponId)
     self.reloadActive = false
     self.reloadBlend = 0
     self.lastCameraPosition = nil
+    self.lastCameraCFrame = nil
 	self:_clearModel()
     self.currentWeaponImported = false
     self.activeMeshLod = nil
@@ -797,10 +800,18 @@ end
 
 function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingPose)
 	local mouseDelta = UserInputService:GetMouseDelta()
-	local targetSway = Vector2.new(
-		math.clamp(-mouseDelta.X * 0.002, -0.04, 0.04),
-		math.clamp(-mouseDelta.Y * 0.002, -0.035, 0.035)
-	)
+    -- On touch/gamepad GetMouseDelta is often zero even while the camera
+    -- turns. Reuse its actual angular change without moving the hit ray.
+    local pitch, yaw = 0, 0
+    if self.lastCameraCFrame then
+        local delta = self.lastCameraCFrame:ToObjectSpace(camera.CFrame)
+        pitch, yaw = delta:ToOrientation()
+    end
+    self.lastCameraCFrame = camera.CFrame
+    local swayX, swayY = WeaponSway.target(mouseDelta.X, mouseDelta.Y,
+        UserInputService.TouchEnabled or UserInputService.GamepadEnabled,
+        pitch, yaw, deltaTime)
+    local targetSway = Vector2.new(swayX, swayY)
 	local swayAlpha = math.clamp(deltaTime * 14, 0, 1)
 	self.sway = self.sway + (targetSway - self.sway) * swayAlpha
 
