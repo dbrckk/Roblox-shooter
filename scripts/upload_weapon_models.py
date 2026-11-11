@@ -74,7 +74,7 @@ def confirmed_asset(response, owner):
     return asset_id
 
 
-OPERATION_PATH = re.compile(r"operations/[A-Za-z0-9_-]{1,160}\\Z")
+OPERATION_PATH = re.compile(r"operations/[A-Za-z0-9_-]{1,160}\Z")
 POLL_ATTEMPTS = 45
 
 
@@ -153,14 +153,14 @@ def upload_model(owner, weapon, lod, raw, key, *, operation_path=None,
         "description": "Original Blender-authored first-person 3D model with two LOD variants.",
         "creationContext": {"creator": {"userId": str(owner)}},
     }, separators=(",", ":")).encode("utf-8")
-    payload = (f"--{boundary}\\r\\n"
-               'Content-Disposition: form-data; name="request"\\r\\n'
-               "Content-Type: application/json\\r\\n\\r\\n").encode("ascii")
+    payload = (f"--{boundary}\r\n"
+               'Content-Disposition: form-data; name="request"\r\n'
+               "Content-Type: application/json\r\n\r\n").encode("ascii")
     payload += metadata
-    payload += (f"\\r\\n--{boundary}\\r\\n"
-                f'Content-Disposition: form-data; name="fileContent"; filename="{weapon}_{lod}.glb"\\r\\n'
-                "Content-Type: model/gltf-binary\\r\\n\\r\\n").encode("ascii")
-    payload += raw + f"\\r\\n--{boundary}--\\r\\n".encode("ascii")
+    payload += (f"\r\n--{boundary}\r\n"
+                f'Content-Disposition: form-data; name="fileContent"; filename="{weapon}_{lod}.glb"\r\n'
+                "Content-Type: model/gltf-binary\r\n\r\n").encode("ascii")
+    payload += raw + f"\r\n--{boundary}--\r\n".encode("ascii")
     operation = request_json(API + "/assets", key, payload=payload,
                              content_type=f"multipart/form-data; boundary={boundary}")
     require(isinstance(operation, dict), "Missing Roblox upload operation")
