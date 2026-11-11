@@ -5,6 +5,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Guide = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FirstMatchGuide"))
+local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -60,6 +61,9 @@ end
 local title = makeText("ObjectiveTitle", 5, 14, Color3.fromRGB(247, 238, 217))
 local subtitle = makeText("ObjectiveDetails", 30, 12, Color3.fromRGB(214, 212, 194))
 local token = 0
+local function controllerActive()
+    return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
+end
 local playedIntro = false
 local hintToken = 0
 
@@ -102,7 +106,8 @@ local function firstShotHint()
     if hintToken > 1 then return end
     local stats = player:FindFirstChild("leaderstats")
     local kills = stats and stats:FindFirstChild("Eliminations")
-    local text = Guide.hint(UserInputService.TouchEnabled, 1, kills and kills.Value or 0)
+    local text = Guide.hint(UserInputService.TouchEnabled, 1,
+        kills and kills.Value or 0, controllerActive())
     if text then
         -- Let the objective card finish; this cue never blocks input.
         task.delay(8.5, function()
@@ -118,7 +123,9 @@ local function onPhaseChanged()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     if phase == "COUNTDOWN" then
         display("IRON YARD   /   PREPARE TO DEPLOY",
-            UserInputService.TouchEnabled and "MOVE • AIM • TAP FIRE" or "SPRINT • SLIDE • USE COVER")
+            controllerActive() and "RT FIRE • LT AIM • A JUMP"
+                or (UserInputService.TouchEnabled and "MOVE • AIM • TAP FIRE"
+                    or "SPRINT • SLIDE • USE COVER"))
     elseif phase == "LIVE" then
         if not playedIntro then
             playedIntro = true
@@ -127,7 +134,8 @@ local function onPhaseChanged()
             task.delay(8.5, function()
                 if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE"
                     or hintToken > 0 then return end
-                local hint = Guide.hint(UserInputService.TouchEnabled, 0, 0)
+                local hint = Guide.hint(UserInputService.TouchEnabled, 0, 0,
+                    controllerActive())
                 if hint then display("FIRST ENGAGEMENT   /   CONTROLS", hint, 5) end
             end)
         else
