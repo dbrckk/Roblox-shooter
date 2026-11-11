@@ -9,6 +9,7 @@ local Registry = require(Shared:WaitForChild("WeaponAssetIds"))
 local Policy = require(Shared:WaitForChild("WeaponAssetPolicy"))
 local MeshPolicy = require(Shared:WaitForChild("WeaponMeshPolicy"))
 local Layout = require(Shared:WaitForChild("WeaponMeshLayout"))
+local LoadPlan = require(Shared:WaitForChild("WeaponAssetLoadPlan"))
 
 local Loader = {}
 local started = false
@@ -139,65 +140,106 @@ local function completeCount(root)
     return count
 end
 
+local function validPair(category, weaponId)
+    return category ~= nil
+        and templateIsComplete(category:FindFirstChild("LOD0"), weaponId)
+        and templateIsComplete(category:FindFirstChild("LOD1"), weaponId)
+end
+
+local function reportStatus(root, pending, authorized)
+    local ready = completeCount(root)
+    Workspace:SetAttribute("IronYardWeaponMeshReadyCount", ready)
+    Workspace:SetAttribute("IronYardWeaponMeshPendingCount", pending)
+    Workspace:SetAttribute("IronYardWeaponMeshStatus",
+        LoadPlan.status(ready, pending, authorized))
+end
+
 local function loadConfigured()
-    local activated = 0
+    local root = ReplicatedStorage:FindFirstChild(ROOT_NAME)
+    if root and not root:IsA("Folder") then
+        -- Never overwrite an unexpected replicated object of the same name.
+        warn("[IRON YARD] PBR asset root is not a Folder; keeping existing fallback")
+        reportStatus(nil, 0, true)
+        return
+    end
+    if not root then
+        root = Instance.new("Folder")
+        root.Name = ROOT_NAME
+        root.Parent = ReplicatedStorage
+    end
+
+    local queue = {}
     for _, weaponId in ipairs(Policy.Weapons) do
-        -- Never re-download a manually installed asset pair. Besides
-        -- preserving the owner's kit, this avoids ten wasted asset calls
-        -- on populated Studio servers.
-        local current = ReplicatedStorage:FindFirstChild(ROOT_NAME)
-        if current and current:IsA("Folder")
-            and current:FindFirstChild(weaponId) then
-            continue
-        end
         local ids = Policy.pair(Registry, weaponId)
-        if ids then
-            local folder = loadPair(weaponId, ids)
-            if folder then
-                -- The Studio importer can install a manual kit at any time.
-                local root = ReplicatedStorage:FindFirstChild(ROOT_NAME)
-                if root and not root:IsA("Folder") then
-                    folder:Destroy()
-                else
-                    if not root then
-                        root = Instance.new("Folder")
-                        root.Name = ROOT_NAME
-                        root.Parent = ReplicatedStorage
-                    end
-                    if root:FindFirstChild(weaponId) then
-                        folder:Destroy() -- never overwrite owner-approved templates
-                    else
-                        folder.Parent = root
-                        activated += 1
-                        Workspace:SetAttribute("IronYardWeaponMeshStatus",
-                            completeCount(root) == #Policy.Weapons and "READY"
-                                or "PARTIAL")
-                    end
-                end
-            end
+        if ids and not validPair(root:FindFirstChild(weaponId), weaponId) then
+            table.insert(queue, { weaponId = weaponId, ids = ids })
         end
     end
-    if activated == 0 then
-        local manual = ReplicatedStorage:FindFirstChild(ROOT_NAME)
-        Workspace:SetAttribute("IronYardWeaponMeshStatus",
-            manual and "MANUAL" or "FALLBACK")
+    local pending = #queue
+    reportStatus(root, pending, true)
+    if pending == 0 then return end
+
+    -- Two simultaneous owner-authorized Model loads at most. Each worker
+    -- downloads LOD0 and LOD1 sequentially and publishes only full pairs.
+    -- The queue index is incremented before any yielding Roblox API call.
+    local index = 0
+    local function worker()
+        while true do
+            index += 1
+            local job = queue[index]
+            if not job then return end
+
+            local replacement = loadPair(job.weaponId, job.ids)
+            if replacement then
+                local liveRoot = ReplicatedStorage:FindFirstChild(ROOT_NAME)
+                if liveRoot == root then
+                    local existing = root:FindFirstChild(job.weaponId)
+                    if validPair(existing, job.weaponId) then
+                        -- Studio may have installed a complete kit during
+                        -- the download. Never overwrite its approved work.
+                        replacement:Destroy()
+                    else
+                        -- A malformed/incomplete manual kit previously
+                        -- prevented valid owner assets from ever activating.
+                        -- Keep it until the replacement has been validated,
+                        -- then swap without yielding or losing the fallback.
+                        replacement.Parent = root
+                        if existing then existing:Destroy() end
+                    end
+                else
+                    -- Studio may replace the entire root during a download.
+                    replacement:Destroy()
+                end
+            end
+            pending -= 1
+            reportStatus(ReplicatedStorage:FindFirstChild(ROOT_NAME), pending, true)
+        end
+    end
+    for _ = 1, LoadPlan.workers(#queue) do
+        task.spawn(worker)
     end
 end
 
 function Loader.start()
     if started then return end
     started = true
-    Workspace:SetAttribute("IronYardWeaponMeshStatus", "DISABLED")
+    local current = ReplicatedStorage:FindFirstChild(ROOT_NAME)
+    reportStatus(current, 0, false)
     if not Policy.sameOwner(Registry,
         game.CreatorType == Enum.CreatorType.User and "User" or "Other",
         game.CreatorId) then return end
+
     local anyConfigured = false
     for _, weaponId in ipairs(Policy.Weapons) do
-        if Policy.pair(Registry, weaponId) then anyConfigured = true break end
+        if Policy.pair(Registry, weaponId) then
+            anyConfigured = true
+            break
+        end
     end
     if not anyConfigured then return end
-    Workspace:SetAttribute("IronYardWeaponMeshStatus", "LOADING")
-    -- Never delay spawning, combat or matchmaking for a Roblox network call.
+
+    -- All asset network calls run asynchronously; never block spawn,
+    -- shooting, damage, bot AI, matchmaking or the first-person fallback.
     task.spawn(loadConfigured)
 end
 
