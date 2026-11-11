@@ -45,7 +45,7 @@ def main():
     rejection = server.split(
         "local function rejectFireWithAmmo(player, weaponId)", 1
     )[1].split("local function acceptedAimReady(", 1)[0]
-    assert "sendAmmo(player, weaponId)\\n    return false" in rejection
+    assert "sendAmmo(player, weaponId)\n    return false" in rejection
     assert rejection.count("return rejectFireWithAmmo(player, weaponId)") == 4
     assert rejection.index("return rejectFireWithAmmo(player, weaponId)") < (
         rejection.index("state.magazines[weaponId] = loaded - 1")
@@ -54,7 +54,7 @@ def main():
     blocked_reload = blocked_reload.split("local function rejectFireWithAmmo", 1)[0]
     assert 'RemoteGuard.allow(player, "ReloadWeapon")' in blocked_reload
     assert 'if loaded >= config.magazineSize or (state.reloadUntil[weaponId] or 0) > os.clock() then' in blocked_reload
-    assert blocked_reload.index('sendAmmo(player, weaponId)\\n        return') > (
+    assert blocked_reload.index('sendAmmo(player, weaponId)\n        return') > (
         blocked_reload.index("if loaded >= config.magazineSize")
     ), "Full / already-active reloads must correct a stale predicted client HUD"
     assert 'if not RemoteGuard.allow(player, "FireWeapon") then return end' in server
