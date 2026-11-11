@@ -289,3 +289,23 @@ vérifient que seule l'opération cosmétique restaure cet état.
 La continuité de la pose est validée au niveau logique et Luau, pas encore
 par une capture en cours de partie. L'homogénéité visuelle des deux LOD reste
 à examiner sur Android et PC après activation Roblox.
+
+## Finitions de progression et fidélité des matériaux PBR
+
+Les armes importées contiennent des MeshParts dont le `SurfaceAppearance`
+et les couleurs sont définis dans Blender. Le système de finitions de
+carrière peut recolorer les mains, les gants, les manches et les détails
+procéduraux, mais **ne modifie jamais** le `BasePart.Color` des primitives
+PBR, y compris la glissière du pistolet, la pompe du fusil, la culasse du
+sniper et le chargeur du fusil d'assaut. Ainsi, le matériau, la peinture,
+les textures PBR et les éventuelles zones transparentes conservent les
+valeurs artistiques d'origine. Le module pur `WeaponMeshPolicy.canRetint`
+est vérifié par les tests d'import et le contrat de rendu.
+
+Pour les changements de LOD en cours de partie, le client vérifie
+d'abord les conditions d'inactivité, peu coûteuses, puis inspecte les
+MeshParts et les quatre cartes PBR **seulement si une transition est
+autorisée**. Cela évite des traversées répétées de la hiérarchie
+`ReplicatedStorage` pendant un tir, une visée, un sprint ou un
+rechargement, sans ajouter de boucle par frame. Le fallback procédural
+reste actif tant qu'aucune paire PBR complète n'est disponible.
