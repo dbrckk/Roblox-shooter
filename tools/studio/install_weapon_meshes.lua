@@ -72,7 +72,7 @@ local function installVariant(source,weapon,lod)
             local extent=mesh.Size.Magnitude
             return extent==extent and extent>=0.025 and extent<=0.35
         end)
-        assert(marker,"GLB missing its unique 4cm Blender weapon-origin marker")
+        assert(marker,"GLB missing its unique Blender weapon-origin marker")
         rootCFrame=marker.CFrame
     end
     local category=stage:FindFirstChild(weapon)
