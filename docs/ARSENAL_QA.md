@@ -212,3 +212,38 @@ nul après 24 égalités, appels répétés après clôture et états invalides.
 répétées, vérifier que la bannière de victoire, l'ordre du podium et
 la prime de fin de série affichent le même gagnant. La CI ne reproduit
 pas elle-même 24 manches en réseau Roblox.
+
+
+## Cadence automatique harmonisée (souris, manette, tactile)
+
+Le fusil d'assaut AR-24 utilise une cadence serveur de 0,115 s entre
+deux tirs acceptés. Anciennement, les boucles d'entrée réveillaient
+l'arme toutes les 40 % de cette durée, soit environ 21,7 réveils par
+seconde, alors que le client rejette déjà les appels intervenant avant
+la limite de 101,5 % de sa cadence. Les réveils inutiles ajoutaient du
+travail client et pouvaient décaler le tir admis au réveil suivant.
+
+Les trois entrées de tir maintenu utilisent maintenant la politique
+pure AutomaticFireCadence : le délai automatique vaut 103,5 % du
+fireCooldown, avec un minimum de 40 ms ; le bouton semi-automatique ne
+répète jamais un tir sans nouvel appui. L'état maintenu reste actif
+pendant un changement temporaire de sélection vers une arme
+semi-automatique : revenir au fusil d'assaut ne nécessite plus de
+relâcher/represser le bouton.
+
+La souris et la manette continuent de partager une seule tâche de tir.
+Le tactile applique la même cadence sans superposer ses boutons en
+mode manette Bluetooth. Les garde-fous d'inventaire, de rechargement,
+de phase de partie et de cadence serveur restent autoritaires.
+
+**Validation requise sur Roblox :** maintenir le tir du fusil d'assaut
+pendant un chargeur complet sur PC et Android ; vérifier le nombre de
+munitions et l'intervalle entre coups audibles. Refaire le test avec
+une manette, puis alterner fusil d'assaut, sniper et fusil d'assaut
+en maintenant la gâchette : aucun tir semi-auto en boucle, aucune
+panne de maintien après le retour sur l'arme automatique. Mesurer
+le temps réel entre tirs avec les outils Studio pour confirmer
+la régularité en présence de latence et de baisse de FPS.
+
+La CI valide la politique et le câblage, pas des mesures de FPS ni
+la sensation réelle à l'écran.
