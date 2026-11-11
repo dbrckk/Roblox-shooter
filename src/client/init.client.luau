@@ -1387,7 +1387,12 @@ end)
 
 -- A new round resets the authoritative aim timer. Reannounce held aim once.
 workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
-    if scoped and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
+    local newPhase = workspace:GetAttribute("NeonMatchPhase")
+    if newPhase ~= "LIVE" and newPhase ~= "COUNTDOWN" then
+        -- Releasing an old trigger during results or duel breaks must not
+        -- silently fire shots as soon as the next match starts.
+        clearHeldCombatInput()
+    elseif scoped and newPhase == "LIVE" then
         remotes.SetAiming:FireServer(true)
     end
 end)
