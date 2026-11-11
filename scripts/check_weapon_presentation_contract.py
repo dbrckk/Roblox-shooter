@@ -79,6 +79,17 @@ for needle in (
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 
+# PBR sight centers come from authored Blender geometry; the fallback uses
+# its original Part positions. Select AFTER the source is actually created.
+aim_profile = get("src/shared/WeaponAimPose.luau")
+assert "local IMPORTED_PROFILES = {" in aim_profile
+assert 'local pose = WeaponAimPose.get(weaponId, self.currentWeaponImported)' in visuals
+set_weapon_body = visuals.split("function WeaponVisuals:setWeapon(weaponId)", 1)[1]
+set_weapon_body = set_weapon_body.split("function WeaponVisuals:_refreshImportedWeaponIfSafe", 1)[0]
+assert set_weapon_body.index('local pose = WeaponAimPose.get(weaponId, self.currentWeaponImported)') > ( 
+    set_weapon_body.index('model:SetAttribute("IronYardWeaponSource", "PROCEDURAL_PARTS")')
+), "Do not select a procedural ADS profile before the imported asset is chosen"
+
 # The cosmetic reload must use real server Ammo state and no new animation loop.
 reload_visual = get("src/shared/ShotgunReloadVisual.luau")
 for needle in (
@@ -473,7 +484,7 @@ assert visuals.index("self.pendingCartridge = nil -- cancel unplayed pump/bolt o
     visuals.index("function WeaponVisuals:_ejectCartridge(plan)"))
 assert "FireServer" not in ejection and "Instance.new" not in ejection
 for needle in (
-    "function Pose.get(id)", "function Pose.damping(blend)",
+    "function Pose.get(id, imported)", "function Pose.damping(blend)",
     "sightX = 0, sightY = 0.32, sightZ = -0.05",
     "sightX = 0, sightY = 0.30, sightZ = 0.10",
     "sightX = 0, sightY = 0.24, sightZ = -0.28",

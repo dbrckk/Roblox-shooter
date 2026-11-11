@@ -1,0 +1,15 @@
+IRON YARD — explicit owner-authorized PUBLIC update, PBR ADS calibration (2026-11-11)
+
+The owner requested "Go" to continue improving and updating the public game.
+
+This request is valid ONLY for the single main commit adding this file, and
+ONLY after the exact commit has passed the Rojo CI build.
+
+Changes: align first-person AR-24, pistol and B-8 ironsights to their
+existing original Blender-authored PBR meshes; keep procedural fallback,
+sniper optical scope and server-controlled fire unchanged.
+
+The release workflow must refuse a different creator, game name, non-PUBLIC
+visibility, mismatched root place or stale CI commit.
+
+No secrets or destination identifiers are stored in the repository.
