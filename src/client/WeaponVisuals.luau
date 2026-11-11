@@ -11,6 +11,7 @@ local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
 local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
 local WeaponMeshRefresh = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshRefreshPolicy"))
+local WeaponMeshLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshLayout"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
@@ -503,22 +504,21 @@ function WeaponVisuals:_getImportedWeapon(weaponId, lod)
     if not origin or not origin:IsA("BasePart") then return nil end
     local required = WeaponMeshPolicy.Required[weaponId]
     if not required then return nil end
-    -- Validate every source before cloning the first piece.
-    local selected = {}
-    for _, name in ipairs(required) do
-        local part = template:FindFirstChild(name)
-        if not part or not part:IsA("MeshPart") or part.MeshId == ""
+    -- glTF Model hierarchy can split one authored component into several
+    -- MeshParts with distinct PBR material maps. Validate all primitives.
+    local selected = WeaponMeshLayout.collect(template, required, function(part)
+        if not part:IsA("MeshPart") or part.MeshId == ""
             or part.Size.Magnitude < 0.03 or part.Size.Magnitude > 10 then
-            return nil
+            return false
         end
         local appearance = part:FindFirstChildOfClass("SurfaceAppearance")
-        if not appearance or not WeaponMeshPolicy.mapsReady({
+        return appearance ~= nil and WeaponMeshPolicy.mapsReady({
             ColorMap=appearance.ColorMap, NormalMap=appearance.NormalMap,
             RoughnessMap=appearance.RoughnessMap,
             MetalnessMap=appearance.MetalnessMap,
-        }) then return nil end
-        table.insert(selected, part)
-    end
+        })
+    end)
+    if not selected then return nil end
     return origin, selected
 end
 
@@ -550,7 +550,8 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
                 * CFrame.Angles(math.rad(-6), math.rad(-4), math.rad(3)),
             CFrame.new(0.08, -0.38, 0.06) * CFrame.Angles(math.rad(-11), 0, 0))
     end
-    for _, sourcePart in ipairs(selected) do
+    for _, componentName in ipairs(WeaponMeshPolicy.Required[weaponId]) do
+      for _, sourcePart in ipairs(selected[componentName]) do
         local clone = sourcePart:Clone()
         local appearance = clone:FindFirstChildOfClass("SurfaceAppearance")
         for _, descendant in ipairs(clone:GetDescendants()) do
@@ -561,7 +562,7 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
         configurePart(clone)
         -- Reuse the existing one-pass mechanical animation by matching
         -- the names the renderer already understands; static shells never move.
-        clone.Name = WeaponMeshPolicy.runtimeName(sourcePart.Name)
+        clone.Name = WeaponMeshPolicy.runtimeName(componentName)
         clone.Parent = model
         table.insert(self.parts, {
             part=clone,
@@ -569,6 +570,7 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
             baseTransparency=clone.Transparency,
             baseColor=clone.Color,
         })
+      end
     end
     -- Existing local FX and reload samples must keep functional anchors.
     -- All are fully transparent non-colliding client-owned primitives.
