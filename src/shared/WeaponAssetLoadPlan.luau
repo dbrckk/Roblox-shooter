@@ -12,6 +12,22 @@ function Plan.workers(pending)
     return math.min(math.floor(pending), Plan.MAX_WORKERS)
 end
 
+-- Queue only complete authorized LOD pairs not already installed.
+-- Incomplete legacy/manual templates must be replaceable after verifying a
+-- full owner-owned replacement pair, never simply skipped by name.
+function Plan.queue(weapons, pairFor, isComplete)
+    local queue = {}
+    if type(weapons) ~= "table" or type(pairFor) ~= "function"
+        or type(isComplete) ~= "function" then return queue end
+    for _, weaponId in ipairs(weapons) do
+        local pair = pairFor(weaponId)
+        if pair ~= nil and isComplete(weaponId) ~= true then
+            table.insert(queue, { weaponId = weaponId, ids = pair })
+        end
+    end
+    return queue
+end
+
 function Plan.status(ready, pending, authorized)
     if type(ready) ~= "number" or type(pending) ~= "number"
         or ready ~= ready or pending ~= pending then return "FALLBACK" end
