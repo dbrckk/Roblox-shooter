@@ -39,6 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 tools/weaponforge/validate_weapon_exports.py build/weapon-kit
+          python3 scripts/test_weapon_origin_glb.py build/weapon-kit
           cat build/weapon-kit/validation_summary.json >> "$GITHUB_STEP_SUMMARY"
       - name: Validate Open Cloud staging with these actual ten GLBs (offline)
         shell: bash
