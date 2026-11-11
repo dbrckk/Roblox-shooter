@@ -187,7 +187,13 @@ local function endDuel(reason, winningSide)
     releaseDuelPrep()
     duel.liveCharacterA = nil
     duel.liveCharacterB = nil
-    local snapshot = RoundStandings.build(duelRows(), round)
+    -- An abandoned duel may end with the winner on fewer bout points.
+    -- Keep every real score, but give the verified surviving champion rank 1
+    -- in the result card instead of contradicting the winner banner.
+    local forfeitChampion = reason == "FORFEIT"
+        and (winningSide == "A" and duel.aId
+            or winningSide == "B" and duel.bId or nil) or nil
+    local snapshot = RoundStandings.build(duelRows(), round, forfeitChampion)
     snapshot.mode = "DUEL"
     snapshot.bouts = duel.bouts
     snapshot.reason = reason
@@ -377,9 +383,10 @@ end
 local function tick()
     if duel and phase ~= "RESULTS" and not duelPlayersIntact() then
         local a,b = duelParticipants()
-        -- A third observer cancels the duel without gifting a victory.
-        local side = #Players:GetPlayers() == 1
-            and (a and "A" or b and "B" or nil) or nil
+        -- Player object references remain truthy after disconnect. Only
+        -- the original combatant still present in the live roster can win
+        -- by forfeit; a third observer or an empty server forces a draw.
+        local side = DuelRules.forfeitSide(Players:GetPlayers(), a, b)
         endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)
         return
     end
