@@ -167,6 +167,31 @@ assert 'game.CreatorType == Enum.CreatorType.User' in asset_loader
 assert 'function Policy.sameOwner(registry, creatorType, creatorId)' in asset_policy
 assert 'function Policy.pair(registry, weaponId)' in asset_policy
 assert 'ownerUserId = 9774173158' in weapon_registry
+# Career finishes must NOT alter an imported PBR mesh's authored
+# base color, even when its mechanical runtime name matches a tiered finish.
+assert 'function P.canRetint(entry)' in mesh_policy
+assert 'return type(entry)=="table" and entry.isPbrMesh~=true' in mesh_policy
+assert 'isPbrMesh=true,' in visuals
+for needle in (
+    'if WeaponMeshPolicy.canRetint(entry) then',
+    'entry.part.Color = color',
+):
+    assert needle in visuals, f"PBR surface finish preservation missing: {needle}"
+finish_section = visuals.split("function WeaponVisuals:_applyCareerFinish()",1)[1]
+finish_section = finish_section.split("function WeaponVisuals:_addArms",1)[0]
+assert finish_section.index("if WeaponMeshPolicy.canRetint(entry) then") < (
+    finish_section.index("entry.part.Color = color")
+), "Guard the actual BasePart.Color write for imported SurfaceAppearance meshes"
+# No expensive GLB mesh+PBR-map traversal during ADS, reload, or active fire.
+refresh_section = visuals.split(
+    "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)",1)[1]
+refresh_section = refresh_section.split("function WeaponVisuals:setSprinting",1)[0]
+assert refresh_section.index("WeaponMeshRefresh.shouldRefresh(") < (
+    refresh_section.index("self:_getImportedWeapon(self.currentWeaponId, lod)")
+), "Skip texture scans until the safe idle window"
+assert 'if not safe then return end' in refresh_section
+
+
 load_plan = get("src/shared/WeaponAssetLoadPlan.luau")
 for needle in (
     "Plan.MAX_WORKERS = 2",
