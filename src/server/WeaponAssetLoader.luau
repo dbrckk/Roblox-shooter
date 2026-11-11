@@ -168,13 +168,11 @@ local function loadConfigured()
         root.Parent = ReplicatedStorage
     end
 
-    local queue = {}
-    for _, weaponId in ipairs(Policy.Weapons) do
-        local ids = Policy.pair(Registry, weaponId)
-        if ids and not validPair(root:FindFirstChild(weaponId), weaponId) then
-            table.insert(queue, { weaponId = weaponId, ids = ids })
-        end
-    end
+    local queue = LoadPlan.queue(Policy.Weapons, function(weaponId)
+        return Policy.pair(Registry, weaponId)
+    end, function(weaponId)
+        return validPair(root:FindFirstChild(weaponId), weaponId)
+    end)
     local pending = #queue
     reportStatus(root, pending, true)
     if pending == 0 then return end
