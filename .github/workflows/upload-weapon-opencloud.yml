@@ -1,0 +1,144 @@
+name: Upload original weapon PBR GLBs to Roblox (owner-authorized)
+
+on:
+  workflow_dispatch:
+    inputs:
+      asset_run_id:
+        description: "Successful weaponforge run ID; blank uses latest successful main run"
+        required: false
+        type: string
+        default: ""
+      creator_user_id:
+        description: "Confirmed owner Roblox User ID"
+        required: true
+        type: string
+        default: "9774173158"
+      publish_assets:
+        description: "Actually create ten Roblox Model assets and update their IDs"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: write
+
+concurrency:
+  group: iron-yard-original-weapon-owner-upload
+  cancel-in-progress: false
+
+jobs:
+  upload:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - name: Check out destination repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 50
+
+      - name: Locate a validated forge run (same authored weapon source)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REQUESTED_RUN: ${{ inputs.asset_run_id }}
+        run: |
+          set -euo pipefail
+          run_id="$REQUESTED_RUN"
+          if [[ -z "$run_id" ]]; then
+            run_id="$(gh run list --workflow weaponforge.yml --branch main --limit 20 \
+              --json databaseId,conclusion \
+              --jq '[.[] | select(.conclusion == "success")][0].databaseId')"
+          fi
+          [[ "$run_id" =~ ^[0-9]+$ ]] || { echo "No successful weaponforge run"; exit 1; }
+          [[ "$(gh run view "$run_id" --json conclusion --jq '.conclusion')" == "success" ]] || {
+            echo "Forge source run was not successful"; exit 1;
+          }
+          source_sha="$(gh run view "$run_id" --json headSha --jq '.headSha')"
+          [[ "$source_sha" =~ ^[a-f0-9]{40}$ ]] || exit 1
+          git fetch --quiet origin "$source_sha" --depth=100
+          if ! git diff --quiet "$source_sha" HEAD -- \
+              tools/weaponforge tools/assetforge/generate_maps.py \
+              .github/workflows/weaponforge.yml; then
+            echo "::error::Forge source no longer matches checked-out weapon source"
+            exit 1
+          fi
+          echo "SOURCE_SHA=$source_sha" >> "$GITHUB_ENV"
+          mkdir -p build/weapon-upload/source
+          gh run download "$run_id" --name iron-yard-original-weapon-meshes \
+            --dir build/weapon-upload/source
+          test -f build/weapon-upload/source/manifest.json
+          echo "Source forge run: $run_id" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Validate all ten GLB binary assets and upload safety
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/upload_weapon_models.py
+          python3 scripts/test_weapon_upload_contract.py
+          python3 tools/weaponforge/validate_weapon_exports.py \
+            build/weapon-upload/source
+
+      - name: Restore prior partial upload checkpoint if available
+        if: ${{ inputs.publish_assets }}
+        continue-on-error: true
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          prior="$(gh run list --workflow upload-weapon-opencloud.yml \
+            --limit 15 --json databaseId --jq \
+            '[.[] | select(.databaseId != (env.GITHUB_RUN_ID | tonumber))][0].databaseId')"
+          if [[ "$prior" =~ ^[0-9]+$ ]]; then
+            gh run download "$prior" --name weapon-upload-checkpoint \
+              --dir build/weapon-upload || true
+          fi
+
+      - name: Verify source files offline or upload owner-approved models
+        shell: bash
+        env:
+          CREATOR: ${{ inputs.creator_user_id }}
+          ACTIVATE: ${{ inputs.publish_assets }}
+          ROBLOX_OPEN_CLOUD_ASSETS_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_ASSETS_KEY }}
+        run: |
+          set -euo pipefail
+          args=(--assets build/weapon-upload/source
+            --owner-user-id "$CREATOR"
+            --source-commit "$SOURCE_SHA"
+            --checkpoint build/weapon-upload/checkpoint.json
+            --module src/shared/WeaponAssetIds.luau)
+          if [[ "$ACTIVATE" == "true" ]]; then
+            args+=(--publish)
+          else
+            echo "Safe offline validation: no Roblox assets created." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          python3 scripts/upload_weapon_models.py "${args[@]}"
+
+      - name: Store resumable upload record without secrets
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: weapon-upload-checkpoint
+          path: build/weapon-upload/checkpoint.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Commit fully validated owner-owned asset registry
+        if: ${{ inputs.publish_assets }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/shared/WeaponAssetIds.luau
+          if git diff --cached --quiet; then
+            echo "No new verified Roblox asset IDs." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git commit -m "assets(weapon): register ten owner-verified PBR models"
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
+          echo "All ten uploaded model IDs committed; live servers will load verified meshes." \
+            >> "$GITHUB_STEP_SUMMARY"

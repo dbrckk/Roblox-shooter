@@ -71,3 +71,59 @@ messages do **not** depend on imported meshes.
 The transparent local muzzle and ejector anchors keep recoil, tracer,
 case ejection and B-8 shell reload behavior working with the PBR models.
 The sniper's optic still hides the first-person weapon when scoped.
+
+
+## Automated owner-authorized activation (Open Cloud)
+
+The legacy Studio import above remains an available manual fallback. There is
+now a **non-interactive owner-owned path** for the same ten authored GLBs:
+
+1. The existing [weaponforge](https://github.com/dbrckk/Roblox-shooter/actions/workflows/weaponforge.yml)
+   produces ten GLB files and validates their real binary content.
+2. The [Upload original weapon PBR GLBs](https://github.com/dbrckk/Roblox-shooter/actions/workflows/upload-weapon-opencloud.yml)
+   workflow retrieves a successful forge artifact, checks that weapon source
+   files still match, verifies every GLB and checks the Roblox creator ID.
+   Its default `publish_assets=false` validates offline and **never uploads**.
+3. When the experience owner has configured the GitHub Actions repository
+   secret `ROBLOX_OPEN_CLOUD_ASSETS_KEY` with the Roblox Assets API read/write
+   scope, run the workflow with `publish_assets=true` and owner user ID
+   `9774173158`. **Never paste the key into a public issue, chat or repo.**
+4. Roblox creates ten **Model** assets. The script verifies each ID, owner,
+   Model type and explicit moderation approval, checkpoints confirmed uploads
+   and restores the checkpoint on retry. Reruns recheck previously registered
+   assets to avoid uploading duplicates.
+5. Only after all ten have passed the checks does GitHub Actions update
+   `src/shared/WeaponAssetIds.luau`. No partial registry commit can activate
+   an incomplete weapon. Successful upload IDs do not by themselves prove
+   texture or movement fidelity.
+6. `WeaponAssetLoader.start()` on game-server initialization reads the
+   committed IDs. For a matching **user-owned** experience, it asynchronously
+   uses `AssetService:LoadAssetAsync()`, validates all expected `MeshPart`
+   names, actual mesh content and all four `SurfaceAppearance` maps,
+   strips all other descendants, and publishes complete LOD0/LOD1 pairs
+   into `ReplicatedStorage.IronYardWeaponTemplates`. Existing owner-imported
+   templates are never overwritten. The client selects them on weapon equip;
+   an absent or invalid asset retains the procedural weapon.
+7. **Publish the updated Rojo place to the public Roblox experience** with
+   its independently configured release workflow. The GitHub source build
+   and the upload workflow are distinct from this final deployment.
+   A running server is not retroactively updated simply because new GitHub
+   asset IDs have been committed.
+
+### Production checks
+
+- Server: `workspace:GetAttribute("IronYardWeaponMeshStatus")` reports
+  `DISABLED`, `LOADING`, `PARTIAL`, `READY`, `MANUAL` or `FALLBACK`
+  according to actual runtime source availability.
+- Client: the equipped viewmodel's `IronYardWeaponSource` reports
+  `PBR_MESH` only when an approved, complete mesh pair was found.
+- Run an Android + PC test with all five weapons: select ECO/BALANCED/QUALITY,
+  aim, shoot, reload, swap, inspect muzzle flashes, shells and scope
+  occlusion. Measure FPS/P95/P99 and inspect the model scale/origin.
+- Never consider an asset upload, a Rojo build or a repository merge as
+  proof of a successful **live Roblox publication**.
+
+If the Open Cloud key is missing, no remote Roblox request occurs. The
+previously published game stays unchanged and the generated source pack
+remains available from
+[the five-weapon release](https://github.com/dbrckk/Roblox-shooter/releases/tag/iron-yard-weapon-meshes-c6ac0d03969f).
