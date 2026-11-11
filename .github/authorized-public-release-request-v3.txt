@@ -1,0 +1,11 @@
+IRON YARD — public version 6 update request (2026-11-11)
+
+Authorization: update the EXISTING PUBLIC Roblox FPS owned by user 9774173158.
+Delivery: new touch/gamepad first-person weapon inertia from PR #23, plus the
+one-shot release anti-duplication safeguards in this commit.
+
+Only trigger publication for the exact commit that ADDS this file after
+its Rojo build passes; never publish a stale SHA or a different experience.
+Publisher must verify owner, exact game name, root place and PUBLIC status.
+
+This authorization file has no Open Cloud secrets.
