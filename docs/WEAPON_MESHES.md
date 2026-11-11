@@ -158,3 +158,38 @@ These are local cosmetic diagnostic attributes, not user-facing HUD labels.
 Client transforms, pivot alignment, PBR texture fidelity, visibility and
 Android frame rates still require Roblox Studio + device QA. A green Rojo
 build cannot confirm any live asset import or visual quality.
+
+## Origine géométrique stable — GLB LOD0/LOD1
+
+Chaque export original (les dix GLB, cinq armes × deux LOD) contient maintenant
+un mini-mesh **`IRONYARD_WeaponOrigin`**, placé exactement à l'origine du
+modèle Blender, indépendant de la taille de la crosse, du canon et de l'optique.
+Cette pièce est un *repère de transformée*, **jamais un élément visible**.
+
+Pourquoi : le pivot d'un Model Roblox téléchargé depuis une ressource Open
+Cloud ou importé avec glTF peut être basé sur son centre d'encombrement.
+Ce centre se déplace selon l'arme et sa version LOD. S'y fier décalerait les
+mains, le recul, les armes et les effets de tir. Le chargeur serveur et
+l'installateur Studio exigent donc une origine unique et correctement
+dimensionnée, qu'ils copient dans le `WeaponOrigin` invisible des templates.
+La vue première personne se place relativement à ce repère déterministe.
+
+**Sécurité et compatibilité :** un ancien pack sans cette origine ne peut
+pas être activé automatiquement par le nouveau chargeur. Il conserve le
+fallback jouable jusqu'à la publication d'un nouveau pack validé. Les
+templates déjà installés et explicitement approuvés dans Studio gardent
+leur ancien `WeaponOrigin` lors d'une mise à jour partielle, pour éviter
+d'altérer silencieusement les placements précédemment réglés.
+
+Le validateur inspecte les fichiers **GLB2 binaires réels** et impose un
+repère unique à l'origine (transformation et géométrie bornées). Le test
+`scripts/test_weapon_origin_glb.py` corrompt volontairement les GLB en
+mémoire (repère absent, translaté, mis à l'échelle, surdimensionné) et
+vérifie que l'activation est refusée. Le workflow
+`.github/workflows/weaponforge.yml` exécute ces tests avant la création
+de l'archive et sa mise en ligne.
+
+Même avec ces corrections, les réglages de visée, l'orientation des axes,
+la visibilité PBR et le positionnement des mains doivent être mesurés en
+situation réelle sur Roblox Studio/Android avant toute affirmation de
+qualité AAA ou publication finale.
