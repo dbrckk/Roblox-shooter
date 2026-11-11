@@ -27,8 +27,8 @@ jobs:
       - name: Require an explicit request in the exact successful build commit
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
-          APPROVED_SHA: \${{ github.event.workflow_run.head_sha }}
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
           set -euo pipefail
           [[ "$APPROVED_SHA" =~ ^[0-9a-f]{40}$ ]] || exit 1
@@ -38,7 +38,7 @@ jobs:
             exit 0
           fi
           changed="$(gh api "repos/$GITHUB_REPOSITORY/commits/$APPROVED_SHA" \
-            --jq '[.files[] | select(.filename == ".github/authorized-public-release-request.txt" and .status == "added")] | length')"
+            --jq '[.files[] | select(.filename == ".github/authorized-public-release-request-v2.txt" and .status == "added")] | length')"
           if [[ "$changed" != "1" ]]; then
             echo "No newly authorized public release request in this exact green commit." >> "$GITHUB_STEP_SUMMARY"
             exit 0
