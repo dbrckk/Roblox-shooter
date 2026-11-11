@@ -225,6 +225,36 @@ assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 
     "Details must use the existing viewmodel renderer"
 )
 
+# PBR weapon origin MUST follow the authored Blender coordinate frame.
+# Roblox's outer Model:GetPivot() can be recentered to the imported bounds.
+weapon_forge = get("tools/weaponforge/build_weapons.py")
+weapon_validator = get("tools/weaponforge/validate_weapon_exports.py")
+weapon_uploader = get("scripts/upload_weapon_models.py")
+for needle in (
+    'box("IRONYARD_WeaponOrigin", (0, 0, 0), (.10, .10, .10),',
+    'use_selection=True,export_yup=True',
+):
+    assert needle in weapon_forge, f"Authoring root or glTF axis missing: {needle}"
+for needle in (
+    'ORIGIN_NAME="IRONYARD_WeaponOrigin"',
+    "set(names)==REQUIRED[weapon] | {ORIGIN_NAME}",
+    '"Origin marker geometry exceeds 12.2cm bounding cube"',
+    '"originMarker":ORIGIN_NAME',
+):
+    assert needle in weapon_validator, f"GLB pivot validation missing: {needle}"
+assert 'from validate_weapon_exports import REQUIRED, ORIGIN_NAME, inspect' in weapon_uploader
+assert 'REQUIRED[weapon] | {ORIGIN_NAME}' in weapon_uploader, (
+    "Open Cloud must reject unanchored, misaligned GLB releases"
+)
+assert 'function Layout.origin(root, validate)' in layout
+assert 'Layout.ORIGIN_NAME = "IRONYARD_WeaponOrigin"' in layout
+assert 'local marker = Layout.origin(package, function(mesh)' in asset_loader
+assert 'origin.CFrame = marker.CFrame' in asset_loader
+assert 'origin.CFrame = package:GetPivot()' not in asset_loader
+assert 'local marker=WeaponMeshLayout.origin(source, function(mesh)' in studio_importer
+assert 'origin.CFrame=rootCFrame' in studio_importer
+assert 'origin.CFrame=source:GetPivot()' not in studio_importer
+
 # Late owner-authorized uploads must activate without a weapon swap.
 # A preset change must switch a currently imported viewmodel to its new LOD,
 # but never during combat, reload, aiming, or before full PBR map replication.
