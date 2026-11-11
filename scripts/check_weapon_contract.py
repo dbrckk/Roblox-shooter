@@ -928,10 +928,24 @@ def main():
                 "if remoteAccepted then",
                 '(ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table"'):
         has(client, key, "Server-authored hit UI, no local duplicate or skipped pellet feedback")
-    for key in ("visuals:drawLocalMuzzleFlash()",
-                "visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)",
+    for key in ("visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)",
                 "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)"):
-        has(client, key, "Local and remote gun flashes use shot direction")
+        has(client, key, "Remote gun flashes use server shot direction")
+    # Own muzzle FX is now scheduled by the shot input and emitted only after
+    # the new camera-aligned weapon pose has been applied in the render loop.
+    # Requiring an input-time flash here would reintroduce the 1-frame visual lag.
+    has(viewmodel, "self:drawLocalMuzzleFlash()",
+        "Local muzzle flashes use the current-frame rendered firearm socket")
+    has(viewmodel, "WeaponFxFramePolicy.flashReady(self.currentWeaponId, flashAt, now)",
+        "Stale Android first-person muzzle FX must be dropped")
+    has(client, "visuals:kick(weaponId)", "Local admitted shot queues its own FX")
+    require("visuals:drawLocalMuzzleFlash()" not in client,
+        "Local flash must not be spawned from the previous-frame viewmodel")
+    render = viewmodel.split("function WeaponVisuals:_render(deltaTime)", 1)[1].split(
+        "function WeaponVisuals:_spawnTransient(spec)", 1)[0]
+    require(render.index("entry.part.CFrame = root * localOffset") < render.index(
+        "self:drawLocalMuzzleFlash()"),
+        "First-person muzzle flash must follow the final weapon pose")
     has(client, "visibleRigParts", "Cached first-person rig visibility")
     for needle in (
         'WaitForChild("FirstPersonBodyCache")',

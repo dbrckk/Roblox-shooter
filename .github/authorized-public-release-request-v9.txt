@@ -1,0 +1,14 @@
+IRON YARD — PUBLIC release fix after v8 blocked CI (11 November 2026)
+
+Owner has requested continuing and publishing changes to the existing
+PUBLIC IRON YARD Roblox FPS.
+
+This commit corrects an obsolete CI contract from the previous release:
+the local muzzle effect now follows the final first-person viewmodel
+render instead of firing directly from the input callback. The contract
+verifies final CFrame ordering and stale-effect suppression while keeping
+the remote fire checks intact. It includes all v7/v8 game improvements
+on main and requires successful exact-SHA Rojo CI before release.
+
+Existing PUBLIC place, owner, source-commit and asset checks are unchanged.
+No secret, destination ID, or user credential is stored here.
