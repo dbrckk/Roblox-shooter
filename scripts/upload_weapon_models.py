@@ -21,6 +21,16 @@ from upload_vanguard_models import API, request_json  # noqa: E402
 
 LODS = ("LOD0", "LOD1")
 WEAPONS = tuple(REQUIRED)
+# The GLB file slugs are lowercase; Roblox gameplay IDs are not.
+# A wrong key silently leaves all ten uploaded models inactive.
+RUNTIME_NAMES = {
+    "pistol": "Pistol",
+    "knife": "Knife",
+    "assault_rifle": "AssaultRifle",
+    "shotgun": "Shotgun",
+    "sniper": "Sniper",
+}
+assert set(RUNTIME_NAMES) == set(WEAPONS)
 MAX_UPLOAD = 20_000_000
 
 
@@ -185,7 +195,7 @@ def matching_committed_ids(module_text, source_commit):
     rows = {}
     for weapon in WEAPONS:
         match = re.search(
-            rf'\b{weapon}\s*=\s*\{{\s*LOD0\s*=\s*(\d+)'
+            rf'\b{RUNTIME_NAMES[weapon]}\s*=\s*\{{\s*LOD0\s*=\s*(\d+)'
             rf'\s*,\s*LOD1\s*=\s*(\d+)\s*\}}', module_text)
         if not match:
             return {}
@@ -203,7 +213,7 @@ def render_module(owner, source_commit, rows):
         "    modelIds = {",
     ]
     for weapon in WEAPONS:
-        result.append(f"        {weapon} = {{ LOD0 = {rows[weapon, 'LOD0']['assetId']},"
+        result.append(f"        {RUNTIME_NAMES[weapon]} = {{ LOD0 = {rows[weapon, 'LOD0']['assetId']},"
                       f" LOD1 = {rows[weapon, 'LOD1']['assetId']} }},")
     return "\n".join(result + ["    },", "}", ""])
 
