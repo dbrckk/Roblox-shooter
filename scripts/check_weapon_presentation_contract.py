@@ -512,6 +512,28 @@ assert visuals.count("function WeaponVisuals:_ejectCartridge(plan)") == 1
 assert visuals.index("self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap") < (
     visuals.index("function WeaponVisuals:_ejectCartridge(plan)"))
 assert "FireServer" not in ejection and "Instance.new" not in ejection
+# Local FX must follow the final post-camera, animated PBR/procedural parts.
+# A muzzle flash spawned from FireWeapon input sees the previous frame's gun.
+fx_policy = get("src/shared/WeaponFxFramePolicy.luau")
+fx_test = get("scripts/test_weapon_fx_frame_policy.luau")
+for needle in ("function Policy.flashReady(", "function Policy.casingReady("):
+    assert needle in fx_policy and needle.split("(")[1] in fx_test
+assert 'WaitForChild("WeaponFxFramePolicy")' in visuals
+assert "self.pendingLocalFlashAt = nil -- prevent late flash" in visuals
+assert "self.pendingLocalFlashAt = weaponId ~= \"Knife\" and self.fireStartedAt or nil" in visuals
+assert "visuals:drawLocalMuzzleFlash()" not in client, (
+    "Local muzzle flash must use post-camera rendered muzzle, not input-time anchor")
+render = visuals.split("function WeaponVisuals:_render(deltaTime)", 1)[1]
+render = render.split("function WeaponVisuals:_spawnTransient(spec)", 1)[0]
+assert render.index("entry.part.CFrame = root * localOffset") < (
+    render.index("self:drawLocalMuzzleFlash()") )
+assert render.index("entry.part.CFrame = root * localOffset") < (
+    render.index("self:_ejectCartridge(pending.plan)") )
+assert "WeaponFxFramePolicy.flashReady(self.currentWeaponId, flashAt, now)" in render
+assert "WeaponFxFramePolicy.casingReady(self.currentWeaponId," in render
+assert visuals.index("self.pendingCartridge = plan and {") < (
+    visuals.index("function WeaponVisuals:_getAnimationCFrame(") )
+assert "FireServer" not in fx_policy and "Instance.new" not in fx_policy
 for needle in (
     "function Pose.get(id, imported)", "function Pose.damping(blend)",
     "sightX = 0, sightY = 0.32, sightZ = -0.05",

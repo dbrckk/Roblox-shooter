@@ -878,7 +878,6 @@ local function fireWeapon(weaponId)
     end
 	visuals:kick(weaponId)
     hud:registerPredictedShot(weaponId)
-    visuals:drawLocalMuzzleFlash()
 	visuals:playFireSound(weaponId, ray.Origin, true)
 
 

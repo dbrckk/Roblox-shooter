@@ -1,0 +1,15 @@
+IRON YARD — one-shot authorization to update existing PUBLIC Roblox game
+Date: 11 November 2026
+Owner instructed continuing the production-ready Roblox FPS and publishing
+the improvement directly to the PUBLIC experience (no private or alpha).
+
+Scope of this release:
+- align local muzzle flashes with the post-camera current-frame gun barrel
+- align pistol/rifle and delayed pump/bolt casings with current-frame sockets
+- suppress visual FX made stale by an Android freeze or a weapon change
+- pure Luau regression suite, integration assertions and quality documentation
+- no changes to combat server authority, maps, saves or monetization
+
+This file authorizes dispatch only for its exact main commit after successful
+Rojo build checks. Keep the existing owner/target/public visibility gates.
+Never expose or commit Roblox API keys, IDs, or credentials.

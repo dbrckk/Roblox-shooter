@@ -117,6 +117,7 @@ jobs:
           ./luau scripts/test_scope_fov_policy.luau
           ./luau scripts/test_crosshair_feedback_policy.luau
           ./luau scripts/test_cartridge_ejection_policy.luau
+          ./luau scripts/test_weapon_fx_frame_policy.luau
           ./luau scripts/test_weapon_pbr_fx_sockets.luau
           ./luau scripts/test_shotgun_reload_visual.luau
           ./luau scripts/test_defeat_presentation.luau

@@ -20,6 +20,7 @@ local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitF
 local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
 local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
+local WeaponFxFramePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFxFramePolicy"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -101,6 +102,7 @@ function WeaponVisuals.new(WeaponConfig)
     self.remoteSoundEmitters = {}
     self.cartridgeShots = {}
     self.pendingCartridge = nil
+    self.pendingLocalFlashAt = nil
     self.detailTier = nil
     self.currentWeaponImported = false
     self.activeMeshLod = nil
@@ -635,6 +637,7 @@ end
 function WeaponVisuals:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
     self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap
+    self.pendingLocalFlashAt = nil -- prevent late flash from previous weapon
     self.aimBlend = 0
     -- Resolve ADS only AFTER choosing procedural or PBR mesh. Their
     -- rear sights have different authored positions in weaponforge.
@@ -796,24 +799,21 @@ function WeaponVisuals:kick(weaponId)
     if not config or weaponId ~= self.currentWeaponId then return end
     self.recoil = WeaponFeel.kick(weaponId, self.recoil, config.recoilKick or 0.08)
     self.fireStartedAt = os.clock()
+    -- Schedule visible first-person FX until AFTER the final camera-aligned
+    -- viewmodel pose is written. No 1-frame-old muzzle/receiver coordinates.
+    self.pendingLocalFlashAt = weaponId ~= "Knife" and self.fireStartedAt or nil
     local count = (self.cartridgeShots[weaponId] or 0) + 1
     self.cartridgeShots[weaponId] = count
     local plan = CartridgeEjection.plan(weaponId,
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
         UserInputService.TouchEnabled, count)
-    if plan then
-        if plan.delay > 0 then
-            -- Pump/bolt action releases the spent shell on its mechanical beat.
-            -- A new shot/weapon swap replaces or cancels stale pending FX.
-            self.pendingCartridge = { at = self.fireStartedAt + plan.delay,
-                weaponId = weaponId, plan = plan }
-        else
-            self.pendingCartridge = nil
-            self:_ejectCartridge(plan)
-        end
-    else
-        self.pendingCartridge = nil
-    end
+    -- Even a zero-delay pistol/AR casing waits until the updated slide and
+    -- ejection port have been rendered. Delayed pump/bolt retain their beat.
+    -- Only one pending shell: repeated shots before a frame drop older FX.
+    self.pendingCartridge = plan and {
+        at = self.fireStartedAt + plan.delay,
+        weaponId = weaponId, plan = plan,
+    } or nil
 end
 
 function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingPose)
@@ -881,13 +881,6 @@ function WeaponVisuals:_render(deltaTime)
     -- Pool opacity/expiry is serviced at 8 Hz, not via a Tween and Debris
     -- allocation for every bullet. Reuses the existing RenderStepped hook.
     local clock = os.clock()
-    local pending = self.pendingCartridge
-    if pending and clock >= pending.at then
-        self.pendingCartridge = nil
-        if pending.weaponId == self.currentWeaponId then
-            self:_ejectCartridge(pending.plan)
-        end
-    end
     if #self.impactMarks > 0 and clock >= self.nextImpactMarkUpdateAt then
         self.nextImpactMarkUpdateAt = clock + 0.125
         self:_updateImpactMarks(clock)
@@ -1003,6 +996,24 @@ function WeaponVisuals:_render(deltaTime)
                 0, feel.actionTravel * actionTravel)
         end
         entry.part.CFrame = root * localOffset
+    end
+
+    -- Emission MUST happen after all parts have their current-frame CFrames.
+    -- This closes the input-versus-render race on fast Android camera turns.
+    local flashAt = self.pendingLocalFlashAt
+    if flashAt ~= nil then
+        self.pendingLocalFlashAt = nil
+        if WeaponFxFramePolicy.flashReady(self.currentWeaponId, flashAt, now) then
+            self:drawLocalMuzzleFlash()
+        end
+    end
+    local pending = self.pendingCartridge
+    if pending and now >= pending.at then
+        self.pendingCartridge = nil
+        if WeaponFxFramePolicy.casingReady(self.currentWeaponId,
+            pending.weaponId, pending.at, now) then
+            self:_ejectCartridge(pending.plan)
+        end
     end
 end
 

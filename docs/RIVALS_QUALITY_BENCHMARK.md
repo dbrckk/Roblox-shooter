@@ -494,3 +494,15 @@ les memes definitions de pieces pour garantir leur identite.
 - Seules les interpolations cosmétiques (sway, bob, ADS, rechargement) bornent désormais leur pas à **50 ms** lorsqu'une frame dure anormalement longtemps. Les expirations VFX et la récupération du recul continuent d'utiliser le temps réel.
 - Les tests Luau vérifient les deltas normaux / invalides / saccades ; le contrat d'intégration vérifie l'ordre explicite des deux callbacks et les quatre usages du pas borné.
 - **Validation en moteur encore nécessaire :** rotations rapides Android 30/60 FPS, cadrage ADS mires PBR, wallrun avec caméra inclinée, retour après freeze, 100 tirs en continu et comparaison frame P95/P99 avant/après sur un téléphone réel. Le CI vert ne constitue pas une mesure FPS Roblox.
+
+
+## FX alignés sur les armes PBR et le rendu caméra final — 11 novembre 2026
+
+Auparavant les flashs de tir locaux et les douilles AR/pistolet étaient émis à l'instant de l'input, tandis que la mise à jour du modèle en première personne attendait le RenderStep suivant. Les douilles pompe/verrou sortaient aussi avant la mise à jour de la pose du modèle. Sur les rotations rapides et sous 30 FPS, l'effet pouvait donc être placé à la position précédente du canon ou du mécanisme, même avec les nouveaux sockets Blender calibrés.
+
+- **Nouveau chemin unique** : après caméra native, mouvement de caméra IRON YARD et animation de toutes les pièces du viewmodel, le même RenderStep crée le flash local et/ou la douille exigible depuis la position courante de leurs sockets.
+- **Priorité réactivité** : le son, le tracer de visée et les requêtes de tir restent immédiats, seul le flash visuel attend la pose 3D de l'image courante. Pas de changement du raycast, des hitboxes, de la cadence, du PBR, du rythme serveur ou de la publication publique.
+- **Gestion des blocages** : pas de flash vieux de plus de 170 ms ni de douille en retard de plus de 180 ms après un freeze Android, ni de douille/flash d'une arme quittée. Les coups de fusil automatiques supplantent volontairement une vieille douille en attente plutôt que de gonfler la liste VFX.
+- **Budget** : une seule boucle RenderStep préexistante, aucune instance réseau, aucun raycast ni allocation par frame supplémentaire ; les effets restent gérés par le pool local déjà limité (ECO désactive les douilles).
+- **Tests** : régressions Luau horaires immédiats/différés, retards, changement d'arme, invalides et contre-ordre dans le contrat d'intégration, compilés en CI.
+- **À confirmer dans Roblox** : tir continu AR/PC/Android, rotations rapides 30/60 FPS, mires ADS PBR, quatre bots, coup de shotgun puis switch immédiat, sniper après verrou, et framerate P95/P99.
