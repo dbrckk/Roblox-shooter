@@ -79,8 +79,8 @@ def confirmed_asset(response, owner):
     require(str(creator.get("userId")) == str(owner),
             "Asset creator is not the configured experience owner")
     state = (response.get("moderationResult") or {}).get("moderationState")
-    require(state in (None, "MODERATION_STATE_APPROVED"),
-            "Asset moderation is not approved")
+    require(state in ("MODERATION_STATE_APPROVED", "Approved"),
+            "Asset moderation is not explicitly approved")
     return asset_id
 
 
@@ -119,6 +119,24 @@ def verify_existing(asset_id, owner, key):
     require(isinstance(asset_id, int) and asset_id > 0, "Bad saved asset ID")
     response = request_json(API + "/assets/" + str(asset_id), key)
     return confirmed_asset(response, owner) == asset_id
+
+
+def matching_committed_ids(module_text, source_commit):
+    # Re-running the same verified forge must not upload ten duplicate assets.
+    # These source-controlled IDs are still rechecked against Roblox live data.
+    if not re.search(r'sourceCommit\\s*=\\s*"' + source_commit + r'"',
+                     module_text):
+        return {}
+    rows = {}
+    for weapon in WEAPONS:
+        match = re.search(
+            rf'\\b{weapon}\\s*=\\s*\\{{\\s*LOD0\\s*=\\s*(\\d+)'
+            rf'\\s*,\\s*LOD1\\s*=\\s*(\\d+)\\s*\\}}', module_text)
+        if not match:
+            return {}
+        rows[weapon, "LOD0"] = int(match.group(1))
+        rows[weapon, "LOD1"] = int(match.group(2))
+    return rows
 
 
 def render_module(owner, source_commit, rows):
@@ -180,6 +198,7 @@ def main(argv=None):
 
     key = os.environ.get("ROBLOX_OPEN_CLOUD_ASSETS_KEY", "")
     require(bool(key), "ROBLOX_OPEN_CLOUD_ASSETS_KEY is not configured")
+    already = matching_committed_ids(existing, args.source_commit)
     previous = {}
     if args.checkpoint.is_file():
         saved = json.loads(args.checkpoint.read_text("utf-8"))
@@ -191,7 +210,11 @@ def main(argv=None):
         for lod in LODS:
             row = rows[weapon, lod]
             cached = previous.get(f"{weapon}/{lod}", {})
-            if cached.get("sha256") == row["sha256"] and isinstance(
+            committed = already.get((weapon, lod))
+            if committed is not None and committed > 0:
+                if verify_existing(committed, args.owner_user_id, key):
+                    row["assetId"] = committed
+            elif cached.get("sha256") == row["sha256"] and isinstance(
                     cached.get("assetId"), int):
                 # A checkpoint alone cannot authorize arbitrary model IDs.
                 if verify_existing(cached["assetId"], args.owner_user_id, key):
