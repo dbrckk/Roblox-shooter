@@ -225,12 +225,83 @@ assert visuals.count('RunService.RenderStepped:Connect(function(deltaTime)') == 
     "Details must use the existing viewmodel renderer"
 )
 
+# Late owner-authorized uploads must activate without a weapon swap.
+# A preset change must switch a currently imported viewmodel to its new LOD,
+# but never during combat, reload, aiming, or before full PBR map replication.
+layout = get("src/shared/WeaponMeshLayout.luau")
+for needle in (
+    "function Layout.componentName(candidate, required)",
+    "function Layout.collect(root, required, validate)",
+    'part:IsA("MeshPart")',
+    'parent:IsA("Model") or parent:IsA("Folder")',
+    "Layout.MAX_PER_COMPONENT = 8",
+    "Layout.MAX_TOTAL = 32",
+    "if owners[key] and owners[key] ~= owner then return nil end",
+):
+    assert needle in layout, f"Roblox multi-primitive glTF import missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponMeshLayout")',
+    'WeaponMeshLayout.collect(template, required, function(part)',
+    'for _, componentName in ipairs(WeaponMeshPolicy.Required[weaponId]) do',
+    'for _, sourcePart in ipairs(selected[componentName]) do',
+):
+    assert needle in visuals, f"Client GLB multi-primitive animation missing: {needle}"
+for needle in (
+    'Layout.collect(package,',
+    'Layout.collect(model, MeshPolicy.Required[weaponId], validMesh)',
+    'for index, part in ipairs(selected[name]) do',
+):
+    assert needle in asset_loader, f"Server GLB nested mesh load missing: {needle}"
+for needle in (
+    'WeaponMeshLayout.collect(root, expected[weapon], function(child)',
+    'for i,sourcePart in ipairs(found[name]) do',
+    'component.Name=name',
+):
+    assert needle in studio_importer, f"Studio multi-primitive install missing: {needle}"
+
+refresh_policy = get("src/shared/WeaponMeshRefreshPolicy.luau")
+for needle in (
+    "function Policy.shouldRefresh(imported, activeLod, wantedLod, available, status)",
+    "status.scoped == true",
+    "status.sprinting == true",
+    "status.reloading == true",
+    "status.pendingCartridge == true",
+    "status.sinceShot < 2.0",
+    "status.sinceEquip < 0.8",
+):
+    assert needle in refresh_policy, f"Non-disruptive hot swap policy missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponMeshRefreshPolicy")',
+    'function WeaponVisuals:_getImportedWeapon(weaponId, lod)',
+    "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)",
+    "self.nextWeaponMeshCheck = now + 1.2",
+    "WeaponMeshRefresh.shouldRefresh(self.currentWeaponImported,",
+    "self.activeMeshLod = lod",
+    'model:SetAttribute("IronYardWeaponLOD", lod)',
+    'self.model:SetAttribute("IronYardWeaponUpgrade", "DEFERRED_IDLE")',
+    "self:_refreshImportedWeaponIfSafe(clock)",
+):
+    assert needle in visuals, f"Deferred PBR LOD refresh not wired: {needle}"
+assert visuals.count("self:_refreshImportedWeaponIfSafe(clock)") == 1, (
+    "Mesh polling must share the original client RenderStepped hook"
+)
+getter = visuals.split("function WeaponVisuals:_getImportedWeapon(weaponId, lod)", 1)[1]
+getter = getter.split("function WeaponVisuals:_createImportedWeapon", 1)[0]
+assert "\n    return false" not in getter, (
+    "An incomplete imported template must be nil, not a truthy refresh status"
+)
+assert getter.count("return nil") >= 5
+assert visuals.index("local origin = self:_getImportedWeapon(self.currentWeaponId, lod)") < (
+    visuals.index("self:setWeapon(weaponId)", visuals.index(
+        "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)"))
+), "Verify complete source before resetting an equipped weapon"
+
 # Five authored PBR meshes, retaining original animation and FX on import.
 for weapon in ("AssaultRifle", "Shotgun", "Sniper"):
     assert f'if not self:_createImportedWeapon(model, "{weapon}") then' in visuals
     assert f'{weapon}={{' in mesh_policy
 for needle in (
-    'clone.Name = WeaponMeshPolicy.runtimeName(sourcePart.Name)',
+    'clone.Name = WeaponMeshPolicy.runtimeName(componentName)',
     'anchor("FlashHider"',
     'anchor("ShotgunEjectionPort"',
     'anchor("MuzzleBrake"',

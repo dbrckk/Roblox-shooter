@@ -4,6 +4,7 @@
 -- Never copy scripts, attachments, unknown objects, or unvalidated meshes.
 local Selection=game:GetService("Selection")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local WeaponMeshLayout=require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshLayout"))
 local expected={
     Pistol={"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
     Knife={"IRONYARD_Knife_Static"},
@@ -42,24 +43,14 @@ local function identify(model)
 end
 
 local function collectMeshes(root, weapon)
-    local found={}
-    for _,child in ipairs(root:GetDescendants()) do
-        if child:IsA("MeshPart") then
-            for _,name in ipairs(expected[weapon]) do
-                if string.lower(child.Name)==string.lower(name) then
-                    assert(not found[name],"Duplicate mesh "..name)
-                    assert(child.MeshId~="" and validAppearance(child)
-                        and child.Size.Magnitude>=0.03 and child.Size.Magnitude<=10,
-                        "Import a real mesh and four maps for "..name)
-                    found[name]=child
-                end
-            end
-        end
-    end
-    for _,name in ipairs(expected[weapon]) do
-        assert(found[name],"Missing required original imported mesh: "..name)
-    end
-    return found
+    local groups=WeaponMeshLayout.collect(root, expected[weapon], function(child)
+        return child.MeshId~="" and validAppearance(child)
+            and child.Size.Magnitude>=0.03 and child.Size.Magnitude<=10
+    end)
+    assert(groups,"Missing, incomplete or duplicate PBR component in "..weapon)
+    -- Source glTF material primitives can be nested MeshParts under a
+    -- *_Node Model. Each validated group is retained for local animation.
+    return groups
 end
 
 local stage=Instance.new("Folder")
@@ -88,18 +79,23 @@ local function installVariant(source,weapon,lod)
     origin.Parent=template
     template.PrimaryPart=origin
     for _,name in ipairs(expected[weapon]) do
-        local clone=found[name]:Clone()
-        local appearance=clone:FindFirstChildOfClass("SurfaceAppearance")
-        for _,item in ipairs(clone:GetDescendants()) do
-            if item~=appearance or item.Parent~=clone then item:Destroy() end
+        local component=Instance.new("Model")
+        component.Name=name
+        for i,sourcePart in ipairs(found[name]) do
+            local clone=sourcePart:Clone()
+            local appearance=clone:FindFirstChildOfClass("SurfaceAppearance")
+            for _,item in ipairs(clone:GetDescendants()) do
+                if item~=appearance or item.Parent~=clone then item:Destroy() end
+            end
+            clone.Name=name.."_Primitive"..i
+            clone.Anchored=true
+            clone.CanCollide=false
+            clone.CanQuery=false
+            clone.CanTouch=false
+            clone.CastShadow=false
+            clone.Parent=component
         end
-        clone.Name=name
-        clone.Anchored=true
-        clone.CanCollide=false
-        clone.CanQuery=false
-        clone.CanTouch=false
-        clone.CastShadow=false
-        clone.Parent=template
+        component.Parent=template
     end
     template:SetAttribute("IronYardStudioApproved",true)
     template.Parent=category
