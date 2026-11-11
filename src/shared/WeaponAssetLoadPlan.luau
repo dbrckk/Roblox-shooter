@@ -6,7 +6,8 @@ Plan.MAX_WORKERS = 2
 Plan.TOTAL_WEAPONS = 5
 
 function Plan.workers(pending)
-    if type(pending) ~= "number" or pending ~= pending or pending <= 0 then
+    if type(pending) ~= "number" or pending ~= pending or pending <= 0
+        or pending == math.huge then
         return 0
     end
     return math.min(math.floor(pending), Plan.MAX_WORKERS)
