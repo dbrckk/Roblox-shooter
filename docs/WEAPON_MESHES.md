@@ -265,3 +265,27 @@ des LOD plus haut). Aucun UI de débogage n'est montré en partie publique.
 et des tests hors moteur. Sans autorisation Open Cloud configurée et sans
 exécution Roblox Studio/Android, elle ne certifie pas la vitesse réelle de
 chargement ni la qualité visuelle des modèles.
+
+## Passage discret aux modèles PBR en partie
+
+Une arme procédurale déjà équipée peut devenir PBR en cours de match lorsque
+les LOD validés sont répliqués. De même, le preset ECO/QUALITY peut changer
+pendant que le joueur possède déjà une arme importée.
+
+Le client attend toujours un moment sûr (pas de tir récent, visée, sprint,
+rechargement actif ou éjection différée). Il distingue désormais ce
+**remplacement cosmétique** d'un vrai changement d'équipement :
+`WeaponMeshSwapState.luau` conserve puis restaure les minuteries d'équipement
+et de tir, le recul résiduel, la progression de visée et de rechargement,
+le déplacement des mains, le mouvement de caméra et le sway. Le joueur
+ne doit plus voir l'animation d'équipement redémarrer à chaque mise à jour
+PBR/LOD. Le registre de munitions et les règles serveur restent inchangés.
+
+Les vrais changements d'armes continuent volontairement à déclencher une
+nouvelle animation d'équipement. Le test
+`scripts/test_weapon_mesh_swap_state.luau` et le contrôle de câblage
+vérifient que seule l'opération cosmétique restaure cet état.
+
+La continuité de la pose est validée au niveau logique et Luau, pas encore
+par une capture en cours de partie. L'homogénéité visuelle des deux LOD reste
+à examiner sur Android et PC après activation Roblox.

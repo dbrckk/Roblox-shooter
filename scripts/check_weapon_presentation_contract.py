@@ -311,6 +311,32 @@ for needle in (
 ):
     assert needle in studio_importer, f"Studio multi-primitive install missing: {needle}"
 
+swap_state = get("src/shared/WeaponMeshSwapState.luau")
+for needle in (
+    '"equipStartedAt", "fireStartedAt", "recoil"',
+    '"reloadActive", "reloadStartedAt", "reloadBlend"',
+    '"aimBlend", "stepPhase", "stepBlend", "sway"',
+    '"lastCameraPosition"',
+    "function P.capture(viewmodel)",
+    "function P.restore(viewmodel, snapshot)",
+):
+    assert needle in swap_state, f"Cosmetic PBR swap must preserve {needle}"
+for needle in (
+    'WaitForChild("WeaponMeshSwapState")',
+    'local previousPose = WeaponMeshSwapState.capture(self)',
+    'WeaponMeshSwapState.restore(self, previousPose)',
+    'if self.currentWeaponImported then',
+):
+    assert needle in visuals, f"Seamless viewmodel PBR hot-swap missing {needle}"
+upgrade = visuals.split(
+    "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)", 1)[1]
+upgrade = upgrade.split("function WeaponVisuals:setSprinting", 1)[0]
+assert upgrade.index("WeaponMeshSwapState.capture(self)") < upgrade.index(
+    "self:setWeapon(weaponId)") < upgrade.index(
+    "WeaponMeshSwapState.restore(self, previousPose)"), (
+        "Cosmetic mesh hot-swap must restore all interpolated animation state"
+    )
+
 refresh_policy = get("src/shared/WeaponMeshRefreshPolicy.luau")
 for needle in (
     "function Policy.shouldRefresh(imported, activeLod, wantedLod, available, status)",
