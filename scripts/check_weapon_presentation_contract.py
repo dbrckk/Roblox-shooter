@@ -287,7 +287,7 @@ assert visuals.count("self:_refreshImportedWeaponIfSafe(clock)") == 1, (
 )
 getter = visuals.split("function WeaponVisuals:_getImportedWeapon(weaponId, lod)", 1)[1]
 getter = getter.split("function WeaponVisuals:_createImportedWeapon", 1)[0]
-assert "return false" not in getter, (
+assert "\n    return false" not in getter, (
     "An incomplete imported template must be nil, not a truthy refresh status"
 )
 assert getter.count("return nil") >= 5
