@@ -10,6 +10,7 @@ local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
 local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
+local WeaponMeshRefresh = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshRefreshPolicy"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
@@ -93,6 +94,8 @@ function WeaponVisuals.new(WeaponConfig)
     self.pendingCartridge = nil
     self.detailTier = nil
     self.currentWeaponImported = false
+    self.activeMeshLod = nil
+    self.nextWeaponMeshCheck = 0
     -- Update visible detail immediately on graphics setting changes, without
     -- resetting reload state, recoil, camera aim or the equipped weapon.
     self.detailPresetConnection = Players.LocalPlayer:GetAttributeChangedSignal(
@@ -485,13 +488,12 @@ end
 -- Load ONLY owner-installed PBR MeshParts from the replicated Studio kit.
 -- Nothing is downloaded or script-executed, and the original Part gun stays
 -- usable if the imported model, permissions or SurfaceAppearance are incomplete.
-function WeaponVisuals:_createImportedWeapon(model, weaponId)
+-- A single validated source selector is shared by initial equipping and
+-- deferred LOD refresh. Incomplete server replication must never hide a gun.
+function WeaponVisuals:_getImportedWeapon(weaponId, lod)
     local templates = ReplicatedStorage:FindFirstChild("IronYardWeaponTemplates")
     local category = templates and templates:FindFirstChild(weaponId)
     if not category then return false end
-    local lod = WeaponMeshPolicy.lod(
-        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        UserInputService.TouchEnabled)
     local template = category:FindFirstChild(lod)
     if not template or not template:IsA("Model")
         or template:GetAttribute("IronYardStudioApproved") ~= true then
@@ -517,6 +519,15 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
         }) then return false end
         table.insert(selected, part)
     end
+    return origin, selected
+end
+
+function WeaponVisuals:_createImportedWeapon(model, weaponId)
+    local lod = WeaponMeshPolicy.lod(
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled)
+    local origin, selected = self:_getImportedWeapon(weaponId, lod)
+    if not origin then return false end
     -- Preserve the original hand positions when a validated imported mesh
     -- replaces a procedural firearm. No imported script/rig is executed.
     if weaponId == "Pistol" then
@@ -590,7 +601,9 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
         anchor("MuzzleBrake", CFrame.new(0, 0.03, -2.35))
     end
     self.currentWeaponImported = true
+    self.activeMeshLod = lod
     model:SetAttribute("IronYardWeaponSource", "PBR_MESH")
+    model:SetAttribute("IronYardWeaponLOD", lod)
     return true
 end
 
@@ -607,6 +620,8 @@ function WeaponVisuals:setWeapon(weaponId)
     self.lastCameraPosition = nil
 	self:_clearModel()
     self.currentWeaponImported = false
+    self.activeMeshLod = nil
+    self.nextWeaponMeshCheck = 0
 
 	local model = Instance.new("Model")
 	model.Name = weaponId .. "Viewmodel"
@@ -639,6 +654,36 @@ function WeaponVisuals:setWeapon(weaponId)
     end
     self:_applyCareerFinish()
     self:_syncScopeVisibility()
+end
+
+-- Server-created PBR templates can arrive after the initial equip.
+-- Upgrades are deferred until idle; all mesh validation precedes any swap.
+function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
+    if now < self.nextWeaponMeshCheck then return end
+    self.nextWeaponMeshCheck = now + 1.2
+    if not self.model or not self.currentWeaponId then return end
+
+    local lod = WeaponMeshPolicy.lod(
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled)
+    if self.currentWeaponImported and self.activeMeshLod == lod then return end
+    local origin = self:_getImportedWeapon(self.currentWeaponId, lod)
+    local safe = WeaponMeshRefresh.shouldRefresh(self.currentWeaponImported,
+        self.activeMeshLod, lod, origin ~= nil, {
+            scoped = self.scoped,
+            sprinting = self.sprinting,
+            reloading = self.reloadActive,
+            pendingCartridge = self.pendingCartridge ~= nil,
+            aimBlend = self.aimBlend,
+            reloadBlend = self.reloadBlend,
+            sinceShot = now - self.fireStartedAt,
+            sinceEquip = now - self.equipStartedAt,
+        })
+    if safe then
+        local weaponId = self.currentWeaponId
+        self:setWeapon(weaponId)
+        self.model:SetAttribute("IronYardWeaponUpgrade", "DEFERRED_IDLE")
+    end
 end
 
 function WeaponVisuals:setSprinting(isSprinting)
@@ -810,6 +855,7 @@ function WeaponVisuals:_render(deltaTime)
 		self.model.Parent = camera
 	end
 
+    self:_refreshImportedWeaponIfSafe(clock)
     self.recoil = WeaponFeel.recover(self.currentWeaponId, self.recoil, deltaTime)
 
     local now = os.clock()
