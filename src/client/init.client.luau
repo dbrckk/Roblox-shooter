@@ -14,6 +14,7 @@ local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget")
 local remoteFxState = RemoteCombatFxBudget.new()
 local TouchLayout = require(shared:WaitForChild("TouchLayout"))
 local GamepadCombatPolicy = require(shared:WaitForChild("GamepadCombatPolicy"))
+local AutomaticFireCadence = require(shared:WaitForChild("AutomaticFireCadence"))
 local FirstPersonBodyCache = require(shared:WaitForChild("FirstPersonBodyCache"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
@@ -1073,9 +1074,12 @@ local function beginHeldFire(gamepad)
     task.spawn(function()
         while mouseFireHeld or gamepadFireHeld do
             local weapon = WeaponConfig.get(currentWeaponId)
-            if not weapon or not weapon.automatic then break end
-            task.wait(math.max(0.04, weapon.fireCooldown * 0.40))
-            if (mouseFireHeld or gamepadFireHeld) and not hud:isSettingsOpen() then
+            -- Poll once per real automatic cooldown instead of 2.5 times
+            -- per cooldown. Keep the single task alive during a semi-auto
+            -- weapon swap, so re-equipping the AR resumes held fire.
+            task.wait(AutomaticFireCadence.waitSeconds(weapon))
+            if (mouseFireHeld or gamepadFireHeld) and not hud:isSettingsOpen()
+                and AutomaticFireCadence.isAutomatic(WeaponConfig.get(currentWeaponId)) then
                 fireWeapon(currentWeaponId)
             end
         end
@@ -1561,12 +1565,15 @@ if UserInputService.TouchEnabled then
         fireWeapon(currentWeaponId)
         task.spawn(function()
             while heldFireInput == input and fire.Parent do
+                -- Touch and gamepad use the same validated gun cadence.
+                -- An interim semi-auto selection must not permanently kill
+                -- a held automatic-fire input when the player switches back.
                 local selected = WeaponConfig.get(currentWeaponId)
-                if not selected or not selected.automatic then break end
-                task.wait(math.max(0.04, selected.fireCooldown * 0.40))
+                task.wait(AutomaticFireCadence.waitSeconds(selected))
                 if heldFireInput == input and touchGui.Enabled
                     and not hud:isSettingsOpen()
-                    and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
+                    and workspace:GetAttribute("NeonMatchPhase") == "LIVE"
+                    and AutomaticFireCadence.isAutomatic(WeaponConfig.get(currentWeaponId)) then
                     fireWeapon(currentWeaponId)
                 end
             end
