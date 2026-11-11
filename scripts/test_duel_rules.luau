@@ -13,6 +13,23 @@ assert(not D.sameParticipants({p1,p1},p1,p2))
 assert(not D.sameParticipants({p1,p2},p1,p1))
 assert(not D.sameParticipants({},p1,p2))
 assert(not D.sameParticipants("invalid",p1,p2))
+-- Regression: a stale first Player reference does not mean A survived.
+-- A forfeit goes to whichever original Player remains in the server.
+assert(D.forfeitSide({p1},p1,p2) == "A", "B left, A wins")
+assert(D.forfeitSide({p2},p1,p2) == "B", "A left, B wins")
+assert(D.forfeitSide({},p1,p2) == nil, "Empty server has no winner")
+assert(D.forfeitSide({replacement},p1,p2) == nil,
+    "A stranger cannot inherit duel ownership")
+assert(D.forfeitSide({p1,p2,replacement},p1,p2) == nil,
+    "An observer joining an unfinished duel cancels it")
+assert(D.forfeitSide({p1,replacement},p1,p2) == nil,
+    "Two occupants are not a clean forfeit")
+assert(D.forfeitSide({p1,p1},p1,p2) == nil)
+assert(D.forfeitSide({p1},p1,p1) == nil)
+assert(D.forfeitSide({p1},nil,p2) == nil)
+assert(D.forfeitSide(nil,p1,p2) == nil)
+assert(D.forfeitSide("not a roster",p1,p2) == nil)
+
 local lifeA, lifeB = {}, {}
 local hp, maxHP = D.healthForBout(lifeA, lifeA, 65, 100)
 assert(hp == 65 and maxHP == 100)
