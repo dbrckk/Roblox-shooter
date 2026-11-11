@@ -21,6 +21,16 @@ from upload_vanguard_models import API, request_json  # noqa: E402
 
 LODS = ("LOD0", "LOD1")
 WEAPONS = tuple(REQUIRED)
+# The GLB file slugs are lowercase; Roblox gameplay IDs are not.
+# A wrong key silently leaves all ten uploaded models inactive.
+RUNTIME_NAMES = {
+    "pistol": "Pistol",
+    "knife": "Knife",
+    "assault_rifle": "AssaultRifle",
+    "shotgun": "Shotgun",
+    "sniper": "Sniper",
+}
+assert set(RUNTIME_NAMES) == set(WEAPONS)
 MAX_UPLOAD = 20_000_000
 
 
@@ -67,6 +77,25 @@ def sources(asset_root):
 
 
 def confirmed_asset(response, owner):
+    asset_id = validated_identity(response, owner)
+    state = (response.get("moderationResult") or {}).get("moderationState")
+    require(state in ("MODERATION_STATE_APPROVED", "Approved"),
+            "Asset moderation is not explicitly approved")
+    return asset_id
+
+
+OPERATION_PATH = re.compile(r"operations/[A-Za-z0-9_-]{1,160}\Z")
+POLL_ATTEMPTS = 45
+
+
+def safe_operation_path(path):
+    require(isinstance(path, str) and OPERATION_PATH.fullmatch(path) is not None,
+            "Unsafe or missing Roblox operation ID")
+    return path
+
+
+def validated_identity(response, owner):
+    """Read only a plausible Model asset owned by the confirmed creator."""
     require(isinstance(response, dict), "Asset operation missing response")
     asset_id = response.get("assetId")
     try:
@@ -79,13 +108,54 @@ def confirmed_asset(response, owner):
     creator = (response.get("creationContext") or {}).get("creator") or {}
     require(str(creator.get("userId")) == str(owner),
             "Asset creator is not the configured experience owner")
-    state = (response.get("moderationResult") or {}).get("moderationState")
-    require(state in ("MODERATION_STATE_APPROVED", "Approved"),
-            "Asset moderation is not explicitly approved")
     return asset_id
 
 
-def upload_model(owner, weapon, lod, raw, key):
+def poll_operation(path, owner, key, initial=None):
+    """Resume a previously created operation. Never POST a second time.
+
+    Roblox can finish file processing before moderation is approved. Treat
+    a pending moderation result as an incomplete upload, never as success.
+    """
+    path = safe_operation_path(path)
+    for attempt in range(POLL_ATTEMPTS):
+        if attempt == 0 and initial is not None:
+            operation = initial
+        else:
+            operation = request_json(API + "/" + path, key)
+        require(isinstance(operation, dict), "Malformed operation response")
+        if operation.get("done"):
+            if operation.get("error"):
+                raise RuntimeError("Roblox rejected the existing asset operation")
+            response = operation.get("response")
+            asset_id = validated_identity(response, owner)
+            state = (response.get("moderationResult") or {}).get("moderationState")
+            if state in ("MODERATION_STATE_APPROVED", "Approved"):
+                return asset_id
+            if state in ("MODERATION_STATE_REJECTED", "Rejected"):
+                raise RuntimeError("Roblox explicitly rejected this model")
+            # Operation is done, but asynchronous asset moderation has not
+            # necessarily finished. Query by already-verified owner asset ID.
+            refreshed = request_json(API + "/assets/" + str(asset_id), key)
+            try:
+                return confirmed_asset(refreshed, owner)
+            except ValueError as exc:
+                if str(exc) != "Asset moderation is not explicitly approved":
+                    raise
+                new_state = (refreshed.get("moderationResult") or {}).get(
+                    "moderationState")
+                if new_state in ("MODERATION_STATE_REJECTED", "Rejected"):
+                    raise RuntimeError("Roblox rejected this pending model") from None
+        if attempt + 1 < POLL_ATTEMPTS:
+            time.sleep(3)
+    raise TimeoutError("Roblox operation is still processing/moderating: " + path)
+
+
+def upload_model(owner, weapon, lod, raw, key, *, operation_path=None,
+                 on_started=None):
+    """POST only for an unknown model; persist the path before first poll."""
+    if operation_path is not None:
+        return poll_operation(operation_path, owner, key)
     boundary = "IY-" + uuid.uuid4().hex
     metadata = json.dumps({
         "assetType": "Model",
@@ -101,19 +171,13 @@ def upload_model(owner, weapon, lod, raw, key):
                 f'Content-Disposition: form-data; name="fileContent"; filename="{weapon}_{lod}.glb"\r\n'
                 "Content-Type: model/gltf-binary\r\n\r\n").encode("ascii")
     payload += raw + f"\r\n--{boundary}--\r\n".encode("ascii")
-    result = request_json(API + "/assets", key, payload=payload,
-                          content_type=f"multipart/form-data; boundary={boundary}")
-    path = result.get("path", "")
-    require(isinstance(path, str) and
-            re.fullmatch(r"operations/[A-Za-z0-9_./-]+", path),
-            "Roblox did not return a safe operation path")
-    for _ in range(45):
-        if result.get("done"):
-            require(not result.get("error"), "Roblox rejected asset creation")
-            return confirmed_asset(result.get("response"), owner)
-        time.sleep(3)
-        result = request_json(API + "/" + path, key)
-    raise TimeoutError("Roblox asset processing timed out")
+    operation = request_json(API + "/assets", key, payload=payload,
+                             content_type=f"multipart/form-data; boundary={boundary}")
+    require(isinstance(operation, dict), "Missing Roblox upload operation")
+    path = safe_operation_path(operation.get("path"))
+    if on_started is not None:
+        on_started(path)
+    return poll_operation(path, owner, key, initial=operation)
 
 
 def verify_existing(asset_id, owner, key):
@@ -131,7 +195,7 @@ def matching_committed_ids(module_text, source_commit):
     rows = {}
     for weapon in WEAPONS:
         match = re.search(
-            rf'\b{weapon}\s*=\s*\{{\s*LOD0\s*=\s*(\d+)'
+            rf'\b{RUNTIME_NAMES[weapon]}\s*=\s*\{{\s*LOD0\s*=\s*(\d+)'
             rf'\s*,\s*LOD1\s*=\s*(\d+)\s*\}}', module_text)
         if not match:
             return {}
@@ -149,20 +213,23 @@ def render_module(owner, source_commit, rows):
         "    modelIds = {",
     ]
     for weapon in WEAPONS:
-        result.append(f"        {weapon} = {{ LOD0 = {rows[weapon, 'LOD0']['assetId']},"
+        result.append(f"        {RUNTIME_NAMES[weapon]} = {{ LOD0 = {rows[weapon, 'LOD0']['assetId']},"
                       f" LOD1 = {rows[weapon, 'LOD1']['assetId']} }},")
     return "\n".join(result + ["    },", "}", ""])
 
 
 def checkpoint_write(path, owner, source_commit, rows):
-    # The registry checkpoint contains asset IDs and source hashes only, no secret.
+    # Checkpoint holds source hashes, approved asset IDs and pending operation IDs only (never the API key).
     path.parent.mkdir(parents=True, exist_ok=True)
     safe_rows = {}
     for (weapon, lod), row in rows.items():
-        if "assetId" in row:
-            safe_rows[f"{weapon}/{lod}"] = {
-                "sha256": row["sha256"], "assetId": row["assetId"],
-            }
+        if "assetId" in row or "operationPath" in row:
+            saved = {"sha256": row["sha256"]}
+            if "assetId" in row:
+                saved["assetId"] = row["assetId"]
+            if "operationPath" in row:
+                saved["operationPath"] = safe_operation_path(row["operationPath"])
+            safe_rows[f"{weapon}/{lod}"] = saved
     content = {"ownerUserId": owner, "sourceCommit": source_commit,
                "models": safe_rows}
     temporary = path.with_suffix(".tmp")
@@ -215,20 +282,35 @@ def main(argv=None):
             if committed is not None and committed > 0:
                 if verify_existing(committed, args.owner_user_id, key):
                     row["assetId"] = committed
-            elif cached.get("sha256") == row["sha256"] and isinstance(
-                    cached.get("assetId"), int):
-                # A checkpoint alone cannot authorize arbitrary model IDs.
-                if verify_existing(cached["assetId"], args.owner_user_id, key):
-                    row["assetId"] = cached["assetId"]
+            elif cached.get("sha256") == row["sha256"]:
+                if isinstance(cached.get("assetId"), int):
+                    # A checkpoint alone cannot authorize arbitrary model IDs.
+                    if verify_existing(cached["assetId"], args.owner_user_id, key):
+                        row["assetId"] = cached["assetId"]
+                elif "operationPath" in cached:
+                    # Never repeat an upload while its operation is pending.
+                    row["operationPath"] = safe_operation_path(
+                        cached["operationPath"])
             if "assetId" not in row:
+                def record_started(path):
+                    row["operationPath"] = safe_operation_path(path)
+                    checkpoint_write(args.checkpoint, args.owner_user_id,
+                                     args.source_commit, rows)
+
                 row["assetId"] = upload_model(
-                    args.owner_user_id, weapon, lod, row["raw"], key)
+                    args.owner_user_id, weapon, lod, row["raw"], key,
+                    operation_path=row.get("operationPath"),
+                    on_started=record_started)
+                row.pop("operationPath", None)
             checkpoint_write(args.checkpoint, args.owner_user_id,
                              args.source_commit, rows)
             print(f"Roblox confirmed {weapon}/{lod} asset ID {row['assetId']}")
 
     require(all("assetId" in row for row in rows.values()),
             "Incomplete weapon asset set; registry remains unchanged")
+    ids = [rows[weapon, lod]["assetId"] for weapon in WEAPONS for lod in LODS]
+    require(len(set(ids)) == len(ids),
+            "Multiple authored weapons point to the same Roblox asset ID")
     new_module = render_module(args.owner_user_id, args.source_commit, rows)
     staging = args.module.with_suffix(".tmp")
     staging.write_text(new_module, "utf-8")

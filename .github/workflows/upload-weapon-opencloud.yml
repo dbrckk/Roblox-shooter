@@ -87,13 +87,19 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          prior="$(gh run list --workflow upload-weapon-opencloud.yml \
-            --limit 15 --json databaseId --jq \
-            '[.[] | select(.databaseId != (env.GITHUB_RUN_ID | tonumber))][0].databaseId')"
-          if [[ "$prior" =~ ^[0-9]+$ ]]; then
-            gh run download "$prior" --name weapon-upload-checkpoint \
-              --dir build/weapon-upload || true
-          fi
+          # Previous runs can include dry-runs with no checkpoint. Search
+          # for an actual recoverable artifact rather than guessing the last
+          # execution. The Python importer revalidates the owner, source SHA,
+          # content hash and live asset ownership before using any checkpoint.
+          for prior in $(gh run list --workflow upload-weapon-opencloud.yml \
+            --branch main --limit 20 --json databaseId --jq '.[].databaseId'); do
+            if [[ "$prior" == "$GITHUB_RUN_ID" ]]; then continue; fi
+            if gh run download "$prior" --name weapon-upload-checkpoint \
+              --dir build/weapon-upload >/dev/null 2>&1; then
+              echo "Recovered checkpoint from run $prior" >> "$GITHUB_STEP_SUMMARY"
+              break
+            fi
+          done
 
       - name: Verify source files offline or upload owner-approved models
         shell: bash
