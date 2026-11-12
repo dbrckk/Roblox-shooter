@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Stats = game:GetService("Stats")
 local player = Players.LocalPlayer
 
 if not RunService:IsStudio() and not (
@@ -12,6 +13,7 @@ if not RunService:IsStudio() and not (
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PrecisionNet = require(Shared:WaitForChild("PrecisionNet"))
 local FrameWindow = require(Shared:WaitForChild("ClientFrameWindow"))
+local WeaponSwapMetrics = require(Shared:WaitForChild("WeaponSwapMetrics"))
 local remote = PrecisionNet.getRemotes(false).PerformanceDiagnostics
 
 local gui = Instance.new("ScreenGui")
@@ -36,7 +38,7 @@ toggle.Parent = gui
 local panel = Instance.new("Frame")
 panel.Name = "PerformancePanel"
 panel.Visible = false
-panel.Size = UDim2.fromOffset(272, 279)
+panel.Size = UDim2.fromOffset(300, 373)
 panel.Position = UDim2.fromOffset(12, 100)
 panel.BackgroundColor3 = Color3.fromRGB(21, 29, 33)
 panel.BackgroundTransparency = 0.07
@@ -50,7 +52,7 @@ label.Position = UDim2.fromOffset(10, 8)
 label.Size = UDim2.new(1, -18, 1, -14)
 label.TextColor3 = Color3.fromRGB(223, 231, 219)
 label.Font = Enum.Font.Code
-label.TextSize = 13
+label.TextSize = 12
 label.TextXAlignment = Enum.TextXAlignment.Left
 label.TextYAlignment = Enum.TextYAlignment.Top
 label.TextWrapped = false
@@ -63,11 +65,38 @@ local frameWindow = FrameWindow.new()
 local frameSeconds = 0
 local latestFrameStats = nil
 
+-- All readings remain on the client's private owner/Studio screen.
+-- Total RAM includes the entire Roblox client, NOT solely the weapon cache.
+-- Never transmit swap times, cached models, or memory samples via remotes.
+local function localSwapSummary()
+    local data = WeaponSwapMetrics.snapshot()
+    if not data then return "" end
+    local ok, value = pcall(function()
+        return Stats:GetTotalMemoryUsageMb()
+    end)
+    local totalRam = ok and type(value) == "number" and value == value
+        and value >= 0 and value < math.huge
+        and string.format("%.0f MB", value) or "n/a"
+    local cached = data.cachedParts and tostring(data.cachedParts) or "?"
+    return string.format(
+        "\n--- ARMES (local) ---\n"
+        .. "A/B recycles: %d | rebuilds: %d\n"
+        .. "Recycle moy/P95: %.1f / %.1fms\n"
+        .. "Build moy/P95:   %.1f / %.1fms\n"
+        .. "LOD: %d | cache: %s pieces\n"
+        .. "RAM client TOTAL: %s",
+        data.reuse.count, data.build.count,
+        data.reuse.meanMs, data.reuse.p95Ms,
+        data.build.meanMs, data.build.p95Ms,
+        data.lod.count, cached, totalRam)
+end
+
 local function updateLabel()
     if not active then return end
     local p = lastPacket
     if not p or not p.rates or not p.timings then
         label.Text = "IRON YARD / DIAGNOSTICS\nCollecte des mesures..."
+            .. localSwapSummary()
         return
     end
     local r, t = p.rates, p.timings
@@ -107,12 +136,13 @@ local function updateLabel()
         r.moveIssued or 0,
         think.mean or 0, think.peak or 0,
         pose.mean or 0, pose.peak or 0,
-        r.pose or 0, r.botShot or 0)
+        r.pose or 0, r.botShot or 0) .. localSwapSummary()
 end
 
 remote.OnClientEvent:Connect(function(packet)
     if not active or typeof(packet) ~= "table" then return end
     if packet.status == "OFF" then
+        WeaponSwapMetrics.enable(false)
         active = false
         panel.Visible = false
         toggle.Text = "PERF"
@@ -126,6 +156,7 @@ end)
 
 toggle.Activated:Connect(function()
     active = not active
+    WeaponSwapMetrics.enable(active)
     panel.Visible = active
     toggle.Text = active and "CLOSE" or "PERF"
     if active then
