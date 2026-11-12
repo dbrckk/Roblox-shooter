@@ -1,0 +1,16 @@
+IRON YARD — authorized one-shot update of the EXISTING PUBLIC Roblox FPS.
+
+Merged PR #49, source a872febdb6191c97e86dd73a3fa7a70f5695257e.
+Server-side CombatAwards now grants at most ONE victory per player
+per round, even if a round-finalization callback runs repeatedly.
+The claim happens before XP, progression storage and feedback. The
+guard resets at the next round only. Other players are independent.
+
+New pure Luau test exercises 10,000 duplicate callbacks and 1,000
+round resets; a Python integration contract checks the live call order.
+Branch CI, PR CI and merged main Rojo CI are all green.
+
+Require a NEW green Rojo CI on this authorization commit before any
+one-shot publish. Verify existing owner, PUBLIC universe and original
+place independently. Do not create a new experience or private alpha.
+No claim of real in-engine testing is made by these offline tests.
