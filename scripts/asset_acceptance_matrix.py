@@ -201,6 +201,14 @@ def build():
         else:
             assert not commit, f"{family} must not claim an unuploaded source"
 
+    # Never promote an incomplete Roblox upload batch into production.
+    for family, ids in (("VANGUARD", palette_ids), ("world PBR", world_ids)):
+        configured = [identifier for identifier in ids if identifier > 0]
+        assert len(configured) in (0, len(ids)), \
+            f"{family} registry must be entirely empty or complete"
+        assert len(configured) == len(set(configured)), \
+            f"{family} registry reuses an ID"
+
     for family, paths in CONTROLS.items():
         for path in paths:
             assert (ROOT / path).exists(), f"missing offline control {path}"
@@ -247,22 +255,30 @@ def build():
         "viewmodel procédural quand un ID manque, et `WeaponPbrFxSockets` fixe les sockets FX. "
         "**Aucun rendu, cadrage mobile ou coût de streaming n'a été observé.**",
         "",
-        "## Opérateurs VANGUARD — 4 IDs à zéro",
+        f"## Opérateurs VANGUARD — {len(palette_rows) - palette_blocked} prêts hors moteur, "
+        f"{palette_blocked} bloqués",
         "",
     ]
     out += table(palette_rows, ["Modèle"], "Palettes d'opérateur")[2:]
     out += [
-        "Blocage factuel : les quatre GLB existent dans les archives, mais aucun ID n'est "
-        "approuvé. L'import propriétaire reste à faire, avec un préflight **sans upload réel**.",
+        ("Quatre IDs de modèles propriétaires sont consignés. Leur rendu réel dans "
+         "Roblox et sur Android reste à vérifier."
+         if palette_blocked == 0 else
+         "Blocage factuel : les quatre GLB existent dans les archives, mais aucun ID n'est "
+         "approuvé. L'import propriétaire reste à faire, avec un préflight **sans upload réel**."),
         "",
-        "## Matériaux du monde — 12 IDs à zéro",
+        f"## Matériaux du monde — {len(world_rows) - world_blocked} prêts hors moteur, "
+        f"{world_blocked} bloqués",
         "",
     ]
     out += table(world_rows, ["Color", "Normal", "Roughness", "Metalness"], "Matériaux PBR")[2:]
     out += [
-        "Les douze PNG et leurs hashes sont produits par `tools/assetforge/generate_world_maps.py` "
-        "et validés par `audit_world_maps.py`. Aucun upload Open Cloud n'a eu lieu : le jeu garde "
-        "les matériaux Roblox natifs.",
+        ("Douze IDs d'images sont consignés dans le registre propriétaire. "
+         "La résolution des textures PBR sur Roblox reste à vérifier."
+         if world_blocked == 0 else
+         "Les douze PNG et leurs hashes sont produits par `tools/assetforge/generate_world_maps.py` "
+         "et validés par `audit_world_maps.py`. Aucun upload Open Cloud n'a eu lieu : le jeu garde "
+         "les matériaux Roblox natifs."),
         "",
         "## Ce que la CI certifie, et ce qu'elle ne certifie pas",
         "",
@@ -300,7 +316,7 @@ def main():
     if committed != generated:
         raise SystemExit("docs/ASSET_ACCEPTANCE_MATRIX.md drifted from the asset "
                          "modules: run scripts/asset_acceptance_matrix.py --write")
-    print("IRON YARD asset acceptance matrix (10 ready offline, 4 + 12 blocked): OK")
+    print("IRON YARD asset acceptance matrix matches current Roblox asset IDs: OK")
 
 
 if __name__ == "__main__":

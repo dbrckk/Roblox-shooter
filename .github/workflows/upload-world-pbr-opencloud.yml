@@ -24,7 +24,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: world-pbr-owner-images
+  group: iron-yard-owner-pbr-registry
   cancel-in-progress: false
 
 jobs:
@@ -107,7 +107,10 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/shared/WorldPbrAssetIds.luau
+          # The asset registry and generated acceptance matrix are a single unit.
+          python3 scripts/asset_acceptance_matrix.py --write
+          python3 scripts/asset_acceptance_matrix.py
+          git add src/shared/WorldPbrAssetIds.luau docs/ASSET_ACCEPTANCE_MATRIX.md
           if git diff --cached --quiet; then
             echo "No changed world PBR IDs" >> "$GITHUB_STEP_SUMMARY"
             exit 0
@@ -115,5 +118,12 @@ jobs:
           git commit -m "assets(world): activate approved original 1K PBR texture IDs"
           git fetch origin main
           git rebase origin/main
+          # The other asset family may have changed on main during this upload.
+          python3 scripts/asset_acceptance_matrix.py --write
+          git add docs/ASSET_ACCEPTANCE_MATRIX.md
+          if ! git diff --cached --quiet; then
+            git commit --amend --no-edit
+          fi
+          python3 scripts/asset_acceptance_matrix.py
           git push origin HEAD:main
           echo "Verified image IDs committed. Rojo build will check PBR registry." >> "$GITHUB_STEP_SUMMARY"
