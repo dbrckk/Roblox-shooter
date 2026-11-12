@@ -1,0 +1,17 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox release 12 Nov 2026.
+Publish ONLY to the existing creator-verified PUBLIC IRON YARD experience
+using the repository's fail-closed, exact-commit CI gated workflow.
+
+The exact prior main commit d67cde7640776dba1977175b8fa4d9bc79f09ff5
+merges PR #51, fixing non-atomic server progression rewards.
+XP, eliminations, headshots and victories now pass all validation and
+safe-integer overflow checks before any session award is applied.
+Malformed/overflowing events cannot leave partial XP or kills; legitimate
+server-authored rewards and saved DataStore schema/key v1 remain unchanged.
+Pure Luau regression suite, source contracts, Rojo branch/PR and main CI
+were successful. Player progression and the PUBLIC client remain unmodified
+outside the award atomicity correction.
+
+Require NEW green CI on this EXACT release commit, verify owner and
+PUBLIC destination, and publish exactly once. Offline tests are not proof
+of actual live Roblox DataStore reconnect tests; do not misstate them.
