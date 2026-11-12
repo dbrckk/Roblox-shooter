@@ -518,6 +518,34 @@ assert "string.sub(partName" not in render_motion
 assert "WeaponPartMotionRole.classify(" not in render_motion
 assert 'string.sub(name, 1, 11) == "SlideDetail"' in motion_roles
 
+# PBR material splits can create several Parts per magazine, bolt or
+# moving slide. Sample the same pose only once per frame and reuse it; never
+# build a sniper grip CFrame for a non-sniper weapon.
+render_mechanics = visuals.split("function WeaponVisuals:_render(deltaTime)", 1)[1]
+render_mechanics = render_mechanics.split("    -- Emission MUST happen after all parts", 1)[0]
+for needle in (
+    "local shellMotion, magazineMotion, mechanismMotion, boltMotion",
+    "if not shellMotion then",
+    "localOffset = localOffset * shellMotion",
+    "if not magazineMotion then",
+    "localOffset = localOffset * magazineMotion",
+    "if not mechanismMotion then",
+    "localOffset = localOffset * mechanismMotion",
+    "if not boltMotion then",
+    "localOffset = localOffset * boltMotion",
+    'if self.currentWeaponId == "Sniper" then',
+):
+    assert needle in render_mechanics, f"Per-frame PBR motion reuse missing: {needle}"
+assert render_mechanics.count("WeaponMagazinePose.sample(") == 1, (
+    "A PBR magazine may have many material primitives: sample its pose once")
+assert render_mechanics.count("WeaponReloadHandPlan.boltGrip(") == 1, (
+    "Right-hand bolt motion must be sampled once only for sniper")
+bolt_grip = render_mechanics.index("WeaponReloadHandPlan.boltGrip(")
+assert render_mechanics.rfind('if self.currentWeaponId == "Sniper" then', 0, bolt_grip) >= 0
+assert render_mechanics.index("local shellMotion, magazineMotion, mechanismMotion, boltMotion") < (
+    render_mechanics.index("for _, entry in ipairs(self.parts) do"))
+assert render_mechanics.count("CFrame.new(0, 0, actionTravel * feel.actionTravel)") == 1
+
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
     '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',
@@ -525,9 +553,9 @@ for needle in (
     'local supportMotion = self.currentWeaponId == "Shotgun"',
     'localOffset = localOffset * workingHand * supportMotion',
     'role == WeaponPartMotionRole.MAGAZINE then',
-    'role == WeaponPartMotionRole.PISTOL_SLIDE then',
-    'role == WeaponPartMotionRole.SHOTGUN_PUMP then',
-    'role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE then',
+    'or role == WeaponPartMotionRole.PISTOL_SLIDE',
+    'or role == WeaponPartMotionRole.SHOTGUN_PUMP then',
+    'role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE',
     'role == WeaponPartMotionRole.SHOTGUN_LOADING_SHELL then',
 ):
     assert needle in visuals, f"Moving first-person weapon part missing: {needle}"
