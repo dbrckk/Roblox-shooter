@@ -13,6 +13,12 @@
 - Les tests Luau ont couvert 49 152 sélections pour 4 096 masques d'obstacles et 12 manches, ainsi que les vérifications de personnages d'origine. CI branche, PR et `main` réussies ; **publication publique v54 confirmée** par [Actions #43227082815](https://github.com/dbrckk/Roblox-shooter/actions/runs/43227082815).
 - **A1 reste partiellement ouvert** : aucune validation de duel réelle en Studio et des transitions FFA/1v1 sous réseau perturbé. La progression et les FPS Android réels restent non prouvés. Aucun nouveau modèle VANGUARD/texture PBR n'a été importé par cette version.
 
+### Actualisation — A1 (matrice des transitions), 12 novembre 2026
+
+- **A1 — matrice livrée.** [docs/MATCH_TRANSITIONS.md](MATCH_TRANSITIONS.md) fixe les **6 phases**, **14 arêtes légales**, les événements réellement possibles et les **11 cas** exigés par A1. `scripts/test_match_transitions.luau` les exécute ; `scripts/check_match_transition_contract.py` refuse toute phase, durée ou règle qui divergerait de `MatchService`. **Aucun défaut de transition n'a été démontré : aucun comportement de manche n'a été modifié.**
+- **Verrou testé par mutation** : une durée de phase modifiée fait échouer `check_match_transition_contract`, et une cible émise sans arête déclarée dans `startLiveDuelBout` casse le contrat d'arêtes. Fichier restauré, `git diff` vide sur `MatchService`.
+- **A1 reste ouvert** pour ce qui n'est pas automatisable : deux clients Roblox réels, abandons, tiers entrant, respawn pendant `DUEL_PREP`, réseau perturbé.
+
 ## 1. Cible produit, périmètre et principes
 
 **But :** une expérience FPS publique industrielle, agréable et compréhensible, dont le combat et la progression sont fiables, avec des modèles 3D PBR réellement déployés lorsque les autorisations Roblox le permettent. Qualité perçue proche des bons FPS Roblox, mais design, code, audio et assets originaux.
@@ -53,6 +59,8 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 4. Corriger **uniquement les anomalies démontrées**, conserver la cadence et les règles actuelles des duels.
 
 **Terminé quand :** suites Luau de transitions et contrats du vrai branchement serveur verts ; absence de chemins où une ancienne manche compte les dégâts/points de la suivante. **Reste à prouver en moteur :** deux personnages réels, physique, abandons réseau, transitions visibles.
+
+**Statut 12 novembre 2026 :** matrice écrite ([MATCH_TRANSITIONS.md](MATCH_TRANSITIONS.md)), 11 cas exécutés et contrat de câblage vert. Aucune anomalie de transition démontrée, donc aucune règle de manche changée ; la preuve moteur reste la seule partie ouverte.
 
 **A2. Progression DataStore et reprise.**  
 **Fichiers :** `ProgressionService`, `ProgressionLedger`, `ProgressionHud`, `scripts/test_progression_ledger.luau`.
@@ -149,7 +157,7 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 
 | Ordre | ID | Intervention autonome | Livrable vérifiable | Dépendance |
 |---:|---|---|---|---|
-| **1** | **A1** | Matrice FFA/duel, tests des transitions et correction des bugs réels | PR + régressions Luau + CI Rojo | Aucune |
+| **1** | **A1** | Matrice FFA/duel, tests des transitions et correction des bugs réels | Matrice + 11 cas + contrat livrés le 12/11 ; preuve moteur restante | Aucune |
 | 2 | A2 | Renforcer scénarios DataStore hors ordre / départ / verrou | PR + scénarios ledger non-duplicables | Aucune pour l'offline |
 | 3 | A3 | Audit remotes/mouvements/pathfinding et tests adversariaux autorisés | PR + tableau des validations serveur | Aucune |
 | 4 | B1 | Inventaire certifié des assets : 10 armes / 4 opérateurs / 12 textures | Manifeste de statut + préflight GitHub Actions **sans upload** | Upload réel réservé aux permissions Roblox |

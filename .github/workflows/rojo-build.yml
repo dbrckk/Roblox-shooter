@@ -99,6 +99,7 @@ jobs:
           ./luau scripts/test_round_standings.luau
           ./luau scripts/test_victory_award_policy.luau
           ./luau scripts/test_duel_rules.luau
+          ./luau scripts/test_match_transitions.luau
           ./luau scripts/test_match_lobby_policy.luau
           ./luau scripts/test_duel_readout.luau
           ./luau scripts/test_duel_combat_state.luau
@@ -221,6 +222,7 @@ jobs:
           python3 scripts/check_victory_award_contract.py
           python3 scripts/check_match_lobby_contract.py
           python3 scripts/check_duel_prep_contract.py
+          python3 scripts/check_match_transition_contract.py
           python3 scripts/check_weapon_contract.py
           python3 scripts/check_weapon_presentation_contract.py
           python3 scripts/test_pbr_ads_geometry.py
