@@ -86,6 +86,7 @@ function WeaponVisuals.new(WeaponConfig)
     self.aimPose = nil
     self.reloadActive = false
     self.reloadStartedAt = 0
+    self.reloadShellCount = 1
     self.reloadBlend = 0
     self.reloadHandX = 0
     self.reloadHandY = 0
@@ -664,6 +665,7 @@ function WeaponVisuals:setWeapon(weaponId)
 	self.equipStartedAt = os.clock()
 	self.recoil = 0
     self.reloadActive = false
+    self.reloadShellCount = 1
     self.reloadBlend = 0
     self.reloadHandX, self.reloadHandY, self.reloadHandZ = 0, 0, 0
     self.magazineDipBlend = 0
@@ -793,6 +795,15 @@ function WeaponVisuals:setReloading(weaponId, active, loaded, capacity)
     local wasReloading = self.reloadActive
     if nowReloading and not wasReloading then
         self.reloadStartedAt = os.clock()
+        -- Take the deficit from the server's first confirmed reload state.
+        -- The server still replenishes the magazine only on completion.
+        self.reloadShellCount = 1
+        if weaponId == "Shotgun" and type(loaded) == "number"
+            and type(capacity) == "number" and loaded == loaded
+            and capacity == capacity and loaded >= 0 and capacity > loaded
+            and loaded < math.huge and capacity < math.huge then
+            self.reloadShellCount = math.clamp(math.floor(capacity - loaded), 1, 6)
+        end
         self.reloadFinishedAt = -math.huge
     end
     if WeaponReloadFinishPolicy.confirmed(weaponId, wasReloading,
@@ -1026,11 +1037,13 @@ function WeaponVisuals:_render(deltaTime)
     -- and follows its downward travel. Shotgun: the glove follows the visible
     -- loading shell toward its real port, then returns to the pump. The
     -- 3D forearm, sleeve, glove and straps keep ONE coherent transform.
+    local shellBeat = self.currentWeaponId == "Shotgun"
+        and ShotgunReloadVisual.phase(progress, self.reloadShellCount) or nil
     local handX, handY, handZ = WeaponReloadHandPlan.sample(
         self.currentWeaponId, progress, self.reloadActive,
         magazineDip, feel.handTravel,
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        self.currentWeaponImported, self.currentWeaponHasPbrMagazine)
+        self.currentWeaponImported, self.currentWeaponHasPbrMagazine, shellBeat)
     self.reloadHandX += (handX - self.reloadHandX) * handAlpha
     self.reloadHandY += (handY - self.reloadHandY) * handAlpha
     self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha
@@ -1057,7 +1070,8 @@ function WeaponVisuals:_render(deltaTime)
     if self.currentWeaponId == "Shotgun" then
         shellX, shellY, shellZ, shellRoll = ShotgunReloadVisual.sample(
             progress, self.reloadActive,
-            Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"))
+            Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+            self.reloadShellCount)
     end
 
     for _, entry in ipairs(self.parts) do
