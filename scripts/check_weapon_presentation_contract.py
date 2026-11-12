@@ -34,6 +34,7 @@ for needle in (
     "if localShot then", "activeVoices >= maxVoices",
     "distance > maxDistance", "layers = far and 1 or 2",
     "REACH[weaponId] or 1",
+    "function Audio.pruneEndedEmitters(emitters)",
     "function Audio.needsOcclusion(distance, localShot)",
     "function Audio.occludedMix(mix, blocked)",
     "volume = mix.volume * 0.40",
@@ -63,6 +64,8 @@ for needle in (
     "UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId)",
     "self.remoteSoundEmitters = {}",
     "table.insert(self.remoteSoundEmitters, emitter)",
+    "WeaponAudio.pruneEndedEmitters(self.remoteSoundEmitters)",
+    'player:SetAttribute("IronYardPerfRemoteAudioRefs", #self.remoteSoundEmitters)',
     "if index > mix.layers then break end",
     "Debris:AddItem(emitter, mix.lifetime)",
     "if WeaponAudio.needsOcclusion(distance, ownShot) then",
@@ -525,6 +528,16 @@ for needle in (
     "self:_refreshImportedWeaponIfSafe(clock)",
 ):
     assert needle in visuals, f"Deferred PBR LOD refresh not wired: {needle}"
+audio_sweep = visuals.split(
+    "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)", 1)[1]
+audio_sweep = audio_sweep.split("function WeaponVisuals:setSprinting", 1)[0]
+assert 'WeaponAudio.pruneEndedEmitters(self.remoteSoundEmitters)' in audio_sweep, (
+    "Idle remote-shot audio references must be cleaned without new shots"
+)
+audio_admission = visuals.split("function WeaponVisuals:playFireSound(", 1)[1]
+assert "WeaponAudio.pruneEndedEmitters(self.remoteSoundEmitters)" in audio_admission, (
+    "Remote audio cap still requires immediate admission-time pruning"
+)
 assert visuals.count("self:_refreshImportedWeaponIfSafe(clock)") == 1, (
     "Mesh polling must share the original client RenderStepped hook"
 )
@@ -899,6 +912,7 @@ for needle in (
     'player:SetAttribute("IronYardPerfWeaponMeanMs", snapshot.meanMs)',
     'player:SetAttribute("IronYardPerfWeaponSource",',
     'player:SetAttribute("IronYardPerfFxActive", fxActive)',
+    'player:SetAttribute("IronYardPerfRemoteAudioRefs", #self.remoteSoundEmitters)',
 ):
     assert needle in visuals, f"Opt-in viewmodel profiling missing: {needle}"
 assert visuals.count("self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)") == 3

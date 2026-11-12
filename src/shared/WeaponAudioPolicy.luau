@@ -52,6 +52,25 @@ function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponI
     }
 end
 
+-- Roblox Debris destroys the short-lived remote audio Part after playback,
+-- but the local Lua list would otherwise retain that destroyed Instance until
+-- ANOTHER remote shot. Reap dead references also during quiet lobby periods.
+-- Caller invokes this on the existing 1.2s weapon/LOD poll and before a
+-- new remote voice admission. No new task, connection or audio interruption.
+-- The table remains dense so the device's active-voice budget stays correct.
+function Audio.pruneEndedEmitters(emitters)
+    if type(emitters) ~= "table" then return 0 end
+    for i = #emitters, 1, -1 do
+        local emitter = emitters[i]
+        local kind = type(emitter)
+        if (kind ~= "userdata" and kind ~= "table")
+            or emitter.Parent == nil then
+            table.remove(emitters, i)
+        end
+    end
+    return #emitters
+end
+
 -- One WORLD geometry probe per admitted remote shot (not per frame).
 -- Ignore players/NPCs in the caller so a body between shooter and listener
 -- is not mistaken for a concrete wall. Very close shots stay unfiltered.
