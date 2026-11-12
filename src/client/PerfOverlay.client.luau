@@ -36,7 +36,7 @@ toggle.Parent = gui
 local panel = Instance.new("Frame")
 panel.Name = "PerformancePanel"
 panel.Visible = false
-panel.Size = UDim2.fromOffset(272, 279)
+panel.Size = UDim2.fromOffset(288, 346)
 panel.Position = UDim2.fromOffset(12, 100)
 panel.BackgroundColor3 = Color3.fromRGB(21, 29, 33)
 panel.BackgroundTransparency = 0.07
@@ -63,11 +63,39 @@ local frameWindow = FrameWindow.new()
 local frameSeconds = 0
 local latestFrameStats = nil
 
+local function weaponMetrics()
+    local samples = player:GetAttribute("IronYardPerfWeaponSamples")
+    if type(samples) ~= "number" or samples < 1 then
+        return "Arme: mesures en cours..."
+    end
+    return string.format(
+        "Arme %s / %s: %d pieces\n"
+        .. "CPU arme: %.2fms moy | %.2fms pic\n"
+        .. "Effets transitoires: %d / %d",
+        player:GetAttribute("IronYardPerfWeaponId") or "?",
+        player:GetAttribute("IronYardPerfWeaponSource") or "?",
+        player:GetAttribute("IronYardPerfWeaponParts") or 0,
+        player:GetAttribute("IronYardPerfWeaponMeanMs") or 0,
+        player:GetAttribute("IronYardPerfWeaponPeakMs") or 0,
+        player:GetAttribute("IronYardPerfFxActive") or 0,
+        player:GetAttribute("IronYardPerfFxCap") or 0)
+end
+
 local function updateLabel()
     if not active then return end
     local p = lastPacket
     if not p or not p.rates or not p.timings then
-        label.Text = "IRON YARD / DIAGNOSTICS\nCollecte des mesures..."
+        local frames = latestFrameStats
+        label.Text = string.format(
+            "IRON YARD / PRIVATE PROFILER\n"
+            .. "FPS client: %.0f | P95: %.0fms\n"
+            .. "P99: %.0fms\n"
+            .. "%s\n\n"
+            .. "Statistiques serveur en cours...",
+            frames and frames.fps or 0,
+            frames and frames.p95Ms or 0,
+            frames and frames.p99Ms or 0,
+            weaponMetrics())
         return
     end
     local r, t = p.rates, p.timings
@@ -97,7 +125,8 @@ local function updateLabel()
         .. "MoveTo: %.1f/s\n"
         .. "IA ms: %.1f avg / %.1f pic\n"
         .. "Pose ms: %.1f avg / %.1f pic\n"
-        .. "Pose: %.1f/s | Feu: %.1f/s",
+        .. "Pose: %.1f/s | Feu: %.1f/s\n"
+        .. "%s",
         fps, framePeak, p95, p99, slow, samples,
         p.bots or 0, rays,
         r.targetRay or 0, r.navRay or 0,
@@ -107,7 +136,8 @@ local function updateLabel()
         r.moveIssued or 0,
         think.mean or 0, think.peak or 0,
         pose.mean or 0, pose.peak or 0,
-        r.pose or 0, r.botShot or 0)
+        r.pose or 0, r.botShot or 0,
+        weaponMetrics())
 end
 
 remote.OnClientEvent:Connect(function(packet)
@@ -116,6 +146,7 @@ remote.OnClientEvent:Connect(function(packet)
         active = false
         panel.Visible = false
         toggle.Text = "PERF"
+        player:SetAttribute("IronYardPrivatePerfActive", false)
         return
     end
     if packet.status == "ON" and packet.rates then
@@ -128,7 +159,16 @@ toggle.Activated:Connect(function()
     active = not active
     panel.Visible = active
     toggle.Text = active and "CLOSE" or "PERF"
+    player:SetAttribute("IronYardPrivatePerfActive", active)
     if active then
+        for _, name in ipairs({
+            "IronYardPerfWeaponSamples", "IronYardPerfWeaponMeanMs",
+            "IronYardPerfWeaponPeakMs", "IronYardPerfWeaponParts",
+            "IronYardPerfWeaponId", "IronYardPerfWeaponSource",
+            "IronYardPerfFxActive", "IronYardPerfFxCap",
+        }) do
+            player:SetAttribute(name, nil)
+        end
         lastPacket = nil
         FrameWindow.clear(frameWindow)
         latestFrameStats = nil

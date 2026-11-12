@@ -828,6 +828,44 @@ assert visuals.index("self.hasActiveImpactMarks = true") < (
 assert visuals.index("self.hasActiveImpactMarks = anyLive") > (
     visuals.index("function WeaponVisuals:_updateImpactMarks"))
 
+# The private owner/Studio PERF panel must not benchmark weapons for every
+# public player. Local CPU samples run only after the private toggle is open;
+# no server signals or extra RenderStepped callback.
+perf_overlay = get("src/client/PerfOverlay.client.luau")
+perf_policy = get("src/shared/WeaponRenderDiagnostics.luau")
+for needle in (
+    "function Diagnostics.new()",
+    "function Diagnostics.record(state, dt, cpuSeconds)",
+    "function Diagnostics.clear(state)",
+    "dt > 0.25",
+):
+    assert needle in perf_policy, f"Private weapon CPU policy missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponRenderDiagnostics")',
+    'self.privatePerfEnabled = Players.LocalPlayer:GetAttribute("IronYardPrivatePerfActive") == true',
+    'self.privatePerfWindow = WeaponRenderDiagnostics.new()',
+    'local privatePerfStart = self.privatePerfEnabled and os.clock() or nil',
+    'self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)',
+    'WeaponRenderDiagnostics.record(',
+    'player:SetAttribute("IronYardPerfWeaponMeanMs", snapshot.meanMs)',
+    'player:SetAttribute("IronYardPerfWeaponSource",',
+    'player:SetAttribute("IronYardPerfFxActive", fxActive)',
+):
+    assert needle in visuals, f"Opt-in viewmodel profiling missing: {needle}"
+assert visuals.count("self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)") == 3
+assert 'RunService.RenderStepped:Connect' not in visuals
+for needle in (
+    "if not RunService:IsStudio() and not (",
+    "player.UserId == game.CreatorId",
+    'player:SetAttribute("IronYardPrivatePerfActive", active)',
+    'player:SetAttribute("IronYardPrivatePerfActive", false)',
+    'local function weaponMetrics()',
+    'CPU arme: %.2fms moy | %.2fms pic',
+    'Effets transitoires: %d / %d',
+):
+    assert needle in perf_overlay, f"Owner-only PERF UI integration missing: {needle}"
+assert 'FireServer(active and "start" or "stop")' in perf_overlay
+
 # Mobile effects adapt only the transient pool after sustained frame drops.
 # The user-selected preset, confirmed-hit priority and server damage stay put.
 adaptive_fx = get("src/shared/AdaptiveCombatFxPolicy.luau")
