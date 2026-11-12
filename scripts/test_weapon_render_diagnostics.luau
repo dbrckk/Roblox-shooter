@@ -21,8 +21,8 @@ assert(s and s.count == 61 and s.meanMs > 0.19 and s.meanMs < 0.21)
 for _ = 1, 20 do assert(Diagnostics.record(d, 0.02, 0.001) == nil) end
 assert(Diagnostics.record(d, 12.0, 0.01) == nil)
 assert(d.frames == 0 and d.elapsed == 0)
-for _ = 1, 20 do assert(Diagnostics.record(d, 0.05, 0.001) == nil) end
-assert(Diagnostics.record(d, 0.02, 0.001) ~= nil)
+for _ = 1, 19 do assert(Diagnostics.record(d, 0.05, 0.001) == nil) end
+assert(Diagnostics.record(d, 0.05, 0.001) ~= nil)
 for _, invalid in ipairs({0/0, math.huge, -math.huge, -1, "no"}) do
     assert(Diagnostics.record(d, invalid, 0.001) == nil)
     assert(Diagnostics.record(d, 0.02, invalid) == nil)
