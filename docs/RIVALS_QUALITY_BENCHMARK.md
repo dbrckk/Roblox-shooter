@@ -709,3 +709,26 @@ objet réseau, aucune modification de dégâts ou de serveur.
 
 L'alignement PBR des ports d'éjection et le résultat visuel à 30/60 FPS
 restent à constater en jeu, faute de capture Roblox Studio/Android réelle.
+
+
+
+## Armement du pistolet / levier AR après recharge confirmée (12/11/2026)
+
+Le pistolet PBR et le fusil d'assaut possèdent déjà des pièces mobiles
+(glissière, port d'éjection, levier). Elles ne bougeaient toutefois que
+pendant les tirs, et pas au retour du chargeur plein. Désormais **seule**
+une notification de munition du serveur attestant d'une transition
+`reloading=true` vers `false` **avec augmentation du compteur validé**
+déclenche un mouvement discret et complet (recul, maintien, retour)
+de 320 ms de ces mêmes pièces. Aucune animation sur demande de
+recharge refusée, interrompue, sur changement d'arme, ou après une
+remise à zéro d'époque. Le B-8 et le sniper conservent les cycles
+de pompe et verrou existants.
+
+Les deux valeurs cosmétiques de référence (dernier compteur de munitions
+et instant de fin de recharge) survivent aux hot-swaps LOD/PBR et
+sont réinitialisées lors d'un véritable changement d'arme. Un mouvement
+de tir simultané conserve sa priorité de course avec `math.max`.
+Aucune nouvelle boucle, Instance, RemoteEvent, autorité de tir ou
+son externe. Tests Luau couvrant les validations/refus et 320 phases
+continues du retour en batterie. QA visuelle Android toujours requise.

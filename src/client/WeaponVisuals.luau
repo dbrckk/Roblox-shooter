@@ -22,6 +22,7 @@ local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):W
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 local WeaponFxFramePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFxFramePolicy"))
 local WeaponReloadHandPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponReloadHandPlan"))
+local WeaponReloadFinishPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponReloadFinishPolicy"))
 local SniperBoltCycle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SniperBoltCycle"))
 
 local WeaponVisuals = {}
@@ -91,6 +92,8 @@ function WeaponVisuals.new(WeaponConfig)
     self.reloadHandZ = 0
     self.magazineDipBlend = 0
     self.pistolOffhandAlpha = 0
+    self.lastAmmoLoaded = nil
+    self.reloadFinishedAt = -math.huge
     self.lastViewmodelHidden = nil
     self.stepPhase = 0
     self.stepBlend = 0
@@ -665,6 +668,8 @@ function WeaponVisuals:setWeapon(weaponId)
     self.reloadHandX, self.reloadHandY, self.reloadHandZ = 0, 0, 0
     self.magazineDipBlend = 0
     self.pistolOffhandAlpha = 0
+    self.lastAmmoLoaded = nil
+    self.reloadFinishedAt = -math.huge
     self.lastCameraPosition = nil
     self.lastCameraCFrame = nil
 	self:_clearModel()
@@ -782,12 +787,25 @@ end
 
 -- Reload state comes only from server Ammo messages. Repeated snapshots
 -- must not restart the timeline, and canceled reloads fade out smoothly.
-function WeaponVisuals:setReloading(weaponId, active)
+function WeaponVisuals:setReloading(weaponId, active, loaded, capacity)
     if weaponId ~= self.currentWeaponId then return end
-    if active and not self.reloadActive then
+    local nowReloading = active == true
+    local wasReloading = self.reloadActive
+    if nowReloading and not wasReloading then
         self.reloadStartedAt = os.clock()
+        self.reloadFinishedAt = -math.huge
     end
-    self.reloadActive = active == true
+    if WeaponReloadFinishPolicy.confirmed(weaponId, wasReloading,
+        nowReloading, self.lastAmmoLoaded, loaded, capacity) then
+        self.reloadFinishedAt = os.clock()
+    end
+    self.reloadActive = nowReloading
+    if type(loaded) == "number" and loaded == loaded
+        and loaded >= 0 and loaded < math.huge
+        and type(capacity) == "number" and capacity > 0
+        and capacity < math.huge and loaded <= capacity then
+        self.lastAmmoLoaded = loaded
+    end
 end
 
 -- Locate the actual animated first-person part for the ejector. A missing
@@ -998,6 +1016,11 @@ function WeaponVisuals:_render(deltaTime)
     -- A single equipped gun is animated. No longer evaluate the four
     -- mechanical firing curves for inactive weapons on RenderStepped.
     local actionTravel = WeaponFeel.mechanism(self.currentWeaponId, shotAge)
+    -- The PBR pistol slide / AR charging handle cycles after an actually
+    -- refilled magazine, never after a cancelled or rejected reload.
+    local rack = WeaponReloadFinishPolicy.sample(self.currentWeaponId,
+        now - self.reloadFinishedAt, self.reloadActive)
+    actionTravel = math.max(actionTravel, rack)
     local feel = WeaponFeel.get(self.currentWeaponId)
     -- AR magazine: the left glove reaches the detachable PBR/Part magazine
     -- and follows its downward travel. Shotgun: the glove follows the visible

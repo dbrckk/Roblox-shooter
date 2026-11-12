@@ -6,6 +6,7 @@ P.Fields = {
     "reloadActive", "reloadStartedAt", "reloadBlend",
     "reloadHandX", "reloadHandY", "reloadHandZ",
     "magazineDipBlend", "pistolOffhandAlpha",
+    "lastAmmoLoaded", "reloadFinishedAt",
     "aimBlend", "stepPhase", "stepBlend", "sway",
     "lastCameraPosition", "lastCameraCFrame",
 }

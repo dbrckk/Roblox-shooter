@@ -1,0 +1,7 @@
+IRON YARD owner-authorized one-shot PUBLIC Roblox shooter update, Nov 12 2026.
+Continue verified public experience, no alpha/private release.
+Make AR charging handle / pistol PBR slide cycle after genuinely
+server-confirmed magazine refill, never on cancelled or full-mag requests.
+Preserve server ammo, authority, collision, timing, PBR LOD hot swaps.
+Require green Luau/Rojo CI on exact source commit before existing
+owner/public Roblox Open Cloud release. No new assets or remotes.

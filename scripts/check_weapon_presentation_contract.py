@@ -755,6 +755,29 @@ assert confirmed < client.index("visuals:setReloading(message.weaponId, message.
 request_body = client[client.index("local function requestReload()"):client.index("local function fireWeapon(")]
 assert "setScoped(false)" not in request_body, (
     "Rejected reload must not un-scope before server confirmation")
+# No speculative reload animation: the server-validated Ammo delta must
+# confirm a real refill before the PBR slide/charging handle racks.
+rack_policy = get("src/shared/WeaponReloadFinishPolicy.luau")
+for needle in (
+    "function P.confirmed(weaponId, wasReloading, nowReloading, previousLoaded, loaded, capacity)",
+    "function P.sample(weaponId, age, reloading)",
+    "return smooth((age - 0.025) / 0.125)",
+):
+    assert needle in rack_policy
+for needle in (
+    'WaitForChild("WeaponReloadFinishPolicy")',
+    "WeaponReloadFinishPolicy.confirmed(weaponId, wasReloading,",
+    "self.reloadFinishedAt = os.clock()",
+    "WeaponReloadFinishPolicy.sample(self.currentWeaponId,",
+    "actionTravel = math.max(actionTravel, rack)",
+    "self.lastAmmoLoaded = loaded",
+):
+    assert needle in visuals, f"Reload cycle missing {needle}"
+assert "visuals:setReloading(message.weaponId, message.reloading == true," in client
+assert "visuals:setReloading(weaponId, ammunition.reloading," in client
+assert '"lastAmmoLoaded", "reloadFinishedAt"' in swap_state
+assert 'FireServer' not in rack_policy and 'Instance.new' not in rack_policy
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
 # Reload support hands must follow authored mechanical PBR pieces, not
 # restart or teleport after a deferred asset upgrade or server cancel.
 reload_hand = get("src/shared/WeaponReloadHandPlan.luau")

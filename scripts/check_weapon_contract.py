@@ -962,7 +962,7 @@ def main():
         has(client, needle, "Streamed first-person body cache must release removed Parts")
     # Confirm a reload effect is driven by authoritative server ammo state,
     # and weapon bob uses character ground/velocity rather than a ticking clock.
-    has(viewmodel, "function WeaponVisuals:setReloading(weaponId, active)", "Reload animation API")
+    has(viewmodel, "function WeaponVisuals:setReloading(weaponId, active, loaded, capacity)", "Reload animation API")
     has(client, "visuals:setReloading(message.weaponId, message.reloading == true)",
         "Server-confirmed reload animation")
     has(client, "visuals:setReloading(weaponId, ammunition.reloading)",

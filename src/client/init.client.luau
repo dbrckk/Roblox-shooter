@@ -812,7 +812,10 @@ local function equipWeapon(weaponId)
         hud:setAmmo(weaponId, ammunition.loaded, ammunition.capacity, ammunition.reloading)
     end
 	visuals:setWeapon(weaponId)
-    if ammunition then visuals:setReloading(weaponId, ammunition.reloading) end
+    if ammunition then
+        visuals:setReloading(weaponId, ammunition.reloading,
+            ammunition.loaded, ammunition.capacity)
+    end
 	remotes.EquipWeapon:FireServer(weaponId)
 end
 
@@ -1275,7 +1278,8 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
             message.weaponId, message.reloading, scoped) then
             setScoped(false)
         end
-        visuals:setReloading(message.weaponId, message.reloading == true)
+        visuals:setReloading(message.weaponId, message.reloading == true,
+            message.loaded, message.capacity)
     elseif message.kind == "OutOfAmmo" and message.weaponId == currentWeaponId then
         requestReload()
 	end
