@@ -18,11 +18,10 @@ local function tryImportedMeshKit(model, rig, index, accent)
 
     local source = {}
     for _, partName in ipairs(importedParts) do
-        local mesh = variant:FindFirstChild(partName)
-        if not MeshKit.isRenderable(mesh) then
-            return nil
-        end
-        source[partName] = mesh
+        local template = variant:FindFirstChild(partName)
+        local components = MeshKit.primitives(template)
+        if not components then return nil end
+        source[partName] = { template = template, parts = components }
     end
 
     local anchors = {
@@ -36,26 +35,31 @@ local function tryImportedMeshKit(model, rig, index, accent)
     }
     for _, partName in ipairs(importedParts) do
         local target = anchors[partName]
-        local part = MeshKit.cleanClone(source[partName])
-        part.Name = "VANGUARD Mesh " .. partName
-        part.Anchored = false
-        part.Massless = true
-        part.CanCollide = false
-        part.CanTouch = false
-        part.CanQuery = false
-        part.CastShadow = true
-        part:SetAttribute("NeonCosmeticTier", "Core")
-        -- FBX components are authored around a common world origin.
-        -- Align each part's imported pivot with the corresponding R6 limb,
-        -- preserving the authored relative geometry without affecting hitboxes.
+        local entry = source[partName]
         local offset = partName == "rifle" and CFrame.new(0, -0.39, -1.12) or CFrame.new()
-        part.CFrame = target.CFrame * offset
-        part.Parent = model
-        local weld = Instance.new("WeldConstraint")
-        weld.Name = "ImportedVisualWeld"
-        weld.Part0 = target
-        weld.Part1 = part
-        weld.Parent = part
+        for index, template in ipairs(entry.parts) do
+            local part = MeshKit.cleanClone(template)
+            part.Name = "VANGUARD Mesh " .. partName .. " " .. index
+            part.Anchored = false
+            part.Massless = true
+            part.CanCollide = false
+            part.CanTouch = false
+            part.CanQuery = false
+            part.CastShadow = true
+            part:SetAttribute("NeonCosmeticTier", "Core")
+            -- New grouped imports store transforms relative to their first
+            -- primitive. Legacy manual single-MeshPart templates retain
+            -- their original identity alignment.
+            local relative = entry.template:IsA("MeshPart")
+                and CFrame.new() or template.CFrame
+            part.CFrame = target.CFrame * offset * relative
+            part.Parent = model
+            local weld = Instance.new("WeldConstraint")
+            weld.Name = "ImportedVisualWeld"
+            weld.Part0 = target
+            weld.Part1 = part
+            weld.Parent = part
+        end
     end
 
     -- Invisible base R6 parts remain the server's raycast hitboxes and skeleton.

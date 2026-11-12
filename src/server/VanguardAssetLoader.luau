@@ -1,6 +1,6 @@
 -- IRON YARD / optional owner-controlled PBR asset delivery.
 -- The game never downloads or executes scripts from uploaded Model packages:
--- it selects only seven MeshParts with expected names from each package.
+-- it selects seven bounded component groups of validated PBR MeshParts.
 -- Without complete uploaded assets, procedural VANGUARD stays playable.
 local InsertService = game:GetService("InsertService")
 local ServerStorage = game:GetService("ServerStorage")
@@ -21,7 +21,7 @@ local function hasCompleteTemplateSet(folder)
         if not variant then return false end
         for _, piece in ipairs(PIECES) do
             local mesh = variant:FindFirstChild(piece)
-            if not MeshKit.isRenderable(mesh) then
+            if not MeshKit.primitives(mesh) then
                 return false
             end
         end
@@ -41,24 +41,51 @@ local function extractPackage(owner, palette)
         local selected = {}
         for _, item in ipairs(loaded:GetDescendants()) do
             if item:IsA("MeshPart") then
+                -- Each glTF node can split into one MeshPart per material.
+                -- Some Roblox imports name each primitive generically;
+                -- the nearest canonical ancestor then supplies its identity.
                 local name = Policy.identifyPiece(item.Name)
+                local ancestor = item.Parent
+                while not name and ancestor and ancestor ~= loaded do
+                    name = Policy.identifyPiece(ancestor.Name)
+                    ancestor = ancestor.Parent
+                end
                 if name then
-                    assert(selected[name] == nil, "Duplicate imported mesh " .. name)
                     assert(MeshKit.isRenderable(item),
-                        "Missing one or more PBR maps on " .. name)
-                    selected[name] = item
+                        "Incomplete PBR maps on imported " .. name)
+                    local group = selected[name]
+                    if not group then
+                        group = {}
+                        selected[name] = group
+                    end
+                    assert(#group < Policy.MAX_PRIMITIVES_PER_PIECE,
+                        "Excessive material primitives on " .. name)
+                    table.insert(group, item)
                 end
             end
         end
         for _, name in ipairs(PIECES) do
-            assert(selected[name] ~= nil, "Missing imported VANGUARD mesh " .. name)
+            local group = selected[name]
+            assert(group and Policy.primitiveCountValid(#group),
+                "Missing or oversized imported VANGUARD piece " .. name)
         end
         local paletteFolder = Instance.new("Folder")
         paletteFolder.Name = palette
         for _, name in ipairs(PIECES) do
-            local clone = MeshKit.cleanClone(selected[name])
-            clone.Name = name
-            clone.Parent = paletteFolder
+            local component = Instance.new("Folder")
+            component.Name = name
+            local group = selected[name]
+            -- Keep every material primitive's relative local transform.
+            -- A bot aligns the first primitive with its R6 limb, and the
+            -- rest retain their Blender-authored offsets and orientations.
+            local basis = group[1].CFrame
+            for index, item in ipairs(group) do
+                local clone = MeshKit.cleanClone(item)
+                clone.Name = string.format("Primitive%02d", index)
+                clone.CFrame = basis:ToObjectSpace(item.CFrame)
+                clone.Parent = component
+            end
+            component.Parent = paletteFolder
         end
         return paletteFolder
     end)

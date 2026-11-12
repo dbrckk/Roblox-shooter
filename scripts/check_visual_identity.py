@@ -573,10 +573,12 @@ def main():
                    "Policy.keepChild(child.ClassName, child.Parent == clone,",
                    "child:Destroy()", "clone.CanQuery = false"):
         check(needle in kit, "Untrusted owner-controlled PBR package bypasses sanitization: " + needle)
-    for needle in ("MeshKit.isRenderable(mesh)", "MeshKit.cleanClone(selected[name])",
-                   "Policy.identifyPiece(item.Name)", "loaded:Destroy()"):
+    for needle in ("MeshKit.primitives(mesh)", "MeshKit.isRenderable(item)",
+                   "MeshKit.cleanClone(item)", "Policy.identifyPiece(item.Name)",
+                   "Policy.identifyPiece(ancestor.Name)", "loaded:Destroy()"):
         check(needle in loader, "Owner-controlled asset loader lacks verified safe extraction: " + needle)
-    for needle in ("MeshKit.isRenderable(mesh)", "MeshKit.cleanClone(source[partName])",
+    for needle in ("MeshKit.primitives(template)", "MeshKit.cleanClone(template)",
+                   "part.CanQuery = false", "part.CanCollide = false",
                    'model:SetAttribute("NeonVisualSource", "PROCEDURAL_PARTS")'):
         check(needle in bot_visuals, "Bots must preserve safe procedural fallback: " + needle)
     for needle in ("assert(completeMaps(", "local function safeClone(mesh)",

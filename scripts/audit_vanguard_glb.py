@@ -81,15 +81,19 @@ def inspect(path):
                 f"Texture data falls outside GLB BIN chunk: {path}")
         require(image.get("mimeType") in ("image/png", "image/jpeg", "image/webp"),
                 f"Unknown embedded texture type: {path}")
+    primitive_count = 0
     for mesh in meshes:
         primitives = mesh.get("primitives", [])
-        require(len(primitives) > 0, f"Empty geometry in {path}")
+        require(1 <= len(primitives) <= 8,
+                f"Unbounded multi-material mesh component in {path}")
+        primitive_count += len(primitives)
         for primitive in primitives:
             require("POSITION" in primitive.get("attributes", {}),
                     f"Triangle primitive has no positions: {path}")
     return {
         "bytes": len(payload),
         "mesh_parts": len(meshes),
+        "material_primitives": primitive_count,
         "materials": len(materials),
         "images": len(images),
         "normal_maps": sum("normalTexture" in mat for mat in materials),
