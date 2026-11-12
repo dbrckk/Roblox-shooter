@@ -1,0 +1,21 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox release 12 Nov 2026.
+Publish ONLY to the existing creator-verified PUBLIC IRON YARD experience
+using the repository's fail-closed, exact-commit CI-gated workflow.
+
+The exact prior merged main commit 66dc62512c179e3bebc2a998c52fa0fab5b9980e
+includes PR #52, preventing a stale UpdateAsync attempt from shortening
+the current same-owner 180-second DataStore progression lease.
+Both acquire retries and autosaves retain max(previousExpiresAt,
+requestTimestamp + leaseDuration) for the existing token. The
+existing cross-server lock refusal, expiry handover and server-authoritative
+session progression are unchanged. No DataStore schema/key migration.
+
+Full branch CI, PR CI and main Luau compiler, executable regression tests,
+source integration checks and Rojo build passed. Tests include delayed,
+out-of-order acquisition and autosave, valid expiration handover and
+rejection of stale session writes.
+
+Require a NEW successful CI on this exact authorization SHA, independently
+verify the same owner/universe/start place and PUBLIC visibility, then publish
+exactly once. Do not create a private alpha or different Roblox experience.
+No live Roblox DataStore or Android tests were executed; do not claim them.
