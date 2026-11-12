@@ -97,3 +97,27 @@ local partX,partY,partZ=Hand.sample("Pistol",0.45,true,1,1.15,
 assert(freshX==partX and freshY==partY and freshZ==partZ,
     "Independent PBR and procedural magazines follow same motion")
 assert(legacyX < freshX and legacyY > freshY and legacyZ ~= freshZ)
+
+
+-- Each B-8 hand insertion is driven by the same pure normalized shell beat;
+-- between cartridges the glove returns rather than clutching an invisible
+-- shell. The overall reload state never affects server ammunition.
+for count = 1, 6 do
+    for i = 0, count - 1 do
+        local mid = 0.18 + 0.70 * (i + 0.5) / count
+        local shellPhase = Reload.phase(mid, count)
+        local mx, my, mz = Hand.sample(
+            "Shotgun", mid, true, 0, 1, "QUALITY", false, false, shellPhase)
+        assert(mx > 0.1 and my > 0 and mz > 0.6,
+            "B-8 glove must follow every visible cartridge insertion")
+        local gap = 0.18 + 0.70 * (i + 0.94) / count
+        local gx, gy, gz = Hand.sample(
+            "Shotgun", gap, true, 0, 1, "QUALITY", false, false,
+            Reload.phase(gap, count))
+        assert(gx == 0 and gy == 0 and gz == 0,
+            "B-8 glove returns between hidden shell repetitions")
+        local cx, cy, cz = Hand.sample(
+            "Shotgun", mid, false, 0, 1, "QUALITY", false, false, shellPhase)
+        assert(cx == 0 and cy == 0 and cz == 0)
+    end
+end

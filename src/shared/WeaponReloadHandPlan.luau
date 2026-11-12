@@ -17,7 +17,7 @@ end
 -- Returns three scalars to avoid allocating a Vector3/table per frame.
 -- progress follows the server-confirmed reloadSeconds (0..1);
 -- dip is the SAME mid-reload magazine extraction curve used by the mesh.
-function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported, hasMagazine)
+function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported, hasMagazine, shellPhase)
     if active ~= true or not finite(progress) or not finite(dip)
         or not finite(handTravel) or handTravel < 0 then
         return 0, 0, 0
@@ -37,6 +37,18 @@ function Plan.sample(weaponId, progress, active, dip, handTravel, preset, import
         -- ECO hides the shell, so keep only a restrained manipulation.
         local reach = smooth(0.12, 0.35, p) * (1 - smooth(0.72, 0.94, p))
         local seated = smooth(0.27, 0.74, p)
+        if shellPhase ~= nil then
+            -- A server-snapshot deficit can contain several cartridges.
+            -- Match the physical repeated shell, including its hidden
+            -- return beat, rather than following one nonexistent shell.
+            if not finite(shellPhase) or shellPhase < 0 or shellPhase > 1 then
+                return 0, 0, 0
+            end
+            reach = smooth(0, 0.20, shellPhase)
+                * (1 - smooth(0.80, 1, shellPhase))
+                * smooth(0.08, 0.18, p) * (1 - smooth(0.88, 0.98, p))
+            seated = smooth(0.10, 0.84, shellPhase)
+        end
         local intensity = preset == "ECO" and 0.32 or 1
         return (0.06 + 0.22 * seated) * reach * intensity,
             (0.06 + 0.04 * math.sin(math.pi * seated)) * reach * intensity,
