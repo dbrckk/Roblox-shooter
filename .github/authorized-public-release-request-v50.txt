@@ -1,0 +1,20 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox update, 12 November 2026.
+Release ONLY the existing verified creator-owned PUBLIC IRON YARD experience
+through the repository's exact-commit CI-gated guarded Open Cloud workflow.
+
+PR #53 improves final DataStore save reliability during player departure,
+late lease acquisition and server shutdown. It counts overlapping acquire,
+autosave, departure and detached GUID-owned release operations, and makes
+BindToClose continue to wait (up to its existing 26-second limit) for saved XP
+even when the last Player has already been removed from active records.
+Late release is registered before the originating acquisition completes,
+without a zero-outstanding gap. Duplicate shutdown releases are not launched
+when PlayerRemoving already owns that final operation.
+
+The source includes earlier monotonic lease and atomic award safeguards.
+UserId keys, datastore name/schema v1, XP amounts and gameplay stay unchanged.
+Luau regression suites, static contracts, Rojo build on branch and PR, and
+merged main CI all succeeded at b651bbb4b0d37d4ea17bffaad08cad9a70e548f0.
+Require NEW green CI for the exact release commit, verified creator and PUBLIC
+destination, and precisely one publish. This is best-effort finalization;
+real Roblox DataStore/reconnect testing remains required.
