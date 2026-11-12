@@ -1,6 +1,6 @@
 # IRON YARD — production
 
-> **Historique des améliorations déjà réalisées.** Ce fichier conserve les décisions et les travaux antérieurs. Pour les priorités et critères de livraison actuels, consulter **[ROADMAP V2 — version publique premium](ROADMAP_V2_PUBLIC.md)**. La justification technique et les blocages confirmés sont dans **[l'audit global du 8 novembre 2026](AUDIT_GLOBAL_2026-11-08.md)**.
+> **Historique des améliorations déjà réalisées.** Ce fichier conserve les décisions et les travaux antérieurs. Pour les priorités et critères de livraison actuels, consulter **[ROADMAP V3 — finition production sans test Android immédiat](ROADMAP_V3_SANS_TEST_ANDROID.md)**. La V2 est désormais également historique. La justification technique et les blocages confirmés sont dans **[l'audit global du 8 novembre 2026](AUDIT_GLOBAL_2026-11-08.md)**.
 
 
 ## Référence

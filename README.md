@@ -1,10 +1,13 @@
 # IRON YARD — Roblox FPS tactique compétitif
 
-## Pilotage du projet — audit et nouvelle feuille de route
+## Pilotage du projet — feuille de route en vigueur
 
-- **[Audit global du jeu et des risques — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md)** : inventaire vérifié du code, gameplay, sécurité, IA, interfaces, assets, performances, progression, publication et limites de validation.
-- **[Feuille de route V2 vers la version publique premium](docs/ROADMAP_V2_PUBLIC.md)** : priorités critiques, lots finis et mesurables, conditions de validation, dépendances Roblox et ordre exact des prochains développements.
-- [Ancien journal de progression](docs/ROADMAP.md) : archive chronologique des travaux précédents, non utilisée pour prioriser les nouvelles fonctionnalités.
+- **[Feuille de route V3 — finition production sans test Android immédiat](docs/ROADMAP_V3_SANS_TEST_ANDROID.md)** : backlog actif priorisé, étapes autonomes réalisables depuis GitHub, critères de sortie, blocages Roblox/Android et preuves attendues. **Le prochain lot est A1 : fiabilité FFA/duel 1v1 déjà codé.**
+- [Feuille de route V2 — historique](docs/ROADMAP_V2_PUBLIC.md) : décisions et lots précédents, dont plusieurs statuts ne sont plus actuels.
+- [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
+- [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
+
+**État vérifié le 12 novembre 2026 :** expérience IRON YARD publique **v35**, build et publication GitHub Actions réussis. Armes PBR : dix IDs enregistrés (5 armes × 2 LOD) ; 1v1 codé avec tests ; modèles VANGUARD (4 IDs) et matériaux de monde PBR (12 IDs) non activés dans les registres. FPS Android, gameplay moteur et persistance DataStore réelle restent non mesurés/à valider.
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet vise désormais **une seule livraison publique**, sans phase privée : GitHub Actions produit un build testable, puis une publication publique manuelle strictement contrôlée lorsque l'expérience Roblox et les accès sont prêts. Un build GitHub n'est pas une publication Roblox.
 
