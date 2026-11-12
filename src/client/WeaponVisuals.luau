@@ -6,6 +6,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
 local TransientFxPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TransientFxPool"))
+local AdaptiveCombatFxPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("AdaptiveCombatFxPolicy"))
 local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponSway = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponSwayPolicy"))
@@ -110,6 +111,10 @@ function WeaponVisuals.new(WeaponConfig)
     self.hasActiveImpactMarks = false
     self.nextImpactMarkUpdateAt = 0
     self.transientParts = {}
+    -- Android transient VFX budget tracks sustained frame times only;
+    -- no additional render loop or changes to player quality settings.
+    self.adaptiveCombatFx = AdaptiveCombatFxPolicy.new()
+    self.adaptiveCombatFxCap = nil
     -- Track only live slots: pooled Parts persist, but inactive slots must
     -- not be visited by every RenderStepped after the first firefight.
     self.activeTransientIndices = {}
@@ -955,6 +960,10 @@ function WeaponVisuals:_render(deltaTime)
     -- Preserve actual wall-clock recoil/FX expiry, but cap interpolation after
     -- Android backgrounding or a frame hitch to avoid single-frame pose snaps.
     local animationDt = ViewmodelRenderPolicy.animationDelta(deltaTime)
+    self.adaptiveCombatFxCap = AdaptiveCombatFxPolicy.sample(
+        self.adaptiveCombatFx, deltaTime,
+        Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+        UserInputService.TouchEnabled)
     -- Pool opacity/expiry is serviced at 8 Hz, not via a Tween and Debris
     -- allocation for every bullet. Reuses the existing RenderStepped hook.
     local clock = os.clock()
@@ -1197,9 +1206,10 @@ end
 -- state, so different kinds can safely reuse the SAME physical Part.
 function WeaponVisuals:_spawnTransient(spec)
     local now = os.clock()
-    local cap = TransientFxPool.cap(
+    local cap = math.min(TransientFxPool.cap(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        UserInputService.TouchEnabled)
+        UserInputService.TouchEnabled),
+        self.adaptiveCombatFxCap or TransientFxPool.MAX_PARTS)
     local slot, index = TransientFxPool.claim(self.transientParts,
         now, spec.duration, cap, spec.priority)
     if not slot then return false end
@@ -1258,9 +1268,10 @@ function WeaponVisuals:_spawnTransient(spec)
 end
 
 function WeaponVisuals:_updateTransientFx(now)
-    local cap = TransientFxPool.cap(
+    local cap = math.min(TransientFxPool.cap(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        UserInputService.TouchEnabled)
+        UserInputService.TouchEnabled),
+        self.adaptiveCombatFxCap or TransientFxPool.MAX_PARTS)
     for index in pairs(self.activeTransientIndices) do
         local slot = self.transientParts[index]
         local part = slot and slot.part
