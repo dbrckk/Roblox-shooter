@@ -33,6 +33,7 @@ local function getState(player)
     if not state then
         state = {
             equippedWeaponId = "AssaultRifle",
+            mirroredWeaponId = "",
             lastFireAt = {},
             lastSpreadAt = {},
             spreadCount = {},
@@ -662,8 +663,13 @@ local function onEquipWeapon(player, weaponId)
     end
     state.equippedWeaponId = weaponId
     -- Audit mirror only: LifecycleService uses it to hold one weapon entry per
-    -- player. Damage, ammo and fire authority are untouched.
-    player:SetAttribute("IronYardEquippedWeapon", weaponId)
+    -- player. Damage, ammo and fire authority are untouched. The guard below
+    -- reads our own state, never the attribute, so the mirror stays write-only
+    -- and a repeated request for the same weapon writes nothing.
+    if state.mirroredWeaponId ~= weaponId then
+        state.mirroredWeaponId = weaponId
+        player:SetAttribute("IronYardEquippedWeapon", weaponId)
+    end
     sendAmmo(player, weaponId)
 end
 

@@ -40,7 +40,7 @@ Compteurs publiés en attributs de `Workspace`, écrits par le serveur seul : `I
 
 Deux garde-fous :
 
-- **Aucun retour vers le jeu.** Les deux miroirs sont écrits par `MatchService` et `WeaponService` et **jamais relus** : le contrat le vérifie, une phase ou une arme ne peut pas dépendre de l'audit.
+- **Aucun retour vers le jeu.** Les deux miroirs sont écrits par `MatchService` et `WeaponService` et **jamais relus** : le contrat le vérifie, une phase ou une arme ne peut pas dépendre de l'audit. L'écriture du miroir d'arme est **dédoublonnée depuis un état serveur** (`state.mirroredWeaponId`) : un ré-équipement du même identifiant n'écrit rien, et le service ne relit jamais l'attribut pour le savoir.
 - **Aucun effet de bord autorisé.** Chaque appel au registre passe par `pcall` : un bug d'audit ne peut pas casser une manche, un équipement ou un départ. Le service ne `kick`, ne déplace, ne téléporte et n'expose aucun remote.
 
 ## 3. Scénario de stress

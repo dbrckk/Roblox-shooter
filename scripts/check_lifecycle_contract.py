@@ -113,6 +113,14 @@ def main():
     require("IronYardEquippedWeapon" not in weapon.replace(
                 'player:SetAttribute("IronYardEquippedWeapon", weaponId)', ""),
             "WeaponService must not read the audit mirror back")
+    # The mirror write is deduplicated from server state, never by reading the
+    # attribute back: a repeated equip request must not replicate again.
+    has(weapon, "state.mirroredWeaponId ~= weaponId",
+        "the equip mirror must be deduplicated")
+    has(weapon, "state.mirroredWeaponId = weaponId",
+        "the dedupe must remember the last mirrored weapon")
+    require(weapon.count('player:SetAttribute("IronYardEquippedWeapon"') == 1,
+            "the equip mirror must have exactly one write site")
     start_at = bootstrap.find("LifecycleService.start()")
     match_at = bootstrap.find("MatchService.start()")
     require(start_at != -1, "init.server.luau must start LifecycleService")
