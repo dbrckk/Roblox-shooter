@@ -1,0 +1,17 @@
+IRON YARD — one owner-authorized PUBLIC Roblox update, 12 November 2026.
+
+Owner requested continuing improvements to the existing PUBLIC IRON YARD FPS.
+This single release includes PR #36, squash commit
+eb9bcf3756f380e5727c6e30f9105ee873d9183f.
+Transient VFX now skip repeated Part.Size property writes when size stays
+constant. Each pooled FX slot recalculates its size-change classification
+on spawn, so recycled brass, muzzle flash, tracers and hit glints retain
+correct original geometry, animations, opacity, and priority. The client
+pool remains bounded, server-authoritative combat and gameplay unchanged.
+Luau regression, source contracts and Rojo build passed on the PR and
+on merged main.
+
+Require a fresh green full CI for the exact authorization commit before
+one-shot release. The guarded public publisher must verify exact commit,
+owner, intended existing PUBLIC universe and root place. Do not create
+a new experience or claim measured Android FPS. No secrets in source.
