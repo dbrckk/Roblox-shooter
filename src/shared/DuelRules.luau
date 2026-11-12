@@ -103,6 +103,21 @@ function Duel.prepValid(expectedA, actualA, readyA, expectedB, actualB, readyB)
         and readyA == true and readyB == true
 end
 
+-- Reuse the exact original-character rule at both the 0.2s tick and
+-- preparation deadline. Missing or malformed prep is an interruption,
+-- never permission to remain stuck forever in DUEL_PREP.
+function Duel.prepState(prep, actualA, readyA, actualB, readyB)
+    if type(prep) ~= "table" or #prep ~= 2
+        or type(prep[1]) ~= "table" or type(prep[2]) ~= "table" then
+        return "INTERRUPTED"
+    end
+    if Duel.prepValid(prep[1].character, actualA, readyA,
+        prep[2].character, actualB, readyB) then
+        return "READY"
+    end
+    return "INTERRUPTED"
+end
+
 function Duel.canFight(mode, userId, a, b, playerCount)
     if mode ~= "DUEL" then return true end
     local function validId(id)

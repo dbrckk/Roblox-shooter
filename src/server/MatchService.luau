@@ -252,25 +252,50 @@ local function startDuelBout()
     return true
 end
 
-local function startLiveDuelBout()
-    if not duel or not duel.prep or not duelPlayersIntact() then return false end
+-- An interrupted preparation (death/respawn, removed root, missing
+-- stored prep or unanchoring) must release BOTH old roots immediately.
+-- Checking the original character generations prevents a late respawn
+-- from inheriting the abandoned preparation.
+local function duelPrepState()
+    if not duel then return "INTERRUPTED" end
     local a,b = duelParticipants()
     local prep = duel.prep
+    local first = type(prep) == "table" and prep[1] or nil
+    local second = type(prep) == "table" and prep[2] or nil
     local function liveAndAnchored(entry, player)
+        if type(entry) ~= "table" or not player then return false end
         local c = player.Character
         local h = c and c:FindFirstChildOfClass("Humanoid")
-        return entry.root and entry.root.Parent and entry.root.Anchored
-            and h and h.Health > 0 and entry.root:IsDescendantOf(c)
+        return c ~= nil and entry.root ~= nil
+            and entry.root.Parent ~= nil and entry.root.Anchored
+            and h ~= nil and h.Health > 0
+            and entry.root:IsDescendantOf(c)
     end
-    local valid = DuelRules.prepValid(prep[1].character, a.Character,
-        liveAndAnchored(prep[1], a),
-        prep[2].character, b.Character, liveAndAnchored(prep[2], b))
+    return DuelRules.prepState(prep,
+        a and a.Character, liveAndAnchored(first, a),
+        b and b.Character, liveAndAnchored(second, b))
+end
+
+local function retryInterruptedDuelPrep()
+    if not duel then return false end
+    DuelCombatState.clear()
     releaseDuelPrep()
-    if not valid then
-        duel.waitSince = duel.waitSince or os.clock()
-        transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
-        return false
+    duel.liveCharacterA = nil
+    duel.liveCharacterB = nil
+    -- Keep the original 20-second recovery budget, including repeated
+    -- interrupted preparations; never start a new deadline on each retry.
+    duel.waitSince = duel.waitSince or os.clock()
+    transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
+    return false
+end
+
+local function startLiveDuelBout()
+    if not duel or not duelPlayersIntact() then return false end
+    if duelPrepState() ~= "READY" then
+        return retryInterruptedDuelPrep()
     end
+    local a,b = duelParticipants()
+    releaseDuelPrep()
     -- Lock both participants to the same character generation for this bout.
     duel.liveCharacterA = a.Character
     duel.liveCharacterB = b.Character
@@ -279,9 +304,7 @@ local function startLiveDuelBout()
     SpawnService.clearProtection(a.Character)
     SpawnService.clearProtection(b.Character)
     if not DuelCombatState.begin(a, b) then
-        duel.waitSince = duel.waitSince or os.clock()
-        transition("DUEL_BREAK", DUEL_BREAK_SECONDS)
-        return false
+        return retryInterruptedDuelPrep()
     end
     WeaponService.resetRound()
     duel.waitSince = nil
@@ -453,8 +476,14 @@ local function tick()
                 endRound()
             end
         end
-    elseif phase == "DUEL_PREP" and remaining <= 0 then
-        startLiveDuelBout()
+    elseif phase == "DUEL_PREP" then
+        -- A dead/replaced character or unexpectedly missing prep must
+        -- not leave the lobby hanging until the next matching deadline.
+        if duelPrepState() ~= "READY" then
+            retryInterruptedDuelPrep()
+        elseif remaining <= 0 then
+            startLiveDuelBout()
+        end
     elseif phase == "DUEL_BREAK" and remaining <= 0 then
         if DuelRules.recoveryExpired(duel and duel.waitSince, os.clock()) then
             endDuel("SPAWN_TIMEOUT", nil)

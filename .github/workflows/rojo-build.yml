@@ -216,6 +216,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 scripts/check_match_lobby_contract.py
+          python3 scripts/check_duel_prep_contract.py
           python3 scripts/check_weapon_contract.py
           python3 scripts/check_weapon_presentation_contract.py
           python3 scripts/test_pbr_ads_geometry.py

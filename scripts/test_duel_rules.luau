@@ -143,4 +143,37 @@ assert(not D.prepValid(playerLifeA, playerLifeA, true,
 assert(not D.prepValid(nil, nil, true,
     playerLifeB, playerLifeB, true))
 assert(D.advance(0,0,0/0,"A")==nil)
-print("IRON YARD duel rules: first-to-five, draws, forfeit selection and participant isolation OK")
+
+-- The same pure policy is used by tick and the final LIVE transition.
+-- Missing/stale preparations may never silently authorize a duel bout.
+local rigA, rigB = {}, {}
+local currentA, currentB = rigA, rigB
+local entries = {{character=rigA}, {character=rigB}}
+assert(D.prepState(entries, currentA, true, currentB, true) == "READY")
+for _, bad in ipairs({{}, {{character=rigA}}, {{character=rigA},{character=rigB},{}},
+    {{character=rigA}, {}}, "not a prep", false}) do
+    assert(D.prepState(bad, currentA, true, currentB, true) == "INTERRUPTED")
+end
+assert(D.prepState(nil, currentA, true, currentB, true) == "INTERRUPTED")
+assert(D.prepState(entries, currentA, false, currentB, true) == "INTERRUPTED")
+assert(D.prepState(entries, currentA, true, currentB, false) == "INTERRUPTED")
+assert(D.prepState(entries, currentA, true, currentB, nil) == "INTERRUPTED")
+assert(D.prepState(entries, currentA, true, currentB, true) == "READY")
+for i=1,20000 do
+    local oldA = currentA
+    currentA = {}
+    assert(D.prepState(entries, currentA, true, currentB, true) == "INTERRUPTED",
+        "Respawned A cannot consume old anchored preparation")
+    entries = {{character=currentA}, {character=currentB}}
+    assert(D.prepState(entries, currentA, true, currentB, true) == "READY")
+    assert(D.prepState({{character=oldA},{character=currentB}},
+        currentA, true, currentB, true) == "INTERRUPTED")
+    if i%3==0 then
+        currentB={}
+        assert(D.prepState(entries, currentA, true, currentB, true) == "INTERRUPTED",
+            "Respawned B cannot consume old anchored preparation")
+        entries={{character=currentA},{character=currentB}}
+    end
+end
+assert(D.prepState(entries, currentA, true, currentB, true) == "READY")
+print("IRON YARD duel rules: first-to-five, 20000 respawns, interrupted prep and participant isolation OK")
