@@ -1,0 +1,9 @@
+IRON YARD — owner-authorized one-shot PUBLIC production shooter update.
+Date 2026-11-12. The owner requested continued improvement and release.
+This commit repairs a stale regression test for the new priority-first
+bounded combat VFX pool. The correctly protected muzzle/confirmed-hit
+slots no longer get overwritten while lower priority debris is eligible.
+Static muzzle/hit glints avoid redundant CFrame interpolation on mobile;
+recycled tracer/casing/spark Parts retain full motion. All caps unchanged.
+Run entire Rojo CI on exact SHA; only then publish verified PUBLIC place
+on existing authorized owner account. No alpha/private staging or secrets.
