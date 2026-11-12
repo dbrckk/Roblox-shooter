@@ -803,19 +803,27 @@ function WeaponVisuals:_ejectCartridge(plan)
     end
     if not ejector then return end
 
-    local from = ejector.CFrame * CFrame.new(0.12, 0.08, 0)
-    local to = from * CFrame.new(0.76, -0.48, 0.34)
-        * CFrame.Angles(1.5, 0.8, 1.2)
+    -- Original per-weapon trajectories: the pistol flicks a short brass
+    -- case, the AR sends it sideways, the shotgun extracts a heavier
+    -- polymer hull on the pump beat, and the sniper releases after bolt pull.
+    -- Each originates from the real animated PBR/fallback ejection port.
+    local from = ejector.CFrame
+        * CFrame.new(plan.origin[1], plan.origin[2], plan.origin[3])
+    local to = from
+        * CFrame.new(plan.travel[1], plan.travel[2], plan.travel[3])
+        * CFrame.Angles(plan.tumble[1], plan.tumble[2], plan.tumble[3])
     self:_spawnTransient({
         name = "IronYardSpentCartridge",
         origin = from, target = to,
         size = Vector3.new(plan.size[1], plan.size[2], plan.size[3]),
         endSize = Vector3.new(plan.size[1], plan.size[2], plan.size[3]),
         shape = Enum.PartType.Cylinder,
-        material = MATERIAL_METAL,
+        material = plan.hull and MATERIAL_SMOOTH or MATERIAL_METAL,
+        reflectance = plan.reflectance,
         color = Color3.fromRGB(plan.tint[1], plan.tint[2], plan.tint[3]),
         alpha = 0, duration = plan.duration, priority = 1,
-        arcHeight = plan.arc, spinAngle = plan.spin, linear = true,
+        arcHeight = plan.arc, gravityDrop = plan.drop,
+        spinAngle = plan.spin, linear = true,
     })
 end
 
@@ -1132,6 +1140,9 @@ function WeaponVisuals:_spawnTransient(spec)
     part.Name = spec.name
     part.Shape = spec.shape or Enum.PartType.Block
     part.Material = spec.material or MATERIAL_SMOOTH
+    -- Recycled brass must never leave gloss on a later plastic dust puff.
+    -- Reset for every pooled effect, not on every RenderStep.
+    part.Reflectance = spec.reflectance or 0
     part.Color = spec.color
     part.Size = spec.size
     part.CFrame = spec.origin

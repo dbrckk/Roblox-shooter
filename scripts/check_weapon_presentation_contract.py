@@ -507,8 +507,24 @@ for needle in (
     "function WeaponVisuals:kick(weaponId)",
     "CartridgeEjection.plan(weaponId,",
     "self:_ejectCartridge(pending.plan)",
+    "CFrame.new(plan.origin[1], plan.origin[2], plan.origin[3])",
+    "CFrame.new(plan.travel[1], plan.travel[2], plan.travel[3])",
+    "CFrame.Angles(plan.tumble[1], plan.tumble[2], plan.tumble[3])",
+    "material = plan.hull and MATERIAL_SMOOTH or MATERIAL_METAL",
+    "reflectance = plan.reflectance",
+    "gravityDrop = plan.drop",
+    "part.Reflectance = spec.reflectance or 0",
 ):
     assert needle in visuals, f"Client casings not wired: {needle}"
+for needle in (
+    "origin = {0.12, 0.06, 0.00}",
+    "origin = {0.10, 0.08, 0.02}",
+    "origin = {0.14, 0.02, 0.03}",
+    "origin = {0.17, 0.09, 0.03}",
+    "reflectance = 0, hull = true",
+    "drop = 0.45",
+):
+    assert needle in ejection, f"Missing physically distinct original casing plan: {needle}"
 assert visuals.count("function WeaponVisuals:_ejectCartridge(plan)") == 1
 assert visuals.index("self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap") < (
     visuals.index("function WeaponVisuals:_ejectCartridge(plan)"))

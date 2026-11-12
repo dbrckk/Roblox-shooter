@@ -1,0 +1,9 @@
+IRON YARD — single-use owner-authorized PUBLIC Roblox shooter update.
+Date: 2026-11-12. Continue production game, do not publish alpha/private.
+This change provides distinct original cartridge movement for AR, pistol,
+shotgun and sniper including the server-timed pump/bolt delay. A shotgun
+red polymer hull is no longer rendered as reflective brass. Pooled parts
+reset reflectance when reused, while casing gravity and tumble remain
+client-only cosmetics with no new instances beyond the existing pool.
+Require complete exact-SHA green Luau/Rojo CI and authorized public
+owner/place verification before publication. No weapons gameplay changes.

@@ -678,3 +678,34 @@ Luau couvrent toutes les matières et armes, y compris les ID inconnus,
 et un contrat statique vérifie les branches de dessin.
 L'esthétique PBR finale et les FPS doivent encore être contrôlés dans
 Roblox Studio / sur Android réel.
+
+
+
+## Éjection des douilles : trajectoires propres à chaque arme — 12 novembre 2026
+
+Le rendu précédent utilisait une **même trajectoire de douille** (écart
+latéral, chute et rotation) pour l'AR-24, le pistolet, le B-8 et le sniper,
+indépendamment des mécanismes des armes. De plus, la cartouche rouge
+du shotgun était affichée avec le matériau métallique des étuis en laiton.
+
+Chaque arme possède désormais un profil original d'éjection depuis son
+port physique, toujours après la position du viewmodel calculée pour
+la caméra actuelle. L'AR projette les petits étuis rapidement vers la
+droite, le pistolet les expulse plus près de la glissière, le B-8
+rejette une **douille rouge en matériau polymère** plus lourde, et le
+sniper libère le grand étui au recul maximal de son verrou (0,43 s).
+Le B-8 conserve l'animation différée de pompe (0,39 s). Une retombée
+gravitationnelle analytique est ajoutée aux arcs et rotations déjà
+gérés par le pool, sans simulation physique ou collision.
+
+Les quatre profils sont bornés par tests Luau : dimensions, directions,
+matériaux, intensité de chute et délais. Le **même seul élément recyclé**
+par douille demeure, avec les budgets existants ECO (aucune douille),
+BALANCED Android (AR un tir sur deux) et QUALITY.
+Le rendu réinitialise également la réflectance des pièces à chaque
+réutilisation du pool pour éviter qu'une douille métallique ne rende
+brillant un futur nuage de poussière. Aucune nouvelle boucle, aucun
+objet réseau, aucune modification de dégâts ou de serveur.
+
+L'alignement PBR des ports d'éjection et le résultat visuel à 30/60 FPS
+restent à constater en jeu, faute de capture Roblox Studio/Android réelle.

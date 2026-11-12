@@ -5,15 +5,31 @@ local Policy = {}
 local SHELLS = {
     AssaultRifle = { anchor = "EjectionPort", duration = 0.36,
         delay = 0, size = {0.23, 0.09, 0.09}, tint = {194, 153, 75},
+        -- Rapid right-side brass ejection with a shallow arc.
+        origin = {0.12, 0.06, 0.00}, travel = {0.99, -0.39, 0.31},
+        tumble = {1.55, 0.78, 1.15}, drop = 0.31,
+        reflectance = 0.045, hull = false,
         arc = 0.34, spin = 6.5 },
     Pistol = { anchor = "EjectionPort", duration = 0.40,
         delay = 0, size = {0.19, 0.08, 0.08}, tint = {205, 161, 83},
+        -- Compact snappy sideways ejection above the recoiling slide.
+        origin = {0.10, 0.08, 0.02}, travel = {0.77, -0.31, 0.42},
+        tumble = {1.72, 0.82, 1.38}, drop = 0.24,
+        reflectance = 0.045, hull = false,
         arc = 0.28, spin = 7.0 },
     Shotgun = { anchor = "ShotgunEjectionPort", duration = 0.47,
         delay = 0.39, size = {0.33, 0.15, 0.15}, tint = {139, 43, 34},
+        -- Heavy polymer red hull follows the delayed pump extraction.
+        origin = {0.14, 0.02, 0.03}, travel = {0.69, -0.53, 0.24},
+        tumble = {1.34, 0.63, 0.94}, drop = 0.45,
+        reflectance = 0, hull = true,
         arc = 0.44, spin = 5.2 },
     Sniper = { anchor = "SniperEjectionPort", duration = 0.46,
         delay = 0.43, size = {0.35, 0.105, 0.105}, tint = {201, 165, 98},
+        -- Longer brass case clears the breech at maximum bolt pull.
+        origin = {0.17, 0.09, 0.03}, travel = {0.82, -0.43, 0.25},
+        tumble = {1.66, 0.52, 0.96}, drop = 0.38,
+        reflectance = 0.045, hull = false,
         arc = 0.40, spin = 5.9 },
 }
 
