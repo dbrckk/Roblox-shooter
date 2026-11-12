@@ -1,0 +1,19 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox update on 12 November 2026.
+Only publish the exact release-commit source to the existing verified
+creator-owned PUBLIC IRON YARD destination, using the repository's guarded
+official Roblox Open Cloud workflow and strict green-CI checks.
+
+PR #45 fixes owner/Studio private Android PERF diagnostics after app background
+or resume. A >1-second or invalid frame interval now resets the private
+240-frame FPS window, stale weapon CPU data and stale server display.
+Real foreground frame stalls of up to 1 second remain recorded. This prevents
+false slow-frame P95/P99 readings or retaining stale benchmark data.
+The FPS diagnostics are still OFF for ordinary public players.
+Client visual quality, asset source validation, render loop count, server
+authority, hit/damage, rounds, weapon behavior, and public gameplay unchanged.
+
+PR branch + PR CI and merged main Rojo CI successful at
+0ee36630b498199d4e8f4828e1f1e155df684749.
+Require fresh successful CI for this exact authorized release SHA plus strict
+PUBLIC destination owner verification. Publish exactly once; never infer
+real Android FPS performance improvements without physical-device samples.
