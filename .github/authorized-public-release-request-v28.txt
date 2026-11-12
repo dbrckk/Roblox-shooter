@@ -1,0 +1,26 @@
+IRON YARD — one owner-authorized PUBLIC FPS update, 12 November 2026.
+
+User requested continued production improvements to IRON YARD, not an alpha
+or private build. The single target is the EXISTING owner-verified PUBLIC
+Roblox experience. Do not create or change any other Roblox experience.
+
+This release includes PR #29 (merge commit
+03f87ad790b9094eb9b1fa3b7b6a64faf34f446a): while the sniper
+optical scope fully hides its first-person weapon, defer invisible PBR
+part transformations during the scheduled post-shot ejection delay. Render
+every critical frame, specifically pending muzzle flash, server-confirmed
+reload, and the EXACT due frame of the shell, with current camera-aligned
+ejection sockets. Invalid timing fails closed (render, never skip).
+The approved sniper reload action from PR #28 is preserved.
+
+The deterministic Luau suites, source integration checks, compiler and Rojo
+build all succeeded for PR #29 and merged main. Require the full fresh CI
+to succeed for the exact SHA of THIS release-request commit before
+one-shot public dispatch. Do not claim actual Android FPS benchmarks,
+real gameplay QA, or publication success until the matching run confirms it.
+
+Safety: no change to authoritative server shots, ammo, hit detection,
+cooldowns, owner identity, public visibility or remote-event validation.
+The exact-target PUBLIC Roblox workflow independently validates the
+current owner, visibility, root place and source SHA.
+No Roblox API credentials are stored in this file.
