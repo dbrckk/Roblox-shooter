@@ -16,6 +16,7 @@ local WeaponPbrFxSockets = require(ReplicatedStorage:WaitForChild("Shared"):Wait
 local WeaponMeshRefresh = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshRefreshPolicy"))
 local WeaponMeshSwapState = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshSwapState"))
 local WeaponViewmodelCachePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponViewmodelCachePolicy"))
+local WeaponSwapMetrics = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponSwapMetrics"))
 local WeaponMeshLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshLayout"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
@@ -680,6 +681,8 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
 end
 
 function WeaponVisuals:setWeapon(weaponId)
+    -- No timing overhead unless the owner enables the private PERF panel.
+    local startedAt = WeaponSwapMetrics.isEnabled() and os.clock() or nil
     -- Only REAL weapon changes may park the previous model. An idle LOD
     -- rebuild calls setWeapon on the same ID and must destroy the old mesh
     -- instead of retaining a stale LOD behind a graphics-preset change.
@@ -812,6 +815,12 @@ function WeaponVisuals:setWeapon(weaponId)
         * CFrame.Angles(pose.pitch, 0, 0)) or nil
     self:_applyCareerFinish()
     self:_syncScopeVisibility()
+    if startedAt then
+        local kind = reused and "reuse" or (previousModel == nil and "initial"
+            or (changingWeapon and "build" or "lod"))
+        WeaponSwapMetrics.record(kind, os.clock() - startedAt, #self.parts,
+            self.cachedViewmodel and #self.cachedViewmodel.parts or 0)
+    end
 end
 
 -- Server-created PBR templates can arrive after the initial equip.
@@ -825,6 +834,10 @@ function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
     if retained and WeaponViewmodelCachePolicy.expired(retained, now) then
         retained.model:Destroy()
         self.cachedViewmodel = nil
+    end
+    if WeaponSwapMetrics.isEnabled() then
+        WeaponSwapMetrics.noteCache(self.cachedViewmodel
+            and #self.cachedViewmodel.parts or 0)
     end
     if not self.model or not self.currentWeaponId then return end
 

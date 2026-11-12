@@ -462,6 +462,38 @@ assert cache_body.index("local changingWeapon") < cache_body.index(
     "self.currentWeaponId = weaponId")
 assert 'self:_clearModel()' in cache_body, (
     "Same-weapon LOD upgrades must still destroy their old source")
+# Private swap timing is bounded, opt-in, local and compatible with the
+# pre-existing owner-only per-frame weapon CPU diagnostics.
+swap_metrics = get("src/shared/WeaponSwapMetrics.luau")
+for needle in (
+    "Metrics.WINDOW = 48",
+    "function Metrics.enable(value)",
+    "function Metrics.isEnabled()",
+    "function Metrics.noteCache(parts)",
+    "function Metrics.record(kind, durationSeconds, visibleParts, retainedParts)",
+    "function Metrics.snapshot()",
+):
+    assert needle in swap_metrics, f"Swap profiler missing: {needle}"
+private_overlay = get("src/client/PerfOverlay.client.luau")
+assert private_overlay.index("if not RunService:IsStudio()") < private_overlay.index(
+    "WeaponSwapMetrics.enable(active)")
+for needle in ('WaitForChild("WeaponSwapMetrics")', "WeaponSwapMetrics.enable(active)",
+               "WeaponSwapMetrics.snapshot()", "Stats:GetTotalMemoryUsageMb()",
+               "weaponMetrics()", "RAM client TOTAL:"):
+    assert needle in private_overlay, f"Private profiler merger lost {needle}"
+for needle in ('WaitForChild("WeaponSwapMetrics")',
+               "local startedAt = WeaponSwapMetrics.isEnabled() and os.clock() or nil",
+               "WeaponSwapMetrics.record(kind, os.clock() - startedAt, #self.parts,",
+               "WeaponSwapMetrics.noteCache(self.cachedViewmodel"):
+    assert needle in visuals, f"Swap timing integration missing: {needle}"
+render_body = visuals.split("function WeaponVisuals:_render(deltaTime)", 1)[1]
+render_body = render_body.split("function WeaponVisuals:_spawnTransient", 1)[0]
+assert "WeaponSwapMetrics.record" not in render_body
+assert "WeaponSwapMetrics.snapshot" not in render_body
+switch_body = visuals.split("function WeaponVisuals:setWeapon(weaponId)", 1)[1]
+switch_body = switch_body.split("function WeaponVisuals:_refreshImportedWeaponIfSafe", 1)[0]
+assert switch_body.index("self:_applyCareerFinish()") < switch_body.index(
+    "WeaponSwapMetrics.record(kind"), "Record only after finished equip"
 refresh_policy = get("src/shared/WeaponMeshRefreshPolicy.luau")
 for needle in (
     "function Policy.shouldRefresh(imported, activeLod, wantedLod, available, status)",
