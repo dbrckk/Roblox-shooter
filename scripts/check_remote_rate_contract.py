@@ -16,12 +16,14 @@ net = read("src/shared/PrecisionNet.luau")
 
 for key in (
     "EquipWeapon", "FireWeapon", "ReloadWeapon", "SetSprinting",
+    "SetAiming", "SetDuelReady",
     "MovementAction", "MovementUpdate", "MovementStop", "Diagnostics",
 ):
     assert key in policy, f"Missing bounded category: {key}"
 for needle in (
     "function Policy.allow(bucket, channel, now)",
     "function Policy.channelForAction(action)",
+    "return { rate = config.rate, burst = config.burst }",
     'if action == "BoostStop" or action == "StopWallRun" then',
     'if action == "BoostUpdate" or action == "WallRunUpdate" then',
     "state.tokens = math.min(profile.burst, state.tokens + delta * profile.rate)",
@@ -81,11 +83,25 @@ in_handler(movement, "local function onMovementAction(player, payload)",
                "#action > 24",
                'if action == "Slide" then',
            ))
+in_handler(weapon, "local function onSetAiming(player, enabled)",
+           "\\nlocal function onFireWeapon(", (
+               'RemoteGuard.allow(player, "SetAiming")',
+               'typeof(enabled) ~= "boolean"',
+           ))
+match = read("src/server/MatchService.luau")
+in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled)",
+           "\\n    Workspace:SetAttribute(\"IronYardMatchMode\"", (
+               'RemoteGuard.allow(player, "SetDuelReady")',
+               'typeof(enabled) ~= "boolean"',
+               'player:SetAttribute("IronYardDuelReady", enabled)',
+           ))
 assert 'RemoteGuard.allow(player, "Diagnostics")' in diagnostics
 assert "if not authorized(player)" in diagnostics
 for key in ("EquipWeapon", "ReloadWeapon", "FireWeapon", "SetSprinting",
-            "MovementAction", "PerformanceDiagnostics"):
+            "MovementAction", "PerformanceDiagnostics", "SetAiming", "SetDuelReady"):
     assert key + ' = "RemoteEvent"' in net, f"Unbound server remote: {key}"
+assert "remotes.SetAiming.OnServerEvent:Connect(onSetAiming)" in weapon
+assert "remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled)" in match
 assert "remotes.EquipWeapon.OnServerEvent:Connect(onEquipWeapon)" in weapon
 assert "remotes.ReloadWeapon.OnServerEvent:Connect(reloadWeapon)" in weapon
 assert "remotes.FireWeapon.OnServerEvent:Connect(onFireWeapon)" in weapon
