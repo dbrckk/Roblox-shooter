@@ -170,3 +170,27 @@ absolue** n'est revendiquée. Pas de nouvelle clé, aucun changement des gains,
 du schéma v1 ou de l'autorité serveur. Les régressions Luau prouvent le
 comptage des chevauchements; les conditions réelles de durée d'arrêt doivent
 encore être éprouvées sur un serveur Roblox autorisé.
+
+ 
+## Libération différée après autosave lent (12 novembre 2026)
+
+Lorsque `PlayerRemoving` trouve un `UpdateAsync` encore occupé au terme
+de son attente bornée, la sauvegarde finale échouait autrefois sans planifier
+un nouveau passage. L'ancien autosave pouvait finalement confirmer une
+photo plus ancienne, tandis que le dernier gain d'XP restait en mémoire et
+que le bail n'était pas libéré.
+
+Le serveur programme désormais **une seule libération différée par session**
+avant de retirer l'enregistrement du joueur actif. La tâche attend la fin
+de l'écriture en cours (attente bornée à 45 secondes), puis tente une
+libération idempotente avec le **jeton serveur original**, avec un deuxième
+essai limité en cas d'échec. Le même garde évite qu'une acquisition tardive
+et `PlayerRemoving` déclenchent deux tâches concurrentes.
+
+Cette tâche est inscrite dans le compteur partagé utilisé par
+`BindToClose` **avant** son démarrage et conserve sa place après le départ
+du joueur. Les tests Luau vérifient 10 000 demandes concurrentes de
+programmation et le suivi d'une écriture occupée, du départ et de la
+libération finale. La CI complète n'est pas un test de latence ou de
+durabilité du DataStore réel ; une panne persistante ou l'arrêt définitif
+du serveur peut encore empêcher le dernier enregistrement.

@@ -27,6 +27,8 @@ def main():
     data = read("src/server/ProgressionService.luau")
     ledger = read("src/server/ProgressionLedger.luau")
     shutdown_tracker = read("src/server/ProgressionShutdownTracker.luau")
+    detached_policy = read("src/server/ProgressionDetachedRelease.luau")
+    workflow = read(".github/workflows/rojo-build.yml")
     awards = read("src/server/CombatAwards.luau")
     weapon = read("src/server/WeaponService.luau")
     match = read("src/server/MatchService.luau")
@@ -47,6 +49,9 @@ def main():
         "local flush -- acquisition may finish after a player has already left",
         "flush = function(player, record, release)",
         "if not ok or not released then",
+        'require(script.Parent:WaitForChild("ProgressionDetachedRelease"))',
+        "queueDetachedRelease(player, record)",
+        "while record.saving and os.clock() < untilTime do",
         "store:UpdateAsync(keyFor(player), function(previous)",
         "local snapshot = cloneSnapshot(record.earned)",
         "record.triedAcquire = true",
@@ -82,11 +87,31 @@ def main():
         "ShutdownTracker.hasPending(shutdownTracker)",
         "if not record.closing and (record.loaded or record.triedAcquire) then",
     ), "Roblox DataStore shutdown accounting")
-    require(
-        data.index("ShutdownTracker.begin(shutdownTracker)",
-                   data.index('if success and result then', data.index('if not isLive(player, record) then')))
-        < data.index("task.spawn(function()", data.index('if not isLive(player, record) then')),
-        "Late acquisition MUST register release before scheduling detached task")
+    contains(detached_policy, (
+        "function Detached.claim(record)",
+        "record.detachedReleaseQueued = true",
+        "record.detachedReleaseQueued == true",
+    ), "Single-flight detached release guard")
+    require("scripts/test_progression_detached_release.luau" in workflow,
+            "Executable slow-autosave departure regression must run in CI")
+    queued = data.index("queueDetachedRelease = function(player, record)")
+    worker = data[queued:data.index("\nlocal function loadOrRetry(", queued)]
+    require(worker.index("DetachedRelease.claim(record)") < worker.index(
+        "ShutdownTracker.begin(shutdownTracker)") < worker.index("task.spawn(function()"),
+        "One final release slot must be claimed and tracked before scheduling work")
+    require("if record.saving then return false end" in worker
+            and "if flush(player, record, true) then return true end" in worker,
+            "Detached release must wait for busy autosave and attempt owned final save")
+    late = data[data.index("if not isLive(player, record) then"):queued]
+    require(late.index("queueDetachedRelease(player, record)")
+            < late.index("ShutdownTracker.finish(shutdownTracker)"),
+            "Late acquisition MUST queue final release before finishing acquire slot")
+    removing = data.split("Players.PlayerRemoving:Connect(function(player)", 1)[1].split(
+        "\n    task.spawn(function()", 1)[0]
+    require(removing.index("released = flush(player, record, true)")
+            < removing.index("queueDetachedRelease(player, record)")
+            < removing.index("records[player] = nil"),
+            "PlayerRemoving must schedule final save after timeout before unlinking player")
     require("while (pending > 0 or ShutdownTracker.hasPending(shutdownTracker))" in data,
             "BindToClose must wait for completed-Player detached saves")
 

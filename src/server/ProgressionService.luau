@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
 local ShutdownTracker = require(script.Parent:WaitForChild("ProgressionShutdownTracker"))
+local DetachedRelease = require(script.Parent:WaitForChild("ProgressionDetachedRelease"))
 
 local ProgressionService = {}
 local STORE_NAME = "IronYard_Progression_v1"
@@ -22,6 +23,7 @@ local shutdownTracker = ShutdownTracker.new()
 local started = false
 local store
 local flush -- acquisition may finish after a player has already left
+local queueDetachedRelease -- one final release, even after the player is unlinked
 
 local zero = Ledger.zero
 local safeInt = Ledger.safeInt
@@ -69,6 +71,7 @@ local function createRecord(player)
         saving = false,
         closing = false,
         lastWriteAt = 0,
+        detachedReleaseQueued = false,
     }
     records[player] = record
     setStatus(player, record, "LOADING")
@@ -111,21 +114,10 @@ local function acquire(player, record)
             record.loaded = true
             record.base = Ledger.sessionBase(result, record.token)
             record.committed = copyStats(result.lock.committed)
-            -- PlayerRemoving may have exhausted its wait while this UpdateAsync
-            -- was still running. Release the acquired lock and save earned XP
-            -- even when the departing Player was removed from records.
-            -- Reserve the follow-up slot BEFORE finishing the acquire slot.
-            -- BindToClose must never observe zero outstanding operations
-            -- between an acquired lease and its detached final release.
-            ShutdownTracker.begin(shutdownTracker)
-            task.spawn(function()
-                local ok, released = pcall(flush, player, record, true)
-                ShutdownTracker.finish(shutdownTracker)
-                if not ok or not released then
-                    warn("[IRON YARD] Late DataStore release failed for UserId "
-                        .. tostring(player.UserId))
-                end
-            end)
+            -- PlayerRemoving may already have unlinked the record. Reserve
+            -- the ONE deferred final release before finishing this acquire.
+            -- It must also handle a save that exceeded PlayerRemoving's wait.
+            queueDetachedRelease(player, record)
             ShutdownTracker.finish(shutdownTracker)
             return true
         end
@@ -185,6 +177,40 @@ flush = function(player, record, release)
     if not success then warn("[IRON YARD] DataStore save failed after retries: " .. tostring(result)) end
     ShutdownTracker.finish(shutdownTracker)
     return false
+end
+
+-- PlayerRemoving gives a busy DataStore a bounded synchronous chance
+-- to finish. If an autosave still occupies the record afterwards, retain
+-- this player record off-roster and retry the FINAL release when it frees.
+-- A late acquire and PlayerRemoving can both request this exact task:
+-- claim it once, and register the shutdown slot BEFORE the task is queued.
+queueDetachedRelease = function(player, record)
+    if not DetachedRelease.claim(record) then return end
+    ShutdownTracker.begin(shutdownTracker)
+    task.spawn(function()
+        local ok, released = pcall(function()
+            -- A DataStore request can be slower than both 12s waits in
+            -- PlayerRemoving/flush. Bound detached memory and work; the
+            -- server's own BindToClose limit remains 26 seconds.
+            local untilTime = os.clock() + 45
+            while record.saving and os.clock() < untilTime do
+                task.wait(0.15)
+            end
+            if record.saving then return false end
+            -- Only the original server/session token can release this key.
+            -- An unacknowledged acquisition may still own its lease.
+            for attempt = 1, 2 do
+                if flush(player, record, true) then return true end
+                if attempt < 2 then task.wait(2) end
+            end
+            return false
+        end)
+        ShutdownTracker.finish(shutdownTracker)
+        if not ok or not released then
+            warn("[IRON YARD] Late DataStore release failed for UserId "
+                .. tostring(player.UserId))
+        end
+    end)
 end
 
 local function loadOrRetry(player, record)
@@ -258,8 +284,14 @@ function ProgressionService.start()
         ShutdownTracker.begin(shutdownTracker)
         local untilTime = os.clock() + 12
         while record.saving and os.clock() < untilTime do task.wait(0.15) end
+        local released = true
         if record.loaded or record.triedAcquire then
-            flush(player, record, true)
+            released = flush(player, record, true)
+            if not released then
+                -- Never silently discard a busy autosave's final XP snapshot.
+                -- The detached task survives unlink and has a shutdown slot.
+                queueDetachedRelease(player, record)
+            end
         end
         records[player] = nil
         ShutdownTracker.finish(shutdownTracker)
