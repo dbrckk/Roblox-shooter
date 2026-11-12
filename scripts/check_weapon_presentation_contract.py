@@ -796,7 +796,7 @@ assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') =
 # restart or teleport after a deferred asset upgrade or server cancel.
 reload_hand = get("src/shared/WeaponReloadHandPlan.luau")
 for needle in (
-    "function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported, hasMagazine)",
+    "function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported, hasMagazine, shellPhase)",
     'weaponId == "AssaultRifle"',
     'weaponId == "Shotgun"',
     "smooth(0.27, 0.74, p)",
