@@ -1,0 +1,15 @@
+IRON YARD — one-time owner-authorized PUBLIC release, 12 November 2026.
+Publish ONLY to the previously verified creator-owned PUBLIC Roblox universe
+through the existing fail-closed CI-gated workflow. No private/alpha target.
+Source PR #41 is merged at 2d99fe8499542ba882b9cf0d0e0c2753d240a9ec.
+It adds a bounded local-only opt-in owner/Studio weapon-swap microprofiler:
+cached A/B model reuse vs full rebuild vs LOD rebuild vs initial equip;
+mean, rolling last-48-sample P95, cached part count and total client RAM.
+The prior owner-only weapon render CPU and FX diagnostic functionality
+remains intact. The swap profiler runs ONLY when PERF is enabled, performs
+no per-frame measurement, and transmits no timing or RAM data to a server.
+Do not alter game authority, hit registration, ammo, damage, approved
+PBR mesh trust, or published creator and experience IDs.
+PR/branch CI and merged main CI passed. Require fresh exact-release-commit
+Rojo CI success and independent public-owner destination verification.
+Do not claim Android device FPS/memory improvements until measured.
