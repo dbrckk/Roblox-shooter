@@ -84,13 +84,13 @@ in_handler(movement, "local function onMovementAction(player, payload)",
                'if action == "Slide" then',
            ))
 in_handler(weapon, "local function onSetAiming(player, enabled)",
-           "\\nlocal function onFireWeapon(", (
+           "\nlocal function onFireWeapon(", (
                'RemoteGuard.allow(player, "SetAiming")',
                'typeof(enabled) ~= "boolean"',
            ))
 match = read("src/server/MatchService.luau")
 in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled)",
-           "\\n    Workspace:SetAttribute(\"IronYardMatchMode\"", (
+           "\n    Workspace:SetAttribute(\"IronYardMatchMode\"", (
                'RemoteGuard.allow(player, "SetDuelReady")',
                'typeof(enabled) ~= "boolean"',
                'player:SetAttribute("IronYardDuelReady", enabled)',
