@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local SafePlanarInput = require(shared:WaitForChild("SafePlanarInput"))
+local MantleCommitPolicy = require(shared:WaitForChild("MantleCommitPolicy"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 
@@ -40,6 +41,7 @@ local function getState(player)
 			lastWallRunAt = -math.huge,
 			lastWallJumpAt = -math.huge,
 			lastMantleAt = -math.huge,
+            mantleToken = 0,
 			lastStateSentAt = -math.huge,
 			slideToken = 0,
 			wallRunToken = 0,
@@ -496,14 +498,17 @@ local function requestWallJump(player, payload)
 end
 
 local function requestMantle(player, payload)
+    -- Mantles are server-authorized movement only during an active round.
+    -- A forged request during RESULTS/DUEL_BREAK must not queue a teleport.
+    if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
 	local character, humanoid, root = getCharacterParts(player)
-	if not character or not humanoid or not root then
-		return
-	end
+	if not character or not humanoid or not root or root.Anchored then
+        return
+    end
 
-	local state = getState(player)
-	local now = os.clock()
-	if now - state.lastMantleAt < MovementConfig.mantleCooldown then
+    local state = getState(player)
+    local now = os.clock()
+    if now - state.lastMantleAt < MovementConfig.mantleCooldown then
 		return
 	end
 
@@ -523,17 +528,35 @@ local function requestMantle(player, payload)
 	end
 
 	state.lastMantleAt = now
+    state.mantleToken += 1
+    local request = {
+        character = character,
+        root = root,
+        token = state.mantleToken,
+        phase = "LIVE",
+        epoch = Workspace:GetAttribute("IronYardFireEpoch"),
+    }
 	state.sliding = false
 	endWallRun(player)
 
 	root.AssemblyLinearVelocity = direction * MovementConfig.mantleForwardSpeed + UP * MovementConfig.mantleUpSpeed
 	task.delay(0.14, function()
 		local _, currentHumanoid, currentRoot = getCharacterParts(player)
-		-- No delayed mantle movement may affect a newly respawned rig.
-		if not currentHumanoid or currentRoot ~= root
-			or player.Character ~= character then
-			return
-		end
+        -- A completed remote cannot teleport a participant after a duel
+        -- reset, round change, respawn, root anchor or state replacement.
+        if not currentHumanoid or currentRoot ~= root
+            or player.Character ~= character
+            or movementStateByPlayer[player] ~= state
+            or not MantleCommitPolicy.canFinish(request, {
+                character = player.Character,
+                root = currentRoot,
+                anchored = currentRoot and currentRoot.Anchored,
+                token = state.mantleToken,
+                phase = Workspace:GetAttribute("NeonMatchPhase"),
+                epoch = Workspace:GetAttribute("IronYardFireEpoch"),
+            }) then
+            return
+        end
 
 		local targetPosition = Vector3.new(
 			currentRoot.Position.X,
@@ -565,6 +588,7 @@ local function onCharacterAdded(player, character)
 	state.boostFuel = MovementConfig.boostFuelMax
 	state.lastSlideAt = -math.huge
 	state.lastBoostAt = -math.huge
+    state.mantleToken += 1
 	state.slideToken += 1
 	state.wallRunToken += 1
 
@@ -612,6 +636,7 @@ function MovementService.resetDuelMovement(player)
     state.boostFuel = MovementConfig.boostFuelMax
     state.lastSlideAt = -math.huge
     state.lastBoostAt = -math.huge
+    state.mantleToken += 1
     local _, _, root = getCharacterParts(player)
     if root then
         root.AssemblyLinearVelocity = Vector3.zero

@@ -142,6 +142,7 @@ jobs:
           ./luau scripts/test_arsenal_baseline.luau
           ./luau scripts/test_ttk_model.luau
           ./luau scripts/test_safe_planar_input.luau
+          ./luau scripts/test_mantle_commit_policy.luau
           ./luau scripts/test_remote_rate_policy.luau
           ./luau scripts/test_spawn_safety.luau
           ./luau scripts/test_supply_rules.luau

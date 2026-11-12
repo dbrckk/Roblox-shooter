@@ -41,3 +41,35 @@ for token in (
     "sendMovementState(player, state)",
 ):
     assert token in server, "Duel must restore fair starting movement: " + token
+
+
+# Delayed mantles must not bypass DUEL_PREP locked spawns or commit after a
+# round/character replacement. Keep these assertions bound to the true
+# request handler, its delayed callback and the real duel reset.
+policy = (root / "src/shared/MantleCommitPolicy.luau").read_text(encoding="utf-8")
+workflow = (root / ".github/workflows/rojo-build.yml").read_text(encoding="utf-8")
+request = server.split("local function requestMantle(player, payload)", 1)[1].split(
+    "\nlocal function onCharacterAdded(", 1)[0]
+assert 'require(shared:WaitForChild("MantleCommitPolicy"))' in server
+assert 'function MantleCommitPolicy.canFinish(request, current)' in policy
+assert 'current.anchored == false' in policy
+assert 'request.phase == "LIVE" and current.phase == "LIVE"' in policy
+assert 'request.epoch == current.epoch' in policy
+assert 'request.token == current.token' in policy
+for guard in (
+    'if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end',
+    'or root.Anchored then',
+    'state.mantleToken += 1',
+    'local request = {',
+    'epoch = Workspace:GetAttribute("IronYardFireEpoch")',
+    'movementStateByPlayer[player] ~= state',
+    'MantleCommitPolicy.canFinish(request, {',
+):
+    assert guard in request, f"Delayed mantle guard missing: {guard}"
+assert request.index('MantleCommitPolicy.canFinish(request, {') < request.index(
+    'currentRoot.CFrame ='), "Mantle must validate phase/epoch BEFORE moving the root"
+assert server.count('state.mantleToken += 1') >= 3, (
+    "New mantles, respawns and duel resets must all invalidate stale callbacks")
+assert './luau scripts/test_mantle_commit_policy.luau' in workflow, (
+    "Pure delayed-mantle regression must run in Rojo CI")
+print("IRON YARD delayed mantle: phase/epoch/root/anchor/token integration OK")
