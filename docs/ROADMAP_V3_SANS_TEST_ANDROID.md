@@ -13,12 +13,10 @@
 - Les tests Luau ont couvert 49 152 sélections pour 4 096 masques d'obstacles et 12 manches, ainsi que les vérifications de personnages d'origine. CI branche, PR et `main` réussies ; **publication publique v54 confirmée** par [Actions #43227082815](https://github.com/dbrckk/Roblox-shooter/actions/runs/43227082815).
 - **A1 reste partiellement ouvert** : aucune validation de duel réelle en Studio et des transitions FFA/1v1 sous réseau perturbé. La progression et les FPS Android réels restent non prouvés. Aucun nouveau modèle VANGUARD/texture PBR n'a été importé par cette version.
 
-### Actualisation — A1 (matrice des transitions) et 0a (harnais TTK), 12 novembre 2026
+### Actualisation — A1 (matrice des transitions), 12 novembre 2026
 
 - **A1 — matrice livrée.** [docs/MATCH_TRANSITIONS.md](MATCH_TRANSITIONS.md) fixe les **6 phases**, **14 arêtes légales**, les événements réellement possibles et les **11 cas** exigés par A1. `scripts/test_match_transitions.luau` les exécute ; `scripts/check_match_transition_contract.py` refuse toute phase, durée ou règle qui divergerait de `MatchService`. **Aucun défaut de transition n'a été démontré : aucun comportement de manche n'a été modifié.**
-- **0a du plan d'écart RIVALS livré** (hors V3) : harnais TTK `TtkModel` avec verrou des valeurs actuelles en CI, **zéro dégât, cadence, portée ou munition modifiés**. Voir [AUDIT_ECART_RIVALS](AUDIT_ECART_RIVALS_2026-11-12.md) §6 bis.
-- **A2 — scénarios hors ligne livrés.** `scripts/test_progression_recovery.luau` exécute 9 scénarios ordonnés sur le registre réel (magasin mémoire reproduisant `UpdateAsync` : valeur courante, abandon sur `nil`, re-normalisation). Contrat étendu : les états dégradés et la CI sont verrouillés. Voir [PROGRESSION_PERSISTENCE](PROGRESSION_PERSISTENCE.md).
-- **Verrous testés par mutation** : un dégât AR-24 modifié fait échouer `test_ttk_model` et `test_arsenal_baseline` ; une durée de phase modifiée fait échouer `check_match_transition_contract`. Valeurs rétablies, `git diff` vide sur les deux fichiers de jeu.
+- **Verrou testé par mutation** : une durée de phase modifiée fait échouer `check_match_transition_contract`, et une cible émise sans arête déclarée dans `startLiveDuelBout` casse le contrat d'arêtes. Fichier restauré, `git diff` vide sur `MatchService`.
 - **A1 reste ouvert** pour ce qui n'est pas automatisable : deux clients Roblox réels, abandons, tiers entrant, respawn pendant `DUEL_PREP`, réseau perturbé.
 
 ## 1. Cible produit, périmètre et principes
@@ -74,8 +72,6 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 
 **Terminé quand :** conservation exacte et non-duplication dans les tests ; aucune promesse de persistance réelle avant une reconnexion testée plus tard.
 
-**Statut 12 novembre 2026 :** les quatre points sont couverts hors ligne. `scripts/test_progression_recovery.luau` exécute **9 scénarios** (autosave puis départ, autosave retardé après libération, acquisition terminée après le départ, deux serveurs, bail expiré pendant une longue manche, XP de session vs confirmée, snapshot corrompu, callback rejoué, absence d'alias) sur le registre réellement appelé par `UpdateAsync`. Le mode dégradé est documenté et verrouillé par contrat (`STUDIO`, `LOCKED`, `RETRYING`, `UNAVAILABLE` ne peuvent pas afficher `SAVED`). **Aucune clé, aucun schéma v1, aucune récompense, aucune durée de bail modifiés.** La reconnexion sur un serveur Roblox publié reste la seule preuve ouverte.
-
 **A3. Robustesse des remotes et du cycle de vie serveur.**  
 **Fichiers :** `RemoteGuard`, `WeaponService`, `MovementService`, `BotNavigation`, `BotService`.
 
@@ -85,7 +81,6 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 4. Ne pas mettre d'outil offensif en contact avec un serveur hors périmètre autorisé.
 
 **Terminé quand :** une erreur de client ou un spam n'altère ni les dégâts, ni la manche, ni les états de mouvement ; tests purs + contrat de raccordement serveur en CI. Les attaques réseau et les vrais raycasts restent à éprouver en moteur.
-
 
 ### LOT B — Qualité 3D réellement déployable (P1, sans produire de packs supplémentaires)
 
@@ -163,7 +158,7 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 | Ordre | ID | Intervention autonome | Livrable vérifiable | Dépendance |
 |---:|---|---|---|---|
 | **1** | **A1** | Matrice FFA/duel, tests des transitions et correction des bugs réels | Matrice + 11 cas + contrat livrés le 12/11 ; preuve moteur restante | Aucune |
-| 2 | A2 | Renforcer scénarios DataStore hors ordre / départ / verrou | 9 scénarios + mode dégradé verrouillés le 12/11 ; reconnexion réelle restante | Aucune pour l'offline |
+| 2 | A2 | Renforcer scénarios DataStore hors ordre / départ / verrou | PR + scénarios ledger non-duplicables | Aucune pour l'offline |
 | 3 | A3 | Audit remotes/mouvements/pathfinding et tests adversariaux autorisés | PR + tableau des validations serveur | Aucune |
 | 4 | B1 | Inventaire certifié des assets : 10 armes / 4 opérateurs / 12 textures | Manifeste de statut + préflight GitHub Actions **sans upload** | Upload réel réservé aux permissions Roblox |
 | 5 | C1 | Tests de cycles de vie long, fuites, streaming, 4 bots, CI moins fragile | PR avec scénarios reproductibles | Aucune pour les politiques pures |
