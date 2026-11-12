@@ -1,0 +1,14 @@
+IRON YARD — one-time owner-authorized PUBLIC Roblox release, 12 November 2026.
+Publish exclusively to the existing creator-owned PUBLIC IRON YARD
+experience through the existing CI-gated and owner-verified workflow.
+PR #43 fixes the private Studio/owner performance overlay to display
+48-sample recent mean and P95 over the SAME rolling window, separated
+by cached weapon model reuse and full rebuild. Previously lifetime mean
+was incorrectly juxtaposed with recent-window P95, hiding regressions.
+The change only affects optional client-side diagnostics, no public UI,
+no server networking, no damage, ammunition, recoil, combat or asset changes.
+PR and branch Rojo CI succeeded; main Rojo CI also succeeded on
+5f17d68daa41784754541f910ad24fe5d5c08f30.
+Require a NEW exact-release-commit green CI and verified creator destination
+before exactly one PUBLIC publish. No claims of measured Android FPS
+without actual device data.
