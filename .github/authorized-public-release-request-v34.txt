@@ -1,0 +1,25 @@
+IRON YARD — one owner-authorized PUBLIC Roblox update, 12 November 2026.
+
+User instructed continued production improvements to the EXISTING PUBLIC
+IRON YARD competitive FPS, not a private test or new experience.
+
+This one-shot release includes merged PR #35 (squash commit
+2f7c08844ee805202f46bbe7859d1ae4c8a20228).
+For original PBR weapon models with multiple glTF material primitives,
+share the identical magazine extraction, B-8 shell, pump, slide, rifle
+charging and sniper bolt CFrames inside one camera-final render frame.
+Only prepare the sniper right-hand bolt CFrame while the sniper is
+equipped. Server-authoritative ammo, shots, player damage, cooldown,
+hitboxes, fire remotes, camera aim, recoil and original material/LOD
+settings remain unchanged. Projectile FX and ejection anchors keep
+their camera-final update order.
+
+The pull request had successful push and PR CI, and the merged main
+commit passed the complete Luau compiler, runnable regressions, source
+contracts and Rojo build. Require a NEW full green CI for the exact
+authorization commit before the existing one-shot dispatcher may run.
+The final public publish workflow must independently verify intended
+creator, existing PUBLIC universe, root place, exact source commit
+and green CI. Never publish a second/private experience.
+Do not claim measured Android FPS or Studio playtest.
+No keys or other credentials are included in this file.
