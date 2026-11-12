@@ -37,7 +37,8 @@ local function templateIsComplete(model, weaponId)
     end
     local pivot = model:FindFirstChild("WeaponOrigin")
     if not pivot or not pivot:IsA("BasePart") then return false end
-    return Layout.collect(model, MeshPolicy.Required[weaponId], validMesh) ~= nil
+    return Layout.collect(model, MeshPolicy.Required[weaponId], validMesh,
+        MeshPolicy.Optional[weaponId]) ~= nil
 end
 
 local function cleanClone(mesh)
@@ -65,7 +66,8 @@ local function importVariant(assetId, weaponId, lod)
         -- mesh, with one MeshPart PER material primitive. This is expected
         -- for the four-material original GLBs, not a duplicate weapon.
         local selected = Layout.collect(package,
-            MeshPolicy.Required[weaponId], validMesh)
+            MeshPolicy.Required[weaponId], validMesh,
+            MeshPolicy.Optional[weaponId])
         assert(selected, "Missing, invalid or duplicated PBR mesh primitives")
         local marker = Layout.origin(package, function(mesh)
             if not mesh:IsA("MeshPart") or mesh.MeshId == "" then return false end
@@ -89,15 +91,17 @@ local function importVariant(assetId, weaponId, lod)
         origin.CFrame = marker.CFrame
         origin.Parent = template
         template.PrimaryPart = origin
-        for _, name in ipairs(MeshPolicy.Required[weaponId]) do
-            local component = Instance.new("Model")
-            component.Name = name
-            for index, part in ipairs(selected[name]) do
-                local clone = cleanClone(part)
-                clone.Name = name .. "_Primitive" .. index
-                clone.Parent = component
+        for _, name in ipairs(MeshPolicy.components(weaponId)) do
+            if selected[name] then
+                local component = Instance.new("Model")
+                component.Name = name
+                for index, part in ipairs(selected[name]) do
+                    local clone = cleanClone(part)
+                    clone.Name = name .. "_Primitive" .. index
+                    clone.Parent = component
+                end
+                component.Parent = template
             end
-            component.Parent = template
         end
         template:SetAttribute("IronYardStudioApproved", true)
         assert(templateIsComplete(template, weaponId))

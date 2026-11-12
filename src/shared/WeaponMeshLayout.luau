@@ -22,8 +22,9 @@ end
 -- Name validation happens on an ancestor Model first, because Roblox may
 -- rename MeshPart primitives inside the authored *_Node Model. Unknown
 -- meshes are ignored; malformed or duplicated known components fail closed.
-function Layout.collect(root, required, validate)
-    if not root or type(required) ~= "table" or type(validate) ~= "function" then
+function Layout.collect(root, required, validate, optional)
+    if not root or type(required) ~= "table" or type(validate) ~= "function"
+        or (optional ~= nil and type(optional) ~= "table") then
         return nil
     end
     local groups = {}
@@ -36,6 +37,7 @@ function Layout.collect(root, required, validate)
             while parent and parent ~= root do
                 if (parent:IsA("Model") or parent:IsA("Folder")) then
                     key = Layout.componentName(parent.Name, required)
+                        or Layout.componentName(parent.Name, optional)
                     if key then
                         owner = parent
                         break
@@ -45,6 +47,7 @@ function Layout.collect(root, required, validate)
             end
             if not key then
                 key = Layout.componentName(part.Name, required)
+                    or Layout.componentName(part.Name, optional)
                 owner = part
             end
             if key then

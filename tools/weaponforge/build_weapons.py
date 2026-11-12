@@ -77,7 +77,6 @@ def pistol(m,high):
     s.append(cylinder("Barrel",(0,.75,.13),.076,.51,m["gunmetal"],24 if high else 12))
     s.append(cylinder("Muzzle bezel",(0,1.0,.13),.115,.08,m["gunmetal"],24 if high else 12))
     s.append(cylinder("Recessed bore",(0,1.048,.13),.052,.015,m["carbon"]))
-    s.append(box("Magazine plate",(0,-.35,-.56),(.23,.21,.065),m["accent_sand"]))
     if high:
         for side in (-1,1):
             for i in range(2):
@@ -94,6 +93,17 @@ def pistol(m,high):
             parts.append(box("Slide serration",(side*.223,-.24+i*.05,.24),
                              (.012,.022,.13),m["carbon"],0))
     joined(parts,"IRONYARD_Pistol_Slide")
+    # Independent magazine sharing the authored root pivot (LOD0 + LOD1).
+    mag=[
+        box("Magazine casing",(0,-.32,-.43),(.195,.24,.40),m["gunmetal"],3 if high else 1),
+        box("Magazine follower",(0,-.30,-.235),(.175,.20,.035),m["carbon"],1),
+        box("Magazine floorplate",(0,-.35,-.66),(.24,.25,.075),m["accent_sand"],2 if high else 1),
+    ]
+    if high:
+        for side in (-1,1):
+            mag.append(box("Magazine side grip",(side*.101,-.34,-.53),
+                (.016,.16,.12),m["carbon"],1))
+    joined(mag,"IRONYARD_Pistol_Magazine")
 
 def knife(m,high):
     p=[]

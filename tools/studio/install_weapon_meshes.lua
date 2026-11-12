@@ -5,6 +5,7 @@
 local Selection=game:GetService("Selection")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local WeaponMeshLayout=require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshLayout"))
+local WeaponMeshPolicy=require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
 local expected={
     Pistol={"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
     Knife={"IRONYARD_Knife_Static"},
@@ -46,7 +47,7 @@ local function collectMeshes(root, weapon)
     local groups=WeaponMeshLayout.collect(root, expected[weapon], function(child)
         return child.MeshId~="" and validAppearance(child)
             and child.Size.Magnitude>=0.03 and child.Size.Magnitude<=10
-    end)
+    end, WeaponMeshPolicy.Optional[weapon])
     assert(groups,"Missing, incomplete or duplicate PBR component in "..weapon)
     -- Source glTF material primitives can be nested MeshParts under a
     -- *_Node Model. Each validated group is retained for local animation.
@@ -94,7 +95,8 @@ local function installVariant(source,weapon,lod)
     origin.CFrame=rootCFrame
     origin.Parent=template
     template.PrimaryPart=origin
-    for _,name in ipairs(expected[weapon]) do
+    for _,name in ipairs(WeaponMeshPolicy.components(weapon)) do
+      if found[name] then
         local component=Instance.new("Model")
         component.Name=name
         for i,sourcePart in ipairs(found[name]) do
@@ -112,6 +114,7 @@ local function installVariant(source,weapon,lod)
             clone.Parent=component
         end
         component.Parent=template
+      end
     end
     template:SetAttribute("IronYardStudioApproved",true)
     template.Parent=category

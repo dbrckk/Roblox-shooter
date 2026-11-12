@@ -8,7 +8,7 @@ import sys
 ORIGIN_NAME="IRONYARD_WeaponOrigin"
 
 REQUIRED={
- "pistol":{"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide"},
+ "pistol":{"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide","IRONYARD_Pistol_Magazine"},
  "knife":{"IRONYARD_Knife_Static"},
  "assault_rifle":{"IRONYARD_AssaultRifle_Static","IRONYARD_AssaultRifle_ChargingHandle",
                   "IRONYARD_AssaultRifle_Magazine"},

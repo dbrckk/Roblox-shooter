@@ -9,10 +9,24 @@ P.Required={
     Shotgun={"IRONYARD_Shotgun_Static","IRONYARD_Shotgun_PumpAction"},
     Sniper={"IRONYARD_Sniper_Static","IRONYARD_Sniper_Bolt"},
 }
+-- Preserve existing approved two-piece PBR pistols; newer kits carry
+-- an independently animated third magazine component, strictly validated.
+P.Optional={Pistol={"IRONYARD_Pistol_Magazine"}}
+local COMPONENTS={}
+for weapon,required in pairs(P.Required) do
+    local names={}
+    for _,name in ipairs(required) do table.insert(names,name) end
+    for _,name in ipairs(P.Optional[weapon] or {}) do table.insert(names,name) end
+    COMPONENTS[weapon]=names
+end
+function P.components(weapon)
+    return COMPONENTS[weapon]
+end
 P.Maps={"ColorMap","NormalMap","RoughnessMap","MetalnessMap"}
 
 local RUNTIME_NAMES={
     IRONYARD_Pistol_Slide="Slide",
+    IRONYARD_Pistol_Magazine="Magazine",
     IRONYARD_AssaultRifle_ChargingHandle="ChargingHandle",
     IRONYARD_AssaultRifle_Magazine="Magazine",
     IRONYARD_Shotgun_PumpAction="PumpAction",
