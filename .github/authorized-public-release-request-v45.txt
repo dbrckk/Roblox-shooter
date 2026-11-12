@@ -1,0 +1,28 @@
+IRON YARD — owner-authorized ONE-SHOT PUBLIC Roblox update, 12 November 2026.
+
+User requested continued production improvements in the EXISTING PUBLIC
+IRON YARD FPS experience. Authorize one release containing the merged
+duel preparation recovery fix from PR #48, at exact source commit:
+7b217fc3cf88899d85b252dadd0b5644936abd5c
+
+The original duel preparation now checks the two original living,
+anchored character generations during the existing 0.2-second match
+tick and again at the DUEL_PREP -> LIVE boundary. If a character dies,
+respawns, loses its anchored root or the preparation references vanish,
+the server clears stale combat state and live rig references, releases
+both old prep roots, and transitions to DUEL_BREAK with the existing
+20-second bounded recovery clock. A failed DuelCombatState.begin also
+uses this cleanup path. No missing prep can silently leave DUEL_PREP
+in its former dead-end. Only a successful begin consumes another bout.
+One-survivor forfeits and score/award rules remain unchanged.
+
+Pure Luau regression simulates 20,000 changing character generations,
+malformed/missing prep, and both sides' readiness. Python contracts
+require actual MatchService integration. Official Luau, full tests
+and Rojo build passed on PR and merged main.
+
+Require a fresh successful full CI on THIS authorization commit,
+independent creator/owner/universe/starting-place verification and
+existing PUBLIC Roblox destination. Never create a private or cloned
+experience, publish unrelated work, or claim verified Studio physics
+or Android measurements. No credentials are stored in this file.
