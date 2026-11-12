@@ -462,9 +462,8 @@ assert cache_body.index("local changingWeapon") < cache_body.index(
     "self.currentWeaponId = weaponId")
 assert 'self:_clearModel()' in cache_body, (
     "Same-weapon LOD upgrades must still destroy their old source")
-# The private owner/Studio profiler uses an isolated client ModuleScript and
-# samples ONLY actual equip completion, never the per-frame weapon draw loop.
-# Its 48-slot ring retains no Models, network payloads or user identifiers.
+# Private swap timing is bounded, opt-in, local and compatible with the
+# pre-existing owner-only per-frame weapon CPU diagnostics.
 swap_metrics = get("src/shared/WeaponSwapMetrics.luau")
 for needle in (
     "Metrics.WINDOW = 48",
@@ -474,33 +473,27 @@ for needle in (
     "function Metrics.record(kind, durationSeconds, visibleParts, retainedParts)",
     "function Metrics.snapshot()",
 ):
-    assert needle in swap_metrics, f"Bounded private performance metrics missing: {needle}"
-perf_overlay = get("src/client/PerfOverlay.client.luau")
-assert perf_overlay.index("if not RunService:IsStudio()") < perf_overlay.index(
+    assert needle in swap_metrics, f"Swap profiler missing: {needle}"
+private_overlay = get("src/client/PerfOverlay.client.luau")
+assert private_overlay.index("if not RunService:IsStudio()") < private_overlay.index(
     "WeaponSwapMetrics.enable(active)")
-for needle in (
-    'WaitForChild("WeaponSwapMetrics")',
-    "WeaponSwapMetrics.enable(active)",
-    "WeaponSwapMetrics.snapshot()",
-    "Stats:GetTotalMemoryUsageMb()",
-    "RAM client TOTAL:",
-):
-    assert needle in perf_overlay, f"Owner-only Android swap profiling UI missing: {needle}"
-for needle in (
-    'WaitForChild("WeaponSwapMetrics")',
-    "local startedAt = WeaponSwapMetrics.isEnabled() and os.clock() or nil",
-    "WeaponSwapMetrics.record(kind, os.clock() - startedAt, #self.parts,",
-    "WeaponSwapMetrics.noteCache(self.cachedViewmodel",
-):
-    assert needle in visuals, f"Weapon profiling wiring missing: {needle}"
-profile_render = visuals.split("function WeaponVisuals:_render(deltaTime)", 1)[1]
-profile_render = profile_render.split("function WeaponVisuals:_spawnTransient", 1)[0]
-assert "WeaponSwapMetrics.record" not in profile_render
-assert "WeaponSwapMetrics.snapshot" not in profile_render
-profile_switch = visuals.split("function WeaponVisuals:setWeapon(weaponId)", 1)[1]
-profile_switch = profile_switch.split("function WeaponVisuals:_refreshImportedWeaponIfSafe", 1)[0]
-assert profile_switch.index("self:_applyCareerFinish()") < profile_switch.index(
-    "WeaponSwapMetrics.record(kind"), "Record after completed visual equip"
+for needle in ('WaitForChild("WeaponSwapMetrics")', "WeaponSwapMetrics.enable(active)",
+               "WeaponSwapMetrics.snapshot()", "Stats:GetTotalMemoryUsageMb()",
+               "weaponMetrics()", "RAM client TOTAL:"):
+    assert needle in private_overlay, f"Private profiler merger lost {needle}"
+for needle in ('WaitForChild("WeaponSwapMetrics")',
+               "local startedAt = WeaponSwapMetrics.isEnabled() and os.clock() or nil",
+               "WeaponSwapMetrics.record(kind, os.clock() - startedAt, #self.parts,",
+               "WeaponSwapMetrics.noteCache(self.cachedViewmodel"):
+    assert needle in visuals, f"Swap timing integration missing: {needle}"
+render_body = visuals.split("function WeaponVisuals:_render(deltaTime)", 1)[1]
+render_body = render_body.split("function WeaponVisuals:_spawnTransient", 1)[0]
+assert "WeaponSwapMetrics.record" not in render_body
+assert "WeaponSwapMetrics.snapshot" not in render_body
+switch_body = visuals.split("function WeaponVisuals:setWeapon(weaponId)", 1)[1]
+switch_body = switch_body.split("function WeaponVisuals:_refreshImportedWeaponIfSafe", 1)[0]
+assert switch_body.index("self:_applyCareerFinish()") < switch_body.index(
+    "WeaponSwapMetrics.record(kind"), "Record only after finished equip"
 refresh_policy = get("src/shared/WeaponMeshRefreshPolicy.luau")
 for needle in (
     "function Policy.shouldRefresh(imported, activeLod, wantedLod, available, status)",
@@ -866,6 +859,44 @@ assert visuals.index("self.hasActiveImpactMarks = true") < (
     visuals.index("if not slot.part then", visuals.index("function WeaponVisuals:_trackImpactMark")))
 assert visuals.index("self.hasActiveImpactMarks = anyLive") > (
     visuals.index("function WeaponVisuals:_updateImpactMarks"))
+
+# The private owner/Studio PERF panel must not benchmark weapons for every
+# public player. Local CPU samples run only after the private toggle is open;
+# no server signals or extra RenderStepped callback.
+perf_overlay = get("src/client/PerfOverlay.client.luau")
+perf_policy = get("src/shared/WeaponRenderDiagnostics.luau")
+for needle in (
+    "function Diagnostics.new()",
+    "function Diagnostics.record(state, dt, cpuSeconds)",
+    "function Diagnostics.clear(state)",
+    "dt > 0.25",
+):
+    assert needle in perf_policy, f"Private weapon CPU policy missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponRenderDiagnostics")',
+    'self.privatePerfEnabled = Players.LocalPlayer:GetAttribute("IronYardPrivatePerfActive") == true',
+    'self.privatePerfWindow = WeaponRenderDiagnostics.new()',
+    'local privatePerfStart = self.privatePerfEnabled and os.clock() or nil',
+    'self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)',
+    'WeaponRenderDiagnostics.record(',
+    'player:SetAttribute("IronYardPerfWeaponMeanMs", snapshot.meanMs)',
+    'player:SetAttribute("IronYardPerfWeaponSource",',
+    'player:SetAttribute("IronYardPerfFxActive", fxActive)',
+):
+    assert needle in visuals, f"Opt-in viewmodel profiling missing: {needle}"
+assert visuals.count("self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)") == 3
+assert 'RunService.RenderStepped:Connect' not in visuals
+for needle in (
+    "if not RunService:IsStudio() and not (",
+    "player.UserId == game.CreatorId",
+    'player:SetAttribute("IronYardPrivatePerfActive", active)',
+    'player:SetAttribute("IronYardPrivatePerfActive", false)',
+    'local function weaponMetrics()',
+    'CPU arme: %.2fms moy | %.2fms pic',
+    'Effets transitoires: %d / %d',
+):
+    assert needle in perf_overlay, f"Owner-only PERF UI integration missing: {needle}"
+assert 'FireServer(active and "start" or "stop")' in perf_overlay
 
 # Mobile effects adapt only the transient pool after sustained frame drops.
 # The user-selected preset, confirmed-hit priority and server damage stay put.
