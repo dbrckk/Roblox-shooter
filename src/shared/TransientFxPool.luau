@@ -79,6 +79,19 @@ function Pool.moves(targetProvided, arcHeight, gravityDrop, spinAngle)
         or type(spinAngle) == "number" and spinAngle ~= 0
 end
 
+-- These flags are recomputed once when a pooled Part is spawned/recycled.
+-- Constant-size shell casings need no redundant Size writes on RenderStepped.
+-- Vector3 equality is exact for a fixed authored size; no interpolation needed.
+function Pool.resizes(fromSize, toSize)
+    return fromSize ~= toSize
+end
+
+-- Most effects never flicker, so their per-frame opacity must not pay for
+-- a sine calculation. This is presentation-only, not damage or timing.
+function Pool.flickers(amount)
+    return type(amount) == "number" and amount ~= 0 and amount == amount
+end
+
 function Pool.progress(slot, now, visible)
     if type(slot) ~= "table" or not visible or not finite(now)
         or not finite(slot.startedAt) or not finite(slot.expiresAt)
