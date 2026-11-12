@@ -14,6 +14,7 @@ local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitFo
 local WeaponPbrFxSockets = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponPbrFxSockets"))
 local WeaponMeshRefresh = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshRefreshPolicy"))
 local WeaponMeshSwapState = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshSwapState"))
+local WeaponViewmodelCachePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponViewmodelCachePolicy"))
 local WeaponMeshLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshLayout"))
 local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAudioPolicy"))
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
@@ -79,6 +80,9 @@ function WeaponVisuals.new(WeaponConfig)
 	self.currentWeaponId = "AssaultRifle"
 	self.model = nil
 	self.parts = {}
+    -- One briefly retained previous viewmodel, never a five-weapon arsenal.
+    -- Non-rendered models are unparented and evicted on the existing LOD poll.
+    self.cachedViewmodel = nil
 	self.recoil = 0
 	self.fireStartedAt = -math.huge
 	self.equipStartedAt = os.clock()
@@ -660,6 +664,32 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
 end
 
 function WeaponVisuals:setWeapon(weaponId)
+    -- Only REAL weapon changes may park the previous model. An idle LOD
+    -- rebuild calls setWeapon on the same ID and must destroy the old mesh
+    -- instead of retaining a stale LOD behind a graphics-preset change.
+    local previousModel, previousParts = self.model, self.parts
+    local previousWeaponId = self.currentWeaponId
+    local changingWeapon = previousModel ~= nil and previousWeaponId ~= weaponId
+    local reused = nil
+    if changingWeapon then
+        local retained = self.cachedViewmodel
+        self.cachedViewmodel = nil
+        if retained then
+            local wantedLod = WeaponMeshPolicy.lod(
+                Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
+                UserInputService.TouchEnabled)
+            if WeaponViewmodelCachePolicy.canReuse(
+                retained, weaponId, wantedLod, os.clock()) then
+                reused = retained
+            else
+                retained.model:Destroy()
+            end
+        end
+    end
+    local previousImported = self.currentWeaponImported
+    local previousLod = self.activeMeshLod
+    local previousDetailTier = self.detailTier
+    local previousPbrMagazine = self.currentWeaponHasPbrMagazine
     -- A late PBR LOD refresh may change which authored magazine exists.
     self.currentWeaponHasPbrMagazine = false
 	self.currentWeaponId = weaponId
@@ -681,15 +711,57 @@ function WeaponVisuals:setWeapon(weaponId)
     self.reloadFinishedAt = -math.huge
     self.lastCameraPosition = nil
     self.lastCameraCFrame = nil
-	self:_clearModel()
+    if changingWeapon and WeaponViewmodelCachePolicy.shouldStore(
+        previousWeaponId, weaponId, #previousParts) then
+        -- A single fully built model/metadata pair survives a rapid A/B
+        -- toggle for only a few seconds. It has no Parent while inactive:
+        -- no render, physics, queries, camera hooks or extra signal handlers.
+        previousModel.Parent = nil
+        self.cachedViewmodel = {
+            weaponId = previousWeaponId, model = previousModel,
+            parts = previousParts, imported = previousImported,
+            lod = previousLod, detailTier = previousDetailTier,
+            hasPbrMagazine = previousPbrMagazine == true,
+            stashedAt = os.clock(),
+        }
+        self.model = nil
+        self.parts = {}
+        self.lastViewmodelHidden = nil
+        self.detailTier = nil
+    else
+        self:_clearModel()
+    end
     self.currentWeaponImported = false
     self.activeMeshLod = nil
     self.nextWeaponMeshCheck = 0
 
-	local model = Instance.new("Model")
-	model.Name = weaponId .. "Viewmodel"
-	model.Parent = workspace.CurrentCamera or workspace
-	self.model = model
+    local model = reused and reused.model or Instance.new("Model")
+    model.Name = weaponId .. "Viewmodel"
+    if reused then
+        self.model = model
+        self.parts = reused.parts
+        self.currentWeaponImported = reused.imported
+        self.activeMeshLod = reused.lod
+        self.currentWeaponHasPbrMagazine = reused.hasPbrMagazine
+        self.detailTier = reused.detailTier
+        -- Match today's graphics preset before presenting old procedure
+        -- details. This never recolors trusted imported PBR material maps.
+        self:_syncDetailTier()
+        -- Position cached parts against the CURRENT camera while unparented,
+        -- preventing an old camera transform from flashing for one frame.
+        local camera = workspace.CurrentCamera
+        if camera then
+            local root = camera.CFrame *
+                (WEAPON_OFFSETS[weaponId] or WEAPON_OFFSETS.Pistol)
+            for _, entry in ipairs(self.parts) do
+                entry.part.CFrame = root * entry.offset
+            end
+        end
+        model.Parent = camera or workspace
+        model:SetAttribute("IronYardWeaponUpgrade", nil)
+    else
+        model.Parent = workspace.CurrentCamera or workspace
+        self.model = model
 
 	if weaponId == "AssaultRifle" then
         if not self:_createImportedWeapon(model, "AssaultRifle") then
@@ -715,6 +787,7 @@ function WeaponVisuals:setWeapon(weaponId)
     if not self.currentWeaponImported then
         model:SetAttribute("IronYardWeaponSource", "PROCEDURAL_PARTS")
     end
+    end -- new model construction (cache reuse keeps existing validated parts)
     local pose = WeaponAimPose.get(weaponId, self.currentWeaponImported)
     -- Imported mesh sight axes have a slight slope in Blender. Rotate the
     -- already-centered authored front/rear axis at equip time only, not on
@@ -730,6 +803,13 @@ end
 function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
     if now < self.nextWeaponMeshCheck then return end
     self.nextWeaponMeshCheck = now + 1.2
+    -- TTL cleanup shares the existing low-frequency LOD polling path; this
+    -- never adds a task, Tween, RenderStep callback or per-frame scan.
+    local retained = self.cachedViewmodel
+    if retained and WeaponViewmodelCachePolicy.expired(retained, now) then
+        retained.model:Destroy()
+        self.cachedViewmodel = nil
+    end
     if not self.model or not self.currentWeaponId then return end
 
     local lod = WeaponMeshPolicy.lod(

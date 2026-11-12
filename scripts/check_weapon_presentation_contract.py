@@ -425,6 +425,43 @@ assert upgrade.index("WeaponMeshSwapState.capture(self)") < upgrade.index(
         "Cosmetic mesh hot-swap must restore all interpolated animation state"
     )
 
+# The one-slot previous-weapon cache must never retain more than one
+# suspended Model, and must not bypass safety of the existing same-weapon
+# LOD refresh. Reusing visual geometry cannot reuse old combat animation.
+cache_policy = get("src/shared/WeaponViewmodelCachePolicy.luau")
+for needle in (
+    "Policy.TTL = 8",
+    "Policy.MAX_PARTS = 80",
+    "function Policy.shouldStore(previousWeaponId, weaponId, partCount)",
+    "function Policy.expired(entry, now)",
+    "function Policy.canReuse(entry, weaponId, wantedLod, now)",
+):
+    assert needle in cache_policy, f"Bounded viewmodel cache policy missing: {needle}"
+for needle in (
+    'WaitForChild("WeaponViewmodelCachePolicy")',
+    "self.cachedViewmodel = nil",
+    "local changingWeapon = previousModel ~= nil and previousWeaponId ~= weaponId",
+    "WeaponViewmodelCachePolicy.canReuse(",
+    "WeaponViewmodelCachePolicy.shouldStore(",
+    "previousModel.Parent = nil",
+    "retained.model:Destroy()",
+    "model.Parent = camera or workspace",
+    "entry.part.CFrame = root * entry.offset",
+    "self:_syncDetailTier()",
+    "WeaponViewmodelCachePolicy.expired(retained, now)",
+):
+    assert needle in visuals, f"One-slot weapon model cache integration missing: {needle}"
+cache_body = visuals.split("function WeaponVisuals:setWeapon(weaponId)", 1)[1]
+cache_body = cache_body.split("function WeaponVisuals:_refreshImportedWeaponIfSafe", 1)[0]
+assert cache_body.index("previousModel.Parent = nil") < cache_body.index(
+    "model.Parent = camera or workspace")
+assert cache_body.index("entry.part.CFrame = root * entry.offset") < cache_body.index(
+    "model.Parent = camera or workspace"), "No stale camera frame when reparenting cached viewmodel"
+assert cache_body.count("self.cachedViewmodel = {") == 1, "Only one cached model"
+assert cache_body.index("local changingWeapon") < cache_body.index(
+    "self.currentWeaponId = weaponId")
+assert 'self:_clearModel()' in cache_body, (
+    "Same-weapon LOD upgrades must still destroy their old source")
 refresh_policy = get("src/shared/WeaponMeshRefreshPolicy.luau")
 for needle in (
     "function Policy.shouldRefresh(imported, activeLod, wantedLod, available, status)",
