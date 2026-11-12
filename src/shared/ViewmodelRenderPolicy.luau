@@ -9,15 +9,29 @@ function Policy.needsUpdate(previousHidden, hidden)
     return previousHidden == nil or previousHidden ~= hidden
 end
 
--- Skip expensive invisible sniper viewmodel geometry when the optical HUD
--- fully covers it. Never skip a queued flash, spent case or reload: these
--- still need their current-frame muzzle / ejection anchors. Pool updates
--- and the camera's final pose are serviced before the caller returns.
+-- The optical overlay hides every sniper MeshPart. Skip transform work
+-- until a scheduled casing is ACTUALLY due, instead of rendering dozens of
+-- invisible frames during its 0.43s delay. The due frame must update the
+-- socket against the final camera pose before ejecting the casing.
+-- Pending flash and confirmed reload always force a complete render.
+-- A missing/invalid clock or casing timestamp fails closed (no skip).
 function Policy.skipHiddenSniper(weaponId, scoped, hidden, reloading,
-    pendingFlash, pendingCartridge)
-    return weaponId == "Sniper" and scoped == true and hidden == true
-        and reloading == false and pendingFlash == nil
-        and pendingCartridge == nil
+    pendingFlash, pendingCartridge, now)
+    if weaponId ~= "Sniper" or scoped ~= true or hidden ~= true
+        or reloading ~= false or pendingFlash ~= nil then
+        return false
+    end
+    if pendingCartridge == nil then return true end
+    if type(pendingCartridge) ~= "table"
+        or type(pendingCartridge.at) ~= "number"
+        or pendingCartridge.at ~= pendingCartridge.at
+        or pendingCartridge.at < 0
+        or pendingCartridge.at == math.huge
+        or type(now) ~= "number" or now ~= now
+        or now < 0 or now == math.huge then
+        return false
+    end
+    return now < pendingCartridge.at
 end
 
 function Policy.transparency(base, hidden)
