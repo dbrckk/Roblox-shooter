@@ -92,6 +92,13 @@ def main():
     require(ledger.index('"Progression lock exceeds stored counter: " .. field')
             < ledger.index('"Progression release exceeds stored counter: " .. field'),
             "Check lock and marker invariants when normalizing records")
+    require('lock.expiresAt = math.max(lock.expiresAt, timestamp + leaseSeconds)' in ledger,
+            "Out-of-order acquire retry must not reduce the existing owner's expiry")
+    require('data.lock.expiresAt = math.max(data.lock.expiresAt,' in ledger
+            and 'timestamp + leaseSeconds)' in ledger,
+            "Out-of-order autosave must not reduce the existing owner's expiry")
+    require('lock and lock.owner ~= token and lock.expiresAt > timestamp' in ledger,
+            "Another server must still wait until the active lease expires")
     require("if release and data.lastSession" in ledger,
             "Previously released sessions need idempotent acknowledgement after a new lease")
     require("publish(player, record)" in data.split("local function flush(player, record, release)")[-1]
