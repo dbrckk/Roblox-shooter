@@ -7,7 +7,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-**État vérifié le 12 novembre 2026 :** expérience IRON YARD publique **v34**, build et publication GitHub Actions réussis. Armes PBR : dix IDs enregistrés (5 armes × 2 LOD) ; 1v1 codé avec tests ; modèles VANGUARD (4 IDs) et matériaux de monde PBR (12 IDs) non activés dans les registres. FPS Android, gameplay moteur et persistance DataStore réelle restent non mesurés/à valider.
+**État vérifié le 12 novembre 2026 :** expérience IRON YARD publique **v35**, build et publication GitHub Actions réussis. Armes PBR : dix IDs enregistrés (5 armes × 2 LOD) ; 1v1 codé avec tests ; modèles VANGUARD (4 IDs) et matériaux de monde PBR (12 IDs) non activés dans les registres. FPS Android, gameplay moteur et persistance DataStore réelle restent non mesurés/à valider.
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet vise désormais **une seule livraison publique**, sans phase privée : GitHub Actions produit un build testable, puis une publication publique manuelle strictement contrôlée lorsque l'expérience Roblox et les accès sont prêts. Un build GitHub n'est pas une publication Roblox.
 
