@@ -148,3 +148,25 @@ ré-acquisition obsolète, sauvegarde obsolète, écriture incrémentale dans le
 désordre, refus d'un second serveur avant l'expiration la plus récente,
 transfert exactement à expiration et refus d'une ancienne session après le
 transfert. Ces tests ne mesurent pas la fiabilité du service DataStore réel.
+
+
+## Sauvegarde finale surveillée pendant la fermeture serveur (12 novembre 2026)
+
+Une déconnexion pendant un `UpdateAsync` lent peut continuer à libérer son
+verrou de session après que `PlayerRemoving` a retiré le joueur du registre
+actif. Avant le correctif, `BindToClose` comptait uniquement les joueurs
+encore présents : il pouvait terminer immédiatement avec zéro joueur et
+interrompre cette sauvegarde tardive. Désormais un compteur borné de tâches
+DataStore en cours suit aussi les acquisitions, les autosaves, les
+`PlayerRemoving` et les libérations différées. La libération est enregistrée
+**avant** que l'acquisition terminée ne quitte le compteur, afin qu'aucun
+intervalle transitoire ne soit interprété comme « plus rien à attendre ».
+
+Lors du shutdown, le serveur ne déclenche pas une seconde libération pour un
+joueur déjà en cours de sortie et attend les opérations actives ou jusqu'au
+délai de 26 secondes préexistant. En cas d'indisponibilité prolongée du
+DataStore, la sauvegarde reste best effort et **aucune garantie de persistance
+absolue** n'est revendiquée. Pas de nouvelle clé, aucun changement des gains,
+du schéma v1 ou de l'autorité serveur. Les régressions Luau prouvent le
+comptage des chevauchements; les conditions réelles de durée d'arrêt doivent
+encore être éprouvées sur un serveur Roblox autorisé.

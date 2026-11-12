@@ -26,6 +26,7 @@ def contains(text: str, items, scope: str):
 def main():
     data = read("src/server/ProgressionService.luau")
     ledger = read("src/server/ProgressionLedger.luau")
+    shutdown_tracker = read("src/server/ProgressionShutdownTracker.luau")
     awards = read("src/server/CombatAwards.luau")
     weapon = read("src/server/WeaponService.luau")
     match = read("src/server/MatchService.luau")
@@ -45,7 +46,7 @@ def main():
         "local function acquire(player, record)",
         "local flush -- acquisition may finish after a player has already left",
         "flush = function(player, record, release)",
-        "if not flush(player, record, true) then",
+        "if not ok or not released then",
         "store:UpdateAsync(keyFor(player), function(previous)",
         "local snapshot = cloneSnapshot(record.earned)",
         "record.triedAcquire = true",
@@ -65,6 +66,29 @@ def main():
     ), "DataStore lease/recovery")
     require("record.earned[field] += amount" not in data,
             "Unsafe partial progression award mutation must not return")
+    contains(shutdown_tracker, (
+        "function Tracker.new()",
+        "function Tracker.begin(state)",
+        "function Tracker.finish(state)",
+        "function Tracker.hasPending(state)",
+        "state.count += 1",
+        "state.count -= 1",
+    ), "Pure in-flight shutdown operation tracker")
+    contains(data, (
+        'require(script.Parent:WaitForChild("ProgressionShutdownTracker"))',
+        "local shutdownTracker = ShutdownTracker.new()",
+        "ShutdownTracker.begin(shutdownTracker)",
+        "ShutdownTracker.finish(shutdownTracker)",
+        "ShutdownTracker.hasPending(shutdownTracker)",
+        "if not record.closing and (record.loaded or record.triedAcquire) then",
+    ), "Roblox DataStore shutdown accounting")
+    require(
+        data.index("ShutdownTracker.begin(shutdownTracker)",
+                   data.index('if success and result then', data.index('if not isLive(player, record) then')))
+        < data.index("task.spawn(function()", data.index('if not isLive(player, record) then')),
+        "Late acquisition MUST register release before scheduling detached task")
+    require("while (pending > 0 or ShutdownTracker.hasPending(shutdownTracker))" in data,
+            "BindToClose must wait for completed-Player detached saves")
 
     contains(ledger, (
         "function Ledger.normalize(raw)",

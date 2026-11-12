@@ -7,6 +7,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
+local ShutdownTracker = require(script.Parent:WaitForChild("ProgressionShutdownTracker"))
 
 local ProgressionService = {}
 local STORE_NAME = "IronYard_Progression_v1"
@@ -14,6 +15,10 @@ local AUTOSAVE_SECONDS = 45
 local LEASE_SECONDS = 180
 local RETRY_LIMIT = 3
 local records = {}
+-- Count in-flight DataStore operations even after PlayerRemoving unlinks a
+-- Player. BindToClose otherwise sees zero records and may end the server
+-- while a late acquisition is still saving earned progression.
+local shutdownTracker = ShutdownTracker.new()
 local started = false
 local store
 local flush -- acquisition may finish after a player has already left
@@ -92,6 +97,7 @@ local function acquire(player, record)
     if record.loaded or record.saving or record.closing or not store then return end
     record.saving = true
     record.triedAcquire = true
+    ShutdownTracker.begin(shutdownTracker)
     local success, result = retry(function()
         local timestamp = os.time()
         return store:UpdateAsync(keyFor(player), function(previous)
@@ -108,13 +114,22 @@ local function acquire(player, record)
             -- PlayerRemoving may have exhausted its wait while this UpdateAsync
             -- was still running. Release the acquired lock and save earned XP
             -- even when the departing Player was removed from records.
+            -- Reserve the follow-up slot BEFORE finishing the acquire slot.
+            -- BindToClose must never observe zero outstanding operations
+            -- between an acquired lease and its detached final release.
+            ShutdownTracker.begin(shutdownTracker)
             task.spawn(function()
-                if not flush(player, record, true) then
-                    warn("[IRON YARD] Late DataStore release failed for UserId " .. tostring(player.UserId))
+                local ok, released = pcall(flush, player, record, true)
+                ShutdownTracker.finish(shutdownTracker)
+                if not ok or not released then
+                    warn("[IRON YARD] Late DataStore release failed for UserId "
+                        .. tostring(player.UserId))
                 end
             end)
+            ShutdownTracker.finish(shutdownTracker)
             return true
         end
+        ShutdownTracker.finish(shutdownTracker)
         return false
     end
     if success and result then
@@ -123,10 +138,12 @@ local function acquire(player, record)
         record.committed = copyStats(result.lock.committed)
         setStatus(player, record, "ONLINE")
         publish(player, record) -- includes XP earned during the load
+        ShutdownTracker.finish(shutdownTracker)
         return true
     end
     setStatus(player, record, success and "LOCKED" or "RETRYING")
     if not success then warn("[IRON YARD] DataStore load retry required: " .. tostring(result)) end
+    ShutdownTracker.finish(shutdownTracker)
     return false
 end
 
@@ -135,11 +152,15 @@ flush = function(player, record, release)
     -- response. On PlayerRemoving, safely release ONLY our GUID-owned lock
     -- and commit pending XP even when the initial acknowledgement was lost.
     if not store or (not record.loaded and not release) then return false end
+    ShutdownTracker.begin(shutdownTracker)
     local waitStarted = os.clock()
     while record.saving and os.clock() - waitStarted < 12 do
         task.wait(0.15)
     end
-    if record.saving then return false end
+    if record.saving then
+        ShutdownTracker.finish(shutdownTracker)
+        return false
+    end
     record.saving = true
     local snapshot = cloneSnapshot(record.earned)
     local success, result = retry(function()
@@ -157,10 +178,12 @@ flush = function(player, record, release)
             setStatus(player, record, release and "CLOSED" or "ONLINE")
             publish(player, record)
         end
+        ShutdownTracker.finish(shutdownTracker)
         return true
     end
     if player.Parent then setStatus(player, record, success and "LOCKED" or "RETRYING") end
     if not success then warn("[IRON YARD] DataStore save failed after retries: " .. tostring(result)) end
+    ShutdownTracker.finish(shutdownTracker)
     return false
 end
 
@@ -229,13 +252,17 @@ function ProgressionService.start()
         local record = records[player]
         if not record then return end
         record.closing = true
-        -- A pending UpdateAsync load might complete after PlayerRemoving.
+        -- Retain a shutdown slot across the PlayerRemoving wait AND the
+        -- eventual detached release. Once records[player] is cleared, only
+        -- this tracker can keep BindToClose waiting for the in-flight save.
+        ShutdownTracker.begin(shutdownTracker)
         local untilTime = os.clock() + 12
         while record.saving and os.clock() < untilTime do task.wait(0.15) end
         if record.loaded or record.triedAcquire then
             flush(player, record, true)
         end
         records[player] = nil
+        ShutdownTracker.finish(shutdownTracker)
     end)
 
     task.spawn(function()
@@ -258,7 +285,10 @@ function ProgressionService.start()
     game:BindToClose(function()
         local pending = 0
         for player, record in pairs(records) do
-            if record.loaded or record.triedAcquire then
+            -- PlayerRemoving already owns the final release of its record;
+            -- never compete with that in-flight write on the same key.
+            if not record.closing and (record.loaded or record.triedAcquire) then
+                record.closing = true
                 pending += 1
                 task.spawn(function()
                     flush(player, record, true)
@@ -266,8 +296,14 @@ function ProgressionService.start()
                 end)
             end
         end
+        -- Includes records already removed from the Players registry,
+        -- acquisitions that finish after leave, and their late release tasks.
+        -- Roblox's shutdown time is bounded; do not wait indefinitely.
         local deadline = os.clock() + 26
-        while pending > 0 and os.clock() < deadline do task.wait(0.15) end
+        while (pending > 0 or ShutdownTracker.hasPending(shutdownTracker))
+            and os.clock() < deadline do
+            task.wait(0.15)
+        end
     end)
 end
 
