@@ -19,6 +19,7 @@ local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChil
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
 local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
+local WeaponPartMotionRole = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponPartMotionRole"))
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 local WeaponFxFramePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFxFramePolicy"))
 local WeaponReloadHandPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponReloadHandPlan"))
@@ -162,6 +163,7 @@ function WeaponVisuals:_addPart(model, className, name, size, color, offset, mat
 		offset = offset,
 		baseTransparency = part.Transparency,
         baseColor = color,
+        motionRole = WeaponPartMotionRole.classify(self.currentWeaponId, name),
 	})
 
 	return part
@@ -607,6 +609,7 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
             offset=origin.CFrame:ToObjectSpace(sourcePart.CFrame),
             baseTransparency=clone.Transparency,
             baseColor=clone.Color,
+            motionRole=WeaponPartMotionRole.classify(self.currentWeaponId, clone.Name),
             -- This entire material primitive is authored in Blender.
             -- Never apply rank-wide BasePart.Color recolors to its PBR maps.
             isPbrMesh=true,
@@ -1089,8 +1092,9 @@ function WeaponVisuals:_render(deltaTime)
 
     for _, entry in ipairs(self.parts) do
         local localOffset = entry.offset
-        local partName = entry.part.Name
-        if string.sub(partName, 1, 4) == "Left" then
+        -- Resolve at equip/LOD swap, never parse part names on RenderStepped.
+        local role = entry.motionRole
+        if role == WeaponPartMotionRole.LEFT_HAND then
             if self.currentWeaponId == "Pistol" then
                 local opacity = math.max(
                     ViewmodelRenderPolicy.transparency(entry.baseTransparency,
@@ -1107,12 +1111,10 @@ function WeaponVisuals:_render(deltaTime)
             end
             -- One transform for glove, wrist, sleeve, and forearm.
             localOffset = localOffset * workingHand * supportMotion
-        elseif string.sub(partName, 1, 5) == "Right"
-            and self.currentWeaponId == "Sniper" then
+        elseif role == WeaponPartMotionRole.SNIPER_RIGHT_HAND then
             -- The right glove matches the unlock/pull/return/lock sequence.
             localOffset = localOffset * boltHand
-        elseif (partName == "LoadingShellBody" or partName == "LoadingShellBrass")
-            and self.currentWeaponId == "Shotgun" then
+        elseif role == WeaponPartMotionRole.SHOTGUN_LOADING_SHELL then
             if shellX then
                 localOffset = localOffset * CFrame.new(shellX, shellY, shellZ)
                     * CFrame.Angles(0, 0, shellRoll)
@@ -1121,8 +1123,7 @@ function WeaponVisuals:_render(deltaTime)
             if entry.part.Transparency ~= targetAlpha then
                 entry.part.Transparency = targetAlpha
             end
-        elseif (partName == "Magazine" or partName == "MagazineBase")
-            and self.currentWeaponId ~= "Shotgun" then
+        elseif role == WeaponPartMotionRole.MAGAZINE then
             -- Physically detachable PBR/Part magazine rocks slightly as
             -- the support glove extracts it, then seats on the same timeline.
             local magX, magY, magZ, magRoll = WeaponMagazinePose.sample(
@@ -1130,19 +1131,14 @@ function WeaponVisuals:_render(deltaTime)
                 self.currentWeaponImported, self.currentWeaponHasPbrMagazine)
             localOffset = localOffset * CFrame.new(magX, magY, magZ)
                 * CFrame.Angles(0, 0, magRoll)
-        elseif partName == "ChargingHandle" and self.currentWeaponId == "AssaultRifle" then
+        elseif role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE then
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
-        elseif (partName == "Slide" or partName == "EjectionPort"
-            or partName == "Extractor"
-            or string.sub(partName, 1, 11) == "SlideDetail")
-            and self.currentWeaponId == "Pistol" then
+        elseif role == WeaponPartMotionRole.PISTOL_SLIDE then
             -- Mechanism and ejection anchor must remain attached to the slide.
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
-        elseif (partName == "PumpAction" or partName == "PumpGrooveA"
-            or partName == "PumpGrooveB") and self.currentWeaponId == "Shotgun" then
+        elseif role == WeaponPartMotionRole.SHOTGUN_PUMP then
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
-        elseif (partName == "Bolt" or partName == "BoltHandle"
-            or partName == "BoltHandleKnob") and self.currentWeaponId == "Sniper" then
+        elseif role == WeaponPartMotionRole.SNIPER_BOLT then
             -- Only the physical Blender bolt and matching fallback parts
             -- move, with lift first and delayed re-lock after the casing.
             localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * boltPull,

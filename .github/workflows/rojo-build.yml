@@ -112,6 +112,7 @@ jobs:
           ./luau scripts/test_weapon_feel_profile.luau
           ./luau scripts/test_weapon_sway_policy.luau
           ./luau scripts/test_weapon_detail_plan.luau
+          ./luau scripts/test_weapon_part_motion_role.luau
           ./luau scripts/test_weapon_mesh_policy.luau
           ./luau scripts/test_weapon_mesh_refresh_policy.luau
           ./luau scripts/test_weapon_mesh_swap_state.luau
