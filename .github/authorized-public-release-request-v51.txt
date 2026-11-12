@@ -1,0 +1,15 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox update (12 November 2026).
+Release ONLY to the existing verified creator-owned PUBLIC IRON YARD experience,
+through the repository's guarded exact-commit, green-CI publisher.
+
+PR #54 merged as f5f0a08e74aa769fda517f2ed89118a94653e2e4.
+ProgressionLedger validates the combined lease expiry timestamp+leaseSeconds
+as a safe integer BEFORE an UpdateAsync state transition, preventing invalid
+DataStore locks that future sessions could not normalize.
+Regression tests cover acquisition, same-owner renewal, autosave and release
+overflow, and highest valid lease boundary.
+Rojo and executable Luau CI passed on branch, PR and merged main.
+No DataStore schema/key changes, no client/gameplay/visual changes.
+Require NEW green CI on this exact release commit, strict PUBLIC destination
+owner verification, and publish once only. This is not a real live
+Roblox DataStore reconnection test.
