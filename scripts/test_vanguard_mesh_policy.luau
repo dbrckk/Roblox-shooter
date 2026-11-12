@@ -9,6 +9,15 @@ local names = {
 for raw, expected in pairs(names) do
     assert(Policy.identifyPiece(raw) == expected, "Canonical GLB mesh name " .. raw)
 end
+assert(Policy.MAX_PRIMITIVES_PER_PIECE >= 5
+    and Policy.MAX_PRIMITIVES_PER_PIECE <= 8)
+assert(Policy.primitiveCountValid(1) and Policy.primitiveCountValid(5))
+assert(not Policy.primitiveCountValid(0))
+assert(not Policy.primitiveCountValid(Policy.MAX_PRIMITIVES_PER_PIECE + 1))
+assert(not Policy.primitiveCountValid(2.5))
+assert(Policy.identifyPiece("VANGUARD_torso.001") == "torso")
+assert(Policy.identifyPiece("VANGUARD_left_arm_Primitive_04") == "left_arm")
+assert(Policy.identifyPiece("VANGUARD_rifle_7") == "rifle")
 for _, raw in ipairs({"VANGUARD_head_script", "OtherVanguardTorso",
     "VANGUARD_right_arm_old", "script", "torsoVanguard", ""}) do
     assert(Policy.identifyPiece(raw) == nil, "Reject loosely matched payload name " .. raw)

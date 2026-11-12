@@ -104,3 +104,19 @@ En complément de la validation des textures PNG, l'audit GitHub [40891068263](h
 ## Renforcement de l'import runtime — 6 novembre 2026
 
 Les quatre packages ne sont pas considérés prêts sur la seule présence d'un `SurfaceAppearance`. Chaque composant doit posséder un véritable `MeshId` et les **quatre références de cartes PBR non vides**. Le serveur applique un inventaire strict des sept noms de pièces, sans accepter des MeshParts dont le nom contient simplement le nom recherché au milieu d'une autre chaîne. Le clone est **assaini avant publication dans le jeu** : seuls le MeshPart et son premier `SurfaceAppearance` direct subsistent ; tous les scripts, sons, événements, attachments et enfants inattendus sont supprimés. Un import incomplet conserve le bot procédural jouable ; les imports réussis entrent en scène à la prochaine manche. Ces garanties sont compilées et testées en CI, sans revendiquer d'import ni de validation Roblox Studio en direct.
+
+## Imported glTF with multiple material primitives
+
+The original Blender body pieces contain several PBR material slots. Roblox may split
+one named glTF mesh into several MeshParts during Model import. The server now
+accepts **1–8 sanitized primitives per one of the seven R6 pieces**, identified
+by canonical Blender names, numbered suffixes, or the nearest named glTF
+ancestor. A complete four-palette set is staged before enabling PBR avatars.
+
+Each primitive must provide a real MeshId and four non-empty SurfaceAppearance
+maps; scripts, attachments, bindables and all other imported descendants are
+discarded. Primitive transforms are stored relative to the first part of
+the group, then welded to the existing invisible R6 combat hitboxes. Complete
+legacy Studio templates with one MeshPart per piece remain compatible.
+This remains an offline/import compatibility change until real Roblox asset
+IDs and in-engine appearance are verified.

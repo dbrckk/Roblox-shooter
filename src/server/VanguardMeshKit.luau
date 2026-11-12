@@ -23,9 +23,30 @@ function Kit.isRenderable(mesh)
     return appearance ~= nil and Policy.mapsReady(maps(appearance))
 end
 
+-- A Studio template may contain one MeshPart per body piece. A glTF
+-- upload can have several independent MeshParts (one per PBR material).
+-- Require a bounded, direct-child-only, fully renderable component.
+function Kit.primitives(component)
+    if not component then return nil end
+    if component:IsA("MeshPart") then
+        if Kit.isRenderable(component) then return { component } end
+        return nil
+    end
+    if not component:IsA("Folder") and not component:IsA("Model") then
+        return nil
+    end
+    local children = component:GetChildren()
+    if not Policy.primitiveCountValid(#children) then return nil end
+    for _, child in ipairs(children) do
+        if not Kit.isRenderable(child) then return nil end
+    end
+    return children
+end
+
 function Kit.cleanClone(source)
     assert(Kit.isRenderable(source), "Imported rig part lacks a full PBR material")
     local clone = source:Clone()
+    assert(clone ~= nil, "Unclonable imported mesh cannot enter Workspace")
     -- Keep exactly ONE direct SurfaceAppearance, never descendants of
     -- imported models. This protects the live rig against embedded Scripts,
     -- Bindables, particle emitters and attachments in external assets.

@@ -7,13 +7,24 @@ Policy.Palettes = { "olive", "sand", "slate", "rust" }
 Policy.Pieces = { "torso", "head", "left_arm", "right_arm",
     "left_leg", "right_leg", "rifle" }
 Policy.RequiredMaps = { "ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap" }
+-- Blender joins five PBR materials per R6 component. Roblox glTF imports
+-- can split them into distinct MeshParts; cap total replicated geometry.
+Policy.MAX_PRIMITIVES_PER_PIECE = 8
+
+function Policy.primitiveCountValid(count)
+    return type(count) == "number" and count % 1 == 0
+        and count >= 1 and count <= Policy.MAX_PRIMITIVES_PER_PIECE
+end
 
 function Policy.identifyPiece(name)
     if type(name) ~= "string" then return nil end
     local normalized = string.lower(name):gsub("[^a-z0-9]", "")
     for _, piece in ipairs(Policy.Pieces) do
         local part = piece:gsub("[^a-z0-9]", "")
-        if normalized == part or normalized == "vanguard" .. part then
+        local prefixed = "vanguard" .. part
+        if normalized == part or normalized == prefixed
+            or normalized:match("^" .. prefixed .. "%d+$")
+            or normalized:match("^" .. prefixed .. "primitive%d+$") then
             return piece
         end
     end

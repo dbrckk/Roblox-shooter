@@ -208,6 +208,7 @@ jobs:
           python3 scripts/test_vanguard_upload_contract.py
           python3 scripts/test_weapon_upload_contract.py
           python3 scripts/test_audit_vanguard_glb.py
+          python3 scripts/check_vanguard_import_contract.py
           python3 scripts/test_world_pbr_pipeline.py
           python3 scripts/asset_acceptance_matrix.py
           python3 scripts/test_asset_activation_pipeline.py

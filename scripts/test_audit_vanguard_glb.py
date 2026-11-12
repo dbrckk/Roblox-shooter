@@ -47,8 +47,33 @@ with tempfile.TemporaryDirectory() as directory:
     file = Path(directory) / "original.glb"
     file.write_bytes(glb())
     result = audit.inspect(file)
-    assert result["mesh_parts"] == 7 and result["normal_maps"] >= 1
+    assert result["mesh_parts"] == 7 and result["material_primitives"] == 7
+    assert result["normal_maps"] >= 1
     assert result["metal_rough_maps"] >= 1
+    # A joined PBR node with five distinct material primitives is valid;
+    # unbounded geometry must fail before a Roblox upload is attempted.
+    original = glb()
+    header = original[20:]
+    json_size = struct.unpack_from("<I", original, 12)[0]
+    metadata = json.loads(original[20:20 + json_size])
+    metadata["meshes"][0]["primitives"] *= 5
+    data = json.dumps(metadata, separators=(",", ":")).encode("utf-8")
+    data += b" " * (-len(data) % 4)
+    chunk = struct.pack("<I4s", len(data), b"JSON") + data + original[20 + json_size:]
+    file.write_bytes(struct.pack("<4sII", b"glTF", 2, 12 + len(chunk)) + chunk)
+    assert audit.inspect(file)["material_primitives"] == 11
+    metadata["meshes"][0]["primitives"] *= 2
+    data = json.dumps(metadata, separators=(",", ":")).encode("utf-8")
+    data += b" " * (-len(data) % 4)
+    chunk = struct.pack("<I4s", len(data), b"JSON") + data + original[20 + json_size:]
+    file.write_bytes(struct.pack("<4sII", b"glTF", 2, 12 + len(chunk)) + chunk)
+    try:
+        audit.inspect(file)
+    except AssertionError:
+        pass
+    else:
+        raise AssertionError("Overlarge material-primitive group must fail")
+
     file.write_bytes(glb(False))
     try:
         audit.inspect(file)
