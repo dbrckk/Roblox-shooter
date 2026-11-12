@@ -1072,11 +1072,16 @@ function WeaponVisuals:_render(deltaTime)
         boltLift, boltPull = SniperBoltCycle.present(
             shotAge, now - self.reloadFinishedAt, self.reloadActive)
     end
-    local boltX, boltY, boltZ = WeaponReloadHandPlan.boltGrip(
-        self.currentWeaponId, boltPull, boltLift, self.reloadActive, self.scoped)
-    local boltHand = CFrame.new(boltX, boltY, boltZ)
-        * CFrame.Angles(0, math.rad(15 * boltLift),
-            math.rad(-18 * boltPull))
+    -- Only the sniper owns an animated right-hand bolt grip. Avoid
+    -- constructing a throwaway CFrame for every pistol/rifle/pump frame.
+    local boltHand
+    if self.currentWeaponId == "Sniper" then
+        local boltX, boltY, boltZ = WeaponReloadHandPlan.boltGrip(
+            self.currentWeaponId, boltPull, boltLift, self.reloadActive, self.scoped)
+        boltHand = CFrame.new(boltX, boltY, boltZ)
+            * CFrame.Angles(0, math.rad(15 * boltLift),
+                math.rad(-18 * boltPull))
+    end
     -- Pump and support hand move together on a shot; never pump the fore-end
     -- into the left glove while it is inserting a cartridge.
     local supportMotion = self.currentWeaponId == "Shotgun" and not self.reloadActive
@@ -1090,6 +1095,10 @@ function WeaponVisuals:_render(deltaTime)
             self.reloadShellCount)
     end
 
+    -- PBR glTF components may be split into several material MeshParts.
+    -- Lazy shared transforms are computed at most once in this frame;
+    -- the exact same pose is then applied to each primitive.
+    local shellMotion, magazineMotion, mechanismMotion, boltMotion
     for _, entry in ipairs(self.parts) do
         local localOffset = entry.offset
         -- Resolve at equip/LOD swap, never parse part names on RenderStepped.
@@ -1116,34 +1125,45 @@ function WeaponVisuals:_render(deltaTime)
             localOffset = localOffset * boltHand
         elseif role == WeaponPartMotionRole.SHOTGUN_LOADING_SHELL then
             if shellX then
-                localOffset = localOffset * CFrame.new(shellX, shellY, shellZ)
-                    * CFrame.Angles(0, 0, shellRoll)
+                if not shellMotion then
+                    shellMotion = CFrame.new(shellX, shellY, shellZ)
+                        * CFrame.Angles(0, 0, shellRoll)
+                end
+                localOffset = localOffset * shellMotion
             end
             local targetAlpha = shellX and not self.lastViewmodelHidden and 0 or 1
             if entry.part.Transparency ~= targetAlpha then
                 entry.part.Transparency = targetAlpha
             end
         elseif role == WeaponPartMotionRole.MAGAZINE then
-            -- Physically detachable PBR/Part magazine rocks slightly as
-            -- the support glove extracts it, then seats on the same timeline.
-            local magX, magY, magZ, magRoll = WeaponMagazinePose.sample(
-                self.currentWeaponId, magazineDip, feel.magazineTravel,
-                self.currentWeaponImported, self.currentWeaponHasPbrMagazine)
-            localOffset = localOffset * CFrame.new(magX, magY, magZ)
-                * CFrame.Angles(0, 0, magRoll)
-        elseif role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE then
-            localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
-        elseif role == WeaponPartMotionRole.PISTOL_SLIDE then
-            -- Mechanism and ejection anchor must remain attached to the slide.
-            localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
-        elseif role == WeaponPartMotionRole.SHOTGUN_PUMP then
-            localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
+            -- A detachable magazine can have multiple glTF material
+            -- primitives. Sample its server-timed cosmetic pose only once.
+            if not magazineMotion then
+                local magX, magY, magZ, magRoll = WeaponMagazinePose.sample(
+                    self.currentWeaponId, magazineDip, feel.magazineTravel,
+                    self.currentWeaponImported, self.currentWeaponHasPbrMagazine)
+                magazineMotion = CFrame.new(magX, magY, magZ)
+                    * CFrame.Angles(0, 0, magRoll)
+            end
+            localOffset = localOffset * magazineMotion
+        elseif role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE
+            or role == WeaponPartMotionRole.PISTOL_SLIDE
+            or role == WeaponPartMotionRole.SHOTGUN_PUMP then
+            -- Keep slide, extractor, PBR details, pump and ejection socket on
+            -- the same frame-accurate translation without rebuilding it.
+            if not mechanismMotion then
+                mechanismMotion = CFrame.new(0, 0, actionTravel * feel.actionTravel)
+            end
+            localOffset = localOffset * mechanismMotion
         elseif role == WeaponPartMotionRole.SNIPER_BOLT then
-            -- Only the physical Blender bolt and matching fallback parts
-            -- move, with lift first and delayed re-lock after the casing.
-            localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * boltPull,
-                0, feel.actionTravel * boltPull)
-                * CFrame.Angles(0, 0, math.rad(32 * boltLift))
+            -- The Blender bolt may include multiple PBR material primitives;
+            -- all share the same unlock, pull and lock transform.
+            if not boltMotion then
+                boltMotion = CFrame.new(0.8 * feel.actionTravel * boltPull,
+                    0, feel.actionTravel * boltPull)
+                    * CFrame.Angles(0, 0, math.rad(32 * boltLift))
+            end
+            localOffset = localOffset * boltMotion
         end
         entry.part.CFrame = root * localOffset
     end
