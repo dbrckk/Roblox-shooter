@@ -1236,6 +1236,7 @@ function WeaponVisuals:_spawnTransient(spec)
     slot.toCFrame = spec.target or spec.origin
     slot.fromSize = spec.size
     slot.toSize = spec.endSize
+    slot.resizes = TransientFxPool.resizes(spec.size, spec.endSize)
     slot.fromAlpha = spec.alpha
     slot.linear = spec.linear == true
     -- Reset when a pooled shell is reused as a tracer/impact/muzzle flash.
@@ -1279,7 +1280,9 @@ function WeaponVisuals:_updateTransientFx(now)
                 end
                 part.CFrame = transform
             end
-            part.Size = slot.fromSize:Lerp(slot.toSize, blend)
+            if slot.resizes then
+                part.Size = slot.fromSize:Lerp(slot.toSize, blend)
+            end
             local baseAlpha = slot.fromAlpha + (1 - slot.fromAlpha) * blend
             part.Transparency = math.clamp(baseAlpha
                 + slot.flicker * (1 - baseAlpha) * math.abs(math.sin(t * 24)),
