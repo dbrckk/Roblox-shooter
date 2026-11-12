@@ -101,3 +101,27 @@ for frame = 1, 3600 do
         "Only completely invisible, effect-free sniper frames are skipped")
 end
 print("IRON YARD: idle optical sniper skips hidden PBR transforms but keeps FX/camera safety OK")
+
+-- Delayed sniper shell need not animate hidden PBR parts until its actual
+-- emission frame. On the deadline (or invalid timestamps) never skip: the
+-- casing MUST use the current-frame camera and ejection-port transform.
+local delayed = {at = 12.43}
+assert(P.skipHiddenSniper("Sniper", true, true, false, nil, delayed, 12.0))
+assert(P.skipHiddenSniper("Sniper", true, true, false, nil, delayed, 12.429))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, nil, delayed, 12.43))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, nil, delayed, 12.5))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, 12, delayed, 12))
+assert(not P.skipHiddenSniper("Sniper", true, true, true, nil, delayed, 12))
+assert(not P.skipHiddenSniper("Sniper", false, true, false, nil, delayed, 12))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, nil, delayed))
+for _, invalidAt in ipairs({0/0, math.huge, -math.huge, -1, "soon", false}) do
+    assert(not P.skipHiddenSniper(
+        "Sniper", true, true, false, nil, {at = invalidAt}, 12))
+end
+for _, invalidNow in ipairs({0/0, math.huge, -math.huge, -1, "12", false}) do
+    assert(not P.skipHiddenSniper(
+        "Sniper", true, true, false, nil, delayed, invalidNow))
+end
+assert(not P.skipHiddenSniper("Sniper", true, true, false, nil, false, 12))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, nil, {}, 12))
+print("IRON YARD: scoped sniper defers hidden frames but never misses due casing FX: OK")
