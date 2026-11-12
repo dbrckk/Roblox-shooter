@@ -198,6 +198,32 @@ assert(Pool.moves(false, 0.28, 0, 0))
 assert(Pool.moves(false, 0, 0.15, 0))
 assert(Pool.moves(false, 0, 0, -2))
 assert(Pool.moves(true, 0, 0, 0))
+-- Per-spawn flags must preserve pixel-equivalent opacity while avoiding
+-- sine work for static flashes/casings and Size writes for fixed geometry.
+assert(not Pool.resizes(2, 2))
+assert(Pool.resizes(2, 3))
+assert(not Pool.resizes("SAME", "SAME"))
+assert(Pool.resizes("INITIAL", "FINAL"))
+assert(not Pool.flickers(0) and not Pool.flickers(nil))
+assert(not Pool.flickers(false) and not Pool.flickers(0 / 0))
+assert(Pool.flickers(0.12) and Pool.flickers(-0.12))
+for i = 0, 1000 do
+    local t = i / 1000
+    local blend = 1 - (1 - t) * (1 - t)
+    for _, flicker in ipairs({0, 0.12, 0.32}) do
+        local baseAlpha = 0.13 + (1 - 0.13) * blend
+        local original = math.clamp(baseAlpha
+            + flicker * (1 - baseAlpha) * math.abs(math.sin(t * 24)), 0, 1)
+        local optimized = baseAlpha
+        if Pool.flickers(flicker) then
+            optimized += flicker * (1 - optimized) * math.abs(math.sin(t * 24))
+        end
+        optimized = math.clamp(optimized, 0, 1)
+        assert(math.abs(original - optimized) < 1e-12,
+            "Removing non-flicker trigonometry must preserve the exact opacity")
+    end
+end
+
 -- Recycled Part may swap classifications every spawn without stale flags.
 local alternating = {}
 for i = 1, 600 do
@@ -205,6 +231,11 @@ for i = 1, 600 do
     assert(slot and #alternating == 1)
     local animated = i%2 == 0
     slot.moves = Pool.moves(animated, 0, 0, 0)
+    slot.resizes = Pool.resizes(1, animated and 2 or 1)
+    slot.flickers = Pool.flickers(animated and 0.32 or 0)
     assert(slot.moves == animated)
+    assert(slot.resizes == animated, "Recycled VFX must refresh resize admission")
+    assert(slot.flickers == animated, "Recycled sparks cannot leak flicker into flashes")
 end
 print("IRON YARD priority-first FX replacement and static/moving pool reset: OK")
+print("IRON YARD Android FX: constant-size and non-flicker fast path: OK")
