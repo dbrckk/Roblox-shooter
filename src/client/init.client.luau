@@ -1315,7 +1315,8 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
                 (cameraNow.CFrame.Position - message.origin).Magnitude, "PLAYER")
             if remoteAccepted then
                 visuals:drawTracer(message.origin, direction.Unit, fullLength, Color3.fromRGB(240, 213, 165))
-                visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)
+                visuals:drawMuzzleFlash(message.origin, nil, direction.Unit,
+                    nil, message.weaponId)
                 if typeof(message.impactNormal) == "Vector3" then
                     visuals:drawImpact(message.origin + direction.Unit * fullLength,
                         message.impactNormal, message.impactMaterial)
@@ -1352,7 +1353,8 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
                 UserInputService.TouchEnabled, visualDistance, "BOT") then
             local accent = typeof(message.color) == "Color3" and message.color or nil
             visuals:drawTracer(message.origin, message.direction.Unit, distance, accent)
-            visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)
+            visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit,
+                nil, message.weaponId)
             if typeof(message.impactNormal) == "Vector3" then
                 visuals:drawImpact(message.origin + message.direction.Unit * distance,
                     message.impactNormal, message.impactMaterial)

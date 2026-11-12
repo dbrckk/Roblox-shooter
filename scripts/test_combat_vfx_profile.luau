@@ -95,3 +95,53 @@ assert(not Vfx.shouldDisplayHit(10.04, 10, 3, 2),
 assert(Vfx.hitPriority(false, true) > Vfx.hitPriority(true, false),
     "Fatal confirmation has highest priority")
 print("IRON YARD close-range traveling tracers, kill priority and mobile VFX: OK")
+
+
+
+-- Reuse the *same* impact-mark pool with physically differentiated footprints.
+local metal = Vfx.markStyle("Metal")
+local wood = Vfx.markStyle("Wood")
+local glass = Vfx.markStyle("Glass")
+local dirt = Vfx.markStyle("Sand")
+local stone = Vfx.markStyle("Concrete")
+assert(metal.metallic and not wood.metallic and not stone.metallic)
+assert(metal.widthMax < wood.widthMax and dirt.widthMax > stone.widthMax,
+    "Bullet marks differentiate punctured metal, splintered wood and loose dirt")
+assert(wood.aspectMin > stone.aspectMax,
+    "Wood chip scars must be elongated along the impact plane")
+assert(Vfx.markStyle("CorrodedMetal") == metal)
+assert(Vfx.markStyle("WoodPlanks") == wood)
+assert(Vfx.markStyle("not-a-material") == stone)
+assert(Vfx.markStyle("Glass") == glass)
+for _, material in ipairs({"Metal", "Wood", "Glass", "Sand", "Concrete"}) do
+    local style = Vfx.markStyle(material)
+    assert(style.widthMin > 0 and style.widthMax >= style.widthMin)
+    assert(style.widthMax <= 0.4)
+    assert(style.aspectMin > 0 and style.aspectMax >= style.aspectMin)
+    assert(style.depth > 0 and style.depth <= 0.03)
+    assert(style.surfaceOffset > style.depth / 2)
+end
+-- Distinct muzzle bursts for four guns, without increasing preset Part
+-- budgets or replacing the original Blender PBR muzzle socket positions.
+local pistol = Vfx.muzzleSignature("Pistol")
+local rifle = Vfx.muzzleSignature("AssaultRifle")
+local shotgun = Vfx.muzzleSignature("Shotgun")
+local sniper = Vfx.muzzleSignature("Sniper")
+assert(pistol.coreRadius < rifle.coreRadius and rifle.coreRadius < shotgun.coreRadius)
+assert(pistol.finLength < rifle.finLength and rifle.finLength < sniper.finLength)
+assert(shotgun.finWidth > rifle.finWidth and shotgun.duration > rifle.duration)
+assert(sniper.finLength > shotgun.finLength)
+assert(Vfx.muzzleSignature("Knife") == nil)
+assert(Vfx.muzzleSignature("other") == rifle,
+    "Unknown remote gun IDs use safe generic muzzle identity")
+for _, id in ipairs({"Pistol", "AssaultRifle", "Shotgun", "Sniper"}) do
+    local signature = Vfx.muzzleSignature(id)
+    assert(#signature.tint == 3)
+    assert(signature.coreRadius >= 0.1 and signature.coreRadius <= 0.4)
+    assert(signature.finLength > 0 and signature.finLength < 0.9)
+    assert(signature.finThickness > 0 and signature.finWidth > 0)
+    assert(signature.advance >= 0.1 and signature.advance <= 0.4)
+    assert(signature.duration >= 0.05 and signature.duration <= 0.1)
+    assert(signature.finAlpha >= 0 and signature.finAlpha <= 0.5)
+end
+print("IRON YARD weapon-specific flash silhouettes and material bullet scars: OK")

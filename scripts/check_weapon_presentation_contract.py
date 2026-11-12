@@ -649,6 +649,29 @@ assert skip_end < visuals.index("local now = os.clock()", skip_end)
 assert skip_end < visuals.index("for _, entry in ipairs(self.parts) do", skip_end)
 assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
 
+# Material-specific bullet scar footprints and per-weapon muzzle silhouettes
+# must consume the same existing Parts and preset caps on Android/Desktop.
+vfx_profile = get("src/shared/CombatVfxProfile.luau")
+for needle in (
+    "function Profile.markStyle(materialName)",
+    "function Profile.muzzleSignature(weaponId)",
+    "AssaultRifle = {tint", "Pistol = {tint",
+    "Shotgun = {tint", "Sniper = {tint",
+):
+    assert needle in vfx_profile, f"Authored visual identity missing: {needle}"
+for needle in (
+    "local markStyle = CombatVfxProfile.markStyle(materialName)",
+    "mark.Material = markStyle.metallic and MATERIAL_METAL or MATERIAL_SMOOTH",
+    "markStyle.surfaceOffset",
+    "local signature = CombatVfxProfile.muzzleSignature(weaponId)",
+    "signature.coreRadius", "signature.finLength",
+    "signature.duration",
+):
+    assert needle in visuals, f"Weapon/surface render integration missing: {needle}"
+assert "nil, direction, true, self.currentWeaponId)" in visuals
+assert client.count("nil, message.weaponId)") >= 2
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
+
 # Mobile VFX priority 4 must not preempt another confirmed core when a
 # lower-priority dust/tracer is still active; stationary flash/glints avoid
 # redundant CFrame interpolation while keeping Size/Opacity animation.

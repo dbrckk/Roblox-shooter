@@ -1408,6 +1408,7 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
     self.lastImpactAt = now
 
     local surface = CombatVfxProfile.surface(materialName)
+    local markStyle = CombatVfxProfile.markStyle(materialName)
     local motion = CombatVfxProfile.fragmentMotion(materialName)
     local n = normal.Unit
     local tint = colorFromChannels(surface.debris)
@@ -1420,10 +1421,12 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
     local mark = self:_trackImpactMark(now, budget.markSeconds, budget.marks)
     if not mark then return end
     mark.Color = colorFromChannels(surface.mark)
+    mark.Material = markStyle.metallic and MATERIAL_METAL or MATERIAL_SMOOTH
     mark.Transparency = ImpactMarkPool.INITIAL_ALPHA
-    local width = self.random:NextNumber(0.15, 0.26)
-    mark.Size = Vector3.new(0.019, width, width * self.random:NextNumber(0.86, 1.14))
-    mark.CFrame = CFrame.lookAt(position + n * 0.032, position + n)
+    local width = self.random:NextNumber(markStyle.widthMin, markStyle.widthMax)
+    mark.Size = Vector3.new(markStyle.depth, width,
+        width * self.random:NextNumber(markStyle.aspectMin, markStyle.aspectMax))
+    mark.CFrame = CFrame.lookAt(position + n * markStyle.surfaceOffset, position + n)
         * CFrame.Angles(0, math.pi * 0.5, 0)
         * CFrame.Angles(self.random:NextNumber(0, math.pi * 2), 0, 0)
     mark.Parent = workspace
@@ -1473,7 +1476,7 @@ end
 
 -- Remote combatants use an oriented, compact muzzle burst. Only desktop
 -- QUALITY enables a short-lived local light: never a networked light source.
-function WeaponVisuals:drawMuzzleFlash(origin, accentColor, shotDirection, localShot)
+function WeaponVisuals:drawMuzzleFlash(origin, accentColor, shotDirection, localShot, weaponId)
     if typeof(origin) ~= "Vector3" then return end
     local camera = workspace.CurrentCamera
     if not camera then return end
@@ -1484,7 +1487,9 @@ function WeaponVisuals:drawMuzzleFlash(origin, accentColor, shotDirection, local
     if not budget then return end
     local direction = typeof(shotDirection) == "Vector3" and shotDirection.Magnitude > 0.01
         and shotDirection.Unit or camera.CFrame.LookVector
-    local tint = accentColor or Color3.fromRGB(250, 204, 125)
+    local signature = CombatVfxProfile.muzzleSignature(weaponId)
+    if not signature then return end
+    local tint = accentColor or colorFromChannels(signature.tint)
 
     local localLightColor = nil
     if budget.muzzleLight then
@@ -1492,10 +1497,11 @@ function WeaponVisuals:drawMuzzleFlash(origin, accentColor, shotDirection, local
     end
     self:_spawnTransient({
         name = "IronYardMuzzleCore", origin = CFrame.new(origin),
-        size = Vector3.new(0.26, 0.26, 0.26),
+        size = Vector3.new(signature.coreRadius, signature.coreRadius,
+            signature.coreRadius),
         endSize = Vector3.new(0.05, 0.05, 0.05),
         shape = Enum.PartType.Ball, material = MATERIAL_NEON,
-        color = tint, alpha = 0, duration = 0.09,
+        color = tint, alpha = 0, duration = signature.duration,
         priority = localShot and 4 or 3,
         lightColor = localLightColor,
     })
@@ -1503,12 +1509,13 @@ function WeaponVisuals:drawMuzzleFlash(origin, accentColor, shotDirection, local
     for i = 1, budget.muzzleFins do
         self:_spawnTransient({
             name = "IronYardMuzzlePetal",
-            origin = CFrame.lookAt(origin + direction * 0.24,
+            origin = CFrame.lookAt(origin + direction * signature.advance,
                 origin + direction) * CFrame.Angles(0, 0, (i - 1) * math.pi * 0.5),
-            size = Vector3.new(0.09, 0.36, 0.54),
+            size = Vector3.new(signature.finThickness, signature.finWidth,
+                signature.finLength),
             endSize = Vector3.new(0.035, 0.07, 0.17),
             material = MATERIAL_NEON, color = tint,
-            alpha = 0.24, duration = 0.08,
+            alpha = signature.finAlpha, duration = signature.duration,
             priority = localShot and 4 or 2,
         })
     end
@@ -1526,7 +1533,8 @@ function WeaponVisuals:drawLocalMuzzleFlash()
         if MUZZLE_NAMES[entry.part.Name] and entry.part.Parent then
             local direction = camera.CFrame.LookVector
             local advance = WeaponPbrFxSockets.muzzleAdvance(self.currentWeaponImported)
-            self:drawMuzzleFlash(entry.part.Position + direction * advance, nil, direction, true)
+            self:drawMuzzleFlash(entry.part.Position + direction * advance,
+                nil, direction, true, self.currentWeaponId)
             return
         end
     end

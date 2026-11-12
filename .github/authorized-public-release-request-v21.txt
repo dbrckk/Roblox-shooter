@@ -1,0 +1,8 @@
+IRON YARD — owner-authorized one-shot production PUBLIC Roblox FPS release.
+Date: 2026-11-12. Continue existing public gameplay and upgrade visual fidelity.
+Four authored weapon-specific local and networked muzzle flash silhouettes;
+five material-specific surface mark footprints and suitable metallic finish.
+Preserve existing VFX budget, pooled Parts, PBR 3D source and server authority;
+no added network messages, physics, damage or external asset dependencies.
+Require successful exact-SHA Rojo CI and verified owner/public destination
+before publication. Never alpha/private.

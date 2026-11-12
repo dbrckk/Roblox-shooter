@@ -16,15 +16,25 @@ local MATERIALS = {
 
 local SURFACES = {
     METAL = { debris = { 246, 188, 103 }, mark = { 36, 30, 25 },
-        sparks = true, glimmer = true, spread = 0.85 },
+        sparks = true, glimmer = true, spread = 0.85,
+        markStyle = {widthMin = 0.12, widthMax = 0.19, aspectMin = 0.82,
+            aspectMax = 1.10, depth = 0.012, surfaceOffset = 0.023, metallic = true} },
     WOOD = { debris = { 187, 147, 98 }, mark = { 49, 37, 28 },
-        sparks = false, glimmer = false, spread = 0.54 },
+        sparks = false, glimmer = false, spread = 0.54,
+        markStyle = {widthMin = 0.16, widthMax = 0.29, aspectMin = 1.34,
+            aspectMax = 1.82, depth = 0.018, surfaceOffset = 0.035, metallic = false} },
     GLASS = { debris = { 184, 213, 216 }, mark = { 89, 108, 113 },
-        sparks = false, glimmer = true, spread = 0.65 },
+        sparks = false, glimmer = true, spread = 0.65,
+        markStyle = {widthMin = 0.16, widthMax = 0.25, aspectMin = 1.04,
+            aspectMax = 1.28, depth = 0.012, surfaceOffset = 0.027, metallic = false} },
     EARTH = { debris = { 148, 134, 108 }, mark = { 66, 62, 52 },
-        sparks = false, glimmer = false, spread = 0.40 },
+        sparks = false, glimmer = false, spread = 0.40,
+        markStyle = {widthMin = 0.20, widthMax = 0.34, aspectMin = 0.78,
+            aspectMax = 1.12, depth = 0.020, surfaceOffset = 0.036, metallic = false} },
     STONE = { debris = { 182, 181, 169 }, mark = { 55, 54, 51 },
-        sparks = false, glimmer = false, spread = 0.48 },
+        sparks = false, glimmer = false, spread = 0.48,
+        markStyle = {widthMin = 0.15, widthMax = 0.26, aspectMin = 0.86,
+            aspectMax = 1.14, depth = 0.019, surfaceOffset = 0.032, metallic = false} },
 }
 
 -- Material-specific trajectories stay procedural and share the existing
@@ -54,6 +64,36 @@ local DESKTOP_QUALITY = { maxDistance = 195, cooldown = 0.045, fragments = 4,
 
 function Profile.surface(materialName)
     return SURFACES[MATERIALS[materialName] or "STONE"]
+end
+
+-- Surface-aware bullet scar footprints, static and reused across all shots.
+-- Thin/compact metal punctures, longer wooden splinters, wider loose dirt.
+-- The same existing ImpactMarkPool still owns at most 10..36 Parts.
+function Profile.markStyle(materialName)
+    return Profile.surface(materialName).markStyle
+end
+
+-- Original weapon-specific thermal flash silhouettes. The existing preset
+-- sets the Part count (0/1/2 fins on ECO/mobile/desktop); no extra assets,
+-- geometry instances, RemoteEvents or allocations on RenderStepped.
+local MUZZLE_SIGNATURES = {
+    AssaultRifle = {tint = {251, 212, 145}, coreRadius = 0.23,
+        finThickness = 0.07, finWidth = 0.30, finLength = 0.55,
+        advance = 0.24, finAlpha = 0.24, duration = 0.075},
+    Pistol = {tint = {255, 222, 160}, coreRadius = 0.16,
+        finThickness = 0.065, finWidth = 0.22, finLength = 0.31,
+        advance = 0.18, finAlpha = 0.26, duration = 0.067},
+    Shotgun = {tint = {255, 180, 99}, coreRadius = 0.35,
+        finThickness = 0.13, finWidth = 0.48, finLength = 0.72,
+        advance = 0.28, finAlpha = 0.18, duration = 0.095},
+    Sniper = {tint = {255, 202, 119}, coreRadius = 0.28,
+        finThickness = 0.095, finWidth = 0.36, finLength = 0.82,
+        advance = 0.34, finAlpha = 0.22, duration = 0.090},
+}
+
+function Profile.muzzleSignature(weaponId)
+    if weaponId == "Knife" then return nil end
+    return MUZZLE_SIGNATURES[weaponId] or MUZZLE_SIGNATURES.AssaultRifle
 end
 
 function Profile.budget(preset, touch, distance)

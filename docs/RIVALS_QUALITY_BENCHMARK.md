@@ -649,3 +649,32 @@ priorités, égalité des priorités et changement de type du même slot.
 Contrat Python d'intégration et Rojo. **Le gain réel en millisecondes
 GPU/CPU reste à mesurer sur Roblox Android** : le code ne fournit pas
 de benchmark de FPS réel.
+
+
+
+## Flashes de tir différenciés et marques d'impacts matérielles — 12 novembre 2026
+
+Les quatre armes PBR et les variantes procédurales partagent désormais
+**quatre signatures de flash originales**, sans nouvelle texture ni asset
+payant : le pistolet a une impulsion compacte, l'AR-24 un flash directionnel
+court, le B-8 un panache plus large et incandescent, le sniper un flash
+allongé. Les mêmes profils s'appliquent aux tirs vus chez les autres
+joueurs et les bots dès lors que leur message serveur fournit l'ID
+d'arme. Un ID non reconnu retombe sur le profil générique de l'AR ;
+le couteau n'émet aucune flamme.
+
+Les **cicatrices d'impacts** ne sont plus des disques de dimensions
+identiques sur toutes les matières. Le métal reçoit une perforation
+compacte aux reflets métalliques, le bois une empreinte allongée
+comme une écharde, le verre une trace fine et la terre une dispersion
+plus large ; béton/pierre conserve un cratère discret. Toutes les
+dimensions, proportions et profondeurs sont bornées dans le module
+`CombatVfxProfile` et réutilisent le `ImpactMarkPool` existant.
+
+**Budgets inchangés** : ECO 0 ailette de flash, Android BALANCED 1,
+Android QUALITY/desktop 2 ; aucun nouvel objet par frame, rayon,
+transfert réseau, dégâts, gameplay ou connexion de rendu. Les tests
+Luau couvrent toutes les matières et armes, y compris les ID inconnus,
+et un contrat statique vérifie les branches de dessin.
+L'esthétique PBR finale et les FPS doivent encore être contrôlés dans
+Roblox Studio / sur Android réel.

@@ -912,8 +912,10 @@ def main():
             "Confirmed hits must not create or schedule transient Instances")
     has(viewmodel, "local advance = WeaponPbrFxSockets.muzzleAdvance(self.currentWeaponImported)",
         "Muzzle source must select its appropriate physical flash offset")
-    has(viewmodel, "self:drawMuzzleFlash(entry.part.Position + direction * advance, nil, direction, true)",
-        "Own muzzle flash must keep priority over remote debris")
+    has(viewmodel, "self:drawMuzzleFlash(entry.part.Position + direction * advance,",
+        "Own muzzle flash must preserve current-frame PBR socket")
+    has(viewmodel, "nil, direction, true, self.currentWeaponId)",
+        "Own muzzle flash must select its actual original weapon signature")
     for key in ("CombatVfxProfile.hitPriority(headshot == true, killed == true)",
                 "CombatVfxProfile.shouldDisplayHit(now,"):
         has(viewmodel, key, "Fatal confirmation overrides ordinary hit VFX cooldown")
@@ -928,8 +930,9 @@ def main():
                 "if remoteAccepted then",
                 '(ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table"'):
         has(client, key, "Server-authored hit UI, no local duplicate or skipped pellet feedback")
-    for key in ("visuals:drawMuzzleFlash(message.origin, nil, direction.Unit)",
-                "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit)"):
+    for key in ("visuals:drawMuzzleFlash(message.origin, nil, direction.Unit,",
+                "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit,",
+                "nil, message.weaponId)"):
         has(client, key, "Remote gun flashes use server shot direction")
     # Own muzzle FX is now scheduled by the shot input and emitted only after
     # the new camera-aligned weapon pose has been applied in the render loop.
