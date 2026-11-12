@@ -1,0 +1,27 @@
+IRON YARD — owner-authorized one-shot PUBLIC Roblox update, 12 November 2026.
+
+The owner requested continued execution of roadmap V3 on the EXISTING
+public IRON YARD Roblox experience, not a separate private alpha.
+This single release includes squash-merged PR #44:
+c66691101e496a6b6411306e94ee9d9189b1c032.
+
+Fix: after the LAST participant disconnects, the server must release
+any duel preparation anchors, clear the duel combat gate, discard the
+participant references and finished-result snapshot, restore the public
+lobby to WAITING / FFA and clear all replicated duel scores and podium.
+Prior code could retain stale DUEL mode across an empty server and
+mislead the next player before a new FFA round. A true one-survivor
+forfeit still follows its original server-authoritative scoring rule.
+
+New pure Luau regression tests cover empty FFA/DUEL prep/live/results,
+stale mode, remaining participant and idempotent waiting. The server
+source integration contract verifies the empty-lobby guard runs BEFORE
+the forfeit logic and all replicated states are reset.
+
+The complete Luau compiler, executable suite, Python contracts and
+Rojo build are GREEN on PR/push and on merged main. Require fresh
+full green CI of this exact authorization commit before dispatch.
+The existing public publisher independently verifies the real creator,
+PUBLIC universe, original root place, and exact SHA. Do not publish
+another place, private experience, or invent runtime/playtest claims.
+No private tokens or IDs are included here.
