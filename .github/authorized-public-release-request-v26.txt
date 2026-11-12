@@ -1,0 +1,8 @@
+IRON YARD — one-time owner-authorized PUBLIC FPS release, 12 November 2026.
+Publish only the owner-verified existing PUBLIC Roblox experience from the
+exact successful main build. Revision: B-8 visual magazine refill now reuses
+one shell mesh across 1–6 insertions from the server-confirmed ammo deficit,
+with synchronized support hand and hidden return beats. This is strictly
+cosmetic: no changes to authoritative reload, ammo, shots, remotes or damage.
+The feature PR #27 and main Rojo CI were green; re-run all CI gates on
+this exact release-request commit before dispatch. No private staging.
