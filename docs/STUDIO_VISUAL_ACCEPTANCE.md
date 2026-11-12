@@ -292,3 +292,10 @@ On Android compare 30/60 fps modes, rapidly enter/exit the sniper optical overla
 Studio/Android acceptance for the three PBR firearms: aim at one small stationary target with the AR-24, pistol and B-8 at 30, 60 and (where supported) 120 fps. Verify the rear notch and front post are vertically aligned with the screen's actual crosshair and that projectile impact follows the camera ray, not the model muzzle. Test 16:9 and a tall Android viewport, ADS while strafing, quick weapon swaps and 10 successive scopes. Compare both LOD0 and LOD1 to procedural fallback under stream delay. The X-pitch correction and rear translation are computed once at equip; the frame loop must not allocate new CFrames solely for sight correction.
 
 Offline Python verifies authored Blender front/rear centers against the Luau profiles without importing bpy; Luau confirms the two transformed sight centers coincide with the camera axis. Neither test measures real Android fps or optical readability. Record actual screenshots and frame times separately before claiming device-level visual acceptance.
+
+
+## Idle-only PBR reconstruction / Android visual acceptance (12 November 2026)
+
+When imported LOD assets arrive late, or switching ECO/QUALITY, the 3D rebuild must occur only after the player stops walking and camera turn inertia settles. It must not interrupt an active scope, queued flash, fired shot, reloading, or the server-confirmed post-reload bolt/rack cycle. Wait at least 0.65 seconds after a confirmed reload finish and 2 seconds after the previous shot. Ensure that staying idle eventually switches to the requested PBR LOD without permanently retaining the old mesh.
+
+On Android, verify with real Studio or live-device capture: continuously strafe while forcing a graphics preset change, then stop, rotate quickly, stop again and observe the deferred one-time model swap. Repeat with AR-24, pistol, shotgun and sniper after an ammo-refilling reload. Record frame-time spikes around the swap and inspect ADS/crosshair/shell animations. Automated tests validate policy boundaries and the wiring, not measured FPS or physical-device rendering.
