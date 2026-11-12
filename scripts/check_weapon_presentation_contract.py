@@ -843,7 +843,7 @@ for needle in (
     assert needle in visuals, f"Reload cycle missing {needle}"
 assert "visuals:setReloading(message.weaponId, message.reloading == true," in client
 assert "visuals:setReloading(weaponId, ammunition.reloading," in client
-assert '"lastAmmoLoaded", "reloadFinishedAt"' in swap_state
+assert '"lastAmmoLoaded", "reloadFinishedAt", "reloadShellCount"' in swap_state
 assert 'FireServer' not in rack_policy and 'Instance.new' not in rack_policy
 assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
 # Detachable PBR/Part magazines have a subtle, mechanically coherent

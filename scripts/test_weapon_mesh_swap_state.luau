@@ -17,6 +17,7 @@ local state = {
     pistolOffhandAlpha = 0.56,
     lastAmmoLoaded = 6,
     reloadFinishedAt = 49.75,
+    reloadShellCount = 4,
     aimBlend = 0.01,
     stepPhase = 1.25,
     stepBlend = 0.42,
@@ -43,6 +44,8 @@ assert(state.magazineDipBlend == 0.42 and state.pistolOffhandAlpha == 0.56,
     "LOD refresh must not reset a partly canceled magazine or glove fade")
 assert(state.lastAmmoLoaded == 6 and state.reloadFinishedAt == 49.75,
     "LOD refresh must retain confirmed refill cycle and ammo baseline")
+assert(state.reloadShellCount == 4,
+    "PBR/LOD refresh must not reset B-8 shell choreography count")
 assert(state.currentWeaponId == "Shotgun")
 assert(state.currentWeaponImported == true and state.activeMeshLod == "LOD1")
 assert(state.model == "IMPORTED", "Never restore destroyed old viewmodel")

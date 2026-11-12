@@ -63,7 +63,11 @@ function Feel.recover(id, current, dt)
     local profile = PROFILES[id]
     if not profile or not finite(current) or not finite(dt) then return 0 end
     if dt <= 0 then return math.max(0, current) end
-    return math.max(0, current) * math.exp(-profile.recovery * math.min(dt, 1))
+    -- Use actual elapsed time, not a one-second cap. A mobile client may
+    -- suspend rendering while backgrounded: old recoil must be fully gone
+    -- when the app resumes. Clamp only the exponent to prevent underflow
+    -- work for multi-hour hitches; ordinary 30/60/120 FPS is unchanged.
+    return math.max(0, current) * math.exp(-profile.recovery * math.min(dt, 20))
 end
 
 function Feel.shotEnvelope(id, age)
