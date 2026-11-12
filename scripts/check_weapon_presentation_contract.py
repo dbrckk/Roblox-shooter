@@ -660,10 +660,12 @@ assert "FireServer" not in crosshair and "Instance.new" not in crosshair
 # still receive the camera-final viewmodel pose before the FX is emitted.
 render_policy = get("src/shared/ViewmodelRenderPolicy.luau")
 assert "function Policy.skipHiddenSniper(weaponId, scoped, hidden, reloading," in render_policy
+assert "return now < pendingCartridge.at" in render_policy, (
+    "Scoped sniper must update its ejection anchors once the casing is due")
 for needle in (
     "ViewmodelRenderPolicy.skipHiddenSniper(self.currentWeaponId, self.scoped,",
     "self.lastViewmodelHidden, self.reloadActive, self.pendingLocalFlashAt,",
-    "self.pendingCartridge) then",
+    "self.pendingCartridge, clock) then",
     "self.lastCameraCFrame = camera.CFrame",
     "self.sway = self.sway * (1 - ViewmodelRenderPolicy.blendAlpha(animationDt, 14))",
 ):
