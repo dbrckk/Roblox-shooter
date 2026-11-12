@@ -1,0 +1,22 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox v55 release on 12 November 2026.
+Publish ONLY to the existing verified creator-owned PUBLIC IRON YARD
+experience through its guarded GitHub Actions publication workflow.
+Use the exact authorization commit, require GREEN Rojo CI for that SHA,
+and independently verify universe ID, place ID, owner and PUBLIC visibility.
+
+Gameplay/security patch PR #66 merged into main as
+1098c4b94447c9ef2010c06876a8cb3178488c2d:
+cancel delayed Mantle server repositioning if a duel preparation
+anchors the player, the match changes phase, the round fire epoch
+changes, the rig/root is replaced or movement state is reset.
+Require phase LIVE and unanchored root at mantle start.
+A server-owned generation counter rejects expired callbacks on
+CharacterAdded and resetDuelMovement.
+
+Branch, PR and merged-main Rojo CI have all succeeded; pure Luau
+and source integration tests cover the race. Engine and Android
+multiplayer playtests remain unverified. No changes to weapons,
+damage, collision, progression, economy or visual asset IDs.
+
+Authorize EXACTLY ONE PUBLIC publication after a fresh CI pass of
+the release authorization commit and independent target verification.
