@@ -549,3 +549,28 @@ par reload. Contrat Python d'intégration garantissant les mêmes courbes
 pour le bolt importé et la main. Reste à mesurer sur Android/Studio :
 visibilité et alignement des gants et de la poignée PBR à 30/60 FPS,
 aucune gêne ADS, retour après chute de fréquence.
+
+
+
+## Pistolet PBR — annulation de recharge sans téléportation et coût Android (12/11/2026)
+
+La version 14 pouvait replacer le chargeur PBR immédiatement à sa prise
+initiale lorsque le serveur annulait la recharge, alors que la main gauche
+continuait son interpolation. Cela provoquait une désynchronisation visible
+et pouvait faire apparaître une main seule. Le chargeur utilise désormais le
+**même filtre temporel exponentiel** que la position du gant et l'opacité
+du bras de soutien. À 30/60/120 FPS la transition a la même dynamique
+en temps réel, et un hitch Android est borné à 50 ms par passe cosmétique.
+
+Un bras de pistolet complètement invisible n'a pas besoin que ses six
+pièces transparentes soient déplacées à chaque image. Les six CFrame
+concernés sont donc ignorés tant que l'opacité est à 100 %, puis rétablis
+dans la frame où la main redevient visible. Les pièces restent sans collision,
+sans requête physique ni ombre : aucun changement de gameplay.
+
+Les deux valeurs d'interpolation sont conservées lors des mises à jour
+tardives PBR/LOD et réinitialisées sur un véritable changement d'arme.
+Tests Luau : équivalence 30/60/120 FPS, annulation sans snap,
+arguments invalides ; contrat d'intégration d'absence de callback
+supplémentaire et test de conservation de l'état entre LOD.
+Contrôle de rendu 30/60 FPS sur Android toujours nécessaire.

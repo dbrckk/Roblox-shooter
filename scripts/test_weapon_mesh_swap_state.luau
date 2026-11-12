@@ -13,6 +13,8 @@ local state = {
     reloadHandX = 0.02,
     reloadHandY = -0.18,
     reloadHandZ = 0.68,
+    magazineDipBlend = 0.42,
+    pistolOffhandAlpha = 0.56,
     aimBlend = 0.01,
     stepPhase = 1.25,
     stepBlend = 0.42,
@@ -35,6 +37,8 @@ end
 assert(state.reloadHandX == 0.02 and state.reloadHandY == -0.18
     and state.reloadHandZ == 0.68,
     "PBR/LOD refresh must preserve ongoing support-hand interpolation")
+assert(state.magazineDipBlend == 0.42 and state.pistolOffhandAlpha == 0.56,
+    "LOD refresh must not reset a partly canceled magazine or glove fade")
 assert(state.currentWeaponId == "Shotgun")
 assert(state.currentWeaponImported == true and state.activeMeshLod == "LOD1")
 assert(state.model == "IMPORTED", "Never restore destroyed old viewmodel")

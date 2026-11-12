@@ -657,7 +657,10 @@ for needle in (
 for needle in (
     'WaitForChild("WeaponReloadHandPlan")',
     "WeaponReloadHandPlan.sample(",
-    "local handAlpha = math.clamp(animationDt * 14, 0, 1)",
+    "local handAlpha = ViewmodelRenderPolicy.blendAlpha(animationDt, 14)",
+    "self.magazineDipBlend += (magazineTarget - self.magazineDipBlend) * handAlpha",
+    "self.pistolOffhandAlpha += (pistolHandTarget - self.pistolOffhandAlpha) * handAlpha",
+    "if opacity >= 1 then continue end",
     "self.reloadHandX += (handX - self.reloadHandX) * handAlpha",
     "self.reloadHandY += (handY - self.reloadHandY) * handAlpha",
     "self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha",
@@ -678,6 +681,11 @@ for needle in (
     assert needle in swap_state or needle in visuals, f"Reload pose not safely preserved: {needle}"
 # The second pistol hand may never leak into the ordinary hip-fire stance.
 assert 'target = 1' in visuals and '1 - pistolHandVisibility' in visuals
+assert 'function Policy.blendAlpha(dt, rate)' in get("src/shared/ViewmodelRenderPolicy.luau")
+assert '"magazineDipBlend", "pistolOffhandAlpha"' in swap_state
+assert visuals.index('if opacity >= 1 then continue end') < (
+    visuals.index('localOffset = localOffset * workingHand * supportMotion'))
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
 assert visuals.count('CFrame.new(-0.27, -0.54, 0.08)') == 2, (
     "PBR and procedural pistol must share the same support-hand origin")
 # Ensure authentic Blender pistol magazine survives validated owner-only

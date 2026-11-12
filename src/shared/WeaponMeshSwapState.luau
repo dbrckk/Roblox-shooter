@@ -5,6 +5,7 @@ P.Fields = {
     "equipStartedAt", "fireStartedAt", "recoil",
     "reloadActive", "reloadStartedAt", "reloadBlend",
     "reloadHandX", "reloadHandY", "reloadHandZ",
+    "magazineDipBlend", "pistolOffhandAlpha",
     "aimBlend", "stepPhase", "stepBlend", "sway",
     "lastCameraPosition", "lastCameraCFrame",
 }

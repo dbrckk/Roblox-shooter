@@ -1,0 +1,9 @@
+IRON YARD production PUBLIC update — one-shot authorization, 2026-11-12.
+Owner requested continued real improvements to the existing public shooter.
+This commit resolves cosmetic pistol PBR magazine snap-on-cancel, matches
+offhand opacity to real frame-rate-independent interpolation (30/60/120 FPS),
+and skips six entirely invisible glove/sleeve CFrame updates while idle.
+Pure Luau regression and integration/LOD state checks are required.
+No new assets, remotes, ammo, damage, physics or sensitive data.
+Publish exact authorized source SHA only after successful Rojo CI and
+existing owner / PUBLIC Roblox experience verification, never alpha.

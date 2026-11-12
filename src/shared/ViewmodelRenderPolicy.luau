@@ -23,4 +23,14 @@ function Policy.animationDelta(dt)
     return math.clamp(dt, 0, 0.05)
 end
 
+-- Stable interpolation at 30/60/120 FPS; same fraction of a second gives
+-- the same pose even when a mobile frame is delayed. No Tween/task allocation.
+function Policy.blendAlpha(dt, rate)
+    if type(dt) ~= "number" or dt ~= dt or dt < 0
+        or dt == math.huge or dt == -math.huge
+        or type(rate) ~= "number" or rate ~= rate or rate < 0
+        or rate == math.huge or rate == -math.huge then return 0 end
+    return math.clamp(1 - math.exp(-Policy.animationDelta(dt) * rate), 0, 1)
+end
+
 return Policy

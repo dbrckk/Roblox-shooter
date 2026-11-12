@@ -39,3 +39,29 @@ assert(P.animationDelta(math.huge) == 0)
 assert(P.animationDelta(-math.huge) == 0)
 assert(P.animationDelta("0.2") == 0)
 print("IRON YARD FPS viewmodel: visibility and hitch-safe cosmetic animation: OK")
+
+-- A mobile 30 Hz client must finish cosmetic fades in the same real time
+-- as a 60/120 Hz PC client; cancellation must never snap the PBR magazine.
+local function fade(frames, rate, target)
+    local value=0
+    for _=1,frames do
+        local alpha=P.blendAlpha(1/frames,rate)
+        value += (target-value)*alpha
+    end
+    return value
+end
+local at30,at60,at120=fade(30,14,1),fade(60,14,1),fade(120,14,1)
+assert(math.abs(at30-at60)<1e-9 and math.abs(at60-at120)<1e-9,
+    "Hand, magazine and wrist fade must be consistent across frame rates")
+assert(at30>0.999 and at30<1)
+local canceled=1
+for i=1,6 do
+    canceled += (0-canceled)*P.blendAlpha(1/60,14)
+    assert(canceled>=0 and canceled<1, "Cancel fades without snapping")
+end
+assert(canceled>0.1, "Visible canceled glove must not disappear instantly")
+assert(P.blendAlpha(0,14)==0 and P.blendAlpha(-1,14)==0)
+assert(P.blendAlpha(1/60,0)==0 and P.blendAlpha(math.huge,14)==0)
+assert(P.blendAlpha(0/0,14)==0 and P.blendAlpha(1/60,0/0)==0)
+assert(P.blendAlpha(1/60,math.huge)==0)
+assert(P.blendAlpha(1/60,14)>0 and P.blendAlpha(1/60,14)<1)

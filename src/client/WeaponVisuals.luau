@@ -89,6 +89,8 @@ function WeaponVisuals.new(WeaponConfig)
     self.reloadHandX = 0
     self.reloadHandY = 0
     self.reloadHandZ = 0
+    self.magazineDipBlend = 0
+    self.pistolOffhandAlpha = 0
     self.lastViewmodelHidden = nil
     self.stepPhase = 0
     self.stepBlend = 0
@@ -661,6 +663,8 @@ function WeaponVisuals:setWeapon(weaponId)
     self.reloadActive = false
     self.reloadBlend = 0
     self.reloadHandX, self.reloadHandY, self.reloadHandZ = 0, 0, 0
+    self.magazineDipBlend = 0
+    self.pistolOffhandAlpha = 0
     self.lastCameraPosition = nil
     self.lastCameraCFrame = nil
 	self:_clearModel()
@@ -929,12 +933,16 @@ function WeaponVisuals:_render(deltaTime)
     local progress = math.clamp((now - self.reloadStartedAt) / math.max(reloadSeconds, 0.25), 0, 1)
     local reloadTarget = self.reloadActive and 1 or 0
     self.reloadBlend += (reloadTarget - self.reloadBlend) * math.clamp(animationDt * 13, 0, 1)
-    -- Smooth pose in/out, with a distinct magazine manipulation around mid-reload.
-    local reloadPose = self.reloadBlend * math.sin(math.pi * progress * 0.93)
-    local magazineDip = self.reloadActive
+    -- Frame-rate-independent smoothing keeps the physical magazine aligned
+    -- with the returning glove even when the server interrupts a reload.
+    local handAlpha = ViewmodelRenderPolicy.blendAlpha(animationDt, 14)
+    local magazineTarget = self.reloadActive
         and smoothStep(math.clamp((progress - 0.22) / 0.18, 0, 1))
             * (1 - smoothStep(math.clamp((progress - 0.58) / 0.18, 0, 1)))
         or 0
+    self.magazineDipBlend += (magazineTarget - self.magazineDipBlend) * handAlpha
+    local magazineDip = self.magazineDipBlend
+    local reloadPose = self.reloadBlend * math.sin(math.pi * progress * 0.93)
 
     local character = game:GetService("Players").LocalPlayer.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -974,13 +982,14 @@ function WeaponVisuals:_render(deltaTime)
         magazineDip, feel.handTravel,
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
         self.currentWeaponImported, self.currentWeaponHasPbrMagazine)
-    local handAlpha = math.clamp(animationDt * 14, 0, 1)
     self.reloadHandX += (handX - self.reloadHandX) * handAlpha
     self.reloadHandY += (handY - self.reloadHandY) * handAlpha
     self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha
     local workingHand = CFrame.new(self.reloadHandX, self.reloadHandY, self.reloadHandZ)
-    local pistolHandVisibility = self.currentWeaponId == "Pistol"
+    local pistolHandTarget = self.currentWeaponId == "Pistol"
         and WeaponReloadHandPlan.pistolVisibility(progress, self.reloadActive) or 0
+    self.pistolOffhandAlpha += (pistolHandTarget - self.pistolOffhandAlpha) * handAlpha
+    local pistolHandVisibility = self.pistolOffhandAlpha
     local boltLift, boltPull = 0, 0
     if self.currentWeaponId == "Sniper" then
         boltLift, boltPull = SniperBoltCycle.sample(shotAge, self.reloadActive)
@@ -1006,8 +1015,6 @@ function WeaponVisuals:_render(deltaTime)
         local localOffset = entry.offset
         local partName = entry.part.Name
         if string.sub(partName, 1, 4) == "Left" then
-            -- One transform for glove, wrist, sleeve, and forearm.
-            localOffset = localOffset * workingHand * supportMotion
             if self.currentWeaponId == "Pistol" then
                 local opacity = math.max(
                     ViewmodelRenderPolicy.transparency(entry.baseTransparency,
@@ -1016,7 +1023,14 @@ function WeaponVisuals:_render(deltaTime)
                 if entry.part.Transparency ~= opacity then
                     entry.part.Transparency = opacity
                 end
+                -- Six invisible pistol glove/sleeve Parts have no gameplay
+                -- collisions, queries or visible effects. Avoid 6 CFrame
+                -- multiplications and writes per frame while fully hidden.
+                -- The first visible frame resumes from the CURRENT root.
+                if opacity >= 1 then continue end
             end
+            -- One transform for glove, wrist, sleeve, and forearm.
+            localOffset = localOffset * workingHand * supportMotion
         elseif string.sub(partName, 1, 5) == "Right"
             and self.currentWeaponId == "Sniper" then
             -- The right glove matches the unlock/pull/return/lock sequence.
