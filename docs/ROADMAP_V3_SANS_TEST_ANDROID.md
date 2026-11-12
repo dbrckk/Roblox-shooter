@@ -162,6 +162,13 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 
 **Règle de continuité :** tant que le test Android est impossible, passer de A1 → A2 → A3 → B1 → C1 → C2. Ne pas bloquer A2 sur une capture d'écran ou un relevé P95 absent. Ne pas lancer le 2v2, une sixième arme ou de gros packs avant B1.
 
+### Actualisation — B1 (matrice d'acceptation des assets), 12 novembre 2026
+
+- **Matrice générée, pas racontée.** [ASSET_ACCEPTANCE_MATRIX.md](ASSET_ACCEPTANCE_MATRIX.md) est produite depuis `WeaponAssetIds`, `VanguardAssetIds` et `WorldPbrAssetIds` par `scripts/asset_acceptance_matrix.py` ; la CI échoue si le document dérive des modules, si un ID d'arme repasse à zéro, si un propriétaire est nul, ou si un contrôle offline par famille disparaît.
+- **État certifié :** 5 armes / 10 IDs propriétaires `READY_OFFLINE` (LOD0 + LOD1, commit source tracé) ; 4 opérateurs VANGUARD et 3 matériaux du monde (12 canaux) `BLOCKED_ROBLOX_ASSET_APPROVAL`.
+- **Non certifié, et écrit comme tel :** approbation Roblox, upload réel, rendu moteur, cadrage mobile, comportement au streaming, absence de scripts tiers dans les modèles importés. Aucun upload n'est lancé par un push : les workflows d'upload restent manuels et exigent les permissions du créateur.
+- **Collisions et repli intacts :** les IDs ne remplacent que l'apparence ; le viewmodel procédural et les matériaux Roblox natifs restent le repli tant qu'un ID vaut zéro.
+
 ## 5. Qualité, sécurité et critères de fusion/publication
 
 Pour chaque PR de code :

@@ -14,3 +14,7 @@ rojo-server*.log
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Python bytecode
+__pycache__/
+*.pyc
