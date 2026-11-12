@@ -6,6 +6,10 @@ local Policy = {}
 local MAX_X = 0.04
 local MAX_Y = 0.035
 local MAX_FRAME_ANGLE = 0.35
+local REFERENCE_FRAME_SECONDS = 1 / 60
+-- Avoid an unbounded multiplier for clock noise or ultra-short frames.
+-- At 30/60/120 FPS the divisor still equals the real elapsed frame time.
+local MIN_FRAME_SECONDS = 1 / 240
 
 local function finite(value)
     return type(value) == "number" and value == value
@@ -21,10 +25,14 @@ function Policy.target(mouseX, mouseY, indirectInput, pitch, yaw, deltaTime)
         and finite(pitch) and finite(yaw)
         and math.abs(pitch) < MAX_FRAME_ANGLE
         and math.abs(yaw) < MAX_FRAME_ANGLE then
-        -- This is camera angle PER FRAME, not integrated camera velocity.
-        -- Clamped to a smaller-than-crosshair movement: aim stays readable.
-        return math.clamp(-yaw * 0.65, -MAX_X, MAX_X),
-            math.clamp(-pitch * 0.65, -MAX_Y, MAX_Y)
+        -- Camera orientation provides angular displacement PER FRAME.
+        -- Normalize to a reference 60Hz frame: the same turn speed now has
+        -- the same cosmetic weapon inertia at 30, 60 and 120 FPS.
+        -- Never alter the actual camera/ADS or the server's hit ray.
+        local normalizedFrame = REFERENCE_FRAME_SECONDS
+            / math.max(deltaTime, MIN_FRAME_SECONDS)
+        return math.clamp(-yaw * normalizedFrame * 0.65, -MAX_X, MAX_X),
+            math.clamp(-pitch * normalizedFrame * 0.65, -MAX_Y, MAX_Y)
     end
     return math.clamp(-mouseX * 0.002, -MAX_X, MAX_X),
         math.clamp(-mouseY * 0.002, -MAX_Y, MAX_Y)

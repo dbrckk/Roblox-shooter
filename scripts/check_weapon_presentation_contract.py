@@ -82,6 +82,20 @@ for needle in (
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 
+# Mobile camera angular displacement is frame-rate normalized for the
+# *cosmetic* weapon sway, without changing actual aim or the server's ray.
+sway_policy = get("src/shared/WeaponSwayPolicy.luau")
+for needle in (
+    "REFERENCE_FRAME_SECONDS = 1 / 60",
+    "MIN_FRAME_SECONDS = 1 / 240",
+    "math.max(deltaTime, MIN_FRAME_SECONDS)",
+    "yaw * normalizedFrame * 0.65",
+    "pitch * normalizedFrame * 0.65",
+):
+    assert needle in sway_policy, f"Mobile 30/60/120Hz sway parity missing: {needle}"
+assert "FireServer" not in sway_policy and "Instance.new" not in sway_policy
+assert "WeaponSway.target(mouseDelta.X, mouseDelta.Y," in visuals
+
 # PBR sight centers come from authored Blender geometry; the fallback uses
 # its original Part positions. Select AFTER the source is actually created.
 aim_profile = get("src/shared/WeaponAimPose.luau")
