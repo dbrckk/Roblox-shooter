@@ -138,6 +138,7 @@ jobs:
           ./luau scripts/test_viewmodel_render_policy.luau
           ./luau scripts/test_weapon_audio_policy.luau
           ./luau scripts/test_arsenal_baseline.luau
+          ./luau scripts/test_ttk_model.luau
           ./luau scripts/test_safe_planar_input.luau
           ./luau scripts/test_remote_rate_policy.luau
           ./luau scripts/test_spawn_safety.luau
@@ -222,6 +223,7 @@ jobs:
           python3 scripts/check_match_lobby_contract.py
           python3 scripts/check_duel_prep_contract.py
           python3 scripts/check_weapon_contract.py
+          python3 scripts/check_ttk_contract.py
           python3 scripts/check_weapon_presentation_contract.py
           python3 scripts/test_pbr_ads_geometry.py
           python3 scripts/check_combat_feedback_contract.py

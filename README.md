@@ -3,6 +3,7 @@
 ## Pilotage du projet — feuille de route en vigueur
 
 - **[Feuille de route V3 — finition production sans test Android immédiat](docs/ROADMAP_V3_SANS_TEST_ANDROID.md)** : backlog actif priorisé, étapes autonomes réalisables depuis GitHub, critères de sortie, blocages Roblox/Android et preuves attendues. **Le prochain lot est A1 : fiabilité FFA/duel 1v1 déjà codé.**
+- **[Audit produit et plan d'évolution vers le niveau RIVALS — 12 novembre 2026](docs/AUDIT_ECART_RIVALS_2026-11-12.md)** : état vérifié par domaine, benchmark public de RIVALS, tableau d'écart et plan en six lots (menu/format de manche, loadout, progression et collection, présentation, classement, monétisation après rétention).
 - [Feuille de route V2 — historique](docs/ROADMAP_V2_PUBLIC.md) : décisions et lots précédents, dont plusieurs statuts ne sont plus actuels.
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
