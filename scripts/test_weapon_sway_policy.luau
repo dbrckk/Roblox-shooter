@@ -52,3 +52,44 @@ close(x, 0)
 close(y, 0)
 
 print("IRON YARD touch/gamepad camera inertia and mouse priority: OK")
+
+-- Same camera angular velocity must produce the exact same weapon sway
+-- target at 30/60/120 Hz. Previously 30 Hz doubled and 120 Hz halved it.
+local targetX, targetY = nil, nil
+for _, hz in ipairs({30, 60, 120}) do
+    local dt = 1 / hz
+    local x30, y30 = Policy.target(0, 0, true, 0.48 * dt, -0.60 * dt, dt)
+    close(x30, 0.60 * (1/60) * 0.65)
+    close(y30, -0.48 * (1/60) * 0.65)
+    if targetX ~= nil then
+        close(targetX, x30)
+        close(targetY, y30)
+    end
+    targetX, targetY = x30, y30
+
+    -- The existing exponential blend must converge to the same visible
+    -- final pose for one real second, not a frame-count-dependent position.
+    local displayedX, displayedY = 0, 0
+    local rate = 14
+    for _ = 1, hz do
+        local alpha = 1 - math.exp(-rate * dt)
+        displayedX += (x30 - displayedX) * alpha
+        displayedY += (y30 - displayedY) * alpha
+    end
+    close(displayedX, x30 * (1 - math.exp(-rate)))
+    close(displayedY, y30 * (1 - math.exp(-rate)))
+end
+
+-- High-speed turns remain bounded on every device and during unusually
+-- short 1ms frames. Mouse priority and camera-cut rejection stay intact.
+for _, hz in ipairs({30, 60, 120, 1000}) do
+    local dt = 1 / hz
+    local x30, y30 = Policy.target(0, 0, true, 0.3, -0.3, dt)
+    assert(x30 >= -0.04 and x30 <= 0.04)
+    assert(y30 >= -0.035 and y30 <= 0.035)
+    assert(x30 == x30 and y30 == y30)
+end
+local hx, hy = Policy.target(16, -5, true, 0.05, -0.06, 1/30)
+close(hx, -0.032)
+close(hy, 0.010)
+print("IRON YARD: touch/gamepad sway has time-normalized 30/60/120Hz parity OK")

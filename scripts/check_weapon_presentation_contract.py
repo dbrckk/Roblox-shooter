@@ -79,6 +79,16 @@ for needle in (
 ):
     assert needle in visuals, f"Weapon visuals not wired: {needle}"
 
+# Camera turn inertia is presentation-only and must have the same angular
+# velocity response at mobile 30/60/120Hz without moving the shot ray.
+sway_policy = get("src/shared/WeaponSwayPolicy.luau")
+assert "REFERENCE_FRAME_SECONDS = 1 / 60" in sway_policy
+assert "MIN_FRAME_SECONDS = 1 / 240" in sway_policy
+assert "math.max(deltaTime, MIN_FRAME_SECONDS)" in sway_policy
+assert "yaw * normalizedFrame * 0.65" in sway_policy
+assert "pitch * normalizedFrame * 0.65" in sway_policy
+assert "FireServer" not in sway_policy and "Instance.new" not in sway_policy
+
 # PBR sight centers come from authored Blender geometry; the fallback uses
 # its original Part positions. Select AFTER the source is actually created.
 aim_profile = get("src/shared/WeaponAimPose.luau")
