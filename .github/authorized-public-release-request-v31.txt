@@ -1,0 +1,2 @@
+IRON YARD PUBLIC FPS one-shot release authorization, 2026-11-12.
+User requested continued public improvement. PBR detachable pistol/AR magazines now tilt gently on their existing reload motion. Existing Luau and Rojo tests passed on the implementation. Do not publish until green exact-SHA CI, verified owner and PUBLIC place. No alpha staging, new assets or network changes.
