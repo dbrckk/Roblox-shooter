@@ -65,19 +65,23 @@ assert(select(1, Hand.sample("Pistol", 0.45, false, 1, 1, "QUALITY", true)) == 0
 
 -- Right hand follows the actual timed bolt mechanism, except during ADS
 -- and a server-confirmed reload. All values remain bounded and finite.
-local bx, by, bz = Hand.boltGrip("Sniper", 1, false, false)
+local bx, by, bz = Hand.boltGrip("Sniper", 1, 1, false, false)
 assert(bx > 0.25 and by > 0.35 and bz < -0.2)
-local hx, hy, hz = Hand.boltGrip("Sniper", 0.5, false, false)
+local hx, hy, hz = Hand.boltGrip("Sniper", 0.5, 1, false, false)
 assert(hx > 0 and hx < bx and hy < by and hz > bz)
+local ux, uy, uz = Hand.boltGrip("Sniper", 0, 1, false, false)
+assert(ux > 0 and uy > 0 and uz == 0,
+    "Unlock lifts the sniper glove before its rearward travel")
 for _, args in ipairs({
-    {"Sniper", 0, false, false},
-    {"Sniper", 1, true, false},
-    {"Sniper", 1, false, true},
-    {"Pistol", 1, false, false},
-    {"Sniper", math.huge, false, false},
-    {"Sniper", 0/0, false, false},
+    {"Sniper", 0, 0, false, false},
+    {"Sniper", 1, 1, true, false},
+    {"Sniper", 1, 1, false, true},
+    {"Pistol", 1, 1, false, false},
+    {"Sniper", math.huge, 1, false, false},
+    {"Sniper", 0/0, 1, false, false},
+    {"Sniper", 1, 0/0, false, false},
 }) do
-    local x, y, z = Hand.boltGrip(args[1], args[2], args[3], args[4])
+    local x, y, z = Hand.boltGrip(args[1], args[2], args[3], args[4], args[5])
     assert(x == 0 and y == 0 and z == 0)
 end
 print("IRON YARD: scoped-safe sniper bolt and PBR/fallback pistol gestures: OK")

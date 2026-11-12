@@ -523,3 +523,29 @@ Auparavant les flashs de tir locaux et les douilles AR/pistolet étaient émis �
 - **Sniper** : pendant le cycle du verrou déclenché par le tir, le gant, l'avant-bras, le bracelet et la manche de la main droite suivent la cinématique mécanique existante. Le geste est absent pendant la recharge ou la visée optique où l'arme est masquée. Aucun second RenderStep, timer ni modification serveur.
 - **Interruption** : la visibilité de la main de pistolet est annulée immédiatement si la recharge est arrêtée par le serveur. Les positions reviennent progressivement à la normale et le changement d'arme réinitialise l'état.
 - **Contrôles ajoutés** : valeurs bornées, trajectoires PBR/procédurales distinctes, main cachée hors recharge, absence de geste sniper sous lunette, validation par Luau et contrats d'intégration. Reste à réaliser un contrôle en jeu (Studio/Android 30/60 FPS) et mesurer le P95/P99.
+
+
+
+## Verrou de précision en quatre phases — 12 novembre 2026
+
+Le sniper original PBR et le fallback procédural utilisaient auparavant un
+seul mouvement triangulaire pour la culasse et la main. Le rendu client
+emploie désormais une chronologie mécanique plus lisible : déverrouillage
+de la poignée (0,17–0,25 s), recul (0,25–0,43 s), retour de culasse
+(0,43–0,56 s) puis verrouillage (0,56–0,66 s). L'éjection locale de la
+douille reste calée sur **0,43 s**, au recul maximal, dans la boucle
+RenderStep existante déjà synchronisée avec la caméra.
+
+La poignée, le levier et le verrou PBR se déplacent ensemble, tandis que
+la main droite suit les deux degrés d'animation (élévation puis traction)
+et reste masquée avec l'arme pendant la visée optique. En cas de recharge
+confirmée par le serveur, le cycle cosmétiques de tir est supprimé.
+Aucune modification de cadence réelle, munitions, raycast, dégâts, FOV,
+configuration des assets, requête réseau ou physique.
+
+Tests Luau : neuf repères de phase, trajectoires bornées à 900 échantillons,
+correspondance avec le délai de douille, valeurs invalides et interruption
+par reload. Contrat Python d'intégration garantissant les mêmes courbes
+pour le bolt importé et la main. Reste à mesurer sur Android/Studio :
+visibilité et alignement des gants et de la poignée PBR à 30/60 FPS,
+aucune gêne ADS, retour après chute de fréquence.

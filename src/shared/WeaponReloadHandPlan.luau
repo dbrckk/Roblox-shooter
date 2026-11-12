@@ -73,11 +73,14 @@ end
 
 -- Sniper right hand follows the same action envelope as the Blender bolt.
 -- The optical overlay hides the weapon while ADS, so skip unseen motion.
-function Plan.boltGrip(weaponId, actionTravel, reloading, scoped)
+function Plan.boltGrip(weaponId, boltPull, boltLift, reloading, scoped)
     if weaponId ~= "Sniper" or reloading == true or scoped == true
-        or not finite(actionTravel) then return 0, 0, 0 end
-    local pull = math.clamp(actionTravel, 0, 1)
-    return 0.32 * pull, 0.40 * pull, -0.27 * pull
+        or not finite(boltPull) or not finite(boltLift) then return 0, 0, 0 end
+    local pull = math.clamp(boltPull, 0, 1)
+    local unlock = math.clamp(boltLift, 0, 1)
+    return 0.30 * pull + 0.04 * unlock,
+        0.29 * pull + 0.10 * unlock,
+        -0.25 * pull
 end
 
 return Plan

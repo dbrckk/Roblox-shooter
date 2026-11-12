@@ -22,6 +22,7 @@ local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):W
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 local WeaponFxFramePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFxFramePolicy"))
 local WeaponReloadHandPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponReloadHandPlan"))
+local SniperBoltCycle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SniperBoltCycle"))
 
 local WeaponVisuals = {}
 WeaponVisuals.__index = WeaponVisuals
@@ -980,12 +981,15 @@ function WeaponVisuals:_render(deltaTime)
     local workingHand = CFrame.new(self.reloadHandX, self.reloadHandY, self.reloadHandZ)
     local pistolHandVisibility = self.currentWeaponId == "Pistol"
         and WeaponReloadHandPlan.pistolVisibility(progress, self.reloadActive) or 0
+    local boltLift, boltPull = 0, 0
+    if self.currentWeaponId == "Sniper" then
+        boltLift, boltPull = SniperBoltCycle.sample(shotAge, self.reloadActive)
+    end
     local boltX, boltY, boltZ = WeaponReloadHandPlan.boltGrip(
-        self.currentWeaponId, actionTravel, self.reloadActive, self.scoped)
-    local boltAlpha = boltX / 0.32
+        self.currentWeaponId, boltPull, boltLift, self.reloadActive, self.scoped)
     local boltHand = CFrame.new(boltX, boltY, boltZ)
-        * CFrame.Angles(0, math.rad(15 * boltAlpha),
-            math.rad(-18 * boltAlpha))
+        * CFrame.Angles(0, math.rad(15 * boltLift),
+            math.rad(-18 * boltPull))
     -- Pump and support hand move together on a shot; never pump the fore-end
     -- into the left glove while it is inserting a cartridge.
     local supportMotion = self.currentWeaponId == "Shotgun" and not self.reloadActive
@@ -1015,7 +1019,7 @@ function WeaponVisuals:_render(deltaTime)
             end
         elseif string.sub(partName, 1, 5) == "Right"
             and self.currentWeaponId == "Sniper" then
-            -- The right glove follows the existing bolt action in hip fire.
+            -- The right glove matches the unlock/pull/return/lock sequence.
             localOffset = localOffset * boltHand
         elseif (partName == "LoadingShellBody" or partName == "LoadingShellBrass")
             and self.currentWeaponId == "Shotgun" then
@@ -1044,8 +1048,11 @@ function WeaponVisuals:_render(deltaTime)
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif (partName == "Bolt" or partName == "BoltHandle"
             or partName == "BoltHandleKnob") and self.currentWeaponId == "Sniper" then
-            localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * actionTravel,
-                0, feel.actionTravel * actionTravel)
+            -- Only the physical Blender bolt and matching fallback parts
+            -- move, with lift first and delayed re-lock after the casing.
+            localOffset = localOffset * CFrame.new(0.8 * feel.actionTravel * boltPull,
+                0, feel.actionTravel * boltPull)
+                * CFrame.Angles(0, 0, math.rad(32 * boltLift))
         end
         entry.part.CFrame = root * localOffset
     end

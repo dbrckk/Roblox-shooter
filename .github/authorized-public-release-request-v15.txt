@@ -1,0 +1,12 @@
+IRON YARD — explicit one-shot authorized PUBLIC Roblox FPS update.
+Date 2026-11-12. Owner: continue production-ready public IRON YARD,
+with no private / alpha testing destination.
+
+Changes: cinematic original PBR sniper bolt moves through four deterministic
+stages (unlock, pull, return, lock) while the right-hand glove follows the
+same movement. Existing 0.43s casing ejection is aligned to full pull.
+No damage, shot validation, ammo or assets registry changes.
+Includes pure Luau regression and complete CI integration contracts.
+
+Publish ONLY the exact current main SHA after all green Rojo gates,
+and verify correct public place and existing authorized owner. No secrets.

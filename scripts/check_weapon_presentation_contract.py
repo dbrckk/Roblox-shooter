@@ -651,7 +651,7 @@ for needle in (
     "return 0, 0, 0",
     'weaponId == "Pistol"',
     "function Plan.pistolVisibility(progress, active)",
-    "function Plan.boltGrip(weaponId, actionTravel, reloading, scoped)",
+    "function Plan.boltGrip(weaponId, boltPull, boltLift, reloading, scoped)",
 ):
     assert needle in reload_hand, f"Reload hand choreography missing: {needle}"
 for needle in (
@@ -693,6 +693,26 @@ assert 'self.currentWeaponHasPbrMagazine = weaponId == "Pistol"' in visuals
 assert 'selected.IRONYARD_Pistol_Magazine ~= nil' in visuals
 assert 'self.currentWeaponImported, self.currentWeaponHasPbrMagazine' in visuals
 assert 'if imported == true and hasMagazine ~= true then' in reload_hand
+# The actual sniper bolt geometry and glove share the exact ejection
+# phase: unlock -> pull -> casing at max pull -> return -> relock.
+sniper_bolt = get("src/shared/SniperBoltCycle.luau")
+assert 'Cycle.PULL_END = 0.43' in sniper_bolt
+assert 'delay = 0.43' in ejection
+for needle in (
+    "function Cycle.sample(shotAge, reloading)",
+    "Cycle.UNLOCK_START", "Cycle.UNLOCK_END",
+    "Cycle.RETURN_END", "Cycle.LOCK_END",
+):
+    assert needle in sniper_bolt, f"Sniper bolt timing missing: {needle}"
+for needle in (
+    'WaitForChild("SniperBoltCycle")',
+    'boltLift, boltPull = SniperBoltCycle.sample(shotAge, self.reloadActive)',
+    "self.currentWeaponId, boltPull, boltLift, self.reloadActive, self.scoped",
+    "feel.actionTravel * boltPull",
+    "math.rad(32 * boltLift)",
+):
+    assert needle in visuals, f"Sniper bolt/hand geometry not synchronized: {needle}"
+assert "FireServer" not in sniper_bolt and "Instance.new" not in sniper_bolt
 assert "Instance.new" not in reload_hand and "FireServer" not in reload_hand
 assert "targetHumanoid:TakeDamage(damage)" in server
 assert "fireCooldown = 0.115" in config, "Server/weapon cadence not rewritten"
