@@ -106,3 +106,23 @@ clés DataStore, les récompenses et la durée des verrous restent inchangés.
 par les callbacks, mais ne simule pas l'infrastructure DataStore Roblox ;
 un contrôle de persistance et de reconnexion dans une expérience Roblox
 autorisée reste nécessaire.
+
+
+## Attribution atomique des récompenses serveur (12 novembre 2026)
+
+Les gains d'une même action (XP, élimination, tir à la tête, victoire) sont
+désormais validés **tous ensemble** dans `ProgressionLedger.applyGrant`
+avant de remplacer le cumul des gains de la session. Une valeur invalide
+(négative, fractionnaire, non finie, supérieure à 10 000 par événement)
+ou un dépassement du compteur entier entraîne le rejet de **toute**
+l'attribution ; aucun XP ni compteur partiel n'est laissé en mémoire.
+Le nouvel état est indépendant de l'ancien, y compris pendant une écriture
+`UpdateAsync` en cours. L'attribution nominale reste identique (250 XP
+par victoire ; les récompenses de tirs restent calculées par le serveur).
+Les identifiants de sauvegarde, les données déjà enregistrées et le schéma
+DataStore v1 ne changent pas.
+
+La suite Luau exécutable vérifie les quatre champs, les deltas manquants,
+les entrées malformées et un dépassement du **dernier** champ après un
+premier champ normalement valide. Elle ne remplace pas une validation
+multijoueur/reconnexion sur des serveurs Roblox réellement publiés.
