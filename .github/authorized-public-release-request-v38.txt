@@ -1,0 +1,26 @@
+IRON YARD — owner-authorized one-shot PUBLIC Roblox update, 12 November 2026.
+
+The user requested continued improvement and publication on the EXISTING
+PUBLIC IRON YARD Roblox experience, never a duplicate/private alpha.
+This single release covers merged PR #40, source commit
+4b85d277a6986896cb6d541ef2f80d7afc8370fe.
+
+The owner/Studio-only PERF panel now displays first-person viewmodel CPU
+callback mean/peak, active transient effect count and its adaptive budget,
+current weapon type, PBR/procedural source and model part count, alongside
+the existing local FPS P95/P99 and server bot timing metrics.
+
+Profiling uses an opt-in local-only attribute, measures only when owner
+opens PERF, and publishes one lightweight snapshot per second. A pure
+fixed-memory diagnostics policy rejects invalid samples/Android suspension
+gaps. All ordinary public players keep profiling disabled and have no
+extra gameplay telemetry. No server/combat/aim/ammo/hitbox or PBR visuals
+were modified. CPU callback time must not be claimed as GPU rendering time.
+
+Full Luau compile, executable regression and Python integration contracts,
+plus Rojo build are GREEN on PR and on merged main. Require a NEW full
+green CI for this exact release authorization commit, then independently
+verify the original Roblox owner, PUBLIC universe and original root place.
+Publish only the existing public game with no additional universe/place.
+No personal IDs or secrets are stored in this file. Device FPS still
+requires an actual Android playtest; do not assert measured gains.
