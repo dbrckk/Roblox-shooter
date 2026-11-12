@@ -1,0 +1,21 @@
+IRON YARD — one owner-authorized PUBLIC FPS update (12 November 2026).
+
+The owner requested continued improvements to the EXISTING PUBLIC IRON YARD
+experience, with no private alpha or duplicate game. This one-shot request
+covers merged PR #32, commit ef0865211d6b3247afd69d213f4fae6715ac27db.
+
+Cache each procedural or PBR imported weapon primitive's cosmetic animation
+role when the part is equipped or a validated LOD is swapped. Reuse numeric
+motion roles rather than repeatedly parsing part.Name during each mobile
+render step. Preserve all existing transforms, original PBR magazine tilt,
+ADS centering, reload synchronization, bolt/slide/pump motions, and muzzle
+and ejection sockets. The five-weapon executable Luau equivalence suite,
+weapon integration checks, compiler, and Rojo build passed on the PR and
+on merged main.
+
+Release only after full green CI for the exact authorization commit. The
+guarded PUBLIC Roblox workflow must independently verify original owner,
+universe and root place, PUBLIC status, exact source SHA, and current CI.
+Publish only that existing experience, never a new or private universe.
+Do not claim measured Android FPS, Roblox Studio visual verification or
+deployment until corresponding evidence exists. No secrets in source.
