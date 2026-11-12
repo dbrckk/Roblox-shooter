@@ -22,7 +22,8 @@ assert(P.record("lod", 0.050, 30, 12))
 assert(P.record("initial", 0.030, 22, 0))
 local result = P.snapshot()
 assert(result.build.count == 2 and result.reuse.count == 1)
-assert(result.build.meanMs == 20 and result.build.p95Ms == 30)
+assert(result.build.meanMs == 20 and result.build.windowMeanMs == 20
+    and result.build.p95Ms == 30)
 assert(result.build.lastMs == 30 and result.build.peakMs == 30)
 assert(result.build.windowCount == 2 and result.reuse.p95Ms == 4)
 assert(result.lod.count == 1 and result.initial.count == 1)
@@ -42,9 +43,14 @@ end
 local long = P.snapshot()
 assert(long.reuse.count == 240 and long.reuse.windowCount == P.WINDOW)
 assert(long.reuse.meanMs > 100 and long.reuse.meanMs < 150)
+assert(long.reuse.windowMeanMs > 215 and long.reuse.windowMeanMs < 220,
+    "The mean shown beside the recent P95 must use the same last 48 swaps")
+assert(long.reuse.windowMeanMs > long.reuse.meanMs,
+    "Recent slowdown must not be concealed by older fast samples")
 assert(long.reuse.p95Ms >= 235 and long.reuse.p95Ms <= 240)
 assert(long.reuse.peakMs == 240 and long.reuse.lastMs == 240)
-assert(long.build.count == 0 and long.build.p95Ms == 0)
+assert(long.build.count == 0 and long.build.p95Ms == 0
+    and long.build.windowMeanMs == 0)
 assert(long.cachedParts == 10)
 P.enable(false)
 assert(not P.isEnabled() and P.snapshot() == nil)

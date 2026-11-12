@@ -96,13 +96,13 @@ local function localSwapSummary()
     return string.format(
         "\n--- ARMES (local) ---\n"
         .. "A/B recycles: %d | rebuilds: %d\n"
-        .. "Recycle moy/P95: %.1f / %.1fms\n"
-        .. "Build moy/P95: %.1f / %.1fms\n"
+        .. "Recycle 48 moy/P95: %.1f / %.1fms\n"
+        .. "Build 48 moy/P95: %.1f / %.1fms\n"
         .. "LOD: %d | cache: %s pieces\n"
         .. "RAM client TOTAL: %s",
         data.reuse.count, data.build.count,
-        data.reuse.meanMs, data.reuse.p95Ms,
-        data.build.meanMs, data.build.p95Ms,
+        data.reuse.windowMeanMs, data.reuse.p95Ms,
+        data.build.windowMeanMs, data.build.p95Ms,
         data.lod.count, cached, ram)
 end
 

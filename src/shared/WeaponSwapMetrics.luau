@@ -71,12 +71,18 @@ local function summarize(item)
     for i = 1, #item.samples do
         recent[i] = item.samples[i]
     end
+    local windowTotal = 0
+    for _, value in ipairs(recent) do
+        windowTotal += value
+    end
+    local windowMean = #recent > 0 and windowTotal / #recent or 0
     table.sort(recent)
     local p95 = #recent > 0
         and recent[math.ceil(#recent * 0.95)] or 0
     return {
         count = item.count,
         meanMs = item.count > 0 and item.totalMs / item.count or 0,
+        windowMeanMs = windowMean,
         p95Ms = p95,
         peakMs = item.peakMs,
         lastMs = item.lastMs,
