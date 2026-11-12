@@ -7,7 +7,10 @@ local function finite(n)
         and n > -math.huge and n < math.huge
 end
 function P.confirmed(weaponId, wasReloading, nowReloading, previousLoaded, loaded, capacity)
-    return (weaponId == "Pistol" or weaponId == "AssaultRifle")
+    -- Sniper uses the same authoritative refill gate, but its bolt and
+    -- right-hand motion are sampled separately by SniperBoltCycle.
+    return (weaponId == "Pistol" or weaponId == "AssaultRifle"
+        or weaponId == "Sniper")
         and wasReloading == true and nowReloading == false
         and finite(previousLoaded) and finite(loaded) and finite(capacity)
         and capacity > 0 and capacity % 1 == 0

@@ -40,3 +40,48 @@ for i = 0, 900 do
     assert(lift >= 0 and lift <= 1 and pull >= 0 and pull <= 1)
 end
 print("IRON YARD: sniper unlock, pull, ejection, return, relock and cancel OK")
+
+-- A confirmed server refill unlocks the sniper bolt immediately and
+-- performs the same mechanically correct lift/pull/return/relock sequence.
+-- This path never ejects a second casing or changes the weapon magazine.
+assert(math.abs(Cycle.RELOAD_DURATION - 0.49) < 1e-9)
+local rLift, rPull = Cycle.sampleReload(0, false)
+assert(rLift == 0 and rPull == 0)
+rLift, rPull = Cycle.sampleReload(0.08, false)
+assert(rLift == 1 and rPull == 0)
+rLift, rPull = Cycle.sampleReload(0.26, false)
+assert(rLift == 1 and rPull == 1)
+rLift, rPull = Cycle.sampleReload(0.39, false)
+assert(rLift == 1 and rPull == 0)
+rLift, rPull = Cycle.sampleReload(Cycle.RELOAD_DURATION, false)
+assert(rLift == 0 and rPull == 0)
+for i = 0, 490 do
+    local age = i / 1000
+    local lift, pull = Cycle.sampleReload(age, false)
+    local fromShotLift, fromShotPull = Cycle.sample(
+        age + Cycle.UNLOCK_START, false)
+    assert(math.abs(lift - fromShotLift) < 1e-9
+        and math.abs(pull - fromShotPull) < 1e-9,
+        "Reload must reuse the exact shot bolt mechanism")
+    assert(lift >= 0 and lift <= 1 and pull >= 0 and pull <= 1)
+end
+for _, bad in ipairs({-1, 0/0, math.huge, -math.huge, "bad"}) do
+    assert(select(1, Cycle.sampleReload(bad, false)) == 0)
+    assert(select(2, Cycle.sampleReload(bad, false)) == 0)
+end
+assert(select(1, Cycle.sampleReload(0.26, true)) == 0)
+assert(select(2, Cycle.sampleReload(0.26, true)) == 0)
+local shotLift, shotPull = Cycle.sample(0.34, false)
+local chosenLift, chosenPull = Cycle.present(0.34, 0.26, false)
+assert(shotLift == chosenLift and shotPull == chosenPull,
+    "Accepted newer shot must supersede pending reload cycle")
+assert(select(1, Cycle.present(0, 0.26, false)) == 0)
+assert(select(2, Cycle.present(0, 0.26, false)) == 0)
+assert(select(1, Cycle.present(2, 0.26, false)) == 1)
+assert(select(2, Cycle.present(2, 0.26, false)) == 1)
+assert(select(1, Cycle.present(2, 0.26, true)) == 0)
+for i = 1, 3600 do
+    assert(select(1, Cycle.sample(i / 60 + 1, false)) == 0)
+    assert(select(2, Cycle.sample(i / 60 + 1, false)) == 0)
+end
+print("IRON YARD sniper: authoritative refill rack, shot precedence, cancellation and idle mobile path OK")

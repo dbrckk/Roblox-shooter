@@ -1054,7 +1054,10 @@ function WeaponVisuals:_render(deltaTime)
     local pistolHandVisibility = self.pistolOffhandAlpha
     local boltLift, boltPull = 0, 0
     if self.currentWeaponId == "Sniper" then
-        boltLift, boltPull = SniperBoltCycle.sample(shotAge, self.reloadActive)
+        -- Shot bolt or fresh server-confirmed reload rack, never both.
+        -- The existing PBR bolt and right glove use the same pose scalars.
+        boltLift, boltPull = SniperBoltCycle.present(
+            shotAge, now - self.reloadFinishedAt, self.reloadActive)
     end
     local boltX, boltY, boltZ = WeaponReloadHandPlan.boltGrip(
         self.currentWeaponId, boltPull, boltLift, self.reloadActive, self.scoped)
