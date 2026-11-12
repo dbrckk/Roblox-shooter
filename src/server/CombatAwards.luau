@@ -8,6 +8,7 @@ local Workspace = game:GetService("Workspace")
 local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
 local ProgressionService = require(script.Parent:WaitForChild("ProgressionService"))
 local CombatAwards = {}
+local VictoryAwardPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("VictoryAwardPolicy"))
 local states = {}
 local started = false
 local remotes
@@ -23,6 +24,7 @@ local function stateFor(player)
             streak = 0,
             chain = 0,
             lastEliminationAt = -math.huge,
+            victoryGranted = false,
         }
         states[player] = state
         player:SetAttribute("IronYardSessionXP", state.sessionXP)
@@ -86,6 +88,9 @@ function CombatAwards.recordVictory(player)
     if not player or not player:IsA("Player") or not player.Parent then return end
     if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     local state = stateFor(player)
+    -- Only one award per player per round, even if an end callback is retried.
+    -- Set the guard BEFORE invoking progression/persistence or client events.
+    if not VictoryAwardPolicy.claim(state) then return end
     local bonus = 250
     state.roundXP += bonus
     state.sessionXP += bonus
@@ -116,6 +121,7 @@ end
 function CombatAwards.resetRound()
     for player, state in pairs(states) do
         state.roundXP = 0
+        VictoryAwardPolicy.reset(state)
         state.streak = 0
         state.chain = 0
         state.lastEliminationAt = -math.huge
