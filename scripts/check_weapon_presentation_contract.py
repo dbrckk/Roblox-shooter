@@ -828,6 +828,34 @@ assert visuals.index("self.hasActiveImpactMarks = true") < (
 assert visuals.index("self.hasActiveImpactMarks = anyLive") > (
     visuals.index("function WeaponVisuals:_updateImpactMarks"))
 
+# Mobile effects adapt only the transient pool after sustained frame drops.
+# The user-selected preset, confirmed-hit priority and server damage stay put.
+adaptive_fx = get("src/shared/AdaptiveCombatFxPolicy.luau")
+for needle in (
+    "function Policy.new()",
+    "function Policy.cap(state, preset, touch)",
+    "function Policy.sample(state, dt, preset, touch)",
+    "SLOW_FRAME_MS = 38",
+    "FAST_FRAME_MS = 23",
+    "state.slowStreak >= 2",
+    "state.fastStreak >= 4",
+    "dt > 0.25",
+):
+    assert needle in adaptive_fx, f"Adaptive Android transient FX safety missing: {needle}"
+for needle in (
+    'WaitForChild("AdaptiveCombatFxPolicy")',
+    "self.adaptiveCombatFx = AdaptiveCombatFxPolicy.new()",
+    "self.adaptiveCombatFxCap = AdaptiveCombatFxPolicy.sample(",
+    "self.adaptiveCombatFxCap or TransientFxPool.MAX_PARTS",
+):
+    assert needle in visuals, f"Adaptive mobile FX integration missing: {needle}"
+assert visuals.count("self.adaptiveCombatFxCap or TransientFxPool.MAX_PARTS") == 2
+assert visuals.index("self.adaptiveCombatFxCap = AdaptiveCombatFxPolicy.sample(") < (
+    visuals.index("self:_updateTransientFx(clock)"))
+assert 'self.activeTransientIndices[index] = true' in visuals
+assert 'slot.priority = priority' in get("src/shared/TransientFxPool.luau")
+assert 'slot.priority <= priority' in get("src/shared/TransientFxPool.luau")
+
 # Mobile VFX priority 4 must not preempt another confirmed core when a
 # lower-priority dust/tracer is still active; stationary flash/glints avoid
 # redundant CFrame interpolation while keeping Size/Opacity animation.
