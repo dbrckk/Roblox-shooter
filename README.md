@@ -3,6 +3,7 @@
 ## Pilotage du projet — feuille de route en vigueur
 
 - **[Feuille de route V3 — finition production sans test Android immédiat](docs/ROADMAP_V3_SANS_TEST_ANDROID.md)** : backlog actif priorisé, étapes autonomes réalisables depuis GitHub, critères de sortie, blocages Roblox/Android et preuves attendues. **Le prochain lot est A1 : fiabilité FFA/duel 1v1 déjà codé.**
+- **[Matrice d'acceptation des assets](docs/ASSET_ACCEPTANCE_MATRIX.md)** : état généré depuis les registres d'IDs — 10 IDs d'armes prêts hors moteur, 4 modèles VANGUARD et 12 canaux de matériaux encore bloqués faute d'approbation Roblox.
 - [Feuille de route V2 — historique](docs/ROADMAP_V2_PUBLIC.md) : décisions et lots précédents, dont plusieurs statuts ne sont plus actuels.
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.

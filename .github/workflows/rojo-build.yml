@@ -207,6 +207,7 @@ jobs:
           python3 scripts/test_weapon_upload_contract.py
           python3 scripts/test_audit_vanguard_glb.py
           python3 scripts/test_world_pbr_pipeline.py
+          python3 scripts/asset_acceptance_matrix.py
           echo "Model + world PBR map generation, integrity, upload security tests passed."
 
       - name: Verify visual identity and PBR palette consistency
