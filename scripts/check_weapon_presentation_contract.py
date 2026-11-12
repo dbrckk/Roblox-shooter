@@ -366,7 +366,7 @@ for needle in (
     assert needle in visuals, f"Client GLB multi-primitive animation missing: {needle}"
 for needle in (
     'Layout.collect(package,',
-    'Layout.collect(model, MeshPolicy.Required[weaponId], validMesh)',
+    'Layout.collect(model, MeshPolicy.Required[weaponId], validMesh,',
     'for index, part in ipairs(selected[name]) do',
 ):
     assert needle in asset_loader, f"Server GLB nested mesh load missing: {needle}"

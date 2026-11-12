@@ -1,0 +1,8 @@
+IRON YARD one-shot PUBLIC release request: 2026-11-12.
+Correction of stale source contract so CI verifies the new validated
+optional Pistol PBR magazine in server model loading. Same original forge,
+strict asset whitelist and existing public game target. Owner continues
+to authorize publication only after successful exact-source Rojo CI.
+Do not imply separately uploaded new Roblox asset IDs until Open Cloud
+asset workflow confirms and commits updated WeaponAssetIds.luau.
+No credentials, no server combat changes, no alpha or private staging.
