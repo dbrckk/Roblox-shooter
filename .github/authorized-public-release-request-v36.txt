@@ -1,0 +1,14 @@
+IRON YARD — one-time owner-authorized PUBLIC Roblox release, 12 November 2026.
+Publish solely to the existing verified creator-owned PUBLIC Roblox experience
+using the repository's gated workflow and official Luau/Rojo build.
+PR #37 restricts expensive PBR LOD model reconstruction to settled
+viewmodel states: quiet movement, quiet camera inertia, no pending
+local flash or casing, no active ADS/sprint/reload, and at least 0.65 s
+after a server-confirmed ammo refill for the full sniper bolt cycle.
+Existing asset trust, PBR/fallback safety, network remotes, hit detection,
+server authority, ammo, damage, camera aim and game universe are unchanged.
+Both PR/push CI and merged main CI succeeded at
+b0ae583261d2ced59f05807724af366b7cf212de.
+Require independent exact-release-commit CI and owner/destination
+verification before exactly one PUBLIC publish. Do not claim real Android
+frame-time measurements based solely on offline tests.
