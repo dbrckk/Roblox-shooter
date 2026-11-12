@@ -1,3 +1,6 @@
+-- Lifecycle audit before the services whose round and weapon signals it reads.
+local LifecycleService = require(script:WaitForChild("LifecycleService"))
+LifecycleService.start()
 -- Initialize DataStore sessions before XP-earning gameplay services.
 local ProgressionService = require(script:WaitForChild("ProgressionService"))
 ProgressionService.start()

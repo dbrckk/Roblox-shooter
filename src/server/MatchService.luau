@@ -150,6 +150,9 @@ local function transition(nextPhase, seconds, result, winningUserId)
     winnerUserId = winningUserId or 0
     deadline = os.clock() + seconds
     lastPublishedSecond = nil
+    -- Audit mirror only: LifecycleService watches this to scope round resources.
+    -- It never reads the value back and never changes a transition.
+    Workspace:SetAttribute("IronYardRoundPhase", nextPhase)
     publish(math.ceil(seconds))
 end
 
