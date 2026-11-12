@@ -182,6 +182,14 @@ Pour chaque PR de code :
 - **R4 — optimisation aveugle** : pas de mesure physique du CPU/GPU ni de comparaison avant/après ; privilégier correctness, allocations bornées et instruments jusqu'à un vrai test.
 - **R5 — livraison** : asset Roblox non autorisé ou source concurrente ; les gates CI et owner et fallback restent impératifs.
 
+### Actualisation — C1 (dette d'exécution), 12 novembre 2026
+
+- **Registre de cycle de vie livré et câblé.** `src/shared/LifecycleLedger.luau` compte ce qui est vivant par type et nomme une fuite ; `src/server/LifecycleService.luau`, démarré avant `MatchService`, l'alimente depuis `Players.PlayerAdded`/`PlayerRemoving`, le miroir `IronYardEquippedWeapon` de `WeaponService` et le miroir `IronYardRoundPhase` de `MatchService`. Compteurs publiés en attributs de `Workspace` : `IronYardAuditLive`, `AuditPeak`, `AuditLeaks`, `AuditDuplicates`, `AuditOverflow`. Voir [LIFECYCLE_AUDIT.md](LIFECYCLE_AUDIT.md).
+- **Les miroirs ne reviennent jamais dans le jeu** : `MatchService` et `WeaponService` les écrivent sans les relire, et le contrat refuse toute lecture. Chaque appel au registre est sous `pcall` : un bug d'audit ne casse ni manche, ni équipement, ni départ.
+- **Stress déterministe de 20 manches** : 2 joueurs + 4 bots, presets `ECO`/`BALANCED`/`QUALITY`, 10 échanges d'arme et 5 décès par manche, effets réclamés cinq fois au-delà du plafond ; registre vide après chaque manche.
+- **Budget d'IA à quatre bots** : `inFlight ≤ 2`, emplacements tous relâchés, résultat au-delà du bail rejeté alors que son emplacement est libéré séparément.
+- **Aucune mesure de performance** : compteurs seulement, **aucun gain de FPS revendiqué** ; le câblage n'a pas tourné en moteur et le registre ne couvre que ce que les services lui déclarent.
+
 ## 6. Définition de la sortie recherchée
 
 IRON YARD « prêt pour une exploitation publique crédible » signifie : FFA et 1v1 fiables, tirs et scores autoritaires, sauvegarde annoncée avec sincérité, aucune fuite manifeste sur sessions prolongées, modèles/animations/audio honnêtes et cohérents, contrôles Android utilisables, build reproductible et publication/rollback vérifiés. **La V54 est déjà publique ; elle n'est pas automatiquement validée comme ayant atteint tous ces critères.**

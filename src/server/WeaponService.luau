@@ -661,6 +661,9 @@ local function onEquipWeapon(player, weaponId)
         state.aimWeaponId = nil
     end
     state.equippedWeaponId = weaponId
+    -- Audit mirror only: LifecycleService uses it to hold one weapon entry per
+    -- player. Damage, ammo and fire authority are untouched.
+    player:SetAttribute("IronYardEquippedWeapon", weaponId)
     sendAmmo(player, weaponId)
 end
 

@@ -141,6 +141,7 @@ jobs:
           ./luau scripts/test_safe_planar_input.luau
           ./luau scripts/test_remote_rate_policy.luau
           ./luau scripts/test_spawn_safety.luau
+          ./luau scripts/test_lifecycle_stress.luau
           ./luau scripts/test_supply_rules.luau
 
       - name: Validate PUBLIC release gates and build stamp
@@ -236,6 +237,7 @@ jobs:
           python3 scripts/check_mobile_hud_contract.py
           python3 scripts/check_bot_navigation_budget.py
           python3 scripts/check_bot_los_budget.py
+          python3 scripts/check_lifecycle_contract.py
           python3 scripts/check_bot_perf_contract.py
           python3 scripts/check_bot_detail_cache.py
           python3 scripts/check_art_sector_cache.py
