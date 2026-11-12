@@ -40,6 +40,28 @@ end
 assert(ServerCapacity.admits(11) == true, "One free slot must admit")
 assert(ServerCapacity.admits(12) == false, "A full server must refuse")
 
+-- 3 bis. Join classification is pure and takes the roster size AFTER the
+-- join, because PlayerAdded already counts the newcomer. The service must not
+-- do this arithmetic itself: the off-by-one is policy, not plumbing.
+local joins = {
+    { 1, "COMBATANT" }, { 2, "COMBATANT" }, { 10, "COMBATANT" },
+    { 11, "SPECTATOR" }, { 12, "SPECTATOR" },
+    { 13, "FULL" }, { 41, "FULL" },
+}
+for _, case in ipairs(joins) do
+    local slot = ServerCapacity.classifyJoin(case[1])
+    assert(slot == case[2], string.format("roster of %d: expected %s, got %s",
+        case[1], case[2], slot))
+end
+-- The pure helper must stay exactly equivalent to classifying the population
+-- before the join, otherwise the two entry points could drift apart.
+for roster = 1, 13 do
+    assert(ServerCapacity.classifyJoin(roster) == ServerCapacity.classify(roster - 1),
+        "classifyJoin must agree with classify on the population before the join")
+end
+assert(ServerCapacity.classifyJoin(1) == "COMBATANT",
+    "The first player of an empty server is a combatant")
+
 -- 4. Free slots never go negative, even if Roblox overshoots the policy.
 assert(ServerCapacity.freeSlots(0) == 12, "Empty server must show 12 slots")
 assert(ServerCapacity.freeSlots(11) == 1, "One player missing")
@@ -76,6 +98,11 @@ rejects(function() ServerCapacity.classify(-1) end, "negative population")
 rejects(function() ServerCapacity.classify(1.5) end, "fractional population")
 rejects(function() ServerCapacity.classify(0 / 0) end, "NaN population")
 rejects(function() ServerCapacity.classify(nil) end, "missing population")
+rejects(function() ServerCapacity.classifyJoin(0) end, "empty roster after a join")
+rejects(function() ServerCapacity.classifyJoin(-1) end, "negative roster")
+rejects(function() ServerCapacity.classifyJoin(1.5) end, "fractional roster")
+rejects(function() ServerCapacity.classifyJoin(0 / 0) end, "NaN roster")
+rejects(function() ServerCapacity.classifyJoin(nil) end, "missing roster")
 rejects(function() ServerCapacity.freeSlots(-2) end, "negative free slots")
 rejects(function() ServerCapacity.botBudget(-1, 6, 4) end, "negative humans")
 rejects(function() ServerCapacity.botBudget(0, 6, -4) end, "negative bot ceiling")

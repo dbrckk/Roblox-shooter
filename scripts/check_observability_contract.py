@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 MODULES = {
     "src/shared/ServerCapacity.luau": [
         "function ServerCapacity.classify(",
+        "function ServerCapacity.classifyJoin(",
         "function ServerCapacity.admits(",
         "function ServerCapacity.botBudget(",
         "function ServerCapacity.freeSlots(",
@@ -155,7 +156,7 @@ def main():
         "LogService.MessageOut:Connect(onMessage)",
         "Enum.MessageType.MessageWarning",
         'player:SetAttribute("IronYardSlot", slot)',
-        "ServerCapacity.classify(population)",
+        "ServerCapacity.classifyJoin(#Players:GetPlayers())",
         "TelemetryFunnel.recordJoin(funnel, player.UserId)",
         "DiagnosticsLog.categorize(text)",
         'Workspace:SetAttribute("IronYardFreeSlots"',
@@ -173,6 +174,15 @@ def main():
     # The MessageOut handler sees every warning: printing from it would loop.
     require("warn(" not in service_code,
             "ObservabilityService must never print (warning loop)")
+    # The join off-by-one is policy, so it must live in the pure module: the
+    # service passes the roster size and nothing else.
+    require("- 1" not in service_code,
+            "ObservabilityService must not adjust the roster count itself")
+    has(service_capacity := texts["src/shared/ServerCapacity.luau"],
+        "return ServerCapacity.classify(rosterCount - 1)",
+        "ServerCapacity.classifyJoin must own the off-by-one")
+    has(source("scripts/test_server_capacity.luau"), "ServerCapacity.classifyJoin(",
+        "join classification must stay covered by its suite")
     # Reporting must stay pcall-guarded so a bad message cannot break a join.
     has(service, "pcall(DiagnosticsLog.record", "records must be pcall-guarded")
 

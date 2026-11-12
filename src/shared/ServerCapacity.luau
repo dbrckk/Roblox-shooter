@@ -27,6 +27,15 @@ function ServerCapacity.classify(current)
     return "FULL"
 end
 
+-- Slot for a player who has just joined, from the roster size AFTER the join:
+-- `PlayerAdded` fires once the newcomer is already in Players. The off-by-one
+-- lives here, in the pure policy, instead of in the service that observes it.
+function ServerCapacity.classifyJoin(rosterCount)
+    count(rosterCount, "roster count")
+    assert(rosterCount >= 1, "A joining player is always part of the roster")
+    return ServerCapacity.classify(rosterCount - 1)
+end
+
 function ServerCapacity.admits(current)
     return ServerCapacity.classify(current) ~= "FULL"
 end

@@ -51,11 +51,10 @@ function ObservabilityService.record(category, message)
 end
 
 -- Where a joining player lands. `PlayerAdded` fires once the player is already
--- in Players, hence the -1: the policy is stated on the population before it.
+-- in Players, so the roster size given to the policy already includes them;
+-- the off-by-one belongs to ServerCapacity.classifyJoin, not to this service.
 function ObservabilityService.classify(player)
-    local population = #Players:GetPlayers() - 1
-    if population < 0 then population = 0 end
-    local slot = ServerCapacity.classify(population)
+    local slot = ServerCapacity.classifyJoin(#Players:GetPlayers())
     player:SetAttribute("IronYardSlot", slot)
     if slot == "FULL" then
         -- Declaring Players.MaxPlayers = 12 should make this unreachable.

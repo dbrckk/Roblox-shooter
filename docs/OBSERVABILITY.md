@@ -63,7 +63,7 @@ Le service est démarré **avant** `ProgressionService` dans `src/server/init.se
 
 | Élément | Ce qui est fait | Effet observable |
 |---|---|---|
-| Classification à l'arrivée | `ServerCapacity.classify(population)` sur `PlayerAdded`, où `population` exclut l'arrivant | attribut `IronYardSlot` = `COMBATANT` / `SPECTATOR` / `FULL` sur le joueur |
+| Classification à l'arrivée | `ServerCapacity.classifyJoin(#Players:GetPlayers())` sur `PlayerAdded` : le décalage de un (l'arrivant est déjà compté) est dans la politique pure, pas dans le service | attribut `IronYardSlot` = `COMBATANT` / `SPECTATOR` / `FULL` sur le joueur |
 | Funnel | `TelemetryFunnel.recordJoin(funnel, player.UserId)` | `IronYardFunnelJoined`, `IronYardFunnelPlayers`, `IronYardFunnelReturning` sur `Workspace` |
 | Journal d'erreurs | `LogService.MessageOut` filtré sur `MessageWarning`, bucketé par `DiagnosticsLog.categorize` | `IronYardLogDistinct`, `IronYardLogEvicted`, `IronYardLogSaturated` sur `Workspace` |
 | Places libres | `ServerCapacity.freeSlots(population)` | `IronYardFreeSlots` sur `Workspace` |
