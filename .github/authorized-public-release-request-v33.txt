@@ -1,0 +1,11 @@
+IRON YARD — single owner-authorized PUBLIC Roblox update, November 12 2026.
+Publish only the existing verified PUBLIC owner experience, via CI-gated
+repository automation. PR #34 fixed stale client recoil on Android suspend
+by using real elapsed wall-clock time, and preserved the B-8 cosmetic
+reload shell count on a safe PBR mesh/LOD swap.
+No changes to server-authoritative combat, damage, ammunition, hit detection,
+input remotes or published experience identity.
+Both PR/push CI and the merged main CI passed for commit
+5d58ec4ae406f0596f52083c79cd2c86254e6870.
+Require another green CI on this exact authorization commit before
+one-time public publish. No unmeasured Android FPS claims.
