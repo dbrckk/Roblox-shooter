@@ -2,12 +2,12 @@
 -- Generated only after all ten Model uploads passed owner checks.
 return {
     ownerUserId = 9774173158,
-    sourceCommit = "579964769f83d86c848c45d11c613c62dec3bb37",
+    sourceCommit = "61bf0302d0aa091043f2a7051c5bc63cb3e31e45",
     modelIds = {
-        Pistol = { LOD0 = 109915518194290, LOD1 = 82228334318693 },
-        Knife = { LOD0 = 133808775302914, LOD1 = 140198289665494 },
-        AssaultRifle = { LOD0 = 120073251417211, LOD1 = 122261349631045 },
-        Shotgun = { LOD0 = 103611192559156, LOD1 = 114853556835991 },
-        Sniper = { LOD0 = 84971505601887, LOD1 = 122892506215425 },
+        Pistol = { LOD0 = 134864362258514, LOD1 = 84881223568978 },
+        Knife = { LOD0 = 99348309499128, LOD1 = 103350592551962 },
+        AssaultRifle = { LOD0 = 81435833013728, LOD1 = 126956757917272 },
+        Shotgun = { LOD0 = 114122460440295, LOD1 = 77438296092988 },
+        Sniper = { LOD0 = 136956878791627, LOD1 = 85416191844702 },
     },
 }
