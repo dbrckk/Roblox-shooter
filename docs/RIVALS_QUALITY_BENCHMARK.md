@@ -621,3 +621,31 @@ caché, plus contrat d'intégration vérifiant l'ordre des opérations.
 Le nombre d'animations/écritures inutiles supprimées est vérifiable
 dans le code ; aucun gain de FPS réel n'est annoncé sans mesure
 Android Studio / MicroProfiler.
+
+
+## Pool VFX : priorité des impacts confirmés et effets immobiles — 12 novembre 2026
+
+Lors d'un tir nourri, l'ancien `TransientFxPool` choisissait le candidat
+remplaçable au délai d'expiration le plus proche, **même si un effet de
+dégâts confirmés / flash de tir important était actif alors qu'un débris
+moins important restait visible**. La sélection applique désormais
+d'abord la priorité la plus faible (1 débris, 2 tracer, 3, 4 confirmation
+et flash local), puis l'expiration la plus proche **à priorité égale**.
+Le plafond existant de 24/48/72 pièces tactiles et 80/96 sur ordinateur
+demeure strictement inchangé ; aucune augmentation de charge graphique.
+
+Autre coût inutile sur Android : les noyaux de flash, petites étincelles
+immobiles et glints restent fixés au point de tir pendant leur courte vie.
+Ils n'ont pas besoin d'interpoler et d'écrire leur CFrame chaque image.
+Le pool calcule désormais **une fois à chaque émission** un booléen
+`slot.moves` indiquant une cible, une trajectoire en arc, une chute
+ou une rotation. Une pièce recyclée qui devient une douille ou un tracer
+retrouve toujours l'animation ; seule sa position fixe est ignorée
+lorsque l'effet est immobile. Taille, transparence, scintillement et
+extinction des lumières continuent de s'actualiser normalement.
+
+Tests Luau sur rafale prolongée, ordre de remplacement des quatre
+priorités, égalité des priorités et changement de type du même slot.
+Contrat Python d'intégration et Rojo. **Le gain réel en millisecondes
+GPU/CPU reste à mesurer sur Roblox Android** : le code ne fournit pas
+de benchmark de FPS réel.

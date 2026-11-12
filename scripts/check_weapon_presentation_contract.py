@@ -649,6 +649,33 @@ assert skip_end < visuals.index("local now = os.clock()", skip_end)
 assert skip_end < visuals.index("for _, entry in ipairs(self.parts) do", skip_end)
 assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
 
+# Mobile VFX priority 4 must not preempt another confirmed core when a
+# lower-priority dust/tracer is still active; stationary flash/glints avoid
+# redundant CFrame interpolation while keeping Size/Opacity animation.
+pool = get("src/shared/TransientFxPool.luau")
+for needle in (
+    "lowestPriority = math.huge",  # declared alongside oldestTime
+    "slot.priority < lowestPriority",
+    "slot.priority == lowestPriority and slot.expiresAt < oldestTime",
+    "function Pool.moves(targetProvided, arcHeight, gravityDrop, spinAngle)",
+):
+    if needle == "lowestPriority = math.huge":
+        assert "oldestTime, lowestPriority = math.huge, math.huge" in pool
+    else:
+        assert needle in pool, f"VFX priority or motion contract missing: {needle}"
+for needle in (
+    "slot.moves = TransientFxPool.moves(spec.target ~= nil,",
+    "if slot.moves then",
+    "part.CFrame = transform",
+    "part.Size = slot.fromSize:Lerp(slot.toSize, blend)",
+    "part.Transparency = math.clamp(baseAlpha",
+):
+    assert needle in visuals, f"Pooled stationary/mobile VFX wiring missing: {needle}"
+assert visuals.index("if slot.moves then") < visuals.index("part.CFrame = transform")
+assert visuals.index("part.CFrame = transform") < visuals.index(
+    "part.Size = slot.fromSize:Lerp(slot.toSize, blend)")
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
+
 # Both paths must use deterministic post-camera render priorities.
 # The gameplay/HUD pass may change camera roll/FOV; gun transform follows it.
 assert 'Enum.RenderPriority.Camera.Value + 1' in client

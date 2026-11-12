@@ -29,8 +29,8 @@ assert(Pool.claim(slots, 10.03, 0.1, 3, 1) == nil,
     "Debris cannot preempt tracer or local flash")
 assert(Pool.claim(slots, 10.04, 0.1, 3, 4) == one,
     "High priority flash takes earliest expiring eligible tracer")
-assert(Pool.claim(slots, 10.05, 0.1, 3, 4) == one,
-    "High priority may recycle its own earliest expiry slot")
+assert(Pool.claim(slots, 10.05, 0.1, 3, 4) == two,
+    "High priority preserves another flash while eligible tracer remains")
 eq(Pool.progress(one, 10.05, true), 0, "Most recent effect begins at zero")
 local progress = Pool.progress(one, 10.10, true)
 assert(progress and progress > 0 and progress < 1, "Smooth fractional animation")
@@ -168,3 +168,43 @@ assert(Pool.claim(coreOnly, 500.01, 0.2, 24, 4) ~= nil,
     "New confirmed hits may recycle older high-priority slots")
 print("IRON YARD shared confirmed-hit FX: bounded 24/48/72 mobile pool and core priority: OK")
 print("IRON YARD transient VFX: priorities, 18k shots and idle slot retirement: OK")
+
+-- Priority of the visual message matters MORE than its lifetime.
+-- An important server-confirmed hit (4) should never replace another
+-- confirmed core while an older dust particle (1) is still eligible.
+local protected = {}
+local flash = Pool.claim(protected, 900, 0.06, 3, 4)
+local dust = Pool.claim(protected, 900, 0.4, 3, 1)
+local tracer = Pool.claim(protected, 900, 0.15, 3, 2)
+assert(Pool.claim(protected, 900.01, 0.10, 3, 4) == dust,
+    "Priority 4 must evict priority 1 before earlier-expiring priority 4")
+assert(flash.priority == 4 and tracer.priority == 2)
+assert(Pool.claim(protected, 900.02, 0.10, 3, 4) == tracer,
+    "Priority 4 must next evict priority 2 before priority 4")
+assert(Pool.claim(protected, 900.03, 0.10, 3, 1) == nil,
+    "Low-priority dust cannot evict important confirmation flashes")
+-- Same-priority ties still prefer the shortest remaining lifetime.
+local equal = {}
+local slow = Pool.claim(equal, 901, 0.40, 2, 2)
+local fast = Pool.claim(equal, 901, 0.12, 2, 2)
+assert(Pool.claim(equal, 901.02, 0.10, 2, 2) == fast)
+assert(slow.priority == 2)
+-- Independent VFX motion flag: static flashes/glints avoid redundant
+-- CFrame writes, but animated tracer/shell/ricochet never lose movement.
+assert(not Pool.moves(false, 0, 0, 0))
+assert(not Pool.moves(nil, nil, nil, nil))
+assert(Pool.moves(true, 0, 0, 0))
+assert(Pool.moves(false, 0.28, 0, 0))
+assert(Pool.moves(false, 0, 0.15, 0))
+assert(Pool.moves(false, 0, 0, -2))
+assert(Pool.moves(true, 0, 0, 0))
+-- Recycled Part may swap classifications every spawn without stale flags.
+local alternating = {}
+for i = 1, 600 do
+    local slot = Pool.claim(alternating, 902 + i*0.002, 0.03, 1, 4)
+    assert(slot and #alternating == 1)
+    local animated = i%2 == 0
+    slot.moves = Pool.moves(animated, 0, 0, 0)
+    assert(slot.moves == animated)
+end
+print("IRON YARD priority-first FX replacement and static/moving pool reset: OK")

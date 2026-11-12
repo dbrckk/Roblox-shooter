@@ -28,7 +28,7 @@ function Pool.claim(slots, now, duration, cap, priority)
         or (slots.lastAt and now < slots.lastAt) then return nil end
 
     local index, oldestIndex
-    local oldestTime = math.huge
+    local oldestTime, lowestPriority = math.huge, math.huge
     local limit = math.min(#slots, cap)
     for i = 1, limit do
         local slot = slots[i]
@@ -36,7 +36,14 @@ function Pool.claim(slots, now, duration, cap, priority)
             index = i
             break
         end
-        if slot.priority <= priority and slot.expiresAt < oldestTime then
+        -- Preserve important confirmation/muzzle FX: evict the lowest
+        -- eligible priority FIRST, then the earliest expiry within it.
+        -- Otherwise a fresh priority-4 flash could replace another flash
+        -- even while an older priority-1 dust part remains.
+        if slot.priority <= priority and
+            (slot.priority < lowestPriority
+                or (slot.priority == lowestPriority and slot.expiresAt < oldestTime)) then
+            lowestPriority = slot.priority
             oldestTime = slot.expiresAt
             oldestIndex = i
         end
@@ -59,6 +66,17 @@ function Pool.claim(slots, now, duration, cap, priority)
     -- Return the exact slot index so the renderer never needs a reverse
     -- scan to track a live effect. Existing one-value callers are unchanged.
     return slot, index
+end
+
+-- Immutable per-spawn classification for VFX with no world-space movement.
+-- Stationary cores/glints still animate Size and Transparency. Their
+-- authored Part.CFrame is set at spawn, never redundantly every frame.
+-- A reused pooled slot MUST recompute this flag for each new effect.
+function Pool.moves(targetProvided, arcHeight, gravityDrop, spinAngle)
+    return targetProvided == true
+        or type(arcHeight) == "number" and arcHeight > 0
+        or type(gravityDrop) == "number" and gravityDrop > 0
+        or type(spinAngle) == "number" and spinAngle ~= 0
 end
 
 function Pool.progress(slot, now, visible)

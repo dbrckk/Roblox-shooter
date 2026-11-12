@@ -1162,6 +1162,10 @@ function WeaponVisuals:_spawnTransient(spec)
     -- Reset impact movement when this Part is recycled for another effect.
     slot.gravityDrop = spec.gravityDrop or 0
     slot.flicker = spec.flicker or 0
+    -- Recycled slot can change from static muzzle core to moving tracer.
+    -- Recalculate once per spawn, not on each mobile RenderStep.
+    slot.moves = TransientFxPool.moves(spec.target ~= nil,
+        slot.arcHeight, slot.gravityDrop, slot.spinAngle)
     part.Parent = workspace
     return true
 end
@@ -1177,19 +1181,22 @@ function WeaponVisuals:_updateTransientFx(now)
         if t and part then
             -- Original standard TweenInfo uses Quad.Out; tracers use Linear.
             local blend = slot.linear and t or (1 - (1 - t) * (1 - t))
-            local transform = slot.fromCFrame:Lerp(slot.toCFrame, blend)
-            if slot.arcHeight > 0 then
-                transform *= CFrame.new(0,
-                    CartridgeEjection.arc(t, slot.arcHeight), 0)
+            if slot.moves then
+                local transform = slot.fromCFrame:Lerp(slot.toCFrame, blend)
+                if slot.arcHeight > 0 then
+                    transform *= CFrame.new(0,
+                        CartridgeEjection.arc(t, slot.arcHeight), 0)
+                end
+                if slot.gravityDrop > 0 then
+                    -- Analytic falling arc, no physics or Heartbeat tasks.
+                    transform += Vector3.new(0, -slot.gravityDrop * t * t, 0)
+                end
+                if slot.spinAngle ~= 0 then
+                    transform *= CFrame.Angles(0,
+                        slot.spinAngle * t, slot.spinAngle * t * 0.6)
+                end
+                part.CFrame = transform
             end
-            if slot.gravityDrop > 0 then
-                -- Analytic falling arc, no mass, collisions or Heartbeat tasks.
-                transform += Vector3.new(0, -slot.gravityDrop * t * t, 0)
-            end
-            if slot.spinAngle ~= 0 then
-                transform *= CFrame.Angles(0, slot.spinAngle * t, slot.spinAngle * t * 0.6)
-            end
-            part.CFrame = transform
             part.Size = slot.fromSize:Lerp(slot.toSize, blend)
             local baseAlpha = slot.fromAlpha + (1 - slot.fromAlpha) * blend
             part.Transparency = math.clamp(baseAlpha
