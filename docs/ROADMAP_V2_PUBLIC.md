@@ -1,6 +1,6 @@
 # IRON YARD — Master roadmap V2 (historique de planification)
 
-> **Plan remplacé le 12 novembre 2026 par [la V3, backlog de production actif sans test Android immédiat](ROADMAP_V3_SANS_TEST_ANDROID.md).** Les mentions « jamais publié », « duel 1v1 absent » ou « armes PBR non importées » sont historiques : IRON YARD publique v34 et le code actuel du duel et des dix assets d'armes ont été vérifiés dans main. Ne pas reprendre les cases de cette V2 comme statut actuel sans inspecter le code.
+> **Plan remplacé le 12 novembre 2026 par [la V3, backlog de production actif sans test Android immédiat](ROADMAP_V3_SANS_TEST_ANDROID.md).** Les mentions « jamais publié », « duel 1v1 absent » ou « armes PBR non importées » sont historiques : IRON YARD publique v35 et le code actuel du duel et des dix assets d'armes ont été vérifiés dans main. Ne pas reprendre les cases de cette V2 comme statut actuel sans inspecter le code.
 
 Dernière révision : 8 novembre 2026
 Branche de référence : main
