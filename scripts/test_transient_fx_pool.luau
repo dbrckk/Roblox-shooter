@@ -198,6 +198,18 @@ assert(Pool.moves(false, 0.28, 0, 0))
 assert(Pool.moves(false, 0, 0.15, 0))
 assert(Pool.moves(false, 0, 0, -2))
 assert(Pool.moves(true, 0, 0, 0))
+-- A fixed-size brass casing or spark does not need repeated size writes.
+-- The same pool slot may later host a shrinking tracer, so reset at spawn.
+assert(not Pool.resizes("same", "same"))
+assert(Pool.resizes("start", "end"))
+local sizeSlot = {}
+for i = 1, 600 do
+    local slot = Pool.claim(sizeSlot, 950 + i*0.002, 0.03, 1, 4)
+    assert(slot and #sizeSlot == 1)
+    local changed = i%2 == 0
+    slot.resizes = Pool.resizes("size", changed and "smaller" or "size")
+    assert(slot.resizes == changed, "Recycled FX size flag must not leak")
+end
 -- Recycled Part may swap classifications every spawn without stale flags.
 local alternating = {}
 for i = 1, 600 do
