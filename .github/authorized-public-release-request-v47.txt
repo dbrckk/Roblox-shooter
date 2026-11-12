@@ -1,0 +1,13 @@
+IRON YARD -- one owner-authorized PUBLIC Roblox release (12 November 2026).
+Publish only to the existing verified creator-owned PUBLIC IRON YARD experience.
+Source main 60b7fd28aa1060232a87cea0340445ec875b3074 includes PR #50:
+reject DataStore lock/release markers claiming saved XP, eliminations,
+headshots or victories beyond durable totals, preserving real player progress
+and preventing false SAVED acknowledgements. Regression test uses a real
+committed other-owner release instead of an invalid forged marker; all Luau
+tests, Python contracts and Rojo build passed on PR and merged main.
+The source does not modify DataStore schema, keys, existing saved records,
+player rewards, damage, hit detection or other public gameplay.
+Require NEW successful CI for exact release SHA, verify owner and PUBLIC
+destination in guarded official workflow, and publish exactly once.
+Do not treat CI as an actual Roblox DataStore integration test.
