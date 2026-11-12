@@ -10,17 +10,19 @@ local TOLERANCE = 1e-6
 local HEALTH = 100
 
 -- Locked 12 November 2026 values, computed at 15 studs with a full pellet
--- load. Changing a damage or a cadence must update this table in the same PR.
+-- load AND the server's shotgun falloff/rounded aggregate damage.
+-- Changing damage, falloff, reload or cadence must update this table.
 local BASELINE = {
     AssaultRifle = { body = { 5, 0.460 }, head = { 3, 0.230 } },
     Pistol = { body = { 3, 0.440 }, head = { 1, 0.000 } },
-    Shotgun = { body = { 1, 0.000 }, head = { 1, 0.000 } },
+    Shotgun = { body = { 2, 0.840 }, head = { 1, 0.000 } },
     Sniper = { body = { 2, 1.150 }, head = { 1, 0.000 } },
     Knife = { body = { 1, 0.078947368 }, head = { 1, 0.078947368 } },
 }
 
--- The five-weapon arsenal baseline already exists in test_arsenal_baseline.
--- Read it here too so the two baselines cannot silently diverge.
+-- The existing test_arsenal_baseline locks theoretical POINT-BLANK shots.
+-- Compare it at zero range; it intentionally ignores falloff, whereas
+-- BASELINE locks server-equivalent results at 15 studs.
 local ARSENAL_SHOTS = {
     AssaultRifle = { body = 5, head = 3 },
     Pistol = { body = 3, head = 1 },
@@ -49,8 +51,9 @@ for _, weaponId in ipairs(Config.Order) do
         assert(result, weaponId .. " cannot damage a 15-stud target")
         assert(result.shots == locked[zone][1],
             weaponId .. " " .. zone .. " shot count drifted")
-        assert(result.shots == arena[zone],
-            weaponId .. " disagrees with the five-weapon arsenal baseline")
+        local pointBlank = TtkModel.timeToKill(weapon, { studs = 0, zone = zone })
+        assert(pointBlank and pointBlank.shots == arena[zone],
+            weaponId .. " disagrees with the point-blank arsenal baseline")
         close(result.seconds, locked[zone][2],
             weaponId .. " " .. zone .. " TTK drifted")
         assert(result.studs == 15 and result.zone == zone,
@@ -84,13 +87,16 @@ for index, studs in ipairs(TtkModel.RANGES) do
     previousTravel = result.seconds
 end
 
--- 4. Shotgun is pellet-based: landed pellet count changes the TTK directly.
+-- 4. Shotgun is pellet-based, distance-falloff and reload-sensitive.
+-- The server aggregates 8 pellet hits with falloff and rounds once:
+-- at 15 studs full body spread is 97 HP, not the nominal 104.
 local shotgun = Config.get("Shotgun")
 local landed = {
-    { 8, 1, 0.00 },   -- 104 damage: one shell
-    { 6, 2, 0.84 },   -- 78 damage per shell
-    { 4, 2, 0.84 },   -- 52 damage per shell
-    { 1, 8, 5.88 },   -- 13 damage per pellet
+    -- landed, shots, seconds, rounded damage per shot, reloads
+    { 8, 2, 0.84, 97, 0 },
+    { 6, 2, 0.84, 72, 0 },
+    { 4, 3, 1.68, 48, 0 },
+    { 1, 9, 8.43, 12, 1 },
 }
 for _, case in ipairs(landed) do
     local result = TtkModel.timeToKill(shotgun,
@@ -98,8 +104,21 @@ for _, case in ipairs(landed) do
     assert(result, "Shotgun must reach 15 studs")
     assert(result.shots == case[2],
         case[1] .. " landed pellets: unexpected shot count")
+    assert(result.damagePerShot == case[4], "Server pellet falloff must be rounded once")
+    assert(result.reloads == case[5], "Reload count must match magazine depletion")
     close(result.seconds, case[3], case[1] .. " landed pellets TTK")
 end
+local closeBody = TtkModel.timeToKill(shotgun, { studs = 5 })
+assert(closeBody and closeBody.damagePerShot == 102 and closeBody.shots == 1,
+    "A true close-range 8-pellet shotgun blast remains lethal")
+local maxRangeBody = TtkModel.timeToKill(shotgun, { studs = shotgun.range })
+assert(maxRangeBody and maxRangeBody.damagePerShot == 47
+    and maxRangeBody.shots == 3, "Max-range damage is attenuated and rounded")
+local fullHead = TtkModel.timeToKill(shotgun, { studs = 15, zone = "head" })
+assert(fullHead and fullHead.damagePerShot == 119 and fullHead.shots == 1,
+    "A full-headshot pellet hit remains lethal at 15 studs")
+assert(TtkModel.damagePerShot(shotgun, "body", 8, 0) == 104,
+    "Point-blank damage must still match the legacy baseline")
 
 -- 5. Target health is a parameter, not a constant of the model.
 local tanky = TtkModel.timeToKill(Config.get("AssaultRifle"),
@@ -114,7 +133,7 @@ local aimed = TtkModel.timeToKill(Config.get("AssaultRifle"),
 assert(hip.seconds == aimed.seconds and hip.shots == aimed.shots,
     "Aiming must not alter time-to-kill in the balance model")
 
--- 7. All five weapons stay relevant inside the 100-stud baseline range.
+-- 7. All five weapons remain in effective range at 100 studs (ideal hits).
 for _, weaponId in ipairs(Config.Order) do
     local result = TtkModel.timeToKill(Config.get(weaponId), { studs = 100 })
     assert(result, weaponId .. " has no TTK at 100 studs")
