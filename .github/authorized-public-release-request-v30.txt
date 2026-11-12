@@ -1,0 +1,14 @@
+IRON YARD — one-time owner-authorized PUBLIC FPS release, November 12, 2026.
+Publish only the previously verified owner PUBLIC Roblox experience using
+the repository's fail-closed CI-gated public deployment workflow.
+Release PR #31 adjusts authored PBR front/rear iron-sight axes on
+AssaultRifle, Pistol and Shotgun using original Blender source geometry.
+The X pitch and rear-center correction are computed once at equip.
+The playable fallback guns, sniper optical overlay, server-authoritative
+aim/damage/ammunition, network messages and gameplay are unchanged.
+The new geometry-origin Python checks, pure Luau mathematical sight tests,
+source integration contracts and Rojo CI passed on the merged main commit
+3bb061602a57d4e8f44e4d2d7d6fa0e2cad788a9.
+Require a fresh green CI on this exact release-request commit, verify
+the owner and public target, and dispatch at most one PUBLIC publish.
+No private/alpha staging and no unverified claim about Android FPS.
