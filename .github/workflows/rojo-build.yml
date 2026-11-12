@@ -142,6 +142,9 @@ jobs:
           ./luau scripts/test_remote_rate_policy.luau
           ./luau scripts/test_spawn_safety.luau
           ./luau scripts/test_supply_rules.luau
+          ./luau scripts/test_server_capacity.luau
+          ./luau scripts/test_telemetry_funnel.luau
+          ./luau scripts/test_diagnostics_log.luau
 
       - name: Validate PUBLIC release gates and build stamp
         shell: bash
@@ -239,6 +242,7 @@ jobs:
           python3 scripts/check_bot_perf_contract.py
           python3 scripts/check_bot_detail_cache.py
           python3 scripts/check_art_sector_cache.py
+          python3 scripts/check_observability_contract.py
 
       - name: Verify persistent DataStore progression contracts
         shell: bash

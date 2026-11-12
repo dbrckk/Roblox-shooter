@@ -1,3 +1,6 @@
+-- Observability first: it aggregates the warnings emitted during startup.
+local ObservabilityService = require(script:WaitForChild("ObservabilityService"))
+ObservabilityService.start()
 -- Initialize DataStore sessions before XP-earning gameplay services.
 local ProgressionService = require(script:WaitForChild("ProgressionService"))
 ProgressionService.start()
