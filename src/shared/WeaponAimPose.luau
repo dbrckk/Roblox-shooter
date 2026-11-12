@@ -10,23 +10,41 @@ local PROFILES = {
     Shotgun = { sightX = 0, sightY = 0.24, sightZ = -0.28, eyeRelief = 1.34 },
 }
 
--- The imported Blender weaponforge does NOT reuse the Part sights.
--- Authored rear-sight centers in Blender (x, forward Y, height Z):
--- AR: (0,-0.40,0.36), pistol: (0,-0.30,0.35),
--- B-8: (0,-0.31,0.33). glTF's Y-up export maps Blender -Y to Roblox +Z.
--- Keep eye-relief values from the existing weapon profiles to avoid a sudden
--- field-of-view shift. These authored estimates still need in-engine QA.
+-- Blender weaponforge authored REAR and FRONT sight centers. The Y-up glTF
+-- export maps Blender Z to Roblox Y, and Blender -Y to Roblox Z. Correcting
+-- only the rear position does not align the two sights: an elevation delta
+-- of 1–6 cm would float above the camera axis. Keep the existing eye relief,
+-- correct a small model-only X pitch, and anchor the rotated rear at (0,0).
+-- Independent sources: tools/weaponforge/build_weapons.py / long_guns.py.
+-- In-engine Android/Studio visual QA is still required after this calculation.
 local IMPORTED_PROFILES = {
-    AssaultRifle = { sightX = 0, sightY = 0.36, sightZ = 0.40, eyeRelief = 1.28 },
-    Pistol = { sightX = 0, sightY = 0.35, sightZ = 0.30, eyeRelief = 1.00 },
-    Shotgun = { sightX = 0, sightY = 0.33, sightZ = 0.31, eyeRelief = 1.34 },
+    AssaultRifle = {
+        sightX = 0, sightY = 0.36, sightZ = 0.40,
+        frontY = 0.42, frontZ = -1.57, eyeRelief = 1.28,
+    },
+    Pistol = {
+        sightX = 0, sightY = 0.35, sightZ = 0.30,
+        frontY = 0.36, frontZ = -0.50, eyeRelief = 1.00,
+    },
+    Shotgun = {
+        sightX = 0, sightY = 0.33, sightZ = 0.31,
+        frontY = 0.36, frontZ = -2.20, eyeRelief = 1.34,
+    },
 }
 
--- Precompute transforms at module load, not every RenderStepped.
-for _, profiles in ipairs({PROFILES, IMPORTED_PROFILES}) do
-    for _, p in pairs(profiles) do
-        p.x, p.y, p.z = -p.sightX, -p.sightY, -p.eyeRelief - p.sightZ
-    end
+-- Compute these once on module load: no trigonometry on RenderStepped.
+for _, p in pairs(PROFILES) do
+    p.x, p.y, p.z = -p.sightX, -p.sightY, -p.eyeRelief - p.sightZ
+    p.pitch = 0
+end
+for _, p in pairs(IMPORTED_PROFILES) do
+    local heightDelta = p.frontY - p.sightY
+    local forwardDistance = p.sightZ - p.frontZ
+    p.pitch = -math.atan2(heightDelta, forwardDistance)
+    local c, s = math.cos(p.pitch), math.sin(p.pitch)
+    p.x = -p.sightX
+    p.y = -(c * p.sightY - s * p.sightZ)
+    p.z = -p.eyeRelief - (s * p.sightY + c * p.sightZ)
 end
 
 -- The caller uses the actual viewmodel source selected on equip or LOD swap.

@@ -84,6 +84,14 @@ for needle in (
 aim_profile = get("src/shared/WeaponAimPose.luau")
 assert "local IMPORTED_PROFILES = {" in aim_profile
 assert 'local pose = WeaponAimPose.get(weaponId, self.currentWeaponImported)' in visuals
+assert 'p.pitch = -math.atan2(heightDelta, forwardDistance)' in aim_profile
+assert 'p.y = -(c * p.sightY - s * p.sightZ)' in aim_profile
+assert 'p.z = -p.eyeRelief - (s * p.sightY + c * p.sightZ)' in aim_profile
+assert 'CFrame.Angles(pose.pitch, 0, 0)' in visuals
+assert 'p.pitch = 0' in aim_profile
+assert "frontY = 0.42, frontZ = -1.57" in aim_profile
+assert "frontY = 0.36, frontZ = -0.50" in aim_profile
+assert "frontY = 0.36, frontZ = -2.20" in aim_profile
 set_weapon_body = visuals.split("function WeaponVisuals:setWeapon(weaponId)", 1)[1]
 set_weapon_body = set_weapon_body.split("function WeaponVisuals:_refreshImportedWeaponIfSafe", 1)[0]
 assert set_weapon_body.index('local pose = WeaponAimPose.get(weaponId, self.currentWeaponImported)') > ( 
@@ -575,7 +583,8 @@ for needle in (
 for needle in (
     'WaitForChild("WeaponAimPose")',
     "WeaponAimPose.damping(self.aimBlend)",
-    "self.aimPose = pose and CFrame.new(pose.x, pose.y, pose.z) or nil",
+    "self.aimPose = pose and (CFrame.new(pose.x, pose.y, pose.z)",
+    "* CFrame.Angles(pose.pitch, 0, 0)) or nil",
     "offset:Lerp(self.aimPose, self.aimBlend)",
     '"ScopeAdjustmentTurret"', '"ScopeAdjustmentCap"',
     '"RearSight", Vector3.new(0.19, 0.09, 0.14)',

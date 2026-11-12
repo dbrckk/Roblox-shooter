@@ -44,8 +44,10 @@ for id, expected in pairs(importedSights) do
     assert(pbr.sightX == expected[1] and pbr.sightY == expected[2]
         and pbr.sightZ == expected[3] and pbr.eyeRelief == expected[4])
     assert(math.abs(pbr.sightX + pbr.x) < 1e-7)
-    assert(math.abs(pbr.sightY + pbr.y) < 1e-7)
-    assert(math.abs(pbr.sightZ + pbr.z + pbr.eyeRelief) < 1e-7)
+    local cosine, sine = math.cos(pbr.pitch), math.sin(pbr.pitch)
+    assert(math.abs(pbr.y + cosine * pbr.sightY - sine * pbr.sightZ) < 1e-7)
+    assert(math.abs(pbr.z + sine * pbr.sightY + cosine * pbr.sightZ
+        + pbr.eyeRelief) < 1e-7)
     assert(Pose.get(id) == fallback,
         "Old fallback ADS must remain fully compatible")
     assert(Pose.get(id, "true") == fallback,
@@ -54,3 +56,32 @@ end
 assert(Pose.get("Sniper", true) == nil, "Sniper uses optical scope")
 assert(Pose.get("Knife", true) == nil, "Knife has no ADS profile")
 print("IRON YARD: fallback/PBR sight alignment and ADS damping verified")
+
+-- The authored FRONT and REAR PBR sights are distinct Blender objects:
+-- a rear-only translation would leave the front above the reticle.
+-- Check both points on the camera's (0, 0, -Z) optical axis, without
+-- instantiating Roblox CFrame in an offline Luau test runner.
+local sightEnds = {
+    AssaultRifle = { frontY = 0.42, frontZ = -1.57 },
+    Pistol = { frontY = 0.36, frontZ = -0.50 },
+    Shotgun = { frontY = 0.36, frontZ = -2.20 },
+}
+for id, front in pairs(sightEnds) do
+    local p = Pose.get(id, true)
+    local c, s = math.cos(p.pitch), math.sin(p.pitch)
+    local rearY = p.y + c * p.sightY - s * p.sightZ
+    local rearZ = p.z + s * p.sightY + c * p.sightZ
+    local frontY = p.y + c * front.frontY - s * front.frontZ
+    local frontZ = p.z + s * front.frontY + c * front.frontZ
+    assert(p.frontY == front.frontY and p.frontZ == front.frontZ)
+    assert(p.x == 0 and math.abs(rearY) < 1e-9)
+    assert(math.abs(frontY) < 1e-9,
+        "Both PBR sight centers must align vertically with the camera")
+    assert(math.abs(rearZ + p.eyeRelief) < 1e-9)
+    assert(frontZ < rearZ and p.pitch < 0 and p.pitch > -0.05,
+        "Front sight must point forward with restrained model-only pitch")
+    local fallback = Pose.get(id, false)
+    assert(fallback.pitch == 0 and fallback.frontY == nil,
+        "Procedural fallback ADS must remain completely untouched")
+end
+print("IRON YARD authored front/rear PBR iron sights: centered axis and unchanged fallback OK")
