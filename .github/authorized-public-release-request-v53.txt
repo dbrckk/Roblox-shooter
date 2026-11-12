@@ -1,0 +1,15 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox release on 12 November 2026.
+Publish ONLY to the existing verified creator-owned PUBLIC IRON YARD
+Roblox experience, through the project's guarded official publisher.
+Use the exact release commit and require its own successful Rojo CI.
+
+PR #56, merged on main as a2518337fe9c9cb345453f6dd069f3a86d3b5ee2:
+normalize first-person cosmetic touch/gamepad weapon sway to the same
+60 Hz angular-turn reference at 30, 60 and 120 FPS. Keep mouse priority,
+camera cut/invalid-timing guards and bounded motion. The 240Hz floor
+prevents extreme amplification on anomalously short frames.
+No player camera modification, ADS/hit ray change, recoil authority,
+damage, inventory, or DataStore schema changes.
+Luau executable test suites, source contracts and Rojo build passed on
+branch, PR and merged main. Offline tests do not prove device performance.
+Publish exactly once after fresh release-SHA CI and PUBLIC target validation.
