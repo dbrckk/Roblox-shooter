@@ -95,6 +95,7 @@ jobs:
           ./luau scripts/test_cover_surface_plan.luau
           ./luau scripts/test_vanguard_mesh_policy.luau
           ./luau scripts/test_round_standings.luau
+          ./luau scripts/test_victory_award_policy.luau
           ./luau scripts/test_duel_rules.luau
           ./luau scripts/test_match_lobby_policy.luau
           ./luau scripts/test_duel_readout.luau
@@ -215,6 +216,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/check_victory_award_contract.py
           python3 scripts/check_match_lobby_contract.py
           python3 scripts/check_duel_prep_contract.py
           python3 scripts/check_weapon_contract.py
