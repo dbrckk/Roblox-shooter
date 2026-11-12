@@ -139,9 +139,12 @@ case("corrupt locks and release markers reject writes", function()
     state.lock.committed.headshots = -1
     fails(function() L.commit(state, A, earnings(), 1010, 180, false) end,
         "corrupt committed headshots")
-    state.lock = nil
-    state.lastSession = {owner = B, committed = earnings(20, 1)}
-    eq(L.commit(state, A, earnings(20, 1), 1010, 180, true),
+    -- Build a genuinely persisted B release: the normalization invariant
+    -- must reject forged saved totals, not a valid other-owner marker.
+    state = L.acquire(nil, B, 1000, 180)
+    state = L.commit(state, B, earnings(20, 1), 1010, 180, true)
+    eq(state.xp, 20, "other owner's release is durably committed")
+    eq(L.commit(state, A, earnings(20, 1), 1020, 180, true),
         nil, "other owner's completed save cannot acknowledge ours")
 end)
 
@@ -152,6 +155,60 @@ case("saves only positive difference even if snapshots arrive out of order", fun
     eq(state.xp, 300, "old snapshot no rollback")
     eq(state.victories, 1, "old snapshot no victory rollback")
     eq(state.lock.committed.eliminations, 4, "monotonic ledger")
+end)
+
+case("lock counters cannot acknowledge more than durable totals", function()
+    for _, field in ipairs(L.STATS) do
+        local state = L.acquire(nil, A, 1000, 180)
+        local durable = L.normalize(state)
+        state.lock.committed[field] = state[field] + 1
+        fails(function() L.normalize(state) end,
+            "oversized lock counter " .. field)
+        fails(function() L.acquire(state, A, 1020, 180) end,
+            "same-session reacquire cannot bless invalid " .. field)
+        fails(function() L.acquire(state, B, 1200, 180) end,
+            "new writer cannot adopt invalid " .. field)
+        fails(function() L.commit(state, A, earnings(), 1050, 180, false) end,
+            "autosave cannot acknowledge invalid " .. field)
+        fails(function() L.commit(state, A, earnings(), 1050, 180, true) end,
+            "release cannot acknowledge invalid " .. field)
+        eq(durable[field], 0, "rejected transaction cannot mutate stored " .. field)
+    end
+end)
+
+case("release marker counters cannot exceed physically saved totals", function()
+    for _, field in ipairs(L.STATS) do
+        local state = L.acquire(nil, A, 1000, 180)
+        state = L.commit(state, A, earnings(150, 2, 1, 1),
+            1020, 180, true)
+        local durable = L.normalize(state)
+        state.lastSession.committed[field] = state[field] + 1
+        fails(function() L.normalize(state) end,
+            "oversized release marker " .. field)
+        fails(function() L.commit(state, A, earnings(150, 2, 1, 1),
+            1030, 180, true) end,
+            "late release must not claim unsaved " .. field)
+        fails(function() L.acquire(state, B, 1040, 180) end,
+            "future session cannot inherit invalid release marker " .. field)
+        eq(durable[field], state[field],
+            "previous valid total stays unchanged after failed release " .. field)
+    end
+end)
+
+case("valid partial writes, release and reacquire preserve acknowledged totals", function()
+    local state = L.acquire(nil, A, 1000, 180)
+    state = L.commit(state, A, earnings(100, 1, 1, 0), 1010, 180, false)
+    state = L.normalize(state)
+    eq(state.lock.committed.xp, 100, "partial saved XP")
+    eq(state.xp, 100, "partial committed total")
+    state = L.commit(state, A, earnings(250, 2, 1, 1), 1020, 180, true)
+    state = L.normalize(state)
+    eq(state.lastSession.committed.victories, 1, "released victory")
+    state = L.acquire(state, B, 1030, 180)
+    state = L.commit(state, B, earnings(100, 1, 0, 0), 1040, 180, true)
+    state = L.normalize(state)
+    eq(state.xp, 350, "new session increments without duplicating old XP")
+    eq(state.victories, 1, "new session does not change old victory")
 end)
 
 print("IRON YARD pure Luau progression transactions: " .. tostring(cases) .. " suites OK")

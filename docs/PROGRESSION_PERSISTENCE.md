@@ -80,3 +80,29 @@ When the player earns more XP during an in-flight save, only the snapshotted amo
 Before this change the RESULTS podium displayed lifetime XP while hiding the in-game career panel, leaving players unable to distinguish pending from saved XP. The results screen and active career HUD now share the standalone, CI-tested `src/shared/CareerReadout.luau` presentation policy. `CAREER / SAVED` appears only if the server reports ONLINE and confirmed `IronYardSavedXP` equals live `IronYardLifetimeXP`. Pending XP is the difference, not all earned XP. Replication may deliver attributes in either order; when saved totals temporarily exceed received totals, the UI says SYNCING and never indicates a confirmed save.
 
 The results screen refreshes on live save-status and saved-XP attribute changes and now shows XP **remaining** to the next rank. Studio and DataStore failures remain visibly unconfirmed. DataStore v1 keys, awards, authoritative server logic and gameplay are unchanged.
+
+
+## Refus des confirmations de sauvegarde incohérentes (12 novembre 2026)
+
+Avant d'accepter un verrou de session actif (`lock.committed`) ou une attestation
+de session libérée (`lastSession.committed`), le registre serveur vérifie
+désormais **pour chacun des quatre compteurs** que la valeur annoncée comme
+déjà persistée ne dépasse pas le total durable réellement enregistré.
+Cette cohérence était déjà vérifiée lors de certains calculs de base de
+session, mais pas lors de toutes les transactions, notamment les retries
+de libération après reconnexion. Sans elle, un enregistrement corrompu
+pourrait confirmer une progression qui n'existe pas réellement.
+
+Les enregistrements incohérents provoquent une erreur du callback
+`UpdateAsync` : **aucune réécriture ni remise à zéro automatique**.
+Le serveur conserve la progression acquise en mémoire et affiche un état
+de synchronisation non confirmé plutôt qu'un faux `SAVED`. Les tests
+exécutables Luau couvrent les quatre champs sur verrous actifs,
+ré-acquisitions, autosaves, libérations et reprises de session, ainsi
+que le fonctionnement des enregistrements valides. Le schéma v1, les
+clés DataStore, les récompenses et la durée des verrous restent inchangés.
+
+**Limite :** la CI vérifie ces règles dans le registre réellement appelé
+par les callbacks, mais ne simule pas l'infrastructure DataStore Roblox ;
+un contrôle de persistance et de reconnexion dans une expérience Roblox
+autorisée reste nécessaire.

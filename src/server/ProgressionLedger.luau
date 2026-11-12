@@ -43,19 +43,34 @@ function Ledger.normalize(raw)
         assert(type(lock) == "table" and type(lock.owner) == "string"
             and #lock.owner >= 8 and safeInt(lock.expiresAt),
             "Corrupt progression lock")
+        local committed = Ledger.copyStats(lock.committed)
+        -- The saved total must contain every acknowledged session counter.
+        -- A corrupted lock must never convince the HUD or a release retry
+        -- that unsaved XP already exists in durable storage.
+        for _, field in ipairs(Ledger.STATS) do
+            assert(committed[field] <= data[field],
+                "Progression lock exceeds stored counter: " .. field)
+        end
         data.lock = {
             owner = lock.owner,
             expiresAt = lock.expiresAt,
-            committed = Ledger.copyStats(lock.committed),
+            committed = committed,
         }
     end
     if raw.lastSession ~= nil then
         local marker = raw.lastSession
         assert(type(marker) == "table" and type(marker.owner) == "string"
             and #marker.owner >= 8, "Corrupt progression release marker")
+        local committed = Ledger.copyStats(marker.committed)
+        -- lastSession may outlive the lock and coexist with a newer writer,
+        -- but the saved totals must still cover its acknowledged counters.
+        for _, field in ipairs(Ledger.STATS) do
+            assert(committed[field] <= data[field],
+                "Progression release exceeds stored counter: " .. field)
+        end
         data.lastSession = {
             owner = marker.owner,
-            committed = Ledger.copyStats(marker.committed),
+            committed = committed,
         }
     end
     return data
