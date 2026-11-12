@@ -64,6 +64,17 @@ local lastPacket = nil
 local frameWindow = FrameWindow.new()
 local frameSeconds = 0
 local latestFrameStats = nil
+local CLIENT_PERF_ATTRIBUTES = {
+    "IronYardPerfWeaponSamples", "IronYardPerfWeaponMeanMs",
+    "IronYardPerfWeaponPeakMs", "IronYardPerfWeaponParts",
+    "IronYardPerfWeaponId", "IronYardPerfWeaponSource",
+    "IronYardPerfFxActive", "IronYardPerfFxCap",
+}
+local function clearClientWeaponReadings()
+    for _, name in ipairs(CLIENT_PERF_ATTRIBUTES) do
+        player:SetAttribute(name, nil)
+    end
+end
 
 local function weaponMetrics()
     local samples = player:GetAttribute("IronYardPerfWeaponSamples")
@@ -188,14 +199,7 @@ toggle.Activated:Connect(function()
     toggle.Text = active and "CLOSE" or "PERF"
     player:SetAttribute("IronYardPrivatePerfActive", active)
     if active then
-        for _, name in ipairs({
-            "IronYardPerfWeaponSamples", "IronYardPerfWeaponMeanMs",
-            "IronYardPerfWeaponPeakMs", "IronYardPerfWeaponParts",
-            "IronYardPerfWeaponId", "IronYardPerfWeaponSource",
-            "IronYardPerfFxActive", "IronYardPerfFxCap",
-        }) do
-            player:SetAttribute(name, nil)
-        end
+        clearClientWeaponReadings()
         lastPacket = nil
         FrameWindow.clear(frameWindow)
         latestFrameStats = nil
@@ -207,7 +211,18 @@ end)
 
 RunService.RenderStepped:Connect(function(dt)
     if not active then return end
-    if not FrameWindow.push(frameWindow, dt) then return end
+    local accepted, restarted = FrameWindow.push(frameWindow, dt)
+    if restarted then
+        -- The phone was backgrounded (or returned an invalid frame delta).
+        -- Old FPS, weapon CPU and server timings must not masquerade as a
+        -- freshly measured in-game second after the player resumes.
+        frameSeconds = 0
+        latestFrameStats = nil
+        lastPacket = nil
+        clearClientWeaponReadings()
+        updateLabel()
+    end
+    if not accepted then return end
     frameSeconds += dt
     if frameSeconds >= 1.0 then
         latestFrameStats = FrameWindow.snapshot(frameWindow)

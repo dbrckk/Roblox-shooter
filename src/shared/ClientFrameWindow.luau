@@ -2,6 +2,9 @@
 -- Pure Luau, enabled only while the private PERF display is open.
 local FrameWindow = {}
 FrameWindow.CAPACITY = 240
+-- A multi-second Android background/resume interval is not an in-game frame.
+-- Keep real sub-second hitches in the 240-frame profile for diagnosis.
+FrameWindow.MAX_GAP_SECONDS = 1.0
 
 local function finite(n)
     return type(n) == "number" and n == n and n > -math.huge and n < math.huge
@@ -19,8 +22,15 @@ function FrameWindow.clear(window)
 end
 
 function FrameWindow.push(window, seconds)
-    -- Reject invalid clock data and app-suspension gaps above 10 seconds.
-    if not finite(seconds) or seconds <= 0 or seconds > 10 then return false end
+    -- An Android app-resume delta above one second cannot be interpreted
+    -- as continuous gameplay FPS. Invalidate the previous rolling window
+    -- rather than counting the gap as a 1,000-10,000ms game-frame stall.
+    -- Return a second boolean so the owner-only overlay clears stale text.
+    if not finite(seconds) or seconds <= 0
+        or seconds > FrameWindow.MAX_GAP_SECONDS then
+        FrameWindow.clear(window)
+        return false, true
+    end
     local ms = seconds * 1000
     local index = window.nextIndex
     local displaced = window.values[index] or 0

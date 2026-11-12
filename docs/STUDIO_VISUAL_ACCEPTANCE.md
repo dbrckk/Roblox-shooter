@@ -318,3 +318,10 @@ On Android, open PERF, change back and forth between AR and pistol 30+ times, re
 ## Comparable private quick-swap timing window (12 November 2026)
 
 The owner-only PERF panel now displays the mean **and** P95 over the same last 48 samples per kind (reuse/build). Previously its mean used all samples since enabling PERF while P95 used only the last 48, hiding newly introduced stutters after prolonged play. Lifetime counts and lifetime mean remain available in the pure metrics API for long-session debugging. The private panel still shows total Roblox process memory, not bytes attributable to the cached gun. This change does not create an always-on measurement or transmit user diagnostics. On a real Android client, enable owner PERF, alternate two weapons for at least 48 switches, compare recycle vs rebuild, then repeat on ECO and QUALITY while recording total RAM and FPS; report actual device and sample counts.
+
+
+## Android owner PERF: foreground restart safety (12 November 2026)
+
+The private PERF frame-time window now treats non-finite/invalid deltas and a single RenderStepped gap over **1 second** as a discontinuity (Android background/resume), not a gameplay frame. Existing rolling FPS, P95/P99, CPU weapon attributes and stale server display are cleared. The panel resumes from fresh foreground samples on the next frames and waits for a fresh server packet. Real in-game stalls of up to and including 1 second remain measured as slow frames instead of being suppressed. The same policy runs only while the owner or Studio has the PERF panel enabled. No server-side gameplay, player graphics quality or client render loop is changed.
+
+Manual device acceptance: open PERF, record 240 frames, background Roblox for at least 2 seconds, return and verify stale frame/CPU/server measurements are replaced with "mesures en cours" until fresh samples arrive; then repeatedly switch weapons and inspect the rolling 48-swap timings. Verify a real frame hitch under one second still appears in slow-frame counts. Offline Luau tests validate reset boundaries, not measured Android FPS.
