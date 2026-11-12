@@ -211,4 +211,53 @@ case("valid partial writes, release and reacquire preserve acknowledged totals",
     eq(state.victories, 1, "new session does not change old victory")
 end)
 
+case("award increments are atomic across all counters", function()
+    local earned = L.zero()
+    local first = L.applyGrant(earned, {xp=250, victories=1})
+    eq(first.xp, 250, "first award XP")
+    eq(first.victories, 1, "first award victory")
+    eq(earned.xp, 0, "caller snapshot must stay unchanged")
+    local second = L.applyGrant(first, {xp=100, eliminations=1, headshots=1})
+    eq(second.xp, 350, "XP adds")
+    eq(second.eliminations, 1, "kill adds")
+    eq(second.headshots, 1, "headshot adds")
+    eq(second.victories, 1, "absent fields leave earlier awards intact")
+    eq(first.xp, 250, "prior snapshot stays stable for in-flight UpdateAsync")
+    eq(first.eliminations, 0, "prior snapshot stays independent")
+
+    -- In particular, a bad LAST field must not award a valid first field.
+    for _, field in ipairs(L.STATS) do
+        for _, invalid in ipairs({-1, 1.5, 10001, math.huge, "1"}) do
+            local bad = {xp=5, eliminations=1, headshots=1, victories=1}
+            bad[field] = invalid
+            fails(function() L.applyGrant(first, bad) end,
+                "reject invalid " .. field .. "=" .. tostring(invalid))
+            eq(first.xp, 250, "invalid award cannot mutate XP")
+            eq(first.victories, 1, "invalid award cannot mutate wins")
+        end
+        local badNan = {xp=5, eliminations=1, headshots=1, victories=1}
+        badNan[field] = 0/0
+        fails(function() L.applyGrant(first, badNan) end, "NaN " .. field)
+    end
+    fails(function() L.applyGrant(first, nil) end, "nil grant")
+    fails(function() L.applyGrant(first, 20) end, "numeric grant")
+    eq(first.xp, 250, "failed grants do not mutate original totals")
+end)
+
+case("one overflowing award field never partially increments another", function()
+    -- Largest representable INTEGER strictly below the ledger's safe limit.
+    local limit = 9007199254740990
+    local earned = L.zero()
+    earned.victories = limit
+    fails(function()
+        L.applyGrant(earned, {xp=1000, eliminations=1, victories=1})
+    end, "later field overflow cannot partially grant XP")
+    eq(earned.xp, 0, "no XP was granted on overflow")
+    eq(earned.eliminations, 0, "no elimination was granted on overflow")
+    eq(earned.victories, limit, "no overflow was written")
+    local good = L.applyGrant(earned, {xp=1000, eliminations=1})
+    eq(good.xp, 1000, "valid event still succeeds")
+    eq(good.victories, limit, "zero delta at the limit remains valid")
+end)
+
 print("IRON YARD pure Luau progression transactions: " .. tostring(cases) .. " suites OK")

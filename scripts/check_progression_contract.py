@@ -61,7 +61,10 @@ def main():
         '"IronYardLifetimeXP"',
         '"IronYardSavedXP"',
         'math.min(earned.xp, record.committed.xp)',
+        'record.earned = Ledger.applyGrant(record.earned, deltas)',
     ), "DataStore lease/recovery")
+    require("record.earned[field] += amount" not in data,
+            "Unsafe partial progression award mutation must not return")
 
     contains(ledger, (
         "function Ledger.normalize(raw)",
@@ -78,6 +81,10 @@ def main():
         '"Progression lock exceeds stored counter: " .. field',
         '"Progression release exceeds stored counter: " .. field',
         "data.lock = nil",
+        "function Ledger.applyGrant(earned, deltas)",
+        'assert(safeInt(delta) and delta <= 10000,',
+        'assert(safeInt(updated), "Progression session counter overflow: " .. field)',
+        "return nextEarned",
     ), "Pure idempotent DataStore ledger")
 
     require(ledger.count("assert(committed[field] <= data[field],") == 2,

@@ -26,6 +26,26 @@ function Ledger.copyStats(value)
     return copy
 end
 
+-- Apply a server-authored award as an atomic, validated session snapshot.
+-- Validate ALL four fields (including overflow) before replacing the caller's
+-- earned state. A bad later field must never partially grant XP or kills.
+-- This pure function does not read DataStores or change saved records.
+function Ledger.applyGrant(earned, deltas)
+    local current = Ledger.copyStats(earned)
+    assert(type(deltas) == "table", "Missing progression event")
+    local nextEarned = {}
+    for _, field in ipairs(Ledger.STATS) do
+        local delta = deltas[field]
+        if delta == nil then delta = 0 end
+        assert(safeInt(delta) and delta <= 10000,
+            "Invalid progression event: " .. field)
+        local updated = current[field] + delta
+        assert(safeInt(updated), "Progression session counter overflow: " .. field)
+        nextEarned[field] = updated
+    end
+    return nextEarned
+end
+
 -- Invalid existing records must be rejected without overwriting earned XP.
 function Ledger.normalize(raw)
     if raw == nil then

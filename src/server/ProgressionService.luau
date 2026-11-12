@@ -13,7 +13,6 @@ local STORE_NAME = "IronYard_Progression_v1"
 local AUTOSAVE_SECONDS = 45
 local LEASE_SECONDS = 180
 local RETRY_LIMIT = 3
-local STATS = Ledger.STATS
 local records = {}
 local started = false
 local store
@@ -196,11 +195,10 @@ end
 local function add(player, deltas)
     local record = records[player]
     if not record or not player.Parent then return end
-    for _, field in ipairs(STATS) do
-        local amount = deltas[field] or 0
-        assert(safeInt(amount) and amount <= 10000, "Invalid progression event")
-        record.earned[field] += amount
-    end
+    -- The pure ledger returns a complete validated snapshot or throws
+    -- without touching the prior one. Keep all four counters consistent if
+    -- an unexpected award is malformed or a session approaches integer limits.
+    record.earned = Ledger.applyGrant(record.earned, deltas)
     publish(player, record)
 end
 
