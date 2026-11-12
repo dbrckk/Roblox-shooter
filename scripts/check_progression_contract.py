@@ -94,6 +94,19 @@ def main():
     ), "Single-flight detached release guard")
     require("scripts/test_progression_detached_release.luau" in workflow,
             "Executable slow-autosave departure regression must run in CI")
+    require("scripts/test_progression_recovery.luau" in workflow,
+            "Executable out-of-order and departure DataStore scenarios must run in CI")
+
+    # A2: every degraded state must stay explicit, so no save can look confirmed.
+    for degraded in (
+        'setStatus(player, record, "STUDIO")',
+        'setStatus(player, record, success and "LOCKED" or "RETRYING")',
+        'RunService:IsStudio() and "STUDIO" or "UNAVAILABLE"',
+    ):
+        require(degraded in data,
+                f"Degraded progression status is missing: {degraded}")
+    require("Scénarios hors ordre et départ de joueur" in doc,
+            "A2 scenarios must be documented in docs/PROGRESSION_PERSISTENCE.md")
     queued = data.index("queueDetachedRelease = function(player, record)")
     worker = data[queued:data.index("\nlocal function loadOrRetry(", queued)]
     require(worker.index("DetachedRelease.claim(record)") < worker.index(

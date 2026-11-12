@@ -194,3 +194,43 @@ programmation et le suivi d'une écriture occupée, du départ et de la
 libération finale. La CI complète n'est pas un test de latence ou de
 durabilité du DataStore réel ; une panne persistante ou l'arrêt définitif
 du serveur peut encore empêcher le dernier enregistrement.
+
+
+## Scénarios hors ordre et départ de joueur — A2 (12 novembre 2026)
+
+`scripts/test_progression_recovery.luau` pilote le **registre réellement
+appelé par les callbacks** (`ProgressionLedger`) à travers un magasin en
+mémoire qui reproduit les sémantiques d'`UpdateAsync` : le callback reçoit
+toujours la valeur **courante** (jamais une copie périmée de l'appelant),
+un retour `nil` **abandonne** l'écriture sans rien modifier, et chaque valeur
+acceptée est re-normalisée, donc jamais partagée avec l'appelant.
+
+Scénarios exécutés :
+
+1. **Autosave puis départ** : le snapshot étant cumulatif, la libération
+   finale ne recompte pas l'autosave (340 XP, pas 470).
+2. **Autosave retardé après libération** : l'écriture périmée est abandonnée ;
+   la XP durable ne recule pas, le bail ne se rouvre pas.
+3. **Acquisition terminée après le départ** : la libération différée sauve
+   les 90 XP gagnées avant la sortie, une seule fois, et la session suivante
+   repart de ce total.
+4. **Deux serveurs** : écriture étrangère refusée, transfert exactement à
+   l'expiration, ancien propriétaire privé d'écriture après transfert.
+5. **Bail expiré pendant une longue manche** : le propriétaire renouvelle son
+   propre bail sans perdre de gain ; un rival ne profite pas de la fenêtre.
+6. **XP de session vs XP confirmé** : entre deux autosaves, `SAVED` reste
+   plafonné par le durable et `lifetime = saved + en attente`.
+7. **Snapshot corrompu** : rejet fail-closed, stockage intact, autosave
+   suivant accepté (mode dégradé récupérable).
+8. **Callback rejoué** : même callback appliqué deux fois, aucun doublon.
+9. **Aucun alias** : modifier une table retournée ne touche pas l'enregistrement.
+
+**Mode dégradé, inchangé** : chargement impossible, verrou détenu par un autre
+serveur ou DataStore indisponible ne bloquent jamais le jeu ; les compteurs
+restent en mémoire et `UNAVAILABLE`, `RETRYING`, `LOCKED` ou `STUDIO` interdisent
+d'afficher `SAVED`. Le prochain succès inclut les gains en attente.
+**Aucune clé, aucun schéma v1, aucune récompense et aucune durée de bail ne
+sont modifiés par ce lot.**
+
+**Limite :** la suite ne simule ni le service DataStore Roblox, ni la latence,
+ni `BindToClose` réél ; la validation publiée du § précédent reste exigée.
