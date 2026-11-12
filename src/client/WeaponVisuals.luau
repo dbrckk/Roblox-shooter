@@ -1235,7 +1235,9 @@ function WeaponVisuals:_spawnTransient(spec)
     slot.fromCFrame = spec.origin
     slot.toCFrame = spec.target or spec.origin
     slot.fromSize = spec.size
-    slot.toSize = spec.endSize
+    slot.toSize = spec.endSize or spec.size
+    -- A fixed-size shell or flash retains its exact spawn size across frames.
+    slot.resizes = TransientFxPool.resizes(slot.fromSize, slot.toSize)
     slot.fromAlpha = spec.alpha
     slot.linear = spec.linear == true
     -- Reset when a pooled shell is reused as a tracer/impact/muzzle flash.
@@ -1244,6 +1246,7 @@ function WeaponVisuals:_spawnTransient(spec)
     -- Reset impact movement when this Part is recycled for another effect.
     slot.gravityDrop = spec.gravityDrop or 0
     slot.flicker = spec.flicker or 0
+    slot.flickers = TransientFxPool.flickers(slot.flicker)
     -- Recycled slot can change from static muzzle core to moving tracer.
     -- Recalculate once per spawn, not on each mobile RenderStep.
     slot.moves = TransientFxPool.moves(spec.target ~= nil,
@@ -1279,11 +1282,18 @@ function WeaponVisuals:_updateTransientFx(now)
                 end
                 part.CFrame = transform
             end
-            part.Size = slot.fromSize:Lerp(slot.toSize, blend)
+            -- Casings and other constant-size effects already received their
+            -- final size at spawn. Skip interpolation and the property write.
+            if slot.resizes then
+                part.Size = slot.fromSize:Lerp(slot.toSize, blend)
+            end
             local baseAlpha = slot.fromAlpha + (1 - slot.fromAlpha) * blend
-            part.Transparency = math.clamp(baseAlpha
-                + slot.flicker * (1 - baseAlpha) * math.abs(math.sin(t * 24)),
-                0, 1)
+            -- Most flashes, glints and tracers do not flicker. Only moving
+            -- surface sparks need the costly sine function per render frame.
+            if slot.flickers then
+                baseAlpha += slot.flicker * (1 - baseAlpha) * math.abs(math.sin(t * 24))
+            end
+            part.Transparency = math.clamp(baseAlpha, 0, 1)
             if not part.Parent then part.Parent = workspace end
         else
             -- Expired or excluded by a reduced graphics cap: retire this
