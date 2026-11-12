@@ -67,8 +67,10 @@ assert(not P.canCommit(playerA, playerB, lifeA, lifeB, nil, true))
 for i=1,10000 do
     local previous = playerA.Character
     playerA.Character = {}
-    assert(not P.canCommit(playerA, playerB, previous, lifeB, true, true))
-    assert(P.canCommit(playerA, playerB, playerA.Character, lifeB, true, true))
+    assert(not P.canCommit(playerA, playerB, previous,
+        playerB.Character, true, true))
+    assert(P.canCommit(playerA, playerB, playerA.Character,
+        playerB.Character, true, true))
     if i%3 == 0 then
         local oldB = playerB.Character
         playerB.Character = {}
