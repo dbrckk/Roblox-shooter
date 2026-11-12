@@ -751,7 +751,7 @@ assert 'FireServer' not in aim_reload and 'Instance.new' not in aim_reload
 confirmed = client.index("WeaponAimReloadPolicy.releaseOnConfirmedReload(currentWeaponId,")
 assert client.index("if not FireEpochPolicy.acceptAmmo(", 0, confirmed) < confirmed
 assert client.index("ammoByWeapon[message.weaponId] = {", 0, confirmed) < confirmed
-assert confirmed < client.index("visuals:setReloading(message.weaponId, message.reloading == true)", confirmed)
+assert confirmed < client.index("visuals:setReloading(message.weaponId, message.reloading == true,", confirmed)
 request_body = client[client.index("local function requestReload()"):client.index("local function fireWeapon(")]
 assert "setScoped(false)" not in request_body, (
     "Rejected reload must not un-scope before server confirmation")

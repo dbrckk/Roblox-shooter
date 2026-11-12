@@ -1,0 +1,8 @@
+IRON YARD — one-time PUBLIC owner-approved FPS release, November 12 2026.
+The presentation contract now verifies the ammo-aware reload call, after
+the existing server reload/ADS source contract was updated. This allows
+the new pistol PBR slide and AR receiver rack only when actual magazine
+count increases in server-confirmed completed Ammo state; invalid and
+cancelled reloads are animation-free. Run Luau/Python source contracts and
+build Rojo against exact SHA; authorize only public owner-verified Open Cloud
+experience, no private/alpha staging or extra assets/remote messages.
