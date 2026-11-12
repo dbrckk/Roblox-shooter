@@ -21,6 +21,7 @@ local WeaponAudio = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChil
 local CartridgeEjection = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CartridgeEjectionPolicy"))
 local ShotgunReloadVisual = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ShotgunReloadVisual"))
 local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelRenderPolicy"))
+local WeaponRenderDiagnostics = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponRenderDiagnostics"))
 local WeaponPartMotionRole = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponPartMotionRole"))
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 local WeaponFxFramePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFxFramePolicy"))
@@ -122,6 +123,16 @@ function WeaponVisuals.new(WeaponConfig)
     -- Track only live slots: pooled Parts persist, but inactive slots must
     -- not be visited by every RenderStepped after the first firefight.
     self.activeTransientIndices = {}
+    -- Strictly opt-in client-side metrics for the owner/Studio PERF panel.
+    -- Ordinary players never take per-frame CPU timestamps or scan FX.
+    self.privatePerfEnabled = Players.LocalPlayer:GetAttribute("IronYardPrivatePerfActive") == true
+    self.privatePerfWindow = WeaponRenderDiagnostics.new()
+    self.privatePerfConnection = Players.LocalPlayer:GetAttributeChangedSignal(
+        "IronYardPrivatePerfActive"):Connect(function()
+            self.privatePerfEnabled = Players.LocalPlayer:GetAttribute(
+                "IronYardPrivatePerfActive") == true
+            WeaponRenderDiagnostics.clear(self.privatePerfWindow)
+        end)
     -- A bounded list of remote emitters only. The local weapon's feedback
     -- has absolute priority and does not consume these slots.
     self.remoteSoundEmitters = {}
@@ -1036,7 +1047,32 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
             math.rad(feel.reloadRoll * reloadingPose))
 	return sprintMotion * bob * swayMotion * fireMotion * reloadMotion * equipMotion
 end
+-- Samples are captured only for the owner/Studio PERF panel. Publish
+-- diagnostics via client-owned local Player attributes once per second:
+-- no RemoteEvents, server telemetry, UI allocations, or gameplay effects.
+function WeaponVisuals:_finishPrivatePerfFrame(startedAt, frameDt)
+    if startedAt == nil then return end
+    local snapshot = WeaponRenderDiagnostics.record(
+        self.privatePerfWindow, frameDt, os.clock() - startedAt)
+    if not snapshot then return end
+    local fxActive = 0
+    for _ in pairs(self.activeTransientIndices) do
+        fxActive += 1
+    end
+    local player = Players.LocalPlayer
+    player:SetAttribute("IronYardPerfWeaponSamples", snapshot.count)
+    player:SetAttribute("IronYardPerfWeaponMeanMs", snapshot.meanMs)
+    player:SetAttribute("IronYardPerfWeaponPeakMs", snapshot.peakMs)
+    player:SetAttribute("IronYardPerfWeaponParts", #self.parts)
+    player:SetAttribute("IronYardPerfWeaponId", self.currentWeaponId or "NONE")
+    player:SetAttribute("IronYardPerfWeaponSource",
+        not self.model and "NONE" or (self.currentWeaponImported and "PBR" or "PARTS"))
+    player:SetAttribute("IronYardPerfFxActive", fxActive)
+    player:SetAttribute("IronYardPerfFxCap", self.adaptiveCombatFxCap or 0)
+end
+
 function WeaponVisuals:_render(deltaTime)
+    local privatePerfStart = self.privatePerfEnabled and os.clock() or nil
     -- Preserve actual wall-clock recoil/FX expiry, but cap interpolation after
     -- Android backgrounding or a frame hitch to avoid single-frame pose snaps.
     local animationDt = ViewmodelRenderPolicy.animationDelta(deltaTime)
@@ -1058,6 +1094,7 @@ function WeaponVisuals:_render(deltaTime)
     end
 	local camera = workspace.CurrentCamera
 	if not camera or not self.model then
+        self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)
 		return
 	end
 
@@ -1081,6 +1118,7 @@ function WeaponVisuals:_render(deltaTime)
         self.pendingCartridge, clock) then
         self.lastCameraCFrame = camera.CFrame
         self.sway = self.sway * (1 - ViewmodelRenderPolicy.blendAlpha(animationDt, 14))
+        self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)
         return
     end
 
@@ -1278,6 +1316,7 @@ function WeaponVisuals:_render(deltaTime)
             self:_ejectCartridge(pending.plan)
         end
     end
+    self:_finishPrivatePerfFrame(privatePerfStart, deltaTime)
 end
 
 -- A single bounded client pool owns every short-lived visual Part
