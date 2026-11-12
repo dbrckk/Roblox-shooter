@@ -2,14 +2,14 @@
 
 ## Pilotage du projet — feuille de route en vigueur
 
-- **[Feuille de route V3 — finition production sans test Android immédiat](docs/ROADMAP_V3_SANS_TEST_ANDROID.md)** : backlog actif priorisé, étapes autonomes réalisables depuis GitHub, critères de sortie, blocages Roblox/Android et preuves attendues. **Le prochain lot est A1 : fiabilité FFA/duel 1v1 déjà codé.**
+- **[Feuille de route V3 — finition production sans test Android immédiat](docs/ROADMAP_V3_SANS_TEST_ANDROID.md)** : backlog actif priorisé, étapes autonomes réalisables depuis GitHub, critères de sortie, blocages Roblox/Android et preuves attendues. **A1 et A2 disposent de régressions offline, A3 est en cours et les vérifications en moteur restent nécessaires.**
 - **[Matrice d'acceptation des assets](docs/ASSET_ACCEPTANCE_MATRIX.md)** : état généré depuis les registres d'IDs — 10 IDs d'armes prêts hors moteur, 4 modèles VANGUARD et 12 canaux de matériaux encore bloqués faute d'approbation Roblox.
 - **[Audit de l'écart avec RIVALS et TTK serveur](docs/AUDIT_ECART_RIVALS_2026-11-12.md)** : modèle de TTK vérifiable pour cinq armes, avec décroissance réelle des dégâts du B-8 et coûts de rechargement, sans modifier les règles de combat.
 - [Feuille de route V2 — historique](docs/ROADMAP_V2_PUBLIC.md) : décisions et lots précédents, dont plusieurs statuts ne sont plus actuels.
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-**État vérifié le 12 novembre 2026 :** expérience IRON YARD publique **v54** (publication [GitHub Actions #43227082815](https://github.com/dbrckk/Roblox-shooter/actions/runs/43227082815) réussie), build Rojo vert. Armes PBR : dix IDs enregistrés (5 armes × 2 LOD) ; 1v1 codé avec tests ; modèles VANGUARD (4 IDs) et matériaux de monde PBR (12 IDs) non activés dans les registres. FPS Android, gameplay moteur et persistance DataStore réelle restent non mesurés/à valider.
+**État vérifié le 12 novembre 2026 :** expérience IRON YARD publique **v55** (publication [GitHub Actions #43316384420](https://github.com/dbrckk/Roblox-shooter/actions/runs/43316384420) réussie), build Rojo vert. La [PR #66](https://github.com/dbrckk/Roblox-shooter/pull/66) empêche un déplacement différé `Mantle` de perturber un départ verrouillé de duel 1v1 ; voir [la régression A3](docs/MANTLE_PHASE_SAFETY.md). Armes PBR : dix IDs enregistrés (5 armes × 2 LOD) ; 1v1 codé avec tests ; modèles VANGUARD (4 IDs) et matériaux de monde PBR (12 IDs) non activés dans les registres. FPS Android, gameplay moteur et persistance DataStore réelle restent non mesurés/à valider.
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
@@ -23,7 +23,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - **Précision de visée caméra/tête (10 novembre 2026) :** la visée du joueur converge désormais vers le point visible depuis sa caméra, mais le rayon de dégâts reste lancé depuis la tête contrôlée par le serveur, sans tir à travers les couvertures. En cas de caméra trop éloignée ou masquée (latence/déplacement rapide), la trajectoire serveur existante reste utilisée. La validation Roblox Studio reste à effectuer.
 - **Arsenal de cinq armes originales :** AR-24 automatique, B-8 à huit plombs, pistolet, sniper et couteau à lancer. Dégâts, dispersion, chargeurs, rechargements et cadence sont contrôlés par le serveur. Les armes disposent de modèles originaux à la première personne ; lunette sniper et visée à l'épaule/hausse pour les autres armes.
 - **Munitions et confort de tir :** 30 balles AR-24, 14 pistolet, 6 pompe, 5 sniper ; couteaux sans chargeur. Rechargement par `R` sur PC ou bouton `RLD` sur Android ; nouvelles munitions en début de manche. Le HUD affiche la quantité réelle répliquée par le serveur.
-- Déplacements : sprint, slide, saut, boost, wallrun et mantle.
+- Déplacements : sprint, slide, saut, boost, wallrun et mantle. Depuis la **v55**, un mantle différé est rejeté si la phase, l'époque de combat, le personnage ou l'ancrage serveur a changé.
 - HUD, réticule, recul, impacts, sons Roblox internes et fil d'éliminations serveur (les mannequins d'entraînement sont désactivés dans l'arène compétitive).
 - **Contrôles PC + Android/iOS :** tir automatique par maintien, touches 1 à 5 pour l'arsenal, clic droit ou bouton AIM pour viser, choix d'arme mobile avec sélection visible et retour tactile de santé (flash discret).
 - Classement FFA top 3 actualisé par le serveur : vrais joueurs et IA, orientation et secteur dans un HUD compact pour Android.
