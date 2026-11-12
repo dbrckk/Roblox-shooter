@@ -542,7 +542,7 @@ function WeaponVisuals:_getImportedWeapon(weaponId, lod)
             RoughnessMap=appearance.RoughnessMap,
             MetalnessMap=appearance.MetalnessMap,
         })
-    end)
+    end, WeaponMeshPolicy.Optional[weaponId])
     if not selected then return nil end
     return origin, selected
 end
@@ -576,8 +576,9 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
                 * CFrame.Angles(math.rad(-6), math.rad(-4), math.rad(3)),
             CFrame.new(0.08, -0.38, 0.06) * CFrame.Angles(math.rad(-11), 0, 0))
     end
-    for _, componentName in ipairs(WeaponMeshPolicy.Required[weaponId]) do
-      for _, sourcePart in ipairs(selected[componentName]) do
+    for _, componentName in ipairs(WeaponMeshPolicy.components(weaponId)) do
+      if selected[componentName] then
+       for _, sourcePart in ipairs(selected[componentName]) do
         local clone = sourcePart:Clone()
         local appearance = clone:FindFirstChildOfClass("SurfaceAppearance")
         for _, descendant in ipairs(clone:GetDescendants()) do
@@ -599,6 +600,7 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
             -- Never apply rank-wide BasePart.Color recolors to its PBR maps.
             isPbrMesh=true,
         })
+       end
       end
     end
     -- Existing local FX and reload samples must keep functional anchors.
@@ -635,6 +637,8 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
         anchor("SniperEjectionPort")
     end
     self.currentWeaponImported = true
+    self.currentWeaponHasPbrMagazine = weaponId == "Pistol"
+        and selected.IRONYARD_Pistol_Magazine ~= nil
     self.activeMeshLod = lod
     model:SetAttribute("IronYardWeaponSource", "PBR_MESH")
     model:SetAttribute("IronYardWeaponLOD", lod)
@@ -642,6 +646,8 @@ function WeaponVisuals:_createImportedWeapon(model, weaponId)
 end
 
 function WeaponVisuals:setWeapon(weaponId)
+    -- A late PBR LOD refresh may change which authored magazine exists.
+    self.currentWeaponHasPbrMagazine = false
 	self.currentWeaponId = weaponId
     self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap
     self.pendingLocalFlashAt = nil -- prevent late flash from previous weapon
@@ -966,7 +972,7 @@ function WeaponVisuals:_render(deltaTime)
         self.currentWeaponId, progress, self.reloadActive,
         magazineDip, feel.handTravel,
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        self.currentWeaponImported)
+        self.currentWeaponImported, self.currentWeaponHasPbrMagazine)
     local handAlpha = math.clamp(animationDt * 14, 0, 1)
     self.reloadHandX += (handX - self.reloadHandX) * handAlpha
     self.reloadHandY += (handY - self.reloadHandY) * handAlpha

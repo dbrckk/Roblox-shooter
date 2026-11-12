@@ -348,7 +348,7 @@ assert 'origin.CFrame=source:GetPivot()' not in studio_importer
 layout = get("src/shared/WeaponMeshLayout.luau")
 for needle in (
     "function Layout.componentName(candidate, required)",
-    "function Layout.collect(root, required, validate)",
+    "function Layout.collect(root, required, validate, optional)",
     'part:IsA("MeshPart")',
     'parent:IsA("Model") or parent:IsA("Folder")',
     "Layout.MAX_PER_COMPONENT = 8",
@@ -359,7 +359,8 @@ for needle in (
 for needle in (
     'WaitForChild("WeaponMeshLayout")',
     'WeaponMeshLayout.collect(template, required, function(part)',
-    'for _, componentName in ipairs(WeaponMeshPolicy.Required[weaponId]) do',
+    'for _, componentName in ipairs(WeaponMeshPolicy.components(weaponId)) do',
+    'if selected[componentName] then',
     'for _, sourcePart in ipairs(selected[componentName]) do',
 ):
     assert needle in visuals, f"Client GLB multi-primitive animation missing: {needle}"
@@ -642,7 +643,7 @@ for update in (
 # restart or teleport after a deferred asset upgrade or server cancel.
 reload_hand = get("src/shared/WeaponReloadHandPlan.luau")
 for needle in (
-    "function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported)",
+    "function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported, hasMagazine)",
     'weaponId == "AssaultRifle"',
     'weaponId == "Shotgun"',
     "smooth(0.27, 0.74, p)",
@@ -679,6 +680,19 @@ for needle in (
 assert 'target = 1' in visuals and '1 - pistolHandVisibility' in visuals
 assert visuals.count('CFrame.new(-0.27, -0.54, 0.08)') == 2, (
     "PBR and procedural pistol must share the same support-hand origin")
+# Ensure authentic Blender pistol magazine survives validated owner-only
+# loading, reaches first-person PBR, and follows physical Part reload timing.
+assert '"IRONYARD_Pistol_Magazine"' in weapon_forge
+assert '"pistol":{"IRONYARD_Pistol_Static","IRONYARD_Pistol_Slide","IRONYARD_Pistol_Magazine"}' in weapon_validator
+assert 'P.Optional={Pistol={"IRONYARD_Pistol_Magazine"}}' in mesh_policy
+assert 'IRONYARD_Pistol_Magazine="Magazine"' in mesh_policy
+assert 'MeshPolicy.Optional[weaponId]' in asset_loader
+assert 'WeaponMeshPolicy.Optional[weapon]' in studio_importer
+assert 'WeaponMeshPolicy.Optional[weaponId]' in visuals
+assert 'self.currentWeaponHasPbrMagazine = weaponId == "Pistol"' in visuals
+assert 'selected.IRONYARD_Pistol_Magazine ~= nil' in visuals
+assert 'self.currentWeaponImported, self.currentWeaponHasPbrMagazine' in visuals
+assert 'if imported == true and hasMagazine ~= true then' in reload_hand
 assert "Instance.new" not in reload_hand and "FireServer" not in reload_hand
 assert "targetHumanoid:TakeDamage(damage)" in server
 assert "fireCooldown = 0.115" in config, "Server/weapon cadence not rewritten"

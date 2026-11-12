@@ -1,0 +1,10 @@
+IRON YARD — one-shot owner-authorized PUBLIC FPS update 2026-11-12.
+Continue improving the existing PUBLIC experience; no alpha or private mode.
+Source changes: original independent PBR pistol magazine export (both LODs),
+strict binary GLB validation, optional but validated import compatible with
+previous uploaded owner PBR assets, client animation matched to real part,
+Luau regression and source integration tests.
+Publication requires exact SHA passing Rojo CI, existing verified public
+owner and place. Source commit does not falsely assert new Roblox asset IDs
+are uploaded: those follow a separate authorized Open Cloud asset workflow.
+No private code, keys, or server-owned hit/ammunition changes.

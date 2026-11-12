@@ -70,3 +70,28 @@ node("Marker_2", "MeshPart", secondRoot)
 assert(Layout.origin(root, function() return true end) == nil,
     "Duplicated source marker must never become a weapon pivot")
 print("IRON YARD glTF primitives and authored weapon origin: safety checks OK")
+
+-- Optional PBR magazine: old two-piece kits load, but new extra meshes must
+-- be validated, bounded, and unique before Roblox replication.
+local pistolRoot = node("PistolLOD0", "Model")
+local pistolStatic = node("IRONYARD_Pistol_Static_Node", "Model", pistolRoot)
+node("Material_0", "MeshPart", pistolStatic)
+local pistolSlide = node("IRONYARD_Pistol_Slide_Node", "Model", pistolRoot)
+node("Material_0", "MeshPart", pistolSlide)
+local req = {"IRONYARD_Pistol_Static", "IRONYARD_Pistol_Slide"}
+local opt = {"IRONYARD_Pistol_Magazine"}
+local old = Layout.collect(pistolRoot, req, function() return true end, opt)
+assert(old and old.IRONYARD_Pistol_Magazine == nil,
+    "Legacy two-piece owner PBR pistol must remain usable")
+local pistolMagazine = node("IRONYARD_Pistol_Magazine_Node", "Model", pistolRoot)
+local magPart = node("Material_0", "MeshPart", pistolMagazine)
+local upgraded = Layout.collect(pistolRoot, req, function() return true end, opt)
+assert(upgraded and upgraded.IRONYARD_Pistol_Magazine[1] == magPart)
+assert(Layout.collect(pistolRoot, req, function(part)
+    return part ~= magPart end, opt) == nil,
+    "Invalid optional PBR map must not bypass validation")
+assert(Layout.collect(pistolRoot, req, function() return true end, "bad") == nil)
+local duplicateMagazine = node("IRONYARD_Pistol_Magazine", "Model", pistolRoot)
+node("Material_0", "MeshPart", duplicateMagazine)
+assert(Layout.collect(pistolRoot, req, function() return true end, opt) == nil,
+    "Duplicate optional magazine roots are prohibited")

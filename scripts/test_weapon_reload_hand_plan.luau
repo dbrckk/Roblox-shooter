@@ -81,3 +81,15 @@ for _, args in ipairs({
     assert(x == 0 and y == 0 and z == 0)
 end
 print("IRON YARD: scoped-safe sniper bolt and PBR/fallback pistol gestures: OK")
+
+-- New PBR Pistol source truly detaches its magazine. Existing PBR source
+-- still has its fixed magazine and therefore uses the restrained hand.
+local legacyX,legacyY,legacyZ=Hand.sample("Pistol",0.45,true,1,1.15,
+    "QUALITY",true,false)
+local freshX,freshY,freshZ=Hand.sample("Pistol",0.45,true,1,1.15,
+    "QUALITY",true,true)
+local partX,partY,partZ=Hand.sample("Pistol",0.45,true,1,1.15,
+    "QUALITY",false,false)
+assert(freshX==partX and freshY==partY and freshZ==partZ,
+    "Independent PBR and procedural magazines follow same motion")
+assert(legacyX < freshX and legacyY > freshY and legacyZ ~= freshZ)

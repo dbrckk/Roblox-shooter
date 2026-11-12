@@ -17,7 +17,7 @@ end
 -- Returns three scalars to avoid allocating a Vector3/table per frame.
 -- progress follows the server-confirmed reloadSeconds (0..1);
 -- dip is the SAME mid-reload magazine extraction curve used by the mesh.
-function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported)
+function Plan.sample(weaponId, progress, active, dip, handTravel, preset, imported, hasMagazine)
     if active ~= true or not finite(progress) or not finite(dip)
         or not finite(handTravel) or handTravel < 0 then
         return 0, 0, 0
@@ -46,7 +46,7 @@ function Plan.sample(weaponId, progress, active, dip, handTravel, preset, import
         -- static mesh. Do NOT pretend it is detachable on that variant.
         local reach = smooth(0.12, 0.26, p)
             * (1 - smooth(0.76, 0.92, p))
-        if imported == true then
+        if imported == true and hasMagazine ~= true then
             return 0.16 * reach, -0.06 * reach, 0.04 * reach
         end
         -- Procedural Part fallback really has a separate magazine/baseplate.

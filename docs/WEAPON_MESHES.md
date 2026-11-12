@@ -399,3 +399,26 @@ du canon, éjection de la douille au bon instant pendant la mécanique de
 rechargement, transitions PBR LOD0/LOD1 et cohérence avec le viseur. Les
 tests de dépôt valident le raccordement et les positions authored ; ils ne
 remplacent pas des captures Roblox Studio ou des mesures FPS sur téléphone.
+
+## Pistolet PBR indépendant, compatible avec les anciens modèles — 12/11/2026
+
+Le **nouvel export Blender** sépare désormais trois composants en LOD0/LOD1 :
+`IRONYARD_Pistol_Static`, `IRONYARD_Pistol_Slide`,
+`IRONYARD_Pistol_Magazine`. Boîtier du chargeur, follower et talon
+ont leur propre MeshPart PBR, tous alignés sur l'origine Blender de l'arme.
+Le modèle original à deux composants déjà validé conserve son chargement
+et le geste de préhension modéré ; pas de fausse extraction.
+
+Les deux chargeurs de modèles (Open Cloud serveur et Studio) gardent leur
+liste obligatoire originale, et acceptent la pièce supplémentaire **seulement
+si ses MeshParts et textures sont validés**. Une pièce facultative dupliquée
+ou non autorisée rejette le paquet, sans régression vers un asset non vérifié.
+Le client suit le chargeur de la version PBR nouvelle génération avec la
+même courbe de recharge serveur que le fallback procédural.
+
+**Important :** le commit du code ne modifie pas à lui seul les modèles Roblox
+déjà téléchargés. Le workflow de forge doit réussir pour les dix nouveaux
+GLB, puis l'upload Open Cloud autorisé doit publier et enregistrer les
+dix nouveaux IDs dans `WeaponAssetIds.luau`. Il faut un build/place
+public renouvelé pour la connexion du registre au jeu. Mesures Android,
+visée et animations en Studio restent nécessaires.

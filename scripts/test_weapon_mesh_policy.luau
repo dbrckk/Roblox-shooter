@@ -50,3 +50,12 @@ assert(P.canRetint(nil)==false)
 assert(P.canRetint("bad")==false)
 
 print("IRON YARD weapon MeshPart import policy: PBR validation, named pieces and mobile LOD OK")
+
+assert(P.Optional.Pistol[1]=="IRONYARD_Pistol_Magazine")
+assert(P.runtimeName("IRONYARD_Pistol_Magazine")=="Magazine")
+local pistolPieces=P.components("Pistol")
+assert(#pistolPieces==3 and pistolPieces[1]=="IRONYARD_Pistol_Static"
+    and pistolPieces[2]=="IRONYARD_Pistol_Slide"
+    and pistolPieces[3]=="IRONYARD_Pistol_Magazine")
+assert(P.components("Knife")[1]=="IRONYARD_Knife_Static")
+assert(P.components("unknown")==nil)
