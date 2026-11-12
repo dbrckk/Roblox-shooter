@@ -139,9 +139,12 @@ case("corrupt locks and release markers reject writes", function()
     state.lock.committed.headshots = -1
     fails(function() L.commit(state, A, earnings(), 1010, 180, false) end,
         "corrupt committed headshots")
-    state.lock = nil
-    state.lastSession = {owner = B, committed = earnings(20, 1)}
-    eq(L.commit(state, A, earnings(20, 1), 1010, 180, true),
+    -- Build a genuinely persisted B release: the normalization invariant
+    -- must reject forged saved totals, not a valid other-owner marker.
+    state = L.acquire(nil, B, 1000, 180)
+    state = L.commit(state, B, earnings(20, 1), 1010, 180, true)
+    eq(state.xp, 20, "other owner's release is durably committed")
+    eq(L.commit(state, A, earnings(20, 1), 1020, 180, true),
         nil, "other owner's completed save cannot acknowledge ours")
 end)
 
