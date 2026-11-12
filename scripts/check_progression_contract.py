@@ -74,9 +74,17 @@ def main():
         "math.max(committed, snapshot[field])",
         "data.lastSession.owner == token",
         "data.lastSession.committed[field] < snapshot[field]",
+        'assert(committed[field] <= data[field],',
+        '"Progression lock exceeds stored counter: " .. field',
+        '"Progression release exceeds stored counter: " .. field',
         "data.lock = nil",
     ), "Pure idempotent DataStore ledger")
 
+    require(ledger.count("assert(committed[field] <= data[field],") == 2,
+            "Active locks and completed releases must both reject false saved progress")
+    require(ledger.index('"Progression lock exceeds stored counter: " .. field')
+            < ledger.index('"Progression release exceeds stored counter: " .. field'),
+            "Check lock and marker invariants when normalizing records")
     require("if release and data.lastSession" in ledger,
             "Previously released sessions need idempotent acknowledgement after a new lease")
     require("publish(player, record)" in data.split("local function flush(player, record, release)")[-1]
