@@ -744,8 +744,12 @@ function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
             sprinting = self.sprinting,
             reloading = self.reloadActive,
             pendingCartridge = self.pendingCartridge ~= nil,
+            pendingFlash = self.pendingLocalFlashAt ~= nil,
             aimBlend = self.aimBlend,
             reloadBlend = self.reloadBlend,
+            stepBlend = self.stepBlend,
+            swayMagnitude = self.sway.Magnitude,
+            sinceReloadFinish = now - self.reloadFinishedAt,
             sinceShot = now - self.fireStartedAt,
             sinceEquip = now - self.equipStartedAt,
         })
