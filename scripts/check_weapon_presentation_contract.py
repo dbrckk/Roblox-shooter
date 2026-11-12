@@ -122,11 +122,25 @@ assert visuals.count('WeaponPbrFxSockets.muzzleAdvance(self.currentWeaponImporte
 # The cosmetic reload must use real server Ammo state and no new animation loop.
 reload_visual = get("src/shared/ShotgunReloadVisual.luau")
 for needle in (
-    "function Visual.sample(progress, reloading, graphicsPreset)",
+    "function Visual.sample(progress, reloading, graphicsPreset, missingRounds)",
     'graphicsPreset == "ECO"',
     'reloading ~= true',
 ):
     assert needle in reload_visual, f"Shotgun loading policy missing: {needle}"
+for needle in (
+    "function Visual.phase(progress, missingRounds)",
+    "local count = math.clamp(math.floor(missingRounds), 1, 6)",
+    "if withinBeat < 0.10 or withinBeat > 0.88 then return -1 end",
+):
+    assert needle in reload_visual, f"Missing B-8 cartridge cycling contract: {needle}"
+for needle in (
+    "self.reloadShellCount = math.clamp(math.floor(capacity - loaded), 1, 6)",
+    "ShotgunReloadVisual.phase(progress, self.reloadShellCount)",
+    "self.currentWeaponImported, self.currentWeaponHasPbrMagazine, shellBeat)",
+    "self.reloadShellCount)",
+):
+    assert needle in visuals, f"B-8 live visual coordination missing: {needle}"
+
 for needle in (
     'WaitForChild("ShotgunReloadVisual")',
     '"ShotgunEjectionPort"',
