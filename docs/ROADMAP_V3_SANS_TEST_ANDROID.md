@@ -1,11 +1,17 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
 **Date de référence : 12 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `b7a7e62c3f7c8cd2001bf52373e564a237aa4bf3`  
-**Expérience Roblox :** IRON YARD publique, **version 35 confirmée** par le workflow de publication GitHub Actions `43202885857`.  
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `a91ef6b821dfab54b6663961f6b42bf4fa51f135`  
+**Expérience Roblox :** IRON YARD publique, **version 54 confirmée** par le workflow de publication GitHub Actions `43227082815`.  
 **Condition utilisateur actuelle :** pas de test manuel Android/Roblox Studio possible pour le moment. Les tâches bloquées doivent rester en attente **sans bloquer l'ensemble du chantier**.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — publication v54 (12 novembre 2026)
+
+- Le correctif [PR #57](https://github.com/dbrckk/Roblox-shooter/pull/57) est fusionné : les six paires de réapparition du duel tournent tous les deux bouts et les côtés sont inversés. La recherche cyclique d'une paire entièrement dégagée maintient la règle de placement atomique existante.
+- Les tests Luau ont couvert 49 152 sélections pour 4 096 masques d'obstacles et 12 manches, ainsi que les vérifications de personnages d'origine. CI branche, PR et `main` réussies ; **publication publique v54 confirmée** par [Actions #43227082815](https://github.com/dbrckk/Roblox-shooter/actions/runs/43227082815).
+- **A1 reste partiellement ouvert** : aucune validation de duel réelle en Studio et des transitions FFA/1v1 sous réseau perturbé. La progression et les FPS Android réels restent non prouvés. Aucun nouveau modèle VANGUARD/texture PBR n'a été importé par cette version.
 
 ## 1. Cible produit, périmètre et principes
 
@@ -19,7 +25,7 @@ Toute tâche porte un propriétaire logique (« code client », « code serveur 
 
 | Composant | Réalité vérifiée | Dette ou preuve manquante |
 |---|---|---|
-| Publication | L'expérience **publique** IRON YARD a été publiée en version 35 ; workflow CI et déploiement réussis | Un build/publication réussis ne sont ni un playtest, ni un relevé FPS |
+| Publication | L'expérience **publique** IRON YARD a été publiée en version 54 ; workflow CI et déploiement réussis | Un build/publication réussis ne sont ni un playtest, ni un relevé FPS |
 | Base de jeu | FFA, 5 armes, munitions et dégâts côté serveur, HUD tactile, progression, bots et déplacements présents | Temps jusqu'au premier engagement, ressenti des tirs, latence et ergonomie physique non mesurés |
 | Duel 1v1 | **Déjà présent**, pas « à développer de zéro » : `MatchService`, `DuelRules`, `DuelCombatState`, `DuelSpawnPlan`, tests duels en CI | Enchaînements d'abandons, respawns, changements de personnages, état réseau et équité à éprouver dans Roblox |
 | Armes PBR | `WeaponAssetIds.luau` contient **10 IDs non nuls**, 5 armes × LOD0/LOD1 ; politique de validation, cache de viewmodel, ADS et rechargements PBR implémentés | Contrôler résolution réelle de chaque asset, cadrage mobile, textures, animations et pertes au streaming |
@@ -178,6 +184,6 @@ Pour chaque PR de code :
 
 ## 6. Définition de la sortie recherchée
 
-IRON YARD « prêt pour une exploitation publique crédible » signifie : FFA et 1v1 fiables, tirs et scores autoritaires, sauvegarde annoncée avec sincérité, aucune fuite manifeste sur sessions prolongées, modèles/animations/audio honnêtes et cohérents, contrôles Android utilisables, build reproductible et publication/rollback vérifiés. **La V35 est déjà publique ; elle n'est pas automatiquement validée comme ayant atteint tous ces critères.**
+IRON YARD « prêt pour une exploitation publique crédible » signifie : FFA et 1v1 fiables, tirs et scores autoritaires, sauvegarde annoncée avec sincérité, aucune fuite manifeste sur sessions prolongées, modèles/animations/audio honnêtes et cohérents, contrôles Android utilisables, build reproductible et publication/rollback vérifiés. **La V54 est déjà publique ; elle n'est pas automatiquement validée comme ayant atteint tous ces critères.**
 
 Le chantier commence donc par **A1 : transitions FFA/duel et sûreté des changements d'état**. Aucun test Android n'est nécessaire pour avancer sur ce premier lot.
