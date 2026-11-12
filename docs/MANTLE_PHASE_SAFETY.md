@@ -33,3 +33,11 @@ l'exécution différée du moteur. Vérifier dans Studio avec deux clients :
 déclencher un mantle juste avant la préparation 1v1 et confirmer que les
 deux personnages restent à leur position ancrée pendant le compte à rebours.
 Le correctif est indépendant de l'upload des assets PBR.
+
+## Livraison vérifiée
+
+PR [#66](https://github.com/dbrckk/Roblox-shooter/pull/66) fusionnée ;
+CI Rojo `main` [#43316231500](https://github.com/dbrckk/Roblox-shooter/actions/runs/43316231500) verte ;
+publication **v55** [#43316384420](https://github.com/dbrckk/Roblox-shooter/actions/runs/43316384420)
+confirmée sur l'expérience publique existante. Aucun test Android multijoueur
+n'est revendiqué.

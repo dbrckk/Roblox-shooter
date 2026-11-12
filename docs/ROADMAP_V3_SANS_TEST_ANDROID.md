@@ -1,11 +1,17 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
 **Date de référence : 12 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `a91ef6b821dfab54b6663961f6b42bf4fa51f135`  
-**Expérience Roblox :** IRON YARD publique, **version 54 confirmée** par le workflow de publication GitHub Actions `43227082815`.  
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `7499f0e8285c2039a614153c33bbefe339b7f4ee`  
+**Expérience Roblox :** IRON YARD publique, **version 55 confirmée** par le workflow de publication GitHub Actions `43316384420`.  
 **Condition utilisateur actuelle :** pas de test manuel Android/Roblox Studio possible pour le moment. Les tâches bloquées doivent rester en attente **sans bloquer l'ensemble du chantier**.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v55, sécurité des mouvements différés (12 novembre 2026)
+
+- **Correction A3 livrée et publique.** La [PR #66](https://github.com/dbrckk/Roblox-shooter/pull/66) empêche le callback différé d'escalade `Mantle` (`task.delay(0.14)`) de déplacer un combattant après un changement de phase ou d'époque, un ancrage de départ 1v1, un respawn ou un reset de mouvement. Un mantle n'est initié qu'en `LIVE` sur une racine non ancrée. Détails : [MANTLE_PHASE_SAFETY.md](MANTLE_PHASE_SAFETY.md).
+- **Preuves CI :** branche et PR vertes, `main` [#43316231500](https://github.com/dbrckk/Roblox-shooter/actions/runs/43316231500) vert, commit de publication `7499f0e` [#43316318361](https://github.com/dbrckk/Roblox-shooter/actions/runs/43316318361) vert. Workflow officiel de [publication publique v55 #43316384420](https://github.com/dbrckk/Roblox-shooter/actions/runs/43316384420) entièrement réussi, contrôles du propriétaire et de la place compris.
+- **Limites maintenues :** aucune mesure de FPS Android ni session Roblox 1v1 avec deux clients observée. La correction a une preuve de logique et de câblage, pas une preuve moteur. A3 reste ouvert pour l'audit restant des événements serveur et les validations réseau.
 
 ### Actualisation — publication v54 (12 novembre 2026)
 
@@ -199,6 +205,6 @@ Pour chaque PR de code :
 
 ## 6. Définition de la sortie recherchée
 
-IRON YARD « prêt pour une exploitation publique crédible » signifie : FFA et 1v1 fiables, tirs et scores autoritaires, sauvegarde annoncée avec sincérité, aucune fuite manifeste sur sessions prolongées, modèles/animations/audio honnêtes et cohérents, contrôles Android utilisables, build reproductible et publication/rollback vérifiés. **La V54 est déjà publique ; elle n'est pas automatiquement validée comme ayant atteint tous ces critères.**
+IRON YARD « prêt pour une exploitation publique crédible » signifie : FFA et 1v1 fiables, tirs et scores autoritaires, sauvegarde annoncée avec sincérité, aucune fuite manifeste sur sessions prolongées, modèles/animations/audio honnêtes et cohérents, contrôles Android utilisables, build reproductible et publication/rollback vérifiés. **La V55 est déjà publique ; elle n'est pas automatiquement validée comme ayant atteint tous ces critères.**
 
 Le chantier commence donc par **A1 : transitions FFA/duel et sûreté des changements d'état**. Aucun test Android n'est nécessaire pour avancer sur ce premier lot.
