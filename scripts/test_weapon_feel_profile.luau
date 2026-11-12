@@ -44,3 +44,29 @@ assert(Feel.mechanism("Pistol", 0) == 1)
 assert(Feel.mechanism("Pistol", 0.20) == 0)
 assert(Feel.mechanism("Knife", 0.04) == 0)
 print("IRON YARD differentiated recoil, reload poses and mechanisms for five weapons: OK")
+
+-- Cosmetic recoil is time-based, not frame-count-based. Returning from
+-- Android background must not preserve recoil from a shot minutes ago.
+for _, id in ipairs(ids) do
+    local p = Feel.get(id)
+    local start = p.kickCap
+    local function simulate(fps)
+        local current = start
+        for _ = 1, fps do
+            current = Feel.recover(id, current, 1 / fps)
+        end
+        return current
+    end
+    local at30, at60, at120 = simulate(30), simulate(60), simulate(120)
+    local expected = start * math.exp(-p.recovery)
+    assert(math.abs(at30 - expected) < 1e-10)
+    assert(math.abs(at60 - expected) < 1e-10)
+    assert(math.abs(at120 - expected) < 1e-10)
+    local afterPause = Feel.recover(id, start, 30)
+    assert(afterPause < 1e-20, "A 30-second background hitch must clear recoil")
+    assert(Feel.recover(id, start, math.huge) == 0)
+    assert(Feel.recover(id, start, -math.huge) == 0)
+    assert(Feel.recover(id, start, 0/0) == 0)
+    assert(Feel.recover(id, start, 0.05) > 0)
+end
+print("IRON YARD cosmetic recoil: frame-rate independent and background-resume safe OK")
