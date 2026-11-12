@@ -968,10 +968,19 @@ def main():
     has(client, "visuals:setReloading(weaponId, ammunition.reloading,",
         "Weapon switch restores reload state")
     for key in ("humanoid.FloorMaterial ~= Enum.Material.Air",
-                "rootPart.AssemblyLinearVelocity", "self.stepPhase",
-                'string.sub(partName, 1, 4) == "Left"', 'partName == "Magazine"',
-                'partName == "Slide"', 'partName == "PumpAction"', 'partName == "Bolt"'):
+                "rootPart.AssemblyLinearVelocity", "self.stepPhase"):
         has(viewmodel, key, "Grounded movement and animated reload visual")
+    for key in ("role == WeaponPartMotionRole.LEFT_HAND",
+                "role == WeaponPartMotionRole.MAGAZINE",
+                "role == WeaponPartMotionRole.PISTOL_SLIDE",
+                "role == WeaponPartMotionRole.SHOTGUN_PUMP",
+                "role == WeaponPartMotionRole.SNIPER_BOLT"):
+        has(viewmodel, key, "Cached mechanical part transforms")
+    part_roles = source("src/shared/WeaponPartMotionRole.luau")
+    for key in ('string.sub(name, 1, 4) == "Left"',
+                'name == "Magazine"', 'name == "Slide"',
+                'name == "PumpAction"', 'name == "Bolt"'):
+        has(part_roles, key, "Equip-time classification preserves legacy animation")
     finishes = source("src/shared/OperatorFinishes.luau")
     for needle in ('level = 1, name = "FIELD ISSUE"',
                    'level = 3, name = "DESERT PATROL"',

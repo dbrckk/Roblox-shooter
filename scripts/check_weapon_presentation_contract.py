@@ -54,10 +54,10 @@ for needle in (
     "ViewmodelRenderPolicy.transparency(",
     "feel.reloadPitch * reloadingPose",
     "feel.handTravel",
-    'partName == "ChargingHandle"',
-    'partName == "PumpAction"',
-    'partName == "Bolt"',
-    'partName == "Slide"',
+    'role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE',
+    'role == WeaponPartMotionRole.SHOTGUN_PUMP',
+    'role == WeaponPartMotionRole.SNIPER_BOLT',
+    'role == WeaponPartMotionRole.PISTOL_SLIDE',
     "function WeaponVisuals:playFireSound(weaponId, origin, localShot)",
     "WeaponAudio.select(",
     "UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId)",
@@ -177,7 +177,7 @@ for needle in (
     '"ScopeEyepiece"',
     '"BoltHandle"',
     '"BoltHandleKnob"',
-    'or partName == "BoltHandleKnob") and self.currentWeaponId == "Sniper"',
+    'role == WeaponPartMotionRole.SNIPER_BOLT then',
     '"ReceiverDeflector"',
     '"SelectorDial"',
     '"GasBlock"',
@@ -317,7 +317,7 @@ for needle in (
     'function WeaponVisuals:_addDetailGeometry(model, weaponId)',
     'self:_addDetailGeometry(model, "Pistol")',
     'self:_addDetailGeometry(model, "Knife")',
-    'or string.sub(partName, 1, 11) == "SlideDetail"',
+    'motionRole = WeaponPartMotionRole.classify(self.currentWeaponId, name)',
     'added.finishRole = spec.finish',
     'added.isDetail = true',
     'self.detailPresetConnection = Players.LocalPlayer:GetAttributeChangedSignal(',
@@ -493,17 +493,42 @@ assert 'added.baseTransparency, self.lastViewmodelHidden == true' in visuals, (
     "New sniper detail must not leak into the optical scope on quality change"
 )
 
+# Mechanical classification is resolved once when Parts/PBR primitives are equipped.
+motion_roles = get("src/shared/WeaponPartMotionRole.luau")
+assert 'function Role.classify(weaponId, name)' in motion_roles
+for needle in (
+    'WaitForChild("WeaponPartMotionRole")',
+    'motionRole = WeaponPartMotionRole.classify(self.currentWeaponId, name)',
+    'motionRole=WeaponPartMotionRole.classify(self.currentWeaponId, clone.Name)',
+    'local role = entry.motionRole',
+    'role == WeaponPartMotionRole.LEFT_HAND',
+    'role == WeaponPartMotionRole.SNIPER_RIGHT_HAND',
+    'role == WeaponPartMotionRole.SHOTGUN_LOADING_SHELL',
+    'role == WeaponPartMotionRole.MAGAZINE',
+    'role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE',
+    'role == WeaponPartMotionRole.PISTOL_SLIDE',
+    'role == WeaponPartMotionRole.SHOTGUN_PUMP',
+    'role == WeaponPartMotionRole.SNIPER_BOLT',
+):
+    assert needle in visuals, f"Missing equip-time mechanical role: {needle}"
+render_motion = visuals.split("function WeaponVisuals:_render(deltaTime)", 1)[1]
+render_motion = render_motion.split("    -- Emission MUST happen after all parts", 1)[0]
+assert "local partName = entry.part.Name" not in render_motion
+assert "string.sub(partName" not in render_motion
+assert "WeaponPartMotionRole.classify(" not in render_motion
+assert 'string.sub(name, 1, 11) == "SlideDetail"' in motion_roles
+
 # Mechanically linked pieces share transforms in the existing frame loop.
 for needle in (
     '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',
     '"Extractor", Vector3.new(0.035, 0.032, 0.14)',
     'local supportMotion = self.currentWeaponId == "Shotgun"',
     'localOffset = localOffset * workingHand * supportMotion',
-    '(partName == "Magazine" or partName == "MagazineBase")',
-    '(partName == "Slide" or partName == "EjectionPort"',
-    'or partName == "Extractor"',
-    'or string.sub(partName, 1, 11) == "SlideDetail")',
-    'and self.currentWeaponId == "Pistol" then',
+    'role == WeaponPartMotionRole.MAGAZINE then',
+    'role == WeaponPartMotionRole.PISTOL_SLIDE then',
+    'role == WeaponPartMotionRole.SHOTGUN_PUMP then',
+    'role == WeaponPartMotionRole.RIFLE_CHARGING_HANDLE then',
+    'role == WeaponPartMotionRole.SHOTGUN_LOADING_SHELL then',
 ):
     assert needle in visuals, f"Moving first-person weapon part missing: {needle}"
 assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1, (
