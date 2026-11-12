@@ -29,7 +29,7 @@
 
 Fallback vérifié hors moteur : `WeaponAssetPolicy` et `WeaponAssetLoadPlan` gardent le viewmodel procédural quand un ID manque, et `WeaponPbrFxSockets` fixe les sockets FX. **Aucun rendu, cadrage mobile ou coût de streaming n'a été observé.**
 
-## Opérateurs VANGUARD — 4 IDs à zéro
+## Opérateurs VANGUARD — 0 prêts hors moteur, 4 bloqués
 
 | Asset | IDs | Owner | Source | Structure | Canaux | Fallback | Contrôle runtime manquant | Statut |
 |---|---|---|---|---|---|---|---|---|
@@ -40,7 +40,7 @@ Fallback vérifié hors moteur : `WeaponAssetPolicy` et `WeaponAssetLoadPlan` ga
 
 Blocage factuel : les quatre GLB existent dans les archives, mais aucun ID n'est approuvé. L'import propriétaire reste à faire, avec un préflight **sans upload réel**.
 
-## Matériaux du monde — 12 IDs à zéro
+## Matériaux du monde — 0 prêts hors moteur, 3 bloqués
 
 | Asset | IDs | Owner | Source | Structure | Canaux | Fallback | Contrôle runtime manquant | Statut |
 |---|---|---|---|---|---|---|---|---|
