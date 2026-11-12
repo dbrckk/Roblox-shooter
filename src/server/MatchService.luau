@@ -15,6 +15,7 @@ local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local RoundStandings = require(script.Parent:WaitForChild("RoundStandings"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DuelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelRules"))
+local MatchLobbyPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MatchLobbyPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
 local MatchService = {}
@@ -382,6 +383,23 @@ local function endRound()
 end
 
 local function tick()
+    local players = Players:GetPlayers()
+    -- Last disconnect is not an abandoned 1v1 with a surviving winner.
+    -- Clear stale duel mode and public RESULTS before the next player joins.
+    if MatchLobbyPolicy.shouldReset(#players, phase, mode, duel ~= nil) then
+        DuelCombatState.clear()
+        releaseDuelPrep()
+        duel = nil
+        mode = "FFA"
+        finalResult = nil
+        Workspace:SetAttribute("IronYardMatchMode", mode)
+        Workspace:SetAttribute("IronYardDuelLastResult", "")
+        Workspace:SetAttribute("IronYardFinalStandings", "")
+        publishDuelScores()
+        transition("WAITING", 0)
+        return
+    end
+    if #players == 0 then return end
     if duel and phase ~= "RESULTS" and not duelPlayersIntact() then
         local a,b = duelParticipants()
         -- Player object references remain truthy after disconnect. Only
@@ -391,13 +409,6 @@ local function tick()
         endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)
         return
     end
-    if #Players:GetPlayers() == 0 then
-        if phase ~= "WAITING" then
-            transition("WAITING", 0)
-        end
-        return
-    end
-
     if phase == "WAITING" then
         transition("COUNTDOWN", COUNTDOWN_SECONDS)
         return
