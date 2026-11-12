@@ -547,8 +547,11 @@ def main():
         'function SpawnService.placeDuelPair(a, b, bout)',
         'clearAt(position, aChar, bChar)',
         'DuelSpawnPlan.select(clear, bout)',
-        'SpawnService.place(a, aChar, first, second, bChar)',
-        'SpawnService.place(b, bChar, second, first, aChar)',
+        'DuelSpawnPlan.canCommit(a, b, aChar, bChar,',
+        'not clearAt(first, aChar, bChar)',
+        'not clearAt(second, aChar, bChar)',
+        'applyPlacement(aChar, aRoot, aHumanoid, first, second)',
+        'applyPlacement(bChar, bRoot, bHumanoid, second, first)',
     ):
         has(duel_spawn, token, "Collision-safe opposite duel spawns")
     for token in (

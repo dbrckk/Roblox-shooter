@@ -47,4 +47,37 @@ for mask=0,4095 do
         evaluations+=1
     end
 end
+-- Test the exact two-character generation gate used immediately before
+-- SpawnService commits EITHER teleport. Prevent a stale rig from receiving
+-- a late duel position while its opponent is already moved.
+local lifeA, lifeB = {}, {}
+local playerA, playerB = {Character = lifeA}, {Character = lifeB}
+assert(P.canCommit(playerA, playerB, lifeA, lifeB, true, true))
+assert(not P.canCommit(playerA, playerA, lifeA, lifeB, true, true))
+assert(not P.canCommit(playerA, playerB, lifeA, lifeA, true, true))
+assert(not P.canCommit(nil, playerB, lifeA, lifeB, true, true))
+assert(not P.canCommit(playerA, nil, lifeA, lifeB, true, true))
+assert(not P.canCommit(playerA, playerB, nil, lifeB, true, true))
+assert(not P.canCommit(playerA, playerB, lifeA, nil, true, true))
+assert(not P.canCommit(playerA, playerB, lifeA, lifeB, false, true))
+assert(not P.canCommit(playerA, playerB, lifeA, lifeB, true, false))
+assert(not P.canCommit(playerA, playerB, lifeA, lifeB, nil, true))
+-- A new character immediately invalidates the previously prepared pair;
+-- a fresh preparation with BOTH verified generations can still proceed.
+for i=1,10000 do
+    local previous = playerA.Character
+    playerA.Character = {}
+    assert(not P.canCommit(playerA, playerB, previous,
+        playerB.Character, true, true))
+    assert(P.canCommit(playerA, playerB, playerA.Character,
+        playerB.Character, true, true))
+    if i%3 == 0 then
+        local oldB = playerB.Character
+        playerB.Character = {}
+        assert(not P.canCommit(playerA, playerB, playerA.Character,
+            oldB, true, true))
+        assert(P.canCommit(playerA, playerB, playerA.Character,
+            playerB.Character, true, true))
+    end
+end
 print("IRON YARD opposite duel spawns: "..evaluations.." obstacle masks and alternating sides OK")

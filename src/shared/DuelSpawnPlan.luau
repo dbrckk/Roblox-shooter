@@ -19,4 +19,16 @@ function Plan.select(clear, bout)
     return nil
 end
 
+
+-- Validate both ORIGINAL Roblox Player objects and character generations
+-- immediately before an opposite-pad commit. A respawned avatar or missing
+-- rig invalidates the entire pair, never half-spawns one competitor.
+-- Pure Luau: exercised without running Roblox physics in CI.
+function Plan.canCommit(aPlayer, bPlayer, expectedA, expectedB, aReady, bReady)
+    return aPlayer ~= nil and bPlayer ~= nil and aPlayer ~= bPlayer
+        and expectedA ~= nil and expectedB ~= nil and expectedA ~= expectedB
+        and aPlayer.Character == expectedA and bPlayer.Character == expectedB
+        and aReady == true and bReady == true
+end
+
 return Plan

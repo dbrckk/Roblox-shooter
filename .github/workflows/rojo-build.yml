@@ -225,6 +225,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          python3 scripts/check_duel_spawn_contract.py
           python3 scripts/check_movement_contract.py
           python3 scripts/check_remote_rate_contract.py
           python3 scripts/check_mobile_hud_contract.py

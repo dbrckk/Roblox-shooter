@@ -152,14 +152,9 @@ function SpawnService.clearProtection(character)
     end
 end
 
-function SpawnService.place(player, character, preferredPosition, faceToward, otherCharacter)
-    if not character or player.Character ~= character or not character.Parent then return false end
-    local root = character:FindFirstChild("HumanoidRootPart")
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid or humanoid.Health <= 0 then return false end
-    local position = typeof(preferredPosition) == "Vector3"
-        and clearAt(preferredPosition, character, otherCharacter) and preferredPosition
-        or safestPosition(character)
+-- Commit a prevalidated spawn without yielding or changing the chosen pad.
+-- FFA selects a flexible position; duels validate TWO opposite pads first.
+local function applyPlacement(character, root, humanoid, position, faceToward)
     local yaw = rng:NextNumber(-math.pi, math.pi)
     root.AssemblyLinearVelocity = Vector3.zero
     root.AssemblyAngularVelocity = Vector3.zero
@@ -171,6 +166,18 @@ function SpawnService.place(player, character, preferredPosition, faceToward, ot
     character:PivotTo(origin)
     humanoid.Health = humanoid.MaxHealth
     SpawnService.protectCharacter(character, SPAWN_SHIELD_SECONDS)
+end
+
+function SpawnService.place(player, character, preferredPosition, faceToward, otherCharacter)
+    if not player or not character or player.Character ~= character
+        or not character.Parent then return false end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not root or not humanoid or humanoid.Health <= 0 then return false end
+    local position = typeof(preferredPosition) == "Vector3"
+        and clearAt(preferredPosition, character, otherCharacter) and preferredPosition
+        or safestPosition(character)
+    applyPlacement(character, root, humanoid, position, faceToward)
     return true
 end
 
@@ -206,21 +213,26 @@ local function watchPlayer(player)
 end
 
 function SpawnService.placeDuelPair(a, b, bout)
-    if not a or not b or a == b then return false end
+    if not a or not b or a == b or a.Parent ~= Players or b.Parent ~= Players
+        then return false end
     local aChar, bChar = a.Character, b.Character
     if not aChar or not bChar
         or not aChar:IsDescendantOf(Workspace)
         or not bChar:IsDescendantOf(Workspace) then return false end
     local function combatReady(character)
         local humanoid = character:FindFirstChildOfClass("Humanoid")
-        return humanoid and humanoid.Health > 0
-            and character:FindFirstChild("HumanoidRootPart") ~= nil
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if not humanoid or humanoid.Health <= 0 or not root
+            or root.Anchored then return nil, nil end
+        return root, humanoid
     end
-    if not combatReady(aChar) or not combatReady(bChar) then return false end
+    local aRoot, aHumanoid = combatReady(aChar)
+    local bRoot, bHumanoid = combatReady(bChar)
+    if not aRoot or not bRoot then return false end
 
-    -- Validate BOTH pads before teleporting either player. Player bodies
-    -- are ignored as temporary obstacles, but physical cover is not.
-    -- Missing pads cannot silently fall back to a close FFA spawn.
+    -- Verify BOTH opposite pads and both original living characters before
+    -- committing ANY teleport. The general FFA spawn fallback is deliberately
+    -- not used here: it can silently break duel fairness on pad rechecks.
     local clear = {}
     for i, position in ipairs(candidates) do
         clear[i] = clearAt(position, aChar, bChar)
@@ -228,8 +240,24 @@ function SpawnService.placeDuelPair(a, b, bout)
     local firstIndex, secondIndex = DuelSpawnPlan.select(clear, bout)
     if not firstIndex then return false end
     local first, second = candidates[firstIndex], candidates[secondIndex]
-    return SpawnService.place(a, aChar, first, second, bChar)
-        and SpawnService.place(b, bChar, second, first, aChar)
+    if not clearAt(first, aChar, bChar)
+        or not clearAt(second, aChar, bChar) then return false end
+    if a.Parent ~= Players or b.Parent ~= Players
+        or not aChar:IsDescendantOf(Workspace)
+        or not bChar:IsDescendantOf(Workspace)
+        or not DuelSpawnPlan.canCommit(a, b, aChar, bChar,
+            aRoot.Parent == aChar and aHumanoid.Parent == aChar
+                and not aRoot.Anchored and aHumanoid.Health > 0,
+            bRoot.Parent == bChar and bHumanoid.Parent == bChar
+                and not bRoot.Anchored and bHumanoid.Health > 0)
+        then return false end
+
+    -- Both non-yielding placements use their exact opposite pad; no
+    -- first-player move can be followed by a recoverable second-player
+    -- validation failure or a fallback to unrelated FFA spawn points.
+    applyPlacement(aChar, aRoot, aHumanoid, first, second)
+    applyPlacement(bChar, bRoot, bHumanoid, second, first)
+    return true
 end
 
 function SpawnService.placePlayers()
