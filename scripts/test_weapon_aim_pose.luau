@@ -44,8 +44,10 @@ for id, expected in pairs(importedSights) do
     assert(pbr.sightX == expected[1] and pbr.sightY == expected[2]
         and pbr.sightZ == expected[3] and pbr.eyeRelief == expected[4])
     assert(math.abs(pbr.sightX + pbr.x) < 1e-7)
-    assert(math.abs(pbr.sightY + pbr.y) < 1e-7)
-    assert(math.abs(pbr.sightZ + pbr.z + pbr.eyeRelief) < 1e-7)
+    local cosine, sine = math.cos(pbr.pitch), math.sin(pbr.pitch)
+    assert(math.abs(pbr.y + cosine * pbr.sightY - sine * pbr.sightZ) < 1e-7)
+    assert(math.abs(pbr.z + sine * pbr.sightY + cosine * pbr.sightZ
+        + pbr.eyeRelief) < 1e-7)
     assert(Pose.get(id) == fallback,
         "Old fallback ADS must remain fully compatible")
     assert(Pose.get(id, "true") == fallback,
