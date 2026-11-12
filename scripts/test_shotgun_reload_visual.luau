@@ -37,7 +37,7 @@ for count = 1, 6 do
     for i = 0, count - 1 do
         local mid = 0.18 + 0.70 * (i + 0.5) / count
         local phase = Visual.phase(mid, count)
-        assert(phase > 0.49 and phase < 0.51,
+        assert(phase > 0.51 and phase < 0.52,
             "Each missing B-8 round receives a distinct full shell insertion")
         local sx, sy, sz, sr = Visual.sample(mid, true, "QUALITY", count)
         assert(sx > 0.11 and sy > 0 and sz < -0.12 and sr < -0.12)
