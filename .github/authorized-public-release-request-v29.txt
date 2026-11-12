@@ -1,0 +1,29 @@
+IRON YARD — one owner-authorized PUBLIC FPS performance update, 12 November 2026.
+
+The owner requested continued work on the EXISTING public IRON YARD Roblox
+experience. Keep the same owner-verified universe and root place. Do not
+create a new experience, do not publish a private alpha, and do not change
+the public visibility or ownership of any destination.
+
+This one-shot release includes merged PR #30, squash commit
+bfb3f1559ced4b662a3a1d5b7323a504bf765a0d:
+stop the 8 Hz traversal of already expired client-side bullet-mark pool
+entries during idle mobile gameplay. Wake the existing render-loop scan
+on the next accepted local impact; keep marks alive independently of LOD
+visibility so graphics preset upgrades can reveal still-live marks.
+
+The full standalone Luau regression suites, source integration checks,
+compiler, and Rojo build all succeeded on the PR and merged main.
+Re-run the complete CI for this exact release authorization commit,
+and only dispatch one public release if the exact commit's CI is green.
+
+No server damage, ammunition, remote events, raycasts, asset ownership,
+hitboxes, graphics budgets, or input logic are altered.
+No extra RenderStepped callbacks, instances, tweens or background jobs.
+No API keys, credentials or private Roblox identifiers are included.
+
+The target-checking PUBLIC Roblox workflow must independently validate
+creator, universe visibility, root place, the intended exact destination,
+the source commit and CI before issuing a new Roblox place version.
+Do not claim measured Android FPS, studio playtest or actual publication
+until independent matching evidence exists.
