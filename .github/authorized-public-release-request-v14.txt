@@ -1,0 +1,16 @@
+IRON YARD — explicit owner-authorized PUBLIC release of verified PBR assets.
+Date: 2026-11-12. User requested continued improvements and direct PUBLIC
+update of the production Roblox FPS; not an alpha/private version.
+
+The complete new ten-model IRON YARD weapon set was validated by
+weaponforge run 43173848640 (source 61bf0302d0aa091043f2a7051c5bc63cb3e31e45)
+and owner-uploaded through Open Cloud run 43174319326.
+Upload workflow verified all assets and committed the new registry
+in source commit e04cd63e1492586a10786180a2302a7719e2783d.
+
+This release installs that exact verified registry in the public Roblox
+place, including the real independently animated PBR pistol magazine
+in LOD0 and LOD1. Existing safe fallback and strict owner checks remain.
+Run exact-main-SHA Rojo CI first; publish only if all protected owner,
+public visibility, destination place and source gates pass.
+No secret or user-owned ID disclosed as an authorization bypass.
