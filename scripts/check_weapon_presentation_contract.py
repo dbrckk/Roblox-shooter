@@ -583,7 +583,8 @@ for needle in (
 for needle in (
     'WaitForChild("WeaponAimPose")',
     "WeaponAimPose.damping(self.aimBlend)",
-    "self.aimPose = pose and CFrame.new(pose.x, pose.y, pose.z) or nil",
+    "self.aimPose = pose and (CFrame.new(pose.x, pose.y, pose.z)",
+    "* CFrame.Angles(pose.pitch, 0, 0)) or nil",
     "offset:Lerp(self.aimPose, self.aimBlend)",
     '"ScopeAdjustmentTurret"', '"ScopeAdjustmentCap"',
     '"RearSight", Vector3.new(0.19, 0.09, 0.14)',
