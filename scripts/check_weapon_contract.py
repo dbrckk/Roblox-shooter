@@ -963,9 +963,9 @@ def main():
     # Confirm a reload effect is driven by authoritative server ammo state,
     # and weapon bob uses character ground/velocity rather than a ticking clock.
     has(viewmodel, "function WeaponVisuals:setReloading(weaponId, active, loaded, capacity)", "Reload animation API")
-    has(client, "visuals:setReloading(message.weaponId, message.reloading == true)",
+    has(client, "visuals:setReloading(message.weaponId, message.reloading == true,",
         "Server-confirmed reload animation")
-    has(client, "visuals:setReloading(weaponId, ammunition.reloading)",
+    has(client, "visuals:setReloading(weaponId, ammunition.reloading,",
         "Weapon switch restores reload state")
     for key in ("humanoid.FloorMaterial ~= Enum.Material.Air",
                 "rootPart.AssemblyLinearVelocity", "self.stepPhase",

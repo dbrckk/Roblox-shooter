@@ -1,0 +1,7 @@
+IRON YARD owner-approved PUBLIC Roblox-shooter release, 2026-11-12.
+The previous CI caught two stale static wiring assertions after adding
+server-confirmed reload ammo/capacity parameters. Those contracts are now
+updated to verify the actual extended Ammo API. All server authorities,
+PBR materials and combat cadence remain unchanged. Release only after
+complete green Luau, Python contract and Rojo CI on exact source commit.
+Use the existing public destination/owner verification, never private/alpha.
