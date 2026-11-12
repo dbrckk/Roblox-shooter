@@ -1,0 +1,24 @@
+IRON YARD — owner-authorized ONE-SHOT PUBLIC Roblox update, November 12 2026.
+
+This authorization covers merged PR #46 on EXISTING PUBLIC IRON YARD FPS.
+Source commit: cfe4cfefa301187fdc293ba1e1abfd24f68ca10e.
+
+Fix: the 1v1 duel pair now verifies both exact opposite starting
+positions are physically unobstructed and both original Roblox Player
+characters are alive, current, correctly parented and not anchored
+BEFORE moving either competitor. Both use a shared synchronous,
+prevalidated spawn commit, not separate generic FFA spawn calls that
+could silently fallback to different positions or leave a partial pair.
+
+The original FFA spawn choices, shield durations, weapon/server damage,
+duel score rules and fair alternating sides remain unchanged. New
+pure Luau tests exercise 10,000 simulated late character replacements
+and all 4,096 obstacle maps for a duel pair. Production source
+integration contract rejects any future fallback to SpawnService.place
+within placeDuelPair. Green branch, PR and merged-main Luau/Rojo CI.
+
+Require a NEW successful full CI on this authorization SHA, verify
+the intended existing PUBLIC IRON YARD creator/universe/root place,
+and then publish only once. No private alpha, new place, unrelated
+experience or creator/asset rights changes. Do not claim real Roblox
+physics/Android measurements from automated offline tests.
