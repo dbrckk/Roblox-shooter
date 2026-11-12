@@ -126,3 +126,25 @@ La suite Luau exécutable vérifie les quatre champs, les deltas manquants,
 les entrées malformées et un dépassement du **dernier** champ après un
 premier champ normalement valide. Elle ne remplace pas une validation
 multijoueur/reconnexion sur des serveurs Roblox réellement publiés.
+
+
+## Expiration de bail monotone malgré les écritures désordonnées (12 novembre 2026)
+
+Les callbacks `UpdateAsync` d'une même session peuvent terminer dans un autre
+ordre que leur démarrage. Auparavant, une ancienne tentative d'acquisition ou
+d'autosave pouvait écrire `timestamp + 180` sur le bail, même si une écriture
+plus récente avait déjà prolongé celui-ci plus loin. Cette régression de
+l'horodatage risquait d'autoriser un **deuxième serveur à acquérir la clé
+prématurément**, alors que le premier serveur la détenait encore.
+
+`ProgressionLedger.acquire` et `ProgressionLedger.commit` appliquent
+désormais `max(expiration actuelle, timestamp + durée)` **pour le propriétaire
+courant uniquement**. Cela ne retarde pas la reprise après une vraie expiration
+et ne donne jamais le droit d'écrire à un ancien propriétaire après transfert.
+Les snapshots déjà enregistrés restent idempotents et monotones.
+
+La CI exécute les tests Luau du registre appelé par les véritables callbacks :
+ré-acquisition obsolète, sauvegarde obsolète, écriture incrémentale dans le
+désordre, refus d'un second serveur avant l'expiration la plus récente,
+transfert exactement à expiration et refus d'une ancienne session après le
+transfert. Ces tests ne mesurent pas la fiabilité du service DataStore réel.
