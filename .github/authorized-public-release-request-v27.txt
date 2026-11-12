@@ -1,10 +1,5 @@
-IRON YARD — single owner-authorized PUBLIC FPS release, 12 November 2026.
-The existing PUBLIC owner-verified Roblox experience is the only destination.
-Feature PR #28 adds a purely cosmetic sniper bolt and right-hand action
-after authoritative refill and avoids idle per-frame bolt curve work on
-mobile. A newly fired shot takes precedence over the finishing animation.
-No authoritative ammunition, hit detection, firing, camera, remote events,
-or server rules are changed. Rojo and executable Luau/Python gates passed
-for PR #28 and its merged main commit 0ddf1cf6674972083bdb5e395936629a18f09285.
-Require a fresh successful CI on the exact release-request commit before
-one-shot public dispatch. Do not publish to a private or alpha experience.
+IRON YARD owner-authorized one-shot PUBLIC release, 2026-11-12.
+The exact prior source dcff84006ac07311c7da33379fb4f7be4a924c73 passed Luau/Rojo CI.
+This new marker is added rather than modifying an existing release marker.
+PBR detachable magazine extraction tilt for pistol and AR, legacy-safe.
+Only publish after the exact-SHA CI passes and public Roblox owner/place verified.
