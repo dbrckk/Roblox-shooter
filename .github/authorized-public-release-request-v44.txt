@@ -1,0 +1,17 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox FPS update, 12 Nov 2026.
+Publish exclusively to the EXISTING verified creator-owned PUBLIC IRON YARD
+experience through the repo's gated CI, owner verification and official tools.
+PR #47 fixes the strong-Lua-reference retention of already-destroyed
+two-second remote spatial gunshot audio Parts during long quiet matches.
+Original admission-time pruning remains; additionally the EXISTING 1.2s
+weapon LOD poll now prunes destroyed emitter references without requiring
+another remote gunshot or any extra task/render/event subscription.
+Owner-only PERF shows reference count for verification; no diagnostic
+data is transmitted to a server. All existing speaker voice caps,
+weapon local shot priority, registered hit/damage, shot timing, audio mix,
+camera behavior and source/asset trust remain unchanged.
+Push, PR and merged main Rojo CI succeeded on
+7dee6e18cea2035779018cf0e10da18b7cc30f97.
+Require fresh green CI for this EXACT authorized release commit and
+strict PUBLIC destination creator verification before ONE deployment.
+No claims of measured Android memory/FPS gains without device evidence.
