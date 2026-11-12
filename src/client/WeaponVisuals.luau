@@ -709,7 +709,11 @@ function WeaponVisuals:setWeapon(weaponId)
         model:SetAttribute("IronYardWeaponSource", "PROCEDURAL_PARTS")
     end
     local pose = WeaponAimPose.get(weaponId, self.currentWeaponImported)
-    self.aimPose = pose and CFrame.new(pose.x, pose.y, pose.z) or nil
+    -- Imported mesh sight axes have a slight slope in Blender. Rotate the
+    -- already-centered authored front/rear axis at equip time only, not on
+    -- RenderStepped. Procedural fallback has pitch=0 and remains identical.
+    self.aimPose = pose and (CFrame.new(pose.x, pose.y, pose.z)
+        * CFrame.Angles(pose.pitch, 0, 0)) or nil
     self:_applyCareerFinish()
     self:_syncScopeVisibility()
 end

@@ -210,6 +210,7 @@ jobs:
           set -euo pipefail
           python3 scripts/check_weapon_contract.py
           python3 scripts/check_weapon_presentation_contract.py
+          python3 scripts/test_pbr_ads_geometry.py
           python3 scripts/check_combat_feedback_contract.py
 
       - name: Verify server movement remote validation contracts
