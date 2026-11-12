@@ -187,3 +187,11 @@ Pour chaque PR de code :
 IRON YARD « prêt pour une exploitation publique crédible » signifie : FFA et 1v1 fiables, tirs et scores autoritaires, sauvegarde annoncée avec sincérité, aucune fuite manifeste sur sessions prolongées, modèles/animations/audio honnêtes et cohérents, contrôles Android utilisables, build reproductible et publication/rollback vérifiés. **La V54 est déjà publique ; elle n'est pas automatiquement validée comme ayant atteint tous ces critères.**
 
 Le chantier commence donc par **A1 : transitions FFA/duel et sûreté des changements d'état**. Aucun test Android n'est nécessaire pour avancer sur ce premier lot.
+
+### Actualisation — 0b (observabilité et plafond de serveur), 12 novembre 2026
+
+- **Socle livré et câblé.** `ServerCapacity`, `TelemetryFunnel` et `DiagnosticsLog` sont purs, bornés et vérifiés (3 suites Luau + `scripts/check_observability_contract.py`) ; `src/server/ObservabilityService.luau` les branche au serveur. Voir [OBSERVABILITY.md](OBSERVABILITY.md).
+- **Décision de capacité** : 12 joueurs, dont 2 places de spectateur, soit 10 combattants ; le budget de bots reprend la formule de `BotService`. Chaque arrivant reçoit `IronYardSlot` (`COMBATANT` / `SPECTATOR` / `FULL`) et les compteurs sont publiés en attributs de `Workspace`, jamais par un remote client.
+- **Avertissements agrégés** : `LogService.MessageOut` filtré sur `MessageWarning` alimente un journal borné qui déduplique, évince et annonce sa saturation. Le handler n'imprime jamais, sinon la boucle serait infinie.
+- **La décision n'est pas appliquée** : `Players.MaxPlayers` n'est déclaré ni dans `default.project.json` ni dans `game/`. Les kills et les manches ne sont pas encore marqués (`FIRST_KILL`, `ROUND_COMPLETED` restent faux en jeu) : ces branchements touchent l'attribution des dégâts et la vie de la manche, et demandent leur propre PR avec preuve moteur.
+- **Aucun test moteur** : `LogService.MessageOut` côté serveur et l'ordre de démarrage sont vérifiés statiquement, pas observés sur un serveur Roblox.
