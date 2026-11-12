@@ -46,10 +46,17 @@ function Pool.claim(slots, now, seconds, cap)
     return slot
 end
 
+-- Marks may still be alive while temporarily hidden by a smaller mobile
+-- graphics budget. Track lifetime independently of visibility so a preset
+-- upgrade can reveal them again before expiry.
+function Pool.live(slot, now)
+    return type(slot) == "table" and finite(now)
+        and finite(slot.startedAt) and finite(slot.expiresAt)
+        and now >= slot.startedAt and now < slot.expiresAt
+end
+
 function Pool.alpha(slot, now, visible)
-    if type(slot) ~= "table" or not visible or not finite(now)
-        or not finite(slot.startedAt) or not finite(slot.expiresAt)
-        or now < slot.startedAt or now >= slot.expiresAt then return nil end
+    if not visible or not Pool.live(slot, now) then return nil end
     local remaining = slot.expiresAt - now
     if remaining >= Pool.FADE_SECONDS then return Pool.INITIAL_ALPHA end
     local t = 1 - remaining / Pool.FADE_SECONDS

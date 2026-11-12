@@ -704,6 +704,23 @@ assert "nil, direction, true, self.currentWeaponId)" in visuals
 assert client.count("nil, message.weaponId)") >= 2
 assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
 
+# Impact marks recycle as usual, but after the last mark expires no
+# RenderStepped pool traversal should continue forever on mobile.
+impact_pool = get("src/shared/ImpactMarkPool.luau")
+assert "function Pool.live(slot, now)" in impact_pool
+for needle in (
+    "self.hasActiveImpactMarks = false",
+    "if self.hasActiveImpactMarks and clock >= self.nextImpactMarkUpdateAt then",
+    "self.hasActiveImpactMarks = true",
+    "if ImpactMarkPool.live(slot, now) then",
+    "self.hasActiveImpactMarks = anyLive",
+):
+    assert needle in visuals, f"Impact mark idle scanner guard missing: {needle}"
+assert visuals.index("self.hasActiveImpactMarks = true") < (
+    visuals.index("if not slot.part then", visuals.index("function WeaponVisuals:_trackImpactMark")))
+assert visuals.index("self.hasActiveImpactMarks = anyLive") > (
+    visuals.index("function WeaponVisuals:_updateImpactMarks"))
+
 # Mobile VFX priority 4 must not preempt another confirmed core when a
 # lower-priority dust/tracer is still active; stationary flash/glints avoid
 # redundant CFrame interpolation while keeping Size/Opacity animation.

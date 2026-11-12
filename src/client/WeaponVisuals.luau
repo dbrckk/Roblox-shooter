@@ -103,6 +103,9 @@ function WeaponVisuals.new(WeaponConfig)
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
     self.impactMarks = {}
+    -- Once all pooled marks expire, stop the 8 Hz full-pool scan entirely.
+    -- New confirmed impacts reactivate the scanner without a new task.
+    self.hasActiveImpactMarks = false
     self.nextImpactMarkUpdateAt = 0
     self.transientParts = {}
     -- Track only live slots: pooled Parts persist, but inactive slots must
@@ -943,7 +946,7 @@ function WeaponVisuals:_render(deltaTime)
     -- Pool opacity/expiry is serviced at 8 Hz, not via a Tween and Debris
     -- allocation for every bullet. Reuses the existing RenderStepped hook.
     local clock = os.clock()
-    if #self.impactMarks > 0 and clock >= self.nextImpactMarkUpdateAt then
+    if self.hasActiveImpactMarks and clock >= self.nextImpactMarkUpdateAt then
         self.nextImpactMarkUpdateAt = clock + 0.125
         self:_updateImpactMarks(clock)
     end
@@ -1304,6 +1307,7 @@ end
 function WeaponVisuals:_trackImpactMark(now, duration, cap)
     local slot = ImpactMarkPool.claim(self.impactMarks, now, duration, cap)
     if not slot then return nil end
+    self.hasActiveImpactMarks = true
     if not slot.part then
         local mark = Instance.new("Part")
         mark.Name = "IronYardBulletMark"
@@ -1319,7 +1323,13 @@ function WeaponVisuals:_updateImpactMarks(now)
     local preset = Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset")
     local allowed = CombatVfxProfile.budget(
         preset, UserInputService.TouchEnabled, 0).marks
+    local anyLive = false
     for i, slot in ipairs(self.impactMarks) do
+        -- Hidden marks can reappear when QUALITY is restored mid-lifetime.
+        -- Their lifetime is independent of the current preset's visible cap.
+        if ImpactMarkPool.live(slot, now) then
+            anyLive = true
+        end
         local mark = slot.part
         if mark then
             local alpha = ImpactMarkPool.alpha(slot, now, i <= allowed)
@@ -1331,6 +1341,7 @@ function WeaponVisuals:_updateImpactMarks(now)
             end
         end
     end
+    self.hasActiveImpactMarks = anyLive
 end
 
 -- A short 3D glint appears only on the shooter's client when the server
