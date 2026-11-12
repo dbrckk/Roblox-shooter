@@ -115,6 +115,51 @@ case("delayed release acknowledgement preserves a new server lease", function()
         nil, "old server cannot resume normal writes")
 end)
 
+case("delayed reacquire cannot shorten a newer server lease", function()
+    local state = L.acquire(nil, A, 1000, 180)
+    eq(state.lock.expiresAt, 1180, "initial lease")
+    state = L.acquire(state, A, 1100, 180)
+    eq(state.lock.expiresAt, 1280, "reacquired lease extension")
+    -- An old UpdateAsync attempt was started at 1010 but finishes later.
+    state = L.acquire(state, A, 1010, 180)
+    eq(state.lock.expiresAt, 1280, "stale reacquire cannot shorten lease")
+    eq(L.acquire(state, B, 1279, 180), nil,
+        "another server cannot steal a shortened lease")
+    state = L.acquire(state, A, 1099, 180)
+    eq(state.lock.expiresAt, 1280,
+        "repeated out-of-order reacquires are monotonic")
+    local transferred = L.acquire(state, B, 1280, 180)
+    assert(transferred and transferred.lock.owner == B,
+        "other server may acquire only at original valid expiry")
+end)
+
+case("delayed autosave cannot shorten a newer committed lease", function()
+    local state = L.acquire(nil, A, 1000, 180)
+    state = L.commit(state, A, earnings(100, 1), 1200, 180, false)
+    eq(state.lock.expiresAt, 1380, "newer autosave lease")
+    eq(state.xp, 100, "first durable XP")
+    -- Same owner, older clock in a retried transaction after the save above.
+    state = L.commit(state, A, earnings(50, 1), 1030, 180, false)
+    eq(state.lock.expiresAt, 1380, "old autosave cannot shorten lease")
+    eq(state.xp, 100, "older snapshot must not remove persisted XP")
+    eq(state.eliminations, 1, "no duplicate kill")
+    state = L.commit(state, A, earnings(175, 2), 1190, 180, false)
+    eq(state.lock.expiresAt, 1380,
+        "out-of-order increment does not shorten the current lock")
+    eq(state.xp, 175, "newly earned XP still commits once")
+    eq(L.acquire(state, B, 1379, 180), nil,
+        "new server denied while newest lease remains active")
+    local transferred = L.acquire(state, B, 1380, 180)
+    assert(transferred and transferred.lock.owner == B,
+        "expired lease is transferable as before")
+    local rejected = L.commit(transferred, A,
+        earnings(300, 3), 1250, 180, false)
+    eq(rejected, nil, "stale owner cannot write after lease transfer")
+    eq(transferred.xp, 175, "no old-session bonus after transfer")
+    eq(transferred.lock.expiresAt, 1560,
+        "a stale foreign writer cannot alter new owner's lease")
+end)
+
 case("zero-delta heartbeat renews lease without inflating totals", function()
     local state = L.acquire(nil, A, 1000, 180)
     state = L.commit(state, A, earnings(), 1050, 180, false)
