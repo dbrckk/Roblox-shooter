@@ -101,6 +101,11 @@ local function validateContext(token, timestamp, leaseSeconds)
     assert(safeInt(timestamp), "Invalid DataStore lease timestamp")
     assert(safeInt(leaseSeconds) and leaseSeconds > 0,
         "Invalid DataStore lease duration")
+    -- The lease is persisted and later re-normalized by every server.
+    -- Reject unrepresentable expiry BEFORE any UpdateAsync state changes;
+    -- otherwise a near-limit timestamp could write an invalid lock.
+    assert(safeInt(timestamp + leaseSeconds),
+        "Progression lease expiry overflow")
 end
 
 function Ledger.acquire(previous, token, timestamp, leaseSeconds)

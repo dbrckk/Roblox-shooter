@@ -106,6 +106,8 @@ def main():
         '"Progression release exceeds stored counter: " .. field',
         "data.lock = nil",
         "function Ledger.applyGrant(earned, deltas)",
+        'assert(safeInt(timestamp + leaseSeconds),',
+        '"Progression lease expiry overflow"',
         'assert(safeInt(delta) and delta <= 10000,',
         'assert(safeInt(updated), "Progression session counter overflow: " .. field)',
         "return nextEarned",

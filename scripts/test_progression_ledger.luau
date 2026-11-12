@@ -256,6 +256,27 @@ case("valid partial writes, release and reacquire preserve acknowledged totals",
     eq(state.victories, 1, "new session does not change old victory")
 end)
 
+case("lease expiry cannot overflow the durable safe-integer range", function()
+    local nearLimit = 9007199254740990
+    local original = L.acquire(nil, A, 1000, 180)
+    local unchanged = L.normalize(original)
+    fails(function() L.acquire(nil, A, nearLimit, 180) end,
+        "new lock expiry overflow")
+    fails(function() L.acquire(original, A, nearLimit, 180) end,
+        "same-session renewal expiry overflow")
+    fails(function() L.commit(original, A, earnings(100), nearLimit, 180, false) end,
+        "autosave renewal expiry overflow")
+    fails(function() L.commit(original, A, earnings(100), nearLimit, 180, true) end,
+        "release context expiry overflow")
+    eq(original.xp, unchanged.xp, "invalid lease cannot alter XP")
+    eq(original.lock.expiresAt, unchanged.lock.expiresAt,
+        "invalid lease cannot mutate previous lock")
+    local safe = L.acquire(nil, B, nearLimit - 180, 180)
+    eq(safe.lock.expiresAt, nearLimit, "largest valid expiry accepted")
+    eq(L.normalize(safe).lock.expiresAt, nearLimit,
+        "largest valid expiry remains readable")
+end)
+
 case("award increments are atomic across all counters", function()
     local earned = L.zero()
     local first = L.applyGrant(earned, {xp=250, victories=1})
