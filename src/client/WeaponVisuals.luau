@@ -828,6 +828,12 @@ end
 function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
     if now < self.nextWeaponMeshCheck then return end
     self.nextWeaponMeshCheck = now + 1.2
+    -- Remote gunshot Parts have already been destroyed by Debris after
+    -- playback. Release their stale Lua references even if combat stopped:
+    -- previously cleanup only happened when another remote shot arrived.
+    if #self.remoteSoundEmitters > 0 then
+        WeaponAudio.pruneEndedEmitters(self.remoteSoundEmitters)
+    end
     -- TTL cleanup shares the existing low-frequency LOD polling path; this
     -- never adds a task, Tween, RenderStep callback or per-frame scan.
     local retained = self.cachedViewmodel
@@ -1082,6 +1088,7 @@ function WeaponVisuals:_finishPrivatePerfFrame(startedAt, frameDt)
         not self.model and "NONE" or (self.currentWeaponImported and "PBR" or "PARTS"))
     player:SetAttribute("IronYardPerfFxActive", fxActive)
     player:SetAttribute("IronYardPerfFxCap", self.adaptiveCombatFxCap or 0)
+    player:SetAttribute("IronYardPerfRemoteAudioRefs", #self.remoteSoundEmitters)
 end
 
 function WeaponVisuals:_render(deltaTime)
@@ -1814,13 +1821,9 @@ function WeaponVisuals:playFireSound(weaponId, origin, localShot)
 
     local ownShot = localShot == true
     if not ownShot then
-        -- No heartbeat or extra task: clear completed remote emitters only
-        -- when another spatialized shot is considered.
-        for i = #self.remoteSoundEmitters, 1, -1 do
-            if not self.remoteSoundEmitters[i].Parent then
-                table.remove(self.remoteSoundEmitters, i)
-            end
-        end
+        -- Keep the existing admission-time cleanup to avoid a stale voice
+        -- budget if the next remote shot arrives before the 1.2s idle sweep.
+        WeaponAudio.pruneEndedEmitters(self.remoteSoundEmitters)
     end
     local distance = ownShot and 0 or (camera.CFrame.Position - origin).Magnitude
     local mix = WeaponAudio.select(

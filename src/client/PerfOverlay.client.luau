@@ -69,6 +69,7 @@ local CLIENT_PERF_ATTRIBUTES = {
     "IronYardPerfWeaponPeakMs", "IronYardPerfWeaponParts",
     "IronYardPerfWeaponId", "IronYardPerfWeaponSource",
     "IronYardPerfFxActive", "IronYardPerfFxCap",
+    "IronYardPerfRemoteAudioRefs",
 }
 local function clearClientWeaponReadings()
     for _, name in ipairs(CLIENT_PERF_ATTRIBUTES) do
@@ -84,14 +85,16 @@ local function weaponMetrics()
     return string.format(
         "Arme %s / %s: %d pieces\n"
         .. "CPU arme: %.2fms moy | %.2fms pic\n"
-        .. "Effets transitoires: %d / %d",
+        .. "Effets transitoires: %d / %d\n"
+        .. "Audio distant: %d refs",
         player:GetAttribute("IronYardPerfWeaponId") or "?",
         player:GetAttribute("IronYardPerfWeaponSource") or "?",
         player:GetAttribute("IronYardPerfWeaponParts") or 0,
         player:GetAttribute("IronYardPerfWeaponMeanMs") or 0,
         player:GetAttribute("IronYardPerfWeaponPeakMs") or 0,
         player:GetAttribute("IronYardPerfFxActive") or 0,
-        player:GetAttribute("IronYardPerfFxCap") or 0)
+        player:GetAttribute("IronYardPerfFxCap") or 0,
+        player:GetAttribute("IronYardPerfRemoteAudioRefs") or 0)
 end
 
 -- These readings are client-local and only polled with the private panel.

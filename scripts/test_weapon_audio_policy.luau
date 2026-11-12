@@ -74,4 +74,33 @@ assert(farCovered.layers == 1 and farCovered.highGain < farMix.highGain,
     "Occluded distant shots remain more muffled than clear distant ones")
 assert(Audio.occludedMix(clear, false) == clear)
 assert(Audio.occludedMix(nil, true) == nil)
-print("IRON YARD local-priority spatial weapon audio and capped remote voices: OK")
+-- Debris destroys the Roblox Instances, but an idle Lua table must no longer
+-- keep them strongly referenced until another distant shot is played.
+local a, b, c, d = {Parent = "workspace"}, {Parent = nil},
+    {Parent = "workspace"}, {Parent = nil}
+local active = {a, b, c, d}
+assert(Audio.pruneEndedEmitters(active) == 2)
+assert(#active == 2 and active[1] == a and active[2] == c,
+    "Remove destroyed emitters while preserving live voice order")
+assert(Audio.pruneEndedEmitters(active) == 2,
+    "Repeated low-frequency idle sweeps must be idempotent")
+assert(Audio.select("ECO", true, 30, false, #active),
+    "Remaining remote voices still count toward the mobile budget")
+a.Parent, c.Parent = nil, nil
+assert(Audio.pruneEndedEmitters(active) == 0 and #active == 0,
+    "After two-second Debris expiry and a quiet sweep, refs must be released")
+assert(Audio.select("ECO", true, 30, false, #active),
+    "Expired shots may not permanently exhaust remote voice admission")
+assert(Audio.pruneEndedEmitters(nil) == 0)
+local sparse = {{Parent = "workspace"}, false, {Parent = nil}}
+assert(Audio.pruneEndedEmitters(sparse) == 1)
+assert(type(sparse[1]) == "table" and sparse[1].Parent == "workspace")
+-- Regression: at capacity, 8 destroyed voices would previously occupy the
+-- entire mobile ECO budget until a new shot forced another cleanup.
+local full = {}
+for i = 1, 8 do full[i] = {Parent = true} end
+assert(Audio.select("ECO", true, 20, false, #full) == nil)
+for _, item in ipairs(full) do item.Parent = nil end
+assert(Audio.pruneEndedEmitters(full) == 0)
+assert(Audio.select("ECO", true, 20, false, #full))
+print("IRON YARD spatial audio: cap, occlusion, idle dead-reference cleanup OK")
