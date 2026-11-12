@@ -13,3 +13,16 @@ Models: 5 authored weapons x 2 levels of detail (10 owner-owned assets)
 Roblox public place publication: separate workflow and separate verification.
 
 No Open Cloud key or Roblox destination IDs are stored in this file.
+
+--- NEW OWNER-AUTHORIZED UPGRADE — 2026-11-12 ---
+The owner continues the PUBLIC IRON YARD shooter update and explicitly
+requests production upgrades of the original first-person PBR weapons.
+The new weapon forge run 43173848640 passed Blender, GLB and upload
+dry-run validation for the independent pistol magazine. Upload only
+the verified ten original Model assets under the existing owner
+9774173158 using the established Open Cloud workflow. Its source
+SHA must match the exact checked-in forge source; no fallback to older
+model files. Commit the verified new IDs only after all ten upload and
+moderation checks succeed. Do not claim an active public PBR magazine
+until the new registry is released in the public place. No credentials
+or unapproved other-account assets.
