@@ -9,7 +9,16 @@ function Plan.select(clear, bout)
         or bout < 1 or bout % 1 ~= 0 then
         return nil
     end
-    for _, pair in ipairs(Plan.PAIRS) do
+    -- Two consecutive bouts share a pair and exchange the sides.
+    -- Then rotate to the next pair so 1v1 play does not repeat the same
+    -- sightlines for an entire series when all six pairs are available.
+    -- Obstacles may change: scan every pair cyclically from the intended
+    -- start and never commit a partially blocked pair.
+    local count = #Plan.PAIRS
+    if count == 0 then return nil end
+    local startIndex = math.floor((bout - 1) / 2) % count + 1
+    for offset = 0, count - 1 do
+        local pair = Plan.PAIRS[(startIndex + offset - 1) % count + 1]
         local first, second = pair[1], pair[2]
         if clear[first] == true and clear[second] == true then
             if bout % 2 == 0 then return second, first end
