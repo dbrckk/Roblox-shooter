@@ -864,6 +864,23 @@ assert visuals.index("self.hasActiveImpactMarks = anyLive") > (
 # public player. Local CPU samples run only after the private toggle is open;
 # no server signals or extra RenderStepped callback.
 perf_overlay = get("src/client/PerfOverlay.client.luau")
+frame_policy = get("src/shared/ClientFrameWindow.luau")
+for needle in (
+    "FrameWindow.MAX_GAP_SECONDS = 1.0",
+    "FrameWindow.clear(window)",
+    "return false, true",
+):
+    assert needle in frame_policy, f"Android background FPS reset policy missing: {needle}"
+for needle in (
+    "local accepted, restarted = FrameWindow.push(frameWindow, dt)",
+    "if restarted then",
+    "frameSeconds = 0",
+    "latestFrameStats = nil",
+    "lastPacket = nil",
+    "clearClientWeaponReadings()",
+    "if not accepted then return end",
+):
+    assert needle in perf_overlay, f"Owner-only PERF background reset wiring missing: {needle}"
 perf_policy = get("src/shared/WeaponRenderDiagnostics.luau")
 for needle in (
     "function Diagnostics.new()",
