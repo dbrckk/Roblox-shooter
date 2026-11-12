@@ -968,11 +968,13 @@ function WeaponVisuals:_render(deltaTime)
     -- every PBR material primitive and glove CFrame is wasted while idle.
     -- Keep the camera orientation current so fast Android turns DO NOT
     -- produce a stale one-frame sway burst when the scope closes.
-    -- Never skip when a scheduled shell/flash requires fresh 3D anchors.
+    -- Skip invisible frames while a bolt casing is still scheduled for
+    -- the future. Render its due frame with camera-aligned ejection anchors;
+    -- never defer a queued flash or an active server-confirmed reload.
     -- Transient tracers, spent cases and impact marks are already updated.
     if ViewmodelRenderPolicy.skipHiddenSniper(self.currentWeaponId, self.scoped,
         self.lastViewmodelHidden, self.reloadActive, self.pendingLocalFlashAt,
-        self.pendingCartridge) then
+        self.pendingCartridge, clock) then
         self.lastCameraCFrame = camera.CFrame
         self.sway = self.sway * (1 - ViewmodelRenderPolicy.blendAlpha(animationDt, 14))
         return
