@@ -44,6 +44,7 @@ jobs:
         run: |
           set -euo pipefail
           ./luau scripts/test_progression_ledger.luau
+          ./luau scripts/test_progression_shutdown_tracker.luau
           ./luau scripts/test_career_readout.luau
           ./luau scripts/test_operator_finishes.luau
           ./luau scripts/test_touch_layout.luau
