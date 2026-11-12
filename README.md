@@ -7,9 +7,9 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-**État vérifié le 12 novembre 2026 :** expérience IRON YARD publique **v35**, build et publication GitHub Actions réussis. Armes PBR : dix IDs enregistrés (5 armes × 2 LOD) ; 1v1 codé avec tests ; modèles VANGUARD (4 IDs) et matériaux de monde PBR (12 IDs) non activés dans les registres. FPS Android, gameplay moteur et persistance DataStore réelle restent non mesurés/à valider.
+**État vérifié le 12 novembre 2026 :** expérience IRON YARD publique **v54** (publication [GitHub Actions #43227082815](https://github.com/dbrckk/Roblox-shooter/actions/runs/43227082815) réussie), build Rojo vert. Armes PBR : dix IDs enregistrés (5 armes × 2 LOD) ; 1v1 codé avec tests ; modèles VANGUARD (4 IDs) et matériaux de monde PBR (12 IDs) non activés dans les registres. FPS Android, gameplay moteur et persistance DataStore réelle restent non mesurés/à valider.
 
-Les premières protections serveur et la récupération de progression sont en place. Le projet vise désormais **une seule livraison publique**, sans phase privée : GitHub Actions produit un build testable, puis une publication publique manuelle strictement contrôlée lorsque l'expérience Roblox et les accès sont prêts. Un build GitHub n'est pas une publication Roblox.
+Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
 
 FPS Roblox indépendant, utilisant **RIVALS** (duels et progression), **Hypershot** (fluidité) et **Arsenal** (rythme) comme références de game design. Aucun script, asset, carte ni interface propriétaire de ces jeux n'a été copié.
@@ -25,6 +25,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - HUD, réticule, recul, impacts, sons Roblox internes et fil d'éliminations serveur (les mannequins d'entraînement sont désactivés dans l'arène compétitive).
 - **Contrôles PC + Android/iOS :** tir automatique par maintien, touches 1 à 5 pour l'arsenal, clic droit ou bouton AIM pour viser, choix d'arme mobile avec sélection visible et retour tactile de santé (flash discret).
 - Classement FFA top 3 actualisé par le serveur : vrais joueurs et IA, orientation et secteur dans un HUD compact pour Android.
+- **Duel 1v1** : série au premier à cinq victoires avec points de réapparition opposés. Depuis la v54, les six paires disponibles tournent toutes les deux manches, côtés inversés et fallback sur une paire entièrement libre. Les tests couvrent 49 152 sélections déterministes ; pas de preuve de gameplay moteur.
 - Nouveaux repères de terrain : chariots élévateurs, palettes et couvertures industrielles avec collisions de jeu distinctes des détails graphiques.
 - Projet Rojo + CI Github Actions build Roblox.
 - **Arène originale de 356 × 356 studs**, couverture, verticalité, éclairage naturel, terminal de fret moderne avec conteneurs et grues industrielles, signalétique et décors à LOD dynamique ; les meshes PBR ont été générés mais restent à importer dans Roblox Studio.
@@ -41,7 +42,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 
 ## Publication Roblox DIRECTEMENT PUBLIQUE
 
-Le dépôt comprend un [workflow manuel de publication publique](https://github.com/dbrckk/Roblox-shooter/actions/workflows/publish-roblox-public.yml) qui refuse les univers privés, les mauvais propriétaires, la mauvaise place et tout commit dont la CI n'est pas verte. Aucune publication automatique n'est déclenchée par un push. La destination IRON YARD doit déjà être **publique** dans Roblox Creator Dashboard. Le build affiche son SHA Git sur les résultats de manche pour identifier la version ; un retour arrière est documenté. **Aucune expérience Roblox n'a été publiée par ce changement de code.** [Guide Android/PC de publication et de rollback](docs/PUBLIC_ROBLOX_PUBLISHING.md).
+Le dépôt comprend un [workflow manuel de publication publique](https://github.com/dbrckk/Roblox-shooter/actions/workflows/publish-roblox-public.yml) qui refuse les univers privés, les mauvais propriétaires, la mauvaise place et tout commit dont la CI n'est pas verte. Aucune publication automatique n'est déclenchée par un push. La destination IRON YARD doit déjà être **publique** dans Roblox Creator Dashboard. Le build affiche son SHA Git sur les résultats de manche pour identifier la version ; un retour arrière est documenté. **La version v54 a bien été publiée sur l'expérience publique** le 12 novembre 2026. Les tests sur appareil et les performances réelles restent à valider. [Guide Android/PC de publication et de rollback](docs/PUBLIC_ROBLOX_PUBLISHING.md).
 
 ## Construire et jouer
 
@@ -55,7 +56,7 @@ Le dépôt comprend un [workflow manuel de publication publique](https://github.
 
 **Robustesse des combats :** les bots continuent à marcher pendant le calcul d'itinéraires, recalculent leur trajet à proximité des obstacles bas et plateformes, tournent physiquement vers leurs cibles avec `AlignOrientation` et cessent de bloquer les tirs lorsqu'ils sont éliminés. Leur spawn est sélectionné loin des combattants, avec deux secondes de protection annoncées au-dessus du personnage. Les protections sont annulées lorsqu'un combattant tire. Le score des bots retirés (lorsqu'un joueur rejoint) ne peut plus remporter une manche ; les bots morts sont réinitialisés au début de la suivante. La vérification de navigation et de physique dans Studio reste nécessaire.
 
-Le dépôt inclut un mode FFA avec jusqu'à quatre bots mobiles, IA serveur, victoire par éliminations, scoreboard et fil de tirs. Les joueurs disposent de réapparitions sélectionnées parmi des positions dégagées et éloignées des autres combattants, avec protection temporaire de 2,5 secondes annulée au premier tir. Il reste **non testé dans Studio depuis cette session**. Ne pas le considérer comme une version AAA ou publiée. La CI compile tous les fichiers Luau et génère le fichier Roblox Studio ; elle ne valide pas la qualité du gameplay ni les performances sur téléphone.
+Le dépôt inclut un mode FFA avec jusqu'à quatre bots mobiles, IA serveur, victoire par éliminations, scoreboard et fil de tirs. Les joueurs disposent de réapparitions sélectionnées parmi des positions dégagées et éloignées des autres combattants, avec protection temporaire de 2,5 secondes annulée au premier tir. Le gameplay reste **non testé dans Studio depuis cette session**. La publication v54 est confirmée, mais la qualité AAA et la fluidité Android ne sont pas validées par un build vert. La CI compile tous les fichiers Luau et génère le fichier Roblox Studio ; elle ne valide pas la qualité du gameplay ni les performances sur téléphone.
 
 ## Télécharger le projet construit
 
