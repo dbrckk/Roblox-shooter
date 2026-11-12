@@ -770,10 +770,11 @@ request_body = client[client.index("local function requestReload()"):client.inde
 assert "setScoped(false)" not in request_body, (
     "Rejected reload must not un-scope before server confirmation")
 # No speculative reload animation: the server-validated Ammo delta must
-# confirm a real refill before the PBR slide/charging handle racks.
+# confirm a real refill before the PBR slide/charging handle or sniper bolt racks.
 rack_policy = get("src/shared/WeaponReloadFinishPolicy.luau")
 for needle in (
     "function P.confirmed(weaponId, wasReloading, nowReloading, previousLoaded, loaded, capacity)",
+    'or weaponId == "Sniper")',
     "function P.sample(weaponId, age, reloading)",
     "return smooth((age - 0.025) / 0.125)",
 ):
@@ -863,11 +864,15 @@ for needle in (
     "function Cycle.sample(shotAge, reloading)",
     "Cycle.UNLOCK_START", "Cycle.UNLOCK_END",
     "Cycle.RETURN_END", "Cycle.LOCK_END",
+    "Cycle.RELOAD_DURATION = Cycle.LOCK_END - Cycle.UNLOCK_START",
+    "function Cycle.sampleReload(confirmedAge, reloading)",
+    "function Cycle.present(shotAge, confirmedAge, reloading)",
 ):
     assert needle in sniper_bolt, f"Sniper bolt timing missing: {needle}"
 for needle in (
     'WaitForChild("SniperBoltCycle")',
-    'boltLift, boltPull = SniperBoltCycle.sample(shotAge, self.reloadActive)',
+    'boltLift, boltPull = SniperBoltCycle.present(',
+    'shotAge, now - self.reloadFinishedAt, self.reloadActive)',
     "self.currentWeaponId, boltPull, boltLift, self.reloadActive, self.scoped",
     "feel.actionTravel * boltPull",
     "math.rad(32 * boltLift)",
