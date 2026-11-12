@@ -186,9 +186,20 @@ def build():
                          ("world", world_rows)):
         assert all(row["owner"] > 0 for row in rows), \
             f"{family} assets must declare a non-zero owner"
-    assert weapon_commit, "uploaded weapons must record their source commit"
-    assert not palette_commit and not world_commit, \
-        "an unuploaded family must not claim a source commit"
+    assert re.fullmatch(r"[0-9a-f]{40}", weapon_commit), \
+        "uploaded weapons must record a valid source commit"
+    # The existing uploaders write sourceCommit when their entire batch has
+    # finished. Future approved VANGUARD/world uploads must be accepted by
+    # the matrix instead of being rejected for having legitimate provenance.
+    for family, ids, commit in (
+        ("VANGUARD", palette_ids, palette_commit),
+        ("world PBR", world_ids, world_commit),
+    ):
+        if any(identifier > 0 for identifier in ids):
+            assert re.fullmatch(r"[0-9a-f]{40}", commit), \
+                f"{family} approved IDs require a source commit"
+        else:
+            assert not commit, f"{family} must not claim an unuploaded source"
 
     for family, paths in CONTROLS.items():
         for path in paths:
