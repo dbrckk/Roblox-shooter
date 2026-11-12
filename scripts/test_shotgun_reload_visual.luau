@@ -29,3 +29,32 @@ for i = 0, 50000 do
     end
 end
 print("IRON YARD shotgun: 50k allocation-free shell poses, server reload and ECO gating OK")
+
+
+-- Client-only magazine visualization uses the authoritative missing-rounds
+-- snapshot, not predicted ammo. Each beat has a genuine hidden return phase.
+for count = 1, 6 do
+    for i = 0, count - 1 do
+        local mid = 0.18 + 0.70 * (i + 0.5) / count
+        local phase = Visual.phase(mid, count)
+        assert(phase > 0.49 and phase < 0.51,
+            "Each missing B-8 round receives a distinct full shell insertion")
+        local sx, sy, sz, sr = Visual.sample(mid, true, "QUALITY", count)
+        assert(sx > 0.11 and sy > 0 and sz < -0.12 and sr < -0.12)
+        local gap = 0.18 + 0.70 * (i + 0.94) / count
+        assert(Visual.phase(gap, count) == -1)
+        assert(Visual.sample(gap, true, "QUALITY", count) == nil,
+            "The reused shell must be hidden between insertions")
+        assert(Visual.sample(mid, false, "QUALITY", count) == nil)
+        assert(Visual.sample(mid, true, "ECO", count) == nil)
+    end
+end
+for _, invalid in ipairs({-2, 0, 0/0, math.huge, -math.huge, "6"}) do
+    assert(Visual.phase(0.5, invalid) == -1)
+    assert(Visual.sample(0.5, true, "QUALITY", invalid) == nil)
+end
+assert(Visual.phase(math.huge, 6) == -1)
+assert(Visual.phase(-math.huge, 6) == -1)
+assert(Visual.sample(0.1, true, "QUALITY", 6) == nil)
+assert(Visual.sample(0.9, true, "QUALITY", 6) == nil)
+print("IRON YARD: 1-6 authoritative B-8 cartridge beats, hidden resets, ECO and cancellation OK")
