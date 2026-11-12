@@ -8,6 +8,7 @@ local playerGui = player:WaitForChild("PlayerGui")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
+local WeaponAimReloadPolicy = require(shared:WaitForChild("WeaponAimReloadPolicy"))
 local ScopeFovPolicy = require(shared:WaitForChild("ScopeFovPolicy"))
 local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget"))
@@ -755,7 +756,9 @@ end
 
 local function setScoped(enabled)
     local config = WeaponConfig.get(currentWeaponId)
-    if enabled and (sprinting or not config or (not config.aimFov and not config.zoomFieldOfView)) then
+    if enabled and (sprinting or not config
+        or (not config.aimFov and not config.zoomFieldOfView)
+        or not WeaponAimReloadPolicy.canEnterAim(ammoByWeapon[currentWeaponId])) then
         enabled = false
     end
     -- Scope state is independent of camera lifetime; a missing camera may
@@ -1267,6 +1270,11 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
             reloading = message.reloading == true,
         }
         hud:setAmmo(message.weaponId, message.loaded, message.capacity, message.reloading == true)
+        -- A valid server Ammo update, not an unconfirmed request, ends ADS.
+        if WeaponAimReloadPolicy.releaseOnConfirmedReload(currentWeaponId,
+            message.weaponId, message.reloading, scoped) then
+            setScoped(false)
+        end
         visuals:setReloading(message.weaponId, message.reloading == true)
     elseif message.kind == "OutOfAmmo" and message.weaponId == currentWeaponId then
         requestReload()

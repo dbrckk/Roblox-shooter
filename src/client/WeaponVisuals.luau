@@ -855,7 +855,7 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
         UserInputService.TouchEnabled or UserInputService.GamepadEnabled,
         pitch, yaw, deltaTime)
     local targetSway = Vector2.new(swayX, swayY)
-	local swayAlpha = math.clamp(deltaTime * 14, 0, 1)
+	local swayAlpha = ViewmodelRenderPolicy.blendAlpha(deltaTime, 14)
 	self.sway = self.sway + (targetSway - self.sway) * swayAlpha
 
 	local timeNow = os.clock()
@@ -932,7 +932,10 @@ function WeaponVisuals:_render(deltaTime)
     local reloadSeconds = reloadConfig and reloadConfig.reloadSeconds or 2
     local progress = math.clamp((now - self.reloadStartedAt) / math.max(reloadSeconds, 0.25), 0, 1)
     local reloadTarget = self.reloadActive and 1 or 0
-    self.reloadBlend += (reloadTarget - self.reloadBlend) * math.clamp(animationDt * 13, 0, 1)
+    -- Both the ADS return and reload presentation share one real-time
+    -- exponential easing factor independent of Android frame cadence.
+    local poseAlpha = ViewmodelRenderPolicy.blendAlpha(animationDt, 13)
+    self.reloadBlend += (reloadTarget - self.reloadBlend) * poseAlpha
     -- Frame-rate-independent smoothing keeps the physical magazine aligned
     -- with the returning glove even when the server interrupts a reload.
     local handAlpha = ViewmodelRenderPolicy.blendAlpha(animationDt, 14)
@@ -954,11 +957,12 @@ function WeaponVisuals:_render(deltaTime)
         local horizontalSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
         moving = math.clamp(horizontalSpeed / math.max(12, humanoid.WalkSpeed), 0, 1)
     end
-    self.stepBlend += (moving - self.stepBlend) * math.clamp(animationDt * 9, 0, 1)
+    self.stepBlend += (moving - self.stepBlend)
+        * ViewmodelRenderPolicy.blendAlpha(animationDt, 9)
 
 	local offset = WEAPON_OFFSETS[self.currentWeaponId] or WEAPON_OFFSETS.Pistol
     local aimTarget = self.scoped and self.currentWeaponId ~= "Sniper" and 1 or 0
-    self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(animationDt * 13, 0, 1)
+    self.aimBlend += (aimTarget - self.aimBlend) * poseAlpha
     -- Blend the full viewmodel root toward each weapon's rear iron sight.
     -- Sniper keeps its dedicated optical overlay and hidden scoped weapon.
     local rootPose = self.aimPose and offset:Lerp(self.aimPose, self.aimBlend)

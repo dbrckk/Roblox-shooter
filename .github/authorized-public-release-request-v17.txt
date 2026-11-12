@@ -1,0 +1,9 @@
+IRON YARD owner-authorized one-shot PUBLIC shooter update, 2026-11-12.
+Continue the published production Roblox FPS, no private or alpha staging.
+On server-confirmed reload only, release ADS and sniper optical HUD,
+reject new aim input during known reload, but do not un-scope on rejected
+speculative reload attempts. Preserve server fire, ammo and aim authority.
+Consistent cosmetic ADS/reload/walk/sway easing at Android 30/60/120 FPS,
+with pure Luau regression tests and static integration contract.
+Publish the exact main SHA only after green CI and existing owner/public
+destination verification. No new model assets, secrets or remotes.

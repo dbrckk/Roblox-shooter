@@ -633,12 +633,38 @@ assert 'RunService.RenderStepped:Connect' not in visuals
 assert 'RunService.RenderStepped:Connect' not in client
 assert 'ViewmodelRenderPolicy.animationDelta(deltaTime)' in visuals
 for update in (
-    'self.reloadBlend += (reloadTarget - self.reloadBlend) * math.clamp(animationDt * 13',
-    'self.stepBlend += (moving - self.stepBlend) * math.clamp(animationDt * 9',
-    'self.aimBlend += (aimTarget - self.aimBlend) * math.clamp(animationDt * 13',
+    'self.reloadBlend += (reloadTarget - self.reloadBlend) * poseAlpha',
+    '* ViewmodelRenderPolicy.blendAlpha(animationDt, 9)',
+    'self.aimBlend += (aimTarget - self.aimBlend) * poseAlpha',
+    'local poseAlpha = ViewmodelRenderPolicy.blendAlpha(animationDt, 13)',
+    'local swayAlpha = ViewmodelRenderPolicy.blendAlpha(deltaTime, 14)',
     'self:_getAnimationCFrame(animationDt, camera, self.stepBlend, reloadPose)',
 ):
     assert update in visuals, f"Frame-hitch-safe animation integration missing: {update}"
+# A confirmed, current-epoch Ammo reload exits ADS exactly once; speculative
+# requests cannot force unscoping and other-weapon snapshots cannot interfere.
+aim_reload = get("src/shared/WeaponAimReloadPolicy.luau")
+for needle in (
+    "function P.canEnterAim(ammo)",
+    "function P.releaseOnConfirmedReload(equippedWeapon, updatedWeapon, reloading, scoped)",
+    "and reloading == true and scoped == true",
+):
+    assert needle in aim_reload
+for needle in (
+    'WaitForChild("WeaponAimReloadPolicy")',
+    'not WeaponAimReloadPolicy.canEnterAim(ammoByWeapon[currentWeaponId])',
+    'WeaponAimReloadPolicy.releaseOnConfirmedReload(currentWeaponId,',
+    'message.weaponId, message.reloading, scoped)',
+):
+    assert needle in client, f"ADS/reload coherence missing: {needle}"
+assert 'FireServer' not in aim_reload and 'Instance.new' not in aim_reload
+confirmed = client.index("WeaponAimReloadPolicy.releaseOnConfirmedReload(currentWeaponId,")
+assert client.index("if not FireEpochPolicy.acceptAmmo(", 0, confirmed) < confirmed
+assert client.index("ammoByWeapon[message.weaponId] = {", 0, confirmed) < confirmed
+assert confirmed < client.index("visuals:setReloading(message.weaponId, message.reloading == true)", confirmed)
+request_body = client[client.index("local function requestReload()"):client.index("local function fireWeapon(")]
+assert "setScoped(false)" not in request_body, (
+    "Rejected reload must not un-scope before server confirmation")
 # Reload support hands must follow authored mechanical PBR pieces, not
 # restart or teleport after a deferred asset upgrade or server cancel.
 reload_hand = get("src/shared/WeaponReloadHandPlan.luau")

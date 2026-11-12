@@ -65,3 +65,17 @@ assert(P.blendAlpha(1/60,0)==0 and P.blendAlpha(math.huge,14)==0)
 assert(P.blendAlpha(0/0,14)==0 and P.blendAlpha(1/60,0/0)==0)
 assert(P.blendAlpha(1/60,math.huge)==0)
 assert(P.blendAlpha(1/60,14)>0 and P.blendAlpha(1/60,14)<1)
+
+-- ADS, reload, sway and locomotion now converge equally in one real
+-- second at 30/60/120 FPS (without per-frame Tween or scheduling).
+for _, rate in ipairs({9, 13, 14}) do
+    local function pose(frames)
+        local value = 0
+        for _ = 1, frames do
+            value += (1 - value) * P.blendAlpha(1 / frames, rate)
+        end
+        return value
+    end
+    local at30, at60, at120 = pose(30), pose(60), pose(120)
+    assert(math.abs(at30-at60) < 1e-9 and math.abs(at60-at120) < 1e-9)
+end

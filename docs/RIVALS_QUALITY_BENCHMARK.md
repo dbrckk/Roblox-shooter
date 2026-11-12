@@ -574,3 +574,24 @@ Tests Luau : équivalence 30/60/120 FPS, annulation sans snap,
 arguments invalides ; contrat d'intégration d'absence de callback
 supplémentaire et test de conservation de l'état entre LOD.
 Contrôle de rendu 30/60 FPS sur Android toujours nécessaire.
+
+
+
+## ADS / recharge cohérentes et indépendantes du FPS — 12 novembre 2026
+
+Un ancien comportement pouvait conserver la visée ADS et l'overlay de
+lunette sniper pendant une recharge pourtant confirmée par le serveur.
+Désormais, **seul le message Ammo validé pour le bon weaponId et epoch**
+met fin à la visée (HUD, FOV et animation), et interdit de ré-entrer
+en ADS jusqu'à la fin de la recharge. Un simple clic de demande
+ReloadWeapon ou un refus (magasin plein, délai) ne désactive pas la visée.
+Les snapshots d'une autre arme et les messages refusés par FireEpochPolicy
+sont ignorés. Un message répété ne déclenche pas un deuxième SetAiming.
+
+Le fondu ADS, l'atténuation de recul/mouvement de la vue et le retour
+de recharge utilisent la même interpolation exponentielle bornée que
+la main gauche/chargeur. Tests exécutables à 30, 60 et 120 FPS,
+simulations de snapshots répétés et validations de cablage.
+Aucune autorité de tir, dégâts, munition, raycast, FOV serveur ou
+RemoteEvent nouveau. La qualité visuelle et la mesure Android restent
+à vérifier en moteur.
