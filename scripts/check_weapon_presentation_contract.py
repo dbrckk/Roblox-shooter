@@ -821,6 +821,24 @@ assert "visuals:setReloading(weaponId, ammunition.reloading," in client
 assert '"lastAmmoLoaded", "reloadFinishedAt"' in swap_state
 assert 'FireServer' not in rack_policy and 'Instance.new' not in rack_policy
 assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
+# Detachable PBR/Part magazines have a subtle, mechanically coherent
+# extraction tilt on the SAME authoritative reload timeline. Fixed legacy
+# PBR pistol magazines must never animate independently.
+magazine_pose = get("src/shared/WeaponMagazinePose.luau")
+for needle in (
+    "function Pose.sample(weaponId, dip, travel, imported, hasMagazine)",
+    'weaponId == "Pistol"',
+    "hasMagazine ~= true",
+    "math.clamp(dip, 0, 1)",
+):
+    assert needle in magazine_pose
+for needle in (
+    'WaitForChild("WeaponMagazinePose")',
+    "local magX, magY, magZ, magRoll = WeaponMagazinePose.sample(",
+    "CFrame.Angles(0, 0, magRoll)",
+):
+    assert needle in visuals, f"Detachable magazine pose missing: {needle}"
+
 # Reload support hands must follow authored mechanical PBR pieces, not
 # restart or teleport after a deferred asset upgrade or server cancel.
 reload_hand = get("src/shared/WeaponReloadHandPlan.luau")

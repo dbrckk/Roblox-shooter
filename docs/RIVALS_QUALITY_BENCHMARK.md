@@ -732,3 +732,18 @@ de tir simultané conserve sa priorité de course avec `math.max`.
 Aucune nouvelle boucle, Instance, RemoteEvent, autorité de tir ou
 son externe. Tests Luau couvrant les validations/refus et 320 phases
 continues du retour en batterie. QA visuelle Android toujours requise.
+
+
+## Chargeurs PBR détachables : extraction inclinée — 12 novembre 2026
+
+Les chargeurs du pistolet PBR récent et de l'AR-24 adoptent un léger
+basculement lors de leur extraction et réinsertion, en plus du déplacement
+vertical existant. La pose est échantillonnée par une fonction Luau pure
+`WeaponMagazinePose.sample`, sans nouvelle animation indépendante : elle
+utilise exactement le `magazineDipBlend` synchronisé avec le gant de support
+et le rechargement validé par le serveur. Le vieux modèle PBR du pistolet
+sans chargeur séparé reste immobile. Aucun objet 3D, rendu par frame,
+remote, dégâts ou mécanique de recharge n'est ajouté. Un test Luau
+vérifie le début/fin, les limites, l'identité PBR/fallback et le modèle
+hérité ; le contrat Python vérifie le branchement. Les effets visuels
+réels et le FPS restent à mesurer dans Roblox Android/Studio.

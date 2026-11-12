@@ -22,6 +22,7 @@ local ViewmodelRenderPolicy = require(ReplicatedStorage:WaitForChild("Shared"):W
 local WeaponAimPose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponAimPose"))
 local WeaponFxFramePolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFxFramePolicy"))
 local WeaponReloadHandPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponReloadHandPlan"))
+local WeaponMagazinePose = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMagazinePose"))
 local WeaponReloadFinishPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponReloadFinishPolicy"))
 local SniperBoltCycle = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SniperBoltCycle"))
 
@@ -1122,8 +1123,13 @@ function WeaponVisuals:_render(deltaTime)
             end
         elseif (partName == "Magazine" or partName == "MagazineBase")
             and self.currentWeaponId ~= "Shotgun" then
-            localOffset = localOffset * CFrame.new(0, -0.36 * magazineDip * feel.magazineTravel,
-                0.04 * magazineDip * feel.magazineTravel)
+            -- Physically detachable PBR/Part magazine rocks slightly as
+            -- the support glove extracts it, then seats on the same timeline.
+            local magX, magY, magZ, magRoll = WeaponMagazinePose.sample(
+                self.currentWeaponId, magazineDip, feel.magazineTravel,
+                self.currentWeaponImported, self.currentWeaponHasPbrMagazine)
+            localOffset = localOffset * CFrame.new(magX, magY, magZ)
+                * CFrame.Angles(0, 0, magRoll)
         elseif partName == "ChargingHandle" and self.currentWeaponId == "AssaultRifle" then
             localOffset = localOffset * CFrame.new(0, 0, actionTravel * feel.actionTravel)
         elseif (partName == "Slide" or partName == "EjectionPort"
