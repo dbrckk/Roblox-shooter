@@ -1,0 +1,17 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox release on 12 November 2026.
+Publish ONLY to the existing verified creator-owned PUBLIC IRON YARD
+Roblox experience, through the project's guarded official publisher.
+Use the exact release commit and require its own successful Rojo CI.
+
+PR #57, merged on main as 9529305af2d70eb9b57283217db008abaf95490c:
+rotate duel opposite-pad starting positions across six existing safe pairs,
+using each pair for two bouts with swapped player sides. When either pad
+is obstructed, search the next completely clear pair cyclically; never
+teleport one participant to an unrelated FFA fallback position.
+No collision, damage, weapon, economy, DataStore or network protocol changes.
+49,152 pure Luau obstacle-mask selections and original character-generation
+tests passed in both branch and PR Rojo CI; merged-main CI succeeded.
+Tests cannot replace real Roblox gameplay/Android visual validation.
+
+Authorize EXACTLY ONE public publication after fresh release-SHA CI
+and independent target/owner/PUBLIC-status validation.
