@@ -18,8 +18,13 @@ local PROFILES = {
     Diagnostics = { rate = 3, burst = 3 },
 }
 
+-- Return a snapshot, never the live quota configuration. Callers (including
+-- diagnostics and test helpers) must not be able to raise a server admission
+-- limit by mutating a table returned from this shared module.
 function Policy.profile(channel)
-    return PROFILES[channel]
+    local config = PROFILES[channel]
+    if not config then return nil end
+    return { rate = config.rate, burst = config.burst }
 end
 
 local function finite(value)

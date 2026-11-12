@@ -6,6 +6,21 @@ assert(not Policy.allow(bucket, "FireWeapon", 0 / 0))
 assert(not Policy.allow(bucket, "FireWeapon", math.huge))
 assert(not Policy.allow(nil, "FireWeapon", 0))
 
+-- Exposing a profile must never grant write access to the server's quotas.
+local mutable = Policy.profile("FireWeapon")
+local originalRate, originalBurst = mutable.rate, mutable.burst
+mutable.rate, mutable.burst = 999999, 999999
+assert(Policy.profile("FireWeapon").rate == originalRate)
+assert(Policy.profile("FireWeapon").burst == originalBurst)
+assert(Policy.profile("Missing") == nil)
+local probe = {}
+for _ = 1, originalBurst do
+    assert(Policy.allow(probe, "FireWeapon", 0))
+end
+assert(not Policy.allow(probe, "FireWeapon", 0),
+    "Mutating a returned profile must not increase the real quota")
+assert(not Policy.allow(probe, "FireWeapon", 0.001),
+    "Mutating a returned profile must not increase refill speed")
 local profile = Policy.profile("FireWeapon")
 assert(profile.rate >= 9 and profile.burst >= 9,
     "Normal 8.7Hz assault rifle is not throttled")
