@@ -1,0 +1,24 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox release 12 Nov 2026.
+Publish ONLY to the existing creator-verified PUBLIC IRON YARD experience
+using the repository's fail-closed, exact-commit CI-gated workflow.
+
+The exact prior merged main commit 37506d02feeda0a129e6ca14e7ef6a2436f2f64c
+contains PR #55. PlayerRemoving can exhaust both bounded waits while an
+autosave still owns the original record, previously unlinking it with no
+remaining final release attempt. The original player session now reserves
+ONE detached final-release worker before unlinking; late acquisition and
+PlayerRemoving share a single-flight guard. The worker waits for any
+in-flight save and retries the original GUID-owned idempotent DataStore
+release with bounded effort. Every detached task reserves a shutdown
+tracker slot BEFORE spawning so BindToClose does not miss it.
+
+No change to persistent schema v1, keys, ownership rules, XP amounts,
+matchplay, or user-facing UI. Pure Luau tests cover deduplicated queueing
+and shutdown tracking; source contracts verify call order. Full branch,
+PR and merged main CI, Luau compiler, all tests and Rojo build GREEN.
+
+Require NEW CI green on THIS exact authorization commit; independently
+verify existing PUBLIC universe, owner and root place, then publish
+EXACTLY once. No private alpha, different place or invented runtime
+results. Real live Roblox DataStore outage and long latency validation
+remain outstanding.
