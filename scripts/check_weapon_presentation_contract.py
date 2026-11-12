@@ -816,7 +816,8 @@ assert visuals.count("self.adaptiveCombatFxCap or TransientFxPool.MAX_PARTS") ==
 assert visuals.index("self.adaptiveCombatFxCap = AdaptiveCombatFxPolicy.sample(") < (
     visuals.index("self:_updateTransientFx(clock)"))
 assert 'self.activeTransientIndices[index] = true' in visuals
-assert 'slot.priority = priority' in pool and 'slot.priority <= priority' in pool
+assert 'slot.priority = priority' in get("src/shared/TransientFxPool.luau")
+assert 'slot.priority <= priority' in get("src/shared/TransientFxPool.luau")
 
 # Mobile VFX priority 4 must not preempt another confirmed core when a
 # lower-priority dust/tracer is still active; stationary flash/glints avoid
