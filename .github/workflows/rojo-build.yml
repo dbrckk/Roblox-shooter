@@ -52,6 +52,7 @@ jobs:
           ./luau scripts/test_boost_meter_policy.luau
           ./luau scripts/test_combat_readout_policy.luau
           ./luau scripts/test_first_match_guide.luau
+          ./luau scripts/test_first_minute.luau
           ./luau scripts/test_gantry_motion.luau
           ./luau scripts/test_bot_avoidance.luau
           ./luau scripts/test_bot_path_budget.luau
@@ -234,6 +235,7 @@ jobs:
           python3 scripts/check_movement_contract.py
           python3 scripts/check_remote_rate_contract.py
           python3 scripts/check_mobile_hud_contract.py
+          python3 scripts/check_first_minute_contract.py
           python3 scripts/check_bot_navigation_budget.py
           python3 scripts/check_bot_los_budget.py
           python3 scripts/check_bot_perf_contract.py

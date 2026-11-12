@@ -123,6 +123,13 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 - Vérifier les budgets de voix simultanées, priorité du joueur local, atténuation derrière les couvertures et nettoyage à l'expiration.
 - Ne pas ajouter de sons factices, liens morts ou assets tiers non autorisés.
 
+**C2 hors ligne — première minute et clarté HUD.**
+
+- `src/shared/HudSurfacePlan.luau` fixe quelles surfaces peuvent partager un instant (briefing, tableau tactique, fil d'éliminations, carte de défaite, résultat de manche, panneau de progression, profiler privé) et dans quel ordre les neuf étapes de la première minute comptent. Voir [FIRST_MINUTE_UX.md](FIRST_MINUTE_UX.md).
+- `scripts/test_first_minute.luau` rejoue le parcours hors moteur, balaie **24 combinaisons** phase × mode × flags, mesure **15 agencements** tactiles sur des écrans 16:9 et 20:9 avec encoche, et refuse tout panneau qui mentirait sur l'état de sauvegarde.
+- `scripts/check_first_minute_contract.py` relie le plan aux clients réels : si `Briefing`, `RoundResults`, `DefeatScreen`, `ProgressionHud`, `TacticalHud`, `KillFeed` ou le profiler privé changent leurs conditions, la CI échoue.
+- **Aucun fichier client modifié** : le HUD livré reste inchangé, et aucune preuve visuelle n'est revendiquée.
+
 ### LOT D — Campagne Roblox réelle différée (bloquée, pas abandonnée)
 
 **Pas d'intervention utilisateur exigée maintenant.** Lorsque Roblox Studio ou un Android seront disponibles :
