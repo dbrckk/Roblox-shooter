@@ -72,6 +72,13 @@ end
 -- Stationary cores/glints still animate Size and Transparency. Their
 -- authored Part.CFrame is set at spawn, never redundantly every frame.
 -- A reused pooled slot MUST recompute this flag for each new effect.
+-- Immutable per-spawn size policy: fixed-size cartridges and static glints
+-- must not write the same Part.Size on every RenderStepped.
+-- Compare Vector3 values once at spawn, not on each animation frame.
+function Pool.resizes(fromSize, toSize)
+    return fromSize ~= toSize
+end
+
 function Pool.moves(targetProvided, arcHeight, gravityDrop, spinAngle)
     return targetProvided == true
         or type(arcHeight) == "number" and arcHeight > 0
