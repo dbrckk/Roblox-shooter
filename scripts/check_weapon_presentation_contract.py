@@ -798,7 +798,9 @@ for needle in (
     else:
         assert needle in pool, f"VFX priority or motion contract missing: {needle}"
 for needle in (
-    "slot.moves = TransientFxPool.moves(spec.target ~= nil,",
+    "slot.moves = TransientFxPool.moves(spec.target ~= nil,
+    "slot.resizes = TransientFxPool.resizes(spec.size, spec.endSize)",
+    "if slot.resizes then",",
     "if slot.moves then",
     "part.CFrame = transform",
     "part.Size = slot.fromSize:Lerp(slot.toSize, blend)",
