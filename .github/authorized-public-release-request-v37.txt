@@ -1,0 +1,24 @@
+IRON YARD — one owner-authorized PUBLIC update, November 12 2026.
+
+User requested continued production improvements to the existing PUBLIC
+IRON YARD Roblox first-person shooter (no private alpha or duplicate game).
+This single release authorizes merged PR #39 at source commit
+e4a169ee7e69b5168512e9b87c0115452e947bda.
+
+On Android, a pure O(1) transient FX policy limits only the existing
+priority-aware short-lived effect pool under sustained slow render frames.
+Two consecutive slow 1-second windows lower QUALITY from 72 to 48 and
+then 24 effects (BALANCED 48 to 24); four consecutive fast windows
+restore a tier. Isolated frame hitches and Android background/resume
+gaps reset the sampling window without introducing a false downgrade.
+ECO, desktop, original premium PBR meshes, material maps, user graphics
+setting, server-authoritative hits, ammo, damage and input are unchanged.
+Existing high-priority confirmed hits and muzzle flashes still preempt
+low-priority dust when the pool is full.
+
+Official Luau compiler, executable regression tests, integration contracts,
+and full Rojo build succeeded for PR and merged main. Require a new
+successful complete CI run on this exact authorization commit before
+dispatching one PUBLIC update to the existing verified owner/universe/place.
+Do not create a new/private experience or assume measured Android FPS.
+No keys, tokens, credentials, or private creator IDs in this file.
