@@ -112,7 +112,9 @@ function Ledger.acquire(previous, token, timestamp, leaseSeconds)
     end
     if lock and lock.owner == token then
         -- Repeated acquire from the same session MUST retain committed deltas.
-        lock.expiresAt = timestamp + leaseSeconds
+        -- An older UpdateAsync retry can complete after a newer write.
+        -- Never let the same session's lease move backwards in time.
+        lock.expiresAt = math.max(lock.expiresAt, timestamp + leaseSeconds)
     else
         data.lock = {
             owner = token, expiresAt = timestamp + leaseSeconds,
@@ -157,7 +159,9 @@ function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds,
         }
         data.lock = nil
     else
-        data.lock.expiresAt = timestamp + leaseSeconds
+        -- A delayed autosave/retry must not shorten a newer lease.
+        data.lock.expiresAt = math.max(data.lock.expiresAt,
+            timestamp + leaseSeconds)
     end
     return data
 end
