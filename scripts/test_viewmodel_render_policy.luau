@@ -79,3 +79,25 @@ for _, rate in ipairs({9, 13, 14}) do
     local at30, at60, at120 = pose(30), pose(60), pose(120)
     assert(math.abs(at30-at60) < 1e-9 and math.abs(at60-at120) < 1e-9)
 end
+
+-- A sniper hidden by the optical HUD has no visible viewmodel geometry.
+-- Pending muzzle flash/casing cannot be skipped: their socket positions
+-- must be updated after the native camera on this same render frame.
+assert(P.skipHiddenSniper("Sniper", true, true, false, nil, nil))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, 0, nil))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, nil, {at=0.43}))
+assert(not P.skipHiddenSniper("Sniper", true, true, true, nil, nil))
+assert(not P.skipHiddenSniper("Sniper", true, false, false, nil, nil))
+assert(not P.skipHiddenSniper("Sniper", false, true, false, nil, nil))
+assert(not P.skipHiddenSniper("Sniper", true, true, nil, nil, nil))
+assert(not P.skipHiddenSniper("Pistol", true, true, false, nil, nil))
+assert(not P.skipHiddenSniper("AssaultRifle", true, true, false, nil, nil))
+assert(not P.skipHiddenSniper("Sniper", true, true, false, false, nil))
+for frame = 1, 3600 do
+    local scoped = frame < 3000
+    local pending = frame == 1200 and {at=0.43} or nil
+    local skip = P.skipHiddenSniper("Sniper", scoped, scoped, false, nil, pending)
+    assert(skip == (scoped and pending == nil),
+        "Only completely invisible, effect-free sniper frames are skipped")
+end
+print("IRON YARD: idle optical sniper skips hidden PBR transforms but keeps FX/camera safety OK")

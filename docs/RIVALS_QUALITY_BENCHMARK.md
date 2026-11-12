@@ -595,3 +595,29 @@ simulations de snapshots répétés et validations de cablage.
 Aucune autorité de tir, dégâts, munition, raycast, FOV serveur ou
 RemoteEvent nouveau. La qualité visuelle et la mesure Android restent
 à vérifier en moteur.
+
+
+## Scope optique sniper : suppression des transformations invisibles — 12 novembre 2026
+
+Lorsque le joueur vise avec la lunette, le HUD optique masque intégralement
+l'arme. Jusqu'à la version 16, le rendu recalculait et écrivait malgré tout
+chaque CFrame des matériaux PBR, mécanismes, gants et bras à **chaque image**
+même sans tir. Le nouveau filtre `ViewmodelRenderPolicy.skipHiddenSniper`
+évite cette étape tant que le modèle est effectivement masqué,
+qu'aucune recharge n'est en cours et que les files de flash de bouche
+et de douille différée sont vides.
+
+**Sécurité du rendu :** les effets transitoires et marques d'impact
+continuent à être mis à jour ; l'échange de LOD est toujours vérifié ;
+les rafales/douilles doivent encore passer par le rendu de l'arme et
+les coordonnées des sockets du frame courant. Avant de sauter les
+CFrame invisibles, le système enregistre la caméra courante et amortit
+le sway. La sortie de lunette n'hérite donc pas d'un vieux mouvement
+de caméra, même après de grands balayages tactiles.
+
+Aucune allocation, boucle ou connexion supplémentaire. Tests Luau
+de la matrice des cas avec FX en attente, recharge confirmée et HUD
+caché, plus contrat d'intégration vérifiant l'ordre des opérations.
+Le nombre d'animations/écritures inutiles supprimées est vérifiable
+dans le code ; aucun gain de FPS réel n'est annoncé sans mesure
+Android Studio / MicroProfiler.

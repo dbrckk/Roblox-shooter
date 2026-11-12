@@ -625,6 +625,30 @@ assert client.count('RunService:BindToRenderStep("IronYardClientCameraFeel",') =
     "Hip-fire responsiveness must reuse the existing frame callback")
 assert "FireServer" not in crosshair and "Instance.new" not in crosshair
 
+# Fully hidden optical sniper should not write dozens of PBR primitive CFrames
+# on idle Android frames, but any queued muzzle or delayed bolt casing must
+# still receive the camera-final viewmodel pose before the FX is emitted.
+render_policy = get("src/shared/ViewmodelRenderPolicy.luau")
+assert "function Policy.skipHiddenSniper(weaponId, scoped, hidden, reloading," in render_policy
+for needle in (
+    "ViewmodelRenderPolicy.skipHiddenSniper(self.currentWeaponId, self.scoped,",
+    "self.lastViewmodelHidden, self.reloadActive, self.pendingLocalFlashAt,",
+    "self.pendingCartridge) then",
+    "self.lastCameraCFrame = camera.CFrame",
+    "self.sway = self.sway * (1 - ViewmodelRenderPolicy.blendAlpha(animationDt, 14))",
+):
+    assert needle in visuals, f"Idle sniper optical optimization missing: {needle}"
+render_start = visuals.index("function WeaponVisuals:_render(deltaTime)")
+skip_start = visuals.index("if ViewmodelRenderPolicy.skipHiddenSniper(", render_start)
+skip_end = visuals.index("return", skip_start)
+assert visuals.index("self:_updateTransientFx(clock)", render_start) < skip_start
+assert visuals.index("self:_updateImpactMarks(clock)", render_start) < skip_start
+assert visuals.index("self:_refreshImportedWeaponIfSafe(clock)", render_start) < skip_start
+assert visuals.index("self.lastCameraCFrame = camera.CFrame", skip_start) < skip_end
+assert skip_end < visuals.index("local now = os.clock()", skip_end)
+assert skip_end < visuals.index("for _, entry in ipairs(self.parts) do", skip_end)
+assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
+
 # Both paths must use deterministic post-camera render priorities.
 # The gameplay/HUD pass may change camera roll/FOV; gun transform follows it.
 assert 'Enum.RenderPriority.Camera.Value + 1' in client

@@ -9,6 +9,17 @@ function Policy.needsUpdate(previousHidden, hidden)
     return previousHidden == nil or previousHidden ~= hidden
 end
 
+-- Skip expensive invisible sniper viewmodel geometry when the optical HUD
+-- fully covers it. Never skip a queued flash, spent case or reload: these
+-- still need their current-frame muzzle / ejection anchors. Pool updates
+-- and the camera's final pose are serviced before the caller returns.
+function Policy.skipHiddenSniper(weaponId, scoped, hidden, reloading,
+    pendingFlash, pendingCartridge)
+    return weaponId == "Sniper" and scoped == true and hidden == true
+        and reloading == false and pendingFlash == nil
+        and pendingCartridge == nil
+end
+
 function Policy.transparency(base, hidden)
     return hidden and 1 or base
 end

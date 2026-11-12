@@ -1,0 +1,9 @@
+IRON YARD — owner-authorized one-shot PUBLIC Roblox shooter release.
+Date 2026-11-12. Continue improving the publicly accessible FPS.
+Optimize fully hidden sniper optical scope rendering by avoiding unnecessary
+PBR/glove CFrame writes when idle, while retaining all active VFX, delayed
+casing/muzzle anchor synchronization and final camera orientation.
+Luau + source integration coverage; no new scripts running every frame,
+no new RemoteEvents, no new 3D assets, no combat/damage changes.
+Publish exact verified main SHA only after successful Rojo CI, with existing
+owner, experience, and PUBLIC destination checks; never alpha/private.
