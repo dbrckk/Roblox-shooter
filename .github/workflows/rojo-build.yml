@@ -116,6 +116,7 @@ jobs:
           ./luau scripts/test_weapon_mesh_policy.luau
           ./luau scripts/test_weapon_mesh_refresh_policy.luau
           ./luau scripts/test_weapon_mesh_swap_state.luau
+          ./luau scripts/test_weapon_viewmodel_cache_policy.luau
           ./luau scripts/test_weapon_mesh_layout.luau
           ./luau scripts/test_weapon_asset_policy.luau
           ./luau scripts/test_weapon_asset_load_plan.luau
