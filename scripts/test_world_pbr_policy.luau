@@ -5,6 +5,20 @@ assert(Policy.variantName("freight_steel") == "IronYardPbr_freight_steel")
 assert(Policy.variantName("warehouse_steel") == "IronYardPbr_warehouse_steel")
 assert(Policy.variantName("yard_asphalt") == "IronYardPbr_yard_asphalt")
 assert(Policy.variantName("untrusted") == nil, "Unknown variants are never applied")
+for _, style in ipairs(Policy.Materials) do
+    assert(Policy.clientVariant(style.key, style.base, "ECO") == "",
+        "ECO must render native materials for every approved family")
+    assert(Policy.clientVariant(style.key, style.base, "BALANCED") ==
+        Policy.variantName(style.key), "Balanced mode should retain PBR")
+    assert(Policy.clientVariant(style.key, style.base, "QUALITY") ==
+        Policy.variantName(style.key), "Quality mode should retain PBR")
+    assert(Policy.clientVariant(style.key, "Wood", "QUALITY") == nil,
+        "Never override mismatched base materials")
+end
+assert(Policy.clientVariant("forged", "Metal", "QUALITY") == nil,
+    "Unknown client keys may never select an asset")
+assert(Policy.clientVariant(nil, "Concrete", "ECO") == nil,
+    "Unmarked parts must never be modified")
 local function valid()
     local id = 12345
     local result = {

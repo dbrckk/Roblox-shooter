@@ -32,6 +32,8 @@ assert map_code.index("    WorldPbr.start()") < map_code.index("    buildArena(f
 assert 'if not ready or not part or not part:IsA("BasePart")' in material
 assert 'part.Material == Enum.Material[style.base]' in material
 assert 'part.MaterialVariant = Policy.variantName(key)' in material
+assert 'part:SetAttribute("IronYardPbrMaterial", key)' in material
+assert 'CollectionService:AddTag(part, "IronYardWorldPbr")' in material
 assert 'Workspace:SetAttribute("IronYardWorldPbrStatus", "FALLBACK")' in material
 assert 'Workspace:SetAttribute("IronYardWorldPbrStatus", "CONFIGURED")' in material
 assert 'low:SetAttribute("MantleTarget", true)' in map_code
