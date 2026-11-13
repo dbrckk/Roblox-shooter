@@ -120,3 +120,20 @@ the group, then welded to the existing invisible R6 combat hitboxes. Complete
 legacy Studio templates with one MeshPart per piece remain compatible.
 This remains an offline/import compatibility change until real Roblox asset
 IDs and in-engine appearance are verified.
+
+## LOD des modèles PBR propriétaires — 13 novembre 2026
+
+Les quatre modèles propriétaire VANGUARD ont reçu des IDs réels par le workflow
+[43397175811](https://github.com/dbrckk/Roblox-shooter/actions/runs/43397175811),
+puis leurs IDs ont été consignés dans le registre Git. Ce résultat certifie
+l'upload et la traçabilité, **pas le rendu réel dans Roblox ni une publication
+du place publique**.
+
+Avec les meshes multi-matériaux, chaque pièce R6 (tête, torse, quatre membres,
+fusil) conserve **sa première primitive comme Core**, toujours visible.
+Les autres primitives sont **Detail** : le client peut les masquer à distance
+avec les seuils ECO/BALANCED/QUALITY existants, particulièrement sur Android.
+Le serveur conserve tous les assets, les hitboxes R6 et les soudures ;
+aucune collision, trajectoire, navigation ou règle de combat ne change.
+La réduction de rendu est locale, réversible et n'est pas une garantie de FPS
+avant mesure en moteur.

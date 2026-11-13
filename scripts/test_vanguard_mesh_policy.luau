@@ -15,6 +15,24 @@ assert(Policy.primitiveCountValid(1) and Policy.primitiveCountValid(5))
 assert(not Policy.primitiveCountValid(0))
 assert(not Policy.primitiveCountValid(Policy.MAX_PRIMITIVES_PER_PIECE + 1))
 assert(not Policy.primitiveCountValid(2.5))
+-- A 7-part fighter always has one readable Core silhouette per R6 limb,
+-- even when every extra material primitive is culled for low-end Android.
+for _, piece in ipairs(Policy.Pieces) do
+    assert(Policy.visualTier(piece, 1) == "Core",
+        "All seven PBR bones must keep a visible base: " .. piece)
+    for index = 2, Policy.MAX_PRIMITIVES_PER_PIECE do
+        assert(Policy.visualTier(piece, index) == "Detail",
+            "Extra PBR materials must respect existing client LOD")
+    end
+end
+for _, bad in ipairs({ 0, -1, 1.5, Policy.MAX_PRIMITIVES_PER_PIECE + 1 }) do
+    assert(Policy.visualTier("torso", bad) == nil,
+        "Reject an out-of-bounds cosmetic primitive")
+end
+assert(Policy.visualTier("unknown", 1) == nil)
+assert(Policy.visualTier(nil, 1) == nil)
+assert(Policy.visualTier("head", 0/0) == nil)
+assert(Policy.visualTier("head", math.huge) == nil)
 assert(Policy.identifyPiece("VANGUARD_torso.001") == "torso")
 assert(Policy.identifyPiece("VANGUARD_left_arm_Primitive_04") == "left_arm")
 assert(Policy.identifyPiece("VANGUARD_rifle_7") == "rifle")
