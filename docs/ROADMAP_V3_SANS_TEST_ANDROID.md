@@ -1,11 +1,18 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
 **Date de référence : 13 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `784b55bb430c2894b711380d38005d2b10080098`  
-**Expérience Roblox :** IRON YARD publique, **version interne v62 confirmée** par [Actions #43515519494](https://github.com/dbrckk/Roblox-shooter/actions/runs/43515519494) ; **version de place Roblox 58**, source `784b55bb`.  
-**Preuves utilisateur :** deux captures Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v62 ni relevé PERF/FPS ne confirme encore les corrections visuelles en moteur**. Les autres validations bloquées doivent rester ouvertes.
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `6a9c4c42bed7a27f26a5fbb819ecb816c640cb18`  
+**Expérience Roblox :** IRON YARD publique, **version interne v63 confirmée** par [Actions #43517233138](https://github.com/dbrckk/Roblox-shooter/actions/runs/43517233138) ; **version de place Roblox 59**, source `6a9c4c42`.  
+**Preuves utilisateur :** deux captures Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v63 ni relevé PERF/FPS ne confirme encore le fonctionnement et la qualité visuelle en conditions réelles**. Les validations Roblox en moteur restent ouvertes.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v63 : réapparitions sûres en conditions de saturation (13 novembre 2026)
+
+- **Correctif fonctionnel :** [PR #102](https://github.com/dbrckk/Roblox-shooter/pull/102) supprime la branche dangereuse qui téléportait un combattant sur un pad pourtant physiquement bloqué. Une grille intérieure bornée à 49 cases réelles est vérifiée via les collisions Roblox. Sans position sûre, pas de téléportation forcée ni de `CFrame.new(nil)`.
+- **Parties préservées :** les joueurs reçoivent deux tentatives de placement supplémentaires sur le même personnage réel, sans toucher aux personnages remplacés ni aux duels ; les bots échouant à naître réessaient via la réconciliation, et ceux déjà présents ne provoquent pas de crash au reset. Le 1v1 utilise toujours ses propres pads opposés et validés.
+- **Preuve de livraison :** [workflow #43517233138](https://github.com/dbrckk/Roblox-shooter/actions/runs/43517233138), Roblox a confirmé **place version 59**, source `6a9c4c42bed7a27f26a5fbb819ecb816c640cb18` ; build Luau/Rojo vert, cible PUBLIC et propriétaire vérifiés.
+- **QA bloquante avant certification « jeu entièrement fonctionnel » :** effectuer une manche FFA complète, une transition 1v1, plusieurs morts/réapparitions et mesure FPS/P95 sur une session publique réelle. Aucune CI ne peut remplacer le moteur Roblox. Critères dans [PRODUCTION_SAFE_SPAWNS_2026-11-13.md](PRODUCTION_SAFE_SPAWNS_2026-11-13.md).
 
 ### Actualisation — PUBLIC v62 : toit 3D PBR et diagnostic propriétaire (13 novembre 2026)
 
