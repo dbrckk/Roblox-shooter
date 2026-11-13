@@ -14,7 +14,7 @@
 | Famille | Assets | IDs | Prêts offline | Bloqués |
 |---|---:|---:|---:|---:|
 | Armes | 5 | 10 | 5 | 0 |
-| Opérateurs VANGUARD | 4 | 4 | 0 | 4 |
+| Opérateurs VANGUARD | 4 | 4 | 4 | 0 |
 | Matériaux du monde | 3 | 12 | 0 | 3 |
 
 ## Armes — 10 IDs propriétaires
@@ -29,16 +29,16 @@
 
 Fallback vérifié hors moteur : `WeaponAssetPolicy` et `WeaponAssetLoadPlan` gardent le viewmodel procédural quand un ID manque, et `WeaponPbrFxSockets` fixe les sockets FX. **Aucun rendu, cadrage mobile ou coût de streaming n'a été observé.**
 
-## Opérateurs VANGUARD — 0 prêts hors moteur, 4 bloqués
+## Opérateurs VANGUARD — 4 prêts hors moteur, 0 bloqués
 
 | Asset | IDs | Owner | Source | Structure | Canaux | Fallback | Contrôle runtime manquant | Statut |
 |---|---|---|---|---|---|---|---|---|
-| `olive` | Modèle `0` | 9774173158 | `—` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `BLOCKED_ROBLOX_ASSET_APPROVAL` |
-| `sand` | Modèle `0` | 9774173158 | `—` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `BLOCKED_ROBLOX_ASSET_APPROVAL` |
-| `slate` | Modèle `0` | 9774173158 | `—` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `BLOCKED_ROBLOX_ASSET_APPROVAL` |
-| `rust` | Modèle `0` | 9774173158 | `—` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `BLOCKED_ROBLOX_ASSET_APPROVAL` |
+| `olive` | Modèle `132796067986747` | 9774173158 | `903deaafacc29011972b86cbea117bd52d211b76` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `READY_OFFLINE` |
+| `sand` | Modèle `120630851905937` | 9774173158 | `903deaafacc29011972b86cbea117bd52d211b76` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `READY_OFFLINE` |
+| `slate` | Modèle `73086824169421` | 9774173158 | `903deaafacc29011972b86cbea117bd52d211b76` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `READY_OFFLINE` |
+| `rust` | Modèle `136698723350933` | 9774173158 | `903deaafacc29011972b86cbea117bd52d211b76` | modèle opérateur complet | GLB + cartes PBR (archives locales) | personnage procédural IRON YARD | import propriétaire et rendu non confirmés | `READY_OFFLINE` |
 
-Blocage factuel : les quatre GLB existent dans les archives, mais aucun ID n'est approuvé. L'import propriétaire reste à faire, avec un préflight **sans upload réel**.
+Quatre IDs de modèles propriétaires sont consignés. Leur rendu réel dans Roblox et sur Android reste à vérifier.
 
 ## Matériaux du monde — 0 prêts hors moteur, 3 bloqués
 

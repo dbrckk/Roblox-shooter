@@ -1,13 +1,12 @@
--- IRON YARD / uploaded VANGUARD model package IDs.
--- Written only after confirmed Open Cloud asset creation and owner validation.
--- Zeros mean NO ASSETS UPLOADED: runtime keeps safe procedural fallback.
+-- IRON YARD / confirmed uploaded VANGUARD Model asset IDs.
+-- These are owned assets; never edit them using client-supplied data.
 return {
     ownerUserId = 9774173158,
-    sourceCommit = "",
+    sourceCommit = "903deaafacc29011972b86cbea117bd52d211b76",
     paletteModelIds = {
-        olive = 0,
-        sand = 0,
-        slate = 0,
-        rust = 0,
+        olive = 132796067986747,
+        sand = 120630851905937,
+        slate = 73086824169421,
+        rust = 136698723350933,
     },
 }
