@@ -1,0 +1,29 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox v56 update, 13 November 2026.
+
+Target ONLY the existing creator-owned PUBLIC IRON YARD experience.
+Require exact green Rojo CI for the authorization commit, independent
+universe/root place/owner/PUBLIC visibility verification, and the
+existing guarded versioned workflow. No private or test-place release.
+
+Purpose: make the four original creator-approved VANGUARD operator PBR
+models available in the live public place, with mobile-safe visual LOD
+and an owner-only in-game PERF verification readout.
+The approved 3D Models are versioned in src/shared/VanguardAssetIds.luau
+(ownerUserId 9774173158, palettes olive/sand/slate/rust, source archive
+commit 903deaafacc29011972b86cbea117bd52d211b76).
+Roblox asset upload succeeded in GitHub Actions run 43397175811.
+
+The server validates and sanitizes mesh imports before use, preserving
+existing R6 combat hitboxes and a complete procedural fallback.
+Every R6 component keeps one Core visual; other material primitives
+are Detail, culled client-side at appropriate graphics preset distances.
+The owner's PERF panel shows loader status and observed PBR-equipped bots.
+
+The 12 world PBR image IDs remain zero in the registry, so native
+world materials stay in use. Upload success alone does not prove that
+models render correctly in Roblox or improve Android frame times.
+No combat, matchmaking, progression, economy or collision rule changes.
+
+Authorize EXACTLY ONE public place update after fresh green CI, then
+inspect the confirmed Roblox place version and verify the PERF readout
+on Android. Any stale/unexpected target must be refused.
