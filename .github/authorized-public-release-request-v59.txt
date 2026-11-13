@@ -1,0 +1,29 @@
+IRON YARD -- one-time owner-requested PUBLIC Roblox v59 update, 13 November 2026.
+
+Target ONLY the already PUBLIC creator-owned IRON YARD Roblox experience.
+Source base is PUBLIC v58, accepted as Roblox place version 54 by
+workflow 43444851101. Never create a new, private or replacement
+experience. Never change universe, root place or PUBLIC visibility.
+
+Purpose: deploy the focused safety and graphics reliability fix in
+PR #88, commit 56f76ee4979280b84cff6d287b0d9964a90fc1cf.
+A tagged gameplay part can lose its approved material key or change
+base Material during replication, streaming, or a rebuilt arena.
+The client now removes only an exact whitelisted IRON YARD PBR
+MaterialVariant when its authorization becomes invalid. It also
+responds to real Enum.Material changes and tag removals, while leaving
+unrelated custom MaterialVariants untouched. Existing ECO/BALANCED/
+QUALITY handling and the native Roblox fallback remain unchanged.
+
+No new uploaded 3D models or textures. Keep all original 26 owner-
+approved asset IDs (10 weapons, 4 VANGUARD, 12 world images).
+No changes to hitboxes, damage, matchmaking, input, progression or
+gameplay physics. CI verifies the Luau policy and the wiring; real
+Android GPU and visual QA still requires a separate runtime check.
+
+Authorize exactly ONE release to the current owner-controlled PUBLIC
+place only after a fresh successful main Rojo build for the exact
+authorization commit. Independently verify universe, place, creator,
+existing PUBLIC visibility, source SHA, and successful Roblox place
+version response; refuse stale or unexpected targets. No automated
+asset upload or duplicate releases.
