@@ -20,4 +20,4 @@
 3. Si `DELIVERY_FAILED` : inspecter warnings Roblox serveur de l'ID autorisé et les permissions de l'expérience. Si `VALIDATION_FAILED` : inspecter les MeshParts, marker `IRONYARD_WeaponOrigin` et les quatre cartes `SurfaceAppearance` sans supprimer les validations.
 4. Vérifier visuellement l'arme et les modèles VANGUARD ; comparer QUALITÉ et BALANCÉ, FPS/P95 Android, et commandes touch avant de déclarer le rendu résolu.
 
-**Validation automatisée :** compilateur officiel Luau + tests politiques de reprise/contrats du loader + construction Rojo en CI. Pas de preuve de rendu Android ou de publication Roblox associée au merge.
+**Validation automatisée :** compilateur officiel Luau + tests politiques de reprise/contrats du loader + construction Rojo en CI. **Publication publique v60 réussie** [Actions #43474268716](https://github.com/dbrckk/Roblox-shooter/actions/runs/43474268716), version de place Roblox 56. **Pas encore de preuve de rendu Android après publication**.

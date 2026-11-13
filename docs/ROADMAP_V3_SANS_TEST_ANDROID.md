@@ -1,11 +1,19 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
 **Date de référence : 13 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `bc58f543a7c80651497de5ba60f6796f84315da9`  
-**Expérience Roblox :** IRON YARD publique, **version interne v59 confirmée** par [Actions #43449396469](https://github.com/dbrckk/Roblox-shooter/actions/runs/43449396469) ; **version de place Roblox 55**, source `bc58f543`.  
-**Condition utilisateur actuelle :** pas de test manuel Android/Roblox Studio possible pour le moment. Les tâches bloquées doivent rester en attente **sans bloquer l'ensemble du chantier**.
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `e6b420b679bf8a8178bee5b2d125f86793c3b0eb`  
+**Expérience Roblox :** IRON YARD publique, **version interne v60 confirmée** par [Actions #43474268716](https://github.com/dbrckk/Roblox-shooter/actions/runs/43474268716) ; **version de place Roblox 56**, source `e6b420b`.  
+**Preuves utilisateur :** deux captures réelles Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v60 ni relevé PERF/FPS ne confirme encore les corrections en moteur**. Les autres validations bloquées doivent rester ouvertes.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v60 : corrections Android et livraison des armes PBR (13 novembre 2026)
+
+- **Captures Android reçues :** disproportion des textes des touches, nom d'arme envahissant, étiquettes IA visibles derrière des surfaces opaques, rendu de l'AR-24 encore géométrique. Audit et priorités dans [AUDIT_ANDROID_VISUAL_2026-11-13.md](AUDIT_ANDROID_VISUAL_2026-11-13.md).
+- **Correctifs intégrés :** [PR #91](https://github.com/dbrckk/Roblox-shooter/pull/91) limite l'agrandissement du texte sans toucher aux rectangles d'interaction, compacte le libellé et supprime `AlwaysOnTop` sur les marqueurs IA.
+- **Chargement d'assets durci :** [PR #92](https://github.com/dbrckk/Roblox-shooter/pull/92) ajoute jusqu'à deux reprises d'un téléchargement Roblox défaillant, sans contourner la validation des modèles, plus les statuts par arme dans le panneau privé défilable [PBR_DELIVERY_ANDROID_2026-11-13.md](PBR_DELIVERY_ANDROID_2026-11-13.md).
+- **Preuve publique :** CI principale et [publication #43474268716](https://github.com/dbrckk/Roblox-shooter/actions/runs/43474268716) vertes ; Roblox a confirmé **version de place 56**, source `e6b420b679bf8a8178bee5b2d125f86793c3b0eb`. Le déclencheur ne publie qu'après nouveau marqueur d'autorisation.
+- **Reste ouvert (priorité P0/P1) :** obtenir en jeu les cinq statuts `READY` ou leurs causes d'échec, observer `IronYardPerfWeaponSource=PBR` pour chaque arme, les quatre palettes VANGUARD, l'occlusion et les caractères de touches sur Android. Mesurer FPS/P95 et vérifier textures sol/toiture avant retouche globale. **Ne pas déclarer l'apparence corrigée sur la seule CI.**
 
 ### Actualisation — PUBLIC v59 : sécurité de la synchronisation PBR (13 novembre 2026)
 
