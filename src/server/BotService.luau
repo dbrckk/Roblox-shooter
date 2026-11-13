@@ -65,6 +65,9 @@ end
 local function buildCharacter(slot, skill)
     -- Dynamic spawning prevents fixed-corner camping and respects new freight cover.
     local spawn = SpawnService.selectSafeSpawn(nil)
+    -- During temporary saturation, skip creation and let the existing
+    -- 1.25-second reconciliation retry; never create a bot in solid cover.
+    if not spawn then return nil end
     local model = Instance.new("Model")
     model.Name = "[BOT] " .. config.BotNames[slot]
     model:SetAttribute("IsArenaBot", true)
@@ -307,6 +310,7 @@ end
 local function createBot(slot)
     local skill = config.Difficulties[slot]
     local model, humanoid, root, head, joints, appearance = buildCharacter(slot, skill)
+    if not model then return nil end
     local bot = {
         slot = slot,
         name = model.Name,
@@ -921,7 +925,12 @@ function BotService.resetRound()
             bot.humanoid.AutoRotate = true
             bot.root.AssemblyLinearVelocity = Vector3.zero
             bot.root.AssemblyAngularVelocity = Vector3.zero
-            bot.model:PivotTo(CFrame.new(SpawnService.selectSafeSpawn(bot.model)))
+            local safeRoundSpawn = SpawnService.selectSafeSpawn(bot.model)
+            if safeRoundSpawn then
+                bot.model:PivotTo(CFrame.new(safeRoundSpawn))
+            end
+            -- If every pad is blocked, keep the already-live bot where it
+            -- was; a nil CFrame must never terminate the round reset.
             bot.lastAnimationPosition = bot.root.Position
             bot.lastAnimationFacing = bot.root.CFrame.LookVector
             bot.lastAnimationVelocity = bot.root.AssemblyLinearVelocity
