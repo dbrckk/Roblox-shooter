@@ -42,7 +42,7 @@ def main():
     # regression must keep working after either/both families go live.
     def with_source_commit(text, value):
         replaced, count = re.subn(
-            r'sourceCommit\\s*=\\s*"[^"]*"', 'sourceCommit = "' + value + '"',
+            r'sourceCommit\s*=\s*"[^"]*"', 'sourceCommit = "' + value + '"',
             text, count=1)
         require(count == 1, "Missing asset provenance entry")
         return replaced
@@ -50,14 +50,14 @@ def main():
     palette = with_source_commit(original_source(matrix.PALETTES), "b" * 40)
     for i, name in enumerate(("olive", "sand", "slate", "rust")):
         palette, count = re.subn(
-            rf"(?m)^(\\s*{name}\\s*=\\s*)\\d+(\\s*,)",
+            rf"(?m)^(\s*{name}\s*=\s*)\d+(\s*,)",
             lambda match, value=90001 + i: match.group(1) + str(value) + match.group(2),
             palette)
         require(count == 1, "Missing VANGUARD model entry " + name)
     world = with_source_commit(original_source(matrix.WORLD), "c" * 40)
     counter = iter(range(91001, 91013))
     world, amount = re.subn(
-        r"(ColorMap|NormalMap|RoughnessMap|MetalnessMap)\\s*=\\s*\\d+",
+        r"(ColorMap|NormalMap|RoughnessMap|MetalnessMap)\s*=\s*\d+",
         lambda match: match.group(1) + " = " + str(next(counter)), world)
     require(amount == 12, "Expected exactly 12 PBR channels")
 
