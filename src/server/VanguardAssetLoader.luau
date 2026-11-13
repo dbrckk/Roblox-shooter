@@ -14,6 +14,23 @@ local VanguardAssetLoader = {}
 local started = false
 local COLORS = Policy.Palettes
 local PIECES = Policy.Pieces
+-- Roblox InsertService can intermittently reject delivery before the model
+-- is returned. Retry only this network boundary, never invalid mesh content.
+local MAX_DELIVERY_ATTEMPTS = 3
+local function loadOwnedPackage(assetId)
+    local lastError = "unknown"
+    for attempt = 1, MAX_DELIVERY_ATTEMPTS do
+        local ok, loaded = pcall(function()
+            return InsertService:LoadAsset(assetId)
+        end)
+        if ok then return loaded end
+        lastError = tostring(loaded)
+        if attempt < MAX_DELIVERY_ATTEMPTS then
+            task.wait(0.35 * (2 ^ (attempt - 1)))
+        end
+    end
+    error("VANGUARD_DELIVERY_FAILED: " .. lastError, 0)
+end
 
 local function hasCompleteTemplateSet(folder)
     for _, palette in ipairs(COLORS) do
@@ -33,7 +50,7 @@ local function extractPackage(owner, palette)
     local id = AssetIds.paletteModelIds[palette]
     assert(typeof(id) == "number" and id > 0 and id % 1 == 0,
         "Missing uploaded VANGUARD model asset ID: " .. palette)
-    local loaded = InsertService:LoadAsset(id)
+    local loaded = loadOwnedPackage(id)
     assert(loaded and loaded:IsA("Model"), "Roblox asset is not a Model package")
     -- The loaded container stays outside Workspace. Even a creator-owned
     -- package is untrusted: only validated and sanitized meshes cross over.
@@ -106,7 +123,10 @@ local function loadConfiguredPbr()
     end)
     if not success or not hasCompleteTemplateSet(staging) then
         staging:Destroy()
-        Workspace:SetAttribute("IronYardPbrStatus", "FALLBACK")
+        local code = not success and type(message) == "string"
+            and message:find("VANGUARD_DELIVERY_FAILED", 1, true)
+            and "DELIVERY_FAILED" or "VALIDATION_FAILED"
+        Workspace:SetAttribute("IronYardPbrStatus", code)
         warn("[IRON YARD] PBR package import incomplete; keeping procedural avatars: "
             .. tostring(message))
         return
