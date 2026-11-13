@@ -20,6 +20,7 @@ workflow = source(".github/workflows/rojo-build.yml")
 
 for item in ("Policy.MAX_PRIMITIVES_PER_PIECE = 8",
              "function Policy.primitiveCountValid(count)",
+             "function Policy.visualTier(piece, primitiveIndex)",
              'normalized:match("^" .. prefixed .. "%d+$")',
              'normalized:match("^" .. prefixed .. "primitive%d+$")'):
     must(policy, item, "bounded identity policy")
@@ -38,6 +39,9 @@ for item in ("loaded:GetDescendants()", "Policy.identifyPiece(ancestor.Name)",
     must(loader, item, "loader safety and atomic fallback")
 for item in ("MeshKit.primitives(template)",
              "MeshKit.cleanClone(template)",
+             "MeshPolicy.visualTier(partName, index)",
+             'part:SetAttribute("NeonCosmeticTier", tier)',
+             'part.CastShadow = tier == "Core"',
              "part.CFrame = target.CFrame * offset * relative",
              "part.CanCollide = false", "part.CanTouch = false",
              "part.CanQuery = false", 'bodyPart.Transparency = 1',
@@ -47,6 +51,12 @@ for item in ("primitive_count += len(primitives)",
              "1 <= len(primitives) <= 8", '"material_primitives": primitive_count'):
     must(audit, item, "GLB primitive count audit")
 must(test, 'Policy.identifyPiece("VANGUARD_torso.001")', "numbered variant regression")
+must(test, 'Policy.visualTier(piece, 1) == "Core"', "seven retained R6 cores")
+must(test, 'Policy.visualTier(piece, index) == "Detail"', "secondary material detail LOD")
+lod = source("src/client/BotLOD.client.luau")
+for item in ('tier == "Detail"', 'part.LocalTransparencyModifier =',
+             'BotDetailCache.decide(entry.state,'):
+    must(lod, item, "existing client-only bot LOD")
 must(workflow, "python3 scripts/check_vanguard_import_contract.py",
      "CI wiring")
 print("IRON YARD multi-primitive PBR import safety contract: OK")

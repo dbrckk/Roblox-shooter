@@ -16,6 +16,19 @@ function Policy.primitiveCountValid(count)
         and count >= 1 and count <= Policy.MAX_PRIMITIVES_PER_PIECE
 end
 
+-- Each of the seven R6 pieces keeps its first PBR primitive at any range.
+-- Other material primitives are cosmetic details, hidden by the existing
+-- client-only bot LOD when far away. Missing/invalid primitives fail closed.
+function Policy.visualTier(piece, primitiveIndex)
+    if not Policy.primitiveCountValid(primitiveIndex) then return nil end
+    local known = false
+    for _, name in ipairs(Policy.Pieces) do
+        if name == piece then known = true break end
+    end
+    if not known then return nil end
+    return primitiveIndex == 1 and "Core" or "Detail"
+end
+
 function Policy.identifyPiece(name)
     if type(name) ~= "string" then return nil end
     local normalized = string.lower(name):gsub("[^a-z0-9]", "")

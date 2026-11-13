@@ -3,6 +3,9 @@
 -- Armor is welded to the R6 Humanoid skeleton and is non-colliding/non-queryable.
 local ServerStorage = game:GetService("ServerStorage")
 local MeshKit = require(script.Parent:WaitForChild("VanguardMeshKit"))
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local MeshPolicy = require(ReplicatedStorage:WaitForChild("Shared")
+    :WaitForChild("VanguardMeshPolicy"))
 local BotVisuals = {}
 local importedPalette = { "olive", "sand", "slate", "rust" }
 local importedParts = { "torso", "head", "left_arm", "right_arm", "left_leg", "right_leg", "rifle" }
@@ -45,8 +48,13 @@ local function tryImportedMeshKit(model, rig, index, accent)
             part.CanCollide = false
             part.CanTouch = false
             part.CanQuery = false
-            part.CastShadow = true
-            part:SetAttribute("NeonCosmeticTier", "Core")
+            -- Every body piece retains a server-authored base MeshPart at any
+            -- distance. Secondary material primitives use the existing
+            -- mobile/desktop Detail LOD; no collision or hitbox is touched.
+            local tier = MeshPolicy.visualTier(partName, index)
+            assert(tier, "Invalid VANGUARD component/primitive tier")
+            part.CastShadow = tier == "Core"
+            part:SetAttribute("NeonCosmeticTier", tier)
             -- New grouped imports store transforms relative to their first
             -- primitive. Legacy manual single-MeshPart templates retain
             -- their original identity alignment.

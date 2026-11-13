@@ -37,17 +37,29 @@ def main():
                 < before.index("git add src/shared/" + registry),
                 "Matrix must be generated before committing approved IDs")
 
-    palette = original_source(matrix.PALETTES).replace(
-        'sourceCommit = ""', 'sourceCommit = "' + "b" * 40 + '"')
+    # Generate synthetic complete asset families regardless of whether main
+    # currently contains zero IDs or real Roblox-approved owner uploads. This
+    # regression must keep working after either/both families go live.
+    def with_source_commit(text, value):
+        replaced, count = re.subn(
+            r'sourceCommit\s*=\s*"[^"]*"', 'sourceCommit = "' + value + '"',
+            text, count=1)
+        require(count == 1, "Missing asset provenance entry")
+        return replaced
+
+    palette = with_source_commit(original_source(matrix.PALETTES), "b" * 40)
     for i, name in enumerate(("olive", "sand", "slate", "rust")):
-        palette = palette.replace(name + " = 0,", name + f" = {90001 + i},")
-    world = original_source(matrix.WORLD).replace(
-        'sourceCommit = ""', 'sourceCommit = "' + "c" * 40 + '"')
+        palette, count = re.subn(
+            rf"(?m)^(\s*{name}\s*=\s*)\d+(\s*,)",
+            lambda match, value=90001 + i: match.group(1) + str(value) + match.group(2),
+            palette)
+        require(count == 1, "Missing VANGUARD model entry " + name)
+    world = with_source_commit(original_source(matrix.WORLD), "c" * 40)
     counter = iter(range(91001, 91013))
     world, amount = re.subn(
-        r"(ColorMap|NormalMap|RoughnessMap|MetalnessMap) = 0",
-        lambda m: m.group(1) + " = " + str(next(counter)), world)
-    require(amount == 12, "Expected 12 map channels")
+        r"(ColorMap|NormalMap|RoughnessMap|MetalnessMap)\s*=\s*\d+",
+        lambda match: match.group(1) + " = " + str(next(counter)), world)
+    require(amount == 12, "Expected exactly 12 PBR channels")
 
     def build_with(overrides):
         matrix.source = lambda path: (overrides[path] if path in overrides
