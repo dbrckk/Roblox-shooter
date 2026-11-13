@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - ".github/authorized-pbr-rollout-v1.txt"
+      - ".github/authorized-pbr-rollout-v2.txt"
 
 permissions:
   actions: write
