@@ -2,6 +2,7 @@
 -- Core collision geometry is owned by MapService. These details cannot block
 -- raycasts, movement, or PathfindingService and are locally culled on mobile.
 local Lighting = game:GetService("Lighting")
+local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
 local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))
 local WarehouseEntranceArt = require(script.Parent:WaitForChild("WarehouseEntranceArt"))
 local CatwalkDeckArt = require(script.Parent:WaitForChild("CatwalkDeckArt"))
@@ -357,6 +358,11 @@ local function warehouseRoof(parent)
                 * CFrame.Angles(0, 0, side * math.rad(-8)),
             COLOR.slate, Enum.Material.Metal, "Core")
         sheet.CastShadow = false
+        -- Two actual roof sheets dominate the Android upward view. Apply
+        -- existing approved warehouse steel instead of flat native Metal.
+        -- Visual-only parts: no collision, ray query or extra texture IDs.
+        -- ECO still selects their original native Metal locally.
+        WorldPbr.apply(sheet, "warehouse_steel")
         -- Rolled metal seams provide a broad material rhythm from ground
         -- and from elevated catwalks, without uploading texture assets.
         for index = -4, 4 do

@@ -10,6 +10,7 @@ bot = (ROOT / "src/server/BotVisuals.luau").read_text()
 loader = (ROOT / "src/server/VanguardAssetLoader.luau").read_text()
 world = (ROOT / "src/server/WorldPbrMaterials.luau").read_text()
 ci = (ROOT / ".github/workflows/rojo-build.yml").read_text()
+art = (ROOT / "src/server/ArenaArt.luau").read_text()
 
 for required in (
     'if not RunService:IsStudio() and not (',
@@ -58,6 +59,17 @@ for needle in (
 assert weapon_loader.index('local package = fetchOwnedModel(assetId)') < (
     weapon_loader.index('local selected = Layout.collect(package,')
 ), "Never retry model content validation or bypass owner whitelists"
+for needle in (
+    'local WorldPbrPolicy = require(Shared:WaitForChild("WorldPbrPolicy"))',
+    'for _, style in ipairs(WorldPbrPolicy.Materials) do',
+    'local group = type(key) == "string" and byFamily[key] or nil',
+    'part.MaterialVariant == WorldPbrPolicy.variantName(key)',
+    '"ROOF / pitched corrugated shell"',
+    'Roof: %d/%d',
+    'table.concat(familyLines, "\\n")',
+):
+    assert needle in overlay, f"Missing live owner-only material coverage: {needle}"
+assert 'WorldPbr.apply(sheet, "warehouse_steel")' in art
 assert overlay.count('.. pbrSnapshot() .. localSwapSummary()') == 2, (
     "Include PBR readiness both before and after server telemetry is available")
 assert 'model:SetAttribute("NeonVisualSource", "PBR_MESH")' in bot

@@ -16,6 +16,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local PrecisionNet = require(Shared:WaitForChild("PrecisionNet"))
 local FrameWindow = require(Shared:WaitForChild("ClientFrameWindow"))
 local WeaponSwapMetrics = require(Shared:WaitForChild("WeaponSwapMetrics"))
+local WorldPbrPolicy = require(Shared:WaitForChild("WorldPbrPolicy"))
 local remote = PrecisionNet.getRemotes(false).PerformanceDiagnostics
 
 local gui = Instance.new("ScreenGui")
@@ -161,24 +162,47 @@ local function pbrSnapshot()
             end
         end
     end
+    -- Distinguish missing imports from a bad-looking material. This runs
+    -- only while the owner explicitly keeps PERF open: no gameplay polling,
+    -- new network messages or GPU readbacks.
     local worldTagged, worldRendered = 0, 0
+    local roofTagged, roofRendered = 0, 0
+    local byFamily = {}
+    for _, style in ipairs(WorldPbrPolicy.Materials) do
+        byFamily[style.key] = { tagged = 0, rendered = 0 }
+    end
     for _, part in ipairs(CollectionService:GetTagged("IronYardWorldPbr")) do
         if part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
             worldTagged += 1
             local key = part:GetAttribute("IronYardPbrMaterial")
-            if type(key) == "string"
-                and part.MaterialVariant == "IronYardPbr_" .. key then
+            local group = type(key) == "string" and byFamily[key] or nil
+            if group then group.tagged += 1 end
+            local applied = group ~= nil
+                and part.MaterialVariant == WorldPbrPolicy.variantName(key)
+            if applied then
                 worldRendered += 1
+                group.rendered += 1
+            end
+            if part.Name:find("ROOF / pitched corrugated shell", 1, true) == 1 then
+                roofTagged += 1
+                if applied then roofRendered += 1 end
             end
         end
+    end
+    local familyLines = {}
+    for _, style in ipairs(WorldPbrPolicy.Materials) do
+        local group = byFamily[style.key]
+        table.insert(familyLines, string.format("%s: %d/%d",
+            style.key, group.rendered, group.tagged))
     end
     return string.format(
         "\n--- PBR (ce client uniquement) ---\n"
         .. "Kit: %s | bots PBR: %d/%d\n"
         .. "Meshes: %d | Detail visible: %d/%d\n"
-        .. "Decor: %s | PBR local: %d/%d",
+        .. "Decor: %s | PBR local: %d/%d\n%s\nRoof: %d/%d",
         kit, imported, total, primitives, visible, details, world,
-        worldRendered, worldTagged) .. weaponDeliverySnapshot()
+        worldRendered, worldTagged, table.concat(familyLines, "\n"),
+        roofRendered, roofTagged) .. weaponDeliverySnapshot()
 end
 
 -- These readings are client-local and only polled with the private panel.
