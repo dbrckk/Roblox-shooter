@@ -57,9 +57,27 @@ local function cleanClone(mesh)
     return clone
 end
 
+local function fetchOwnedModel(assetId)
+    -- Roblox explicitly warns that model delivery can fail temporarily.
+    -- Retry ONLY delivery failures, not untrusted or incomplete model content.
+    -- Both worker count and retry count are bounded; combat never waits.
+    local lastError = "unknown"
+    for attempt = 1, LoadPlan.MAX_FETCH_ATTEMPTS do
+        local ok, result = pcall(function()
+            return AssetService:LoadAssetAsync(assetId)
+        end)
+        if ok then return result end
+        lastError = tostring(result)
+        if attempt < LoadPlan.MAX_FETCH_ATTEMPTS then
+            task.wait(LoadPlan.retryDelay(attempt))
+        end
+    end
+    error("ASSET_DELIVERY_FAILED: " .. lastError, 0)
+end
+
 local function importVariant(assetId, weaponId, lod)
-    -- Roblox's modern Model loader enforces owner/experience permissions.
-    local package = AssetService:LoadAssetAsync(assetId)
+    -- Owner/experience permissions are still enforced by Roblox.
+    local package = fetchOwnedModel(assetId)
     assert(package and package:IsA("Model"), "Asset is not a Roblox Model")
     local success, result = pcall(function()
         -- Roblox glTF imports contain a nested Model for each authored
@@ -126,7 +144,10 @@ local function loadPair(weaponId, ids)
         staging:Destroy()
         warn("[IRON YARD] Weapon mesh not activated: " .. weaponId
             .. " (" .. tostring(result) .. ")")
-        return nil
+        local code = not success and type(result) == "string"
+            and result:find("ASSET_DELIVERY_FAILED", 1, true)
+            and "DELIVERY_FAILED" or "VALIDATION_FAILED"
+        return nil, code
     end
     return staging
 end
@@ -148,6 +169,12 @@ local function validPair(category, weaponId)
     return category ~= nil
         and templateIsComplete(category:FindFirstChild("LOD0"), weaponId)
         and templateIsComplete(category:FindFirstChild("LOD1"), weaponId)
+end
+
+local function publishWeaponState(weaponId, state)
+    -- Stable owner diagnostics: only an enum state, never assets, keys,
+    -- raw Roblox error messages or client-controlled weapon names.
+    Workspace:SetAttribute("IronYardWeaponState_" .. weaponId, state)
 end
 
 local function reportStatus(root, pending, authorized)
@@ -178,6 +205,12 @@ local function loadConfigured()
         return validPair(root:FindFirstChild(weaponId), weaponId)
     end)
     local pending = #queue
+    for _, weaponId in ipairs(Policy.Weapons) do
+        local state = validPair(root:FindFirstChild(weaponId), weaponId)
+            and "READY" or (Policy.pair(Registry, weaponId)
+                and "QUEUED" or "UNCONFIGURED")
+        publishWeaponState(weaponId, state)
+    end
     reportStatus(root, pending, true)
     if pending == 0 then return end
 
@@ -191,7 +224,9 @@ local function loadConfigured()
             local job = queue[index]
             if not job then return end
 
-            local replacement = loadPair(job.weaponId, job.ids)
+            publishWeaponState(job.weaponId, "LOADING")
+            local replacement, failureState = loadPair(job.weaponId, job.ids)
+            local finalState = failureState or "VALIDATION_FAILED"
             if replacement then
                 local liveRoot = ReplicatedStorage:FindFirstChild(ROOT_NAME)
                 if liveRoot == root then
@@ -208,11 +243,15 @@ local function loadConfigured()
                         replacement.Parent = root
                         if existing then existing:Destroy() end
                     end
+                    finalState = validPair(root:FindFirstChild(job.weaponId),
+                        job.weaponId) and "READY" or "VALIDATION_FAILED"
                 else
                     -- Studio may replace the entire root during a download.
                     replacement:Destroy()
+                    finalState = "ROOT_CHANGED"
                 end
             end
+            publishWeaponState(job.weaponId, finalState)
             pending -= 1
             reportStatus(ReplicatedStorage:FindFirstChild(ROOT_NAME), pending, true)
         end
@@ -227,6 +266,10 @@ function Loader.start()
     started = true
     local current = ReplicatedStorage:FindFirstChild(ROOT_NAME)
     reportStatus(current, 0, false)
+    for _, weaponId in ipairs(Policy.Weapons) do
+        publishWeaponState(weaponId, validPair(current and current:FindFirstChild(weaponId),
+            weaponId) and "READY" or "DISABLED")
+    end
     if not Policy.sameOwner(Registry,
         game.CreatorType == Enum.CreatorType.User and "User" or "Other",
         game.CreatorId) then return end

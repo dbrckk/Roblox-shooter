@@ -4,6 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 overlay = (ROOT / "src/client/PerfOverlay.client.luau").read_text()
+weapon_loader = (ROOT / "src/server/WeaponAssetLoader.luau").read_text()
+weapon_plan = (ROOT / "src/shared/WeaponAssetLoadPlan.luau").read_text()
 bot = (ROOT / "src/server/BotVisuals.luau").read_text()
 loader = (ROOT / "src/server/VanguardAssetLoader.luau").read_text()
 world = (ROOT / "src/server/WorldPbrMaterials.luau").read_text()
@@ -25,6 +27,37 @@ for required in (
     'if not active then return end',
 ):
     assert required in overlay, "Missing secure owner diagnostic: " + required
+for needle in (
+    "local function weaponDeliverySnapshot()",
+    '"IronYardWeaponState_" .. weaponId',
+    'Workspace:GetAttribute("IronYardWeaponMeshReadyCount")',
+    'label.AutomaticSize = Enum.AutomaticSize.Y',
+    'scroller.AutomaticCanvasSize = Enum.AutomaticSize.Y',
+    'panel.Size = UDim2.new(0, 300, 1, -110)',
+    'panelLimit.MaxSize = Vector2.new(300, 485)',
+    '.. weaponDeliverySnapshot()',
+):
+    assert needle in overlay, f"Owner-only PBR delivery / safe-scroll diagnosis missing: {needle}"
+for needle in (
+    'Plan.MAX_FETCH_ATTEMPTS = 3',
+    'function Plan.retryDelay(failedAttempt)',
+):
+    assert needle in weapon_plan, f"Unsafe or missing bounded retry: {needle}"
+for needle in (
+    'local function fetchOwnedModel(assetId)',
+    'AssetService:LoadAssetAsync(assetId)',
+    'if attempt < LoadPlan.MAX_FETCH_ATTEMPTS then',
+    'task.wait(LoadPlan.retryDelay(attempt))',
+    'error("ASSET_DELIVERY_FAILED: " .. lastError, 0)',
+    '"DELIVERY_FAILED" or "VALIDATION_FAILED"',
+    'publishWeaponState(job.weaponId, "LOADING")',
+    'publishWeaponState(job.weaponId, finalState)',
+    'validPair(root:FindFirstChild(job.weaponId)',
+):
+    assert needle in weapon_loader, f"Weapon import fail-closed recovery missing: {needle}"
+assert weapon_loader.index('local package = fetchOwnedModel(assetId)') < (
+    weapon_loader.index('local selected = Layout.collect(package,')
+), "Never retry model content validation or bypass owner whitelists"
 assert overlay.count('.. pbrSnapshot() .. localSwapSummary()') == 2, (
     "Include PBR readiness both before and after server telemetry is available")
 assert 'model:SetAttribute("NeonVisualSource", "PBR_MESH")' in bot

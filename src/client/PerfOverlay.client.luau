@@ -40,18 +40,35 @@ toggle.Parent = gui
 local panel = Instance.new("Frame")
 panel.Name = "PerformancePanel"
 panel.Visible = false
-panel.Size = UDim2.fromOffset(300, 485)
+-- PERF is owner-only and must remain usable on compact landscape phones.
+-- A fixed 485px panel previously extended below the physical viewport.
+panel.Size = UDim2.new(0, 300, 1, -110)
 panel.Position = UDim2.fromOffset(12, 100)
+local panelLimit = Instance.new("UISizeConstraint")
+panelLimit.MaxSize = Vector2.new(300, 485)
+panelLimit.Parent = panel
 panel.BackgroundColor3 = Color3.fromRGB(21, 29, 33)
 panel.BackgroundTransparency = 0.07
 panel.BorderSizePixel = 0
 panel.Parent = gui
 
+local scroller = Instance.new("ScrollingFrame")
+scroller.Name = "DiagnosticsScroll"
+scroller.Size = UDim2.fromScale(1, 1)
+scroller.CanvasSize = UDim2.fromOffset(0, 0)
+scroller.AutomaticCanvasSize = Enum.AutomaticSize.Y
+scroller.ScrollingDirection = Enum.ScrollingDirection.Y
+scroller.ScrollBarThickness = 4
+scroller.BackgroundTransparency = 1
+scroller.BorderSizePixel = 0
+scroller.Parent = panel
+
 local label = Instance.new("TextLabel")
 label.Name = "Diagnostics"
 label.BackgroundTransparency = 1
 label.Position = UDim2.fromOffset(10, 8)
-label.Size = UDim2.new(1, -18, 1, -14)
+label.Size = UDim2.new(1, -24, 0, 0)
+label.AutomaticSize = Enum.AutomaticSize.Y
 label.TextColor3 = Color3.fromRGB(223, 231, 219)
 label.Font = Enum.Font.Code
 label.TextSize = 12
@@ -59,7 +76,7 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.TextYAlignment = Enum.TextYAlignment.Top
 label.TextWrapped = false
 label.Text = "IRON YARD / DIAGNOSTICS\nActivation en cours..."
-label.Parent = panel
+label.Parent = scroller
 
 local active = false
 local lastPacket = nil
@@ -99,6 +116,21 @@ local function weaponMetrics()
         player:GetAttribute("IronYardPerfRemoteAudioRefs") or 0)
 end
 
+
+-- Server-owned material/weapon delivery diagnostics. No asset IDs, credentials,
+-- raw server error messages or extra network traffic are exposed to the client.
+local function weaponDeliverySnapshot()
+    local states = {}
+    for _, weaponId in ipairs({ "AssaultRifle", "Pistol", "Shotgun", "Sniper", "Knife" }) do
+        local state = Workspace:GetAttribute("IronYardWeaponState_" .. weaponId)
+        table.insert(states, weaponId .. ": " .. tostring(state or "UNKNOWN"))
+    end
+    return string.format(
+        "\n--- ARMES PBR (serveur) ---\n%s: %s/%d disponibles\n%s",
+        tostring(Workspace:GetAttribute("IronYardWeaponMeshStatus") or "UNKNOWN"),
+        tostring(Workspace:GetAttribute("IronYardWeaponMeshReadyCount") or 0),
+        5, table.concat(states, "  |  "))
+end
 
 -- Private and opt-in only: count locally replicated bot visuals without
 -- scanning server hitboxes on every frame or exposing account data.
@@ -146,7 +178,7 @@ local function pbrSnapshot()
         .. "Meshes: %d | Detail visible: %d/%d\n"
         .. "Decor: %s | PBR local: %d/%d",
         kit, imported, total, primitives, visible, details, world,
-        worldRendered, worldTagged)
+        worldRendered, worldTagged) .. weaponDeliverySnapshot()
 end
 
 -- These readings are client-local and only polled with the private panel.

@@ -4,6 +4,18 @@
 local Plan = {}
 Plan.MAX_WORKERS = 2
 Plan.TOTAL_WEAPONS = 5
+-- Retrying network delivery is safe; never retry a content validation failure
+-- or initiate additional owner uploads. Only known registry asset IDs are used.
+Plan.MAX_FETCH_ATTEMPTS = 3
+
+function Plan.retryDelay(failedAttempt)
+    if type(failedAttempt) ~= "number" or failedAttempt ~= failedAttempt
+        or failedAttempt % 1 ~= 0 or failedAttempt < 1
+        or failedAttempt >= Plan.MAX_FETCH_ATTEMPTS then
+        return 0
+    end
+    return 0.35 * (2 ^ (failedAttempt - 1))
+end
 
 function Plan.workers(pending)
     if type(pending) ~= "number" or pending ~= pending or pending <= 0
