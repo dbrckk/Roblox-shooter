@@ -1,5 +1,14 @@
 local Plan = require("../src/shared/WeaponAssetLoadPlan")
 assert(Plan.MAX_WORKERS == 2)
+assert(Plan.MAX_FETCH_ATTEMPTS == 3)
+assert(Plan.retryDelay(1) == 0.35)
+assert(Plan.retryDelay(2) == 0.7)
+for _, attempt in ipairs({0, -1, 3, 4, math.huge, 1.5, "2"}) do
+    assert(Plan.retryDelay(attempt) == 0, "Bound retries to two short delays")
+end
+assert(Plan.retryDelay(0/0) == 0)
+-- Only two concurrent workers, at most six remote attempts per worker.
+assert(Plan.workers(9) * Plan.MAX_FETCH_ATTEMPTS == 6)
 for _, pair in ipairs({{0,0},{1,1},{2,2},{3,2},{5,2},{100,2}}) do
     assert(Plan.workers(pair[1]) == pair[2], "Bound max parallel load requests")
 end

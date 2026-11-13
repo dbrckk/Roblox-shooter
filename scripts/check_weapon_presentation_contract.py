@@ -226,6 +226,9 @@ for needle in (
     assert needle in server_init, f"Automated weapon loader not started: {needle}"
 for needle in (
     'AssetService:LoadAssetAsync(assetId)',
+    'local package = fetchOwnedModel(assetId)',
+    'LoadPlan.MAX_FETCH_ATTEMPTS',
+    'publishWeaponState(job.weaponId, finalState)',
     'MeshPolicy.mapsReady({',
     'MeshPolicy.Required[weaponId]',
     'Policy.sameOwner(Registry,',
