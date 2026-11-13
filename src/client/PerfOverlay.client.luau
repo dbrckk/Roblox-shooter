@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Stats = game:GetService("Stats")
+local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 
 if not RunService:IsStudio() and not (
@@ -38,7 +39,7 @@ toggle.Parent = gui
 local panel = Instance.new("Frame")
 panel.Name = "PerformancePanel"
 panel.Visible = false
-panel.Size = UDim2.fromOffset(300, 428)
+panel.Size = UDim2.fromOffset(300, 485)
 panel.Position = UDim2.fromOffset(12, 100)
 panel.BackgroundColor3 = Color3.fromRGB(21, 29, 33)
 panel.BackgroundTransparency = 0.07
@@ -97,6 +98,44 @@ local function weaponMetrics()
         player:GetAttribute("IronYardPerfRemoteAudioRefs") or 0)
 end
 
+
+-- Private and opt-in only: count locally replicated bot visuals without
+-- scanning server hitboxes on every frame or exposing account data.
+local function pbrSnapshot()
+    local kit = tostring(Workspace:GetAttribute("IronYardPbrStatus") or "UNKNOWN")
+    local world = tostring(Workspace:GetAttribute("IronYardWorldPbrStatus") or "UNKNOWN")
+    local folder = Workspace:FindFirstChild("NeonStrikeBots")
+    local total, imported, primitives, details, visible = 0, 0, 0, 0, 0
+    if folder then
+        for _, bot in ipairs(folder:GetChildren()) do
+            if bot:IsA("Model") and bot:GetAttribute("IsArenaBot") == true then
+                total += 1
+                if bot:GetAttribute("NeonVisualSource") == "PBR_MESH" then
+                    imported += 1
+                    for _, child in ipairs(bot:GetDescendants()) do
+                        if child:IsA("MeshPart")
+                            and child:GetAttribute("NeonCosmeticTier") ~= nil then
+                            primitives += 1
+                            if child:GetAttribute("NeonCosmeticTier") == "Detail" then
+                                details += 1
+                                if child.LocalTransparencyModifier < 0.5 then
+                                    visible += 1
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    return string.format(
+        "\n--- PBR (ce client uniquement) ---\n"
+        .. "Kit: %s | bots PBR: %d/%d\n"
+        .. "Meshes: %d | Detail visible: %d/%d\n"
+        .. "Decor: %s",
+        kit, imported, total, primitives, visible, details, world)
+end
+
 -- These readings are client-local and only polled with the private panel.
 -- Total RAM includes the whole Roblox process, not weapon-cache bytes alone.
 local function localSwapSummary()
@@ -134,7 +173,7 @@ local function updateLabel()
             frames and frames.fps or 0,
             frames and frames.p95Ms or 0,
             frames and frames.p99Ms or 0,
-            weaponMetrics()) .. localSwapSummary()
+            weaponMetrics()) .. pbrSnapshot() .. localSwapSummary()
         return
     end
     local r, t = p.rates, p.timings
@@ -176,7 +215,7 @@ local function updateLabel()
         think.mean or 0, think.peak or 0,
         pose.mean or 0, pose.peak or 0,
         r.pose or 0, r.botShot or 0,
-        weaponMetrics()) .. localSwapSummary()
+        weaponMetrics()) .. pbrSnapshot() .. localSwapSummary()
 end
 
 remote.OnClientEvent:Connect(function(packet)

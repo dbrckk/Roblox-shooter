@@ -137,3 +137,19 @@ Le serveur conserve tous les assets, les hitboxes R6 et les soudures ;
 aucune collision, trajectoire, navigation ou règle de combat ne change.
 La réduction de rendu est locale, réversible et n'est pas une garantie de FPS
 avant mesure en moteur.
+
+## Lecture des modèles PBR en jeu via PERF (13 novembre 2026)
+
+Le propriétaire et Roblox Studio disposent du panneau privé **PERF**.
+Lorsqu'il est ouvert, il montre le statut serveur du kit opérateur,
+le nombre de bots locaux réellement équipés de MeshParts PBR,
+le nombre de primitives répliquées, la proportion de détails non masqués
+par le LOD client et le statut des matériaux PBR de l'environnement.
+Ces lectures sont calculées uniquement à l'ouverture du panneau (au plus
+une fois par seconde pour l'échantillonnage FPS) et restent locales.
+
+Les combats ne sont pas affectés. Un statut `READY` avec zéro bot PBR
+peut être transitoire : la reconstruction des bots intervient à la
+prochaine manche. `CONFIGURED` pour les textures du monde n'est pas
+une preuve du rendu effectif sur l'appareil. Ces diagnostics et la CI
+ne remplacent pas les captures ni la mesure FPS/P95 sous Android.
