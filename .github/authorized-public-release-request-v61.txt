@@ -1,0 +1,30 @@
+IRON YARD -- one-time owner-directed PUBLIC v61 model-reliability update, 13 November 2026.
+
+Destination is ONLY the existing PUBLIC IRON YARD experience:
+Roblox universe 10775909016 / root place 99189039770065
+/ owner Roblox user 9774173158.
+The owner has repeatedly requested public, not private, updates and has
+continued the visual repair effort. Do not create a new experience, copy
+assets to a new owner, switch to private or change audience permissions.
+
+Baseline is verified PUBLIC v60, place version 56, source
+e6b420b679bf8a8178bee5b2d125f86793c3b0eb.
+This single, guarded release includes the exact main contents:
+- PR #95: bounded retries for intermittent existing owner-approved VANGUARD
+  InsertService model delivery. Only already registered asset IDs; no uploads.
+- PR #96: fix mobile VANGUARD silhouette LOD. Select the dominant positive,
+  finite imported MeshPart per R6 piece as the unique Core, rather than
+  assuming material primitive 1 is the visible armor shell. Preserve exact
+  relative CFrames, welds, active combat hitboxes and all gameplay rules.
+
+Require green push-triggered Rojo/Luau CI for the exact new one-shot
+authorization commit; independently verify public destination, universe,
+creator, owner, root place and SHA. Publish only once if every independent
+guard succeeds; never retry a failed release blindly.
+
+No modifications to damage, AI, player progression, controls, matchmaking,
+weapon balance or map collision. Do not upload, generate, buy, relicense
+or publish any new Roblox model or texture. Keep 26 existing authorized IDs.
+
+CI does not establish PBR appearance, hitbox rendering, GPU load or
+Android FPS: those remain to verify in a live mobile Roblox session.
