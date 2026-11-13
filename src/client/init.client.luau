@@ -1521,7 +1521,15 @@ if UserInputService.TouchEnabled then
         b.Size = UDim2.fromOffset(width, height)
         b.Font = Enum.Font.GothamBold
         b.Text = label
+        -- TextScaled without a maximum fills entire buttons with huge glyphs,
+        -- covering neighboring actions on landscape Android screenshots.
+        -- Limit visual typography while retaining the exact touch rectangles.
         b.TextScaled = true
+        b.TextWrapped = false
+        local textLimit = Instance.new("UITextSizeConstraint")
+        textLimit.MinTextSize = 10
+        textLimit.MaxTextSize = name == "Fire" and 19 or 16
+        textLimit.Parent = b
         b.BackgroundColor3 = Color3.fromRGB(38, 45, 43)
         b.BackgroundTransparency = 0.17
         b.TextColor3 = Color3.fromRGB(250, 239, 213)
