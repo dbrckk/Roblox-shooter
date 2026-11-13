@@ -28,7 +28,7 @@ for name, usages in expected.items():
         assert usage in map_code, f"Missing in-world PBR application: {usage}"
 
 assert "WorldPbr.start()" in map_code
-assert map_code.index("WorldPbr.start()") < map_code.index("buildArena(folder)")
+assert map_code.index("    WorldPbr.start()") < map_code.index("    buildArena(folder)")
 assert 'if not ready or not part or not part:IsA("BasePart")' in material
 assert 'part.Material == Enum.Material[style.base]' in material
 assert 'part.MaterialVariant = Policy.variantName(key)' in material
