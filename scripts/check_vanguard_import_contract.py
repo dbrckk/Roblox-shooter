@@ -20,7 +20,8 @@ workflow = source(".github/workflows/rojo-build.yml")
 
 for item in ("Policy.MAX_PRIMITIVES_PER_PIECE = 8",
              "function Policy.primitiveCountValid(count)",
-             "function Policy.visualTier(piece, primitiveIndex)",
+             "function Policy.visualTier(piece, primitiveIndex, coreIndex)",
+             "function Policy.dominantIndex(primitives)",
              'normalized:match("^" .. prefixed .. "%d+$")',
              'normalized:match("^" .. prefixed .. "primitive%d+$")'):
     must(policy, item, "bounded identity policy")
@@ -41,13 +42,17 @@ for item in ("loaded:GetDescendants()", "Policy.identifyPiece(ancestor.Name)",
              "MeshKit.isRenderable(item)",
              "Policy.MAX_PRIMITIVES_PER_PIECE",
              "basis:ToObjectSpace(item.CFrame)",
+             "local coreIndex = Policy.dominantIndex(group)",
+             'clone:SetAttribute("IronYardCoreVisual", index == coreIndex)',
              "MeshKit.cleanClone(item)",
              "MeshKit.primitives(mesh)",
              "staging:Destroy()"):
     must(loader, item, "loader safety and atomic fallback")
 for item in ("MeshKit.primitives(template)",
              "MeshKit.cleanClone(template)",
-             "MeshPolicy.visualTier(partName, index)",
+             "MeshPolicy.visualTier(partName, index, entry.coreIndex)",
+             'candidate:GetAttribute("IronYardCoreVisual") == true',
+             "marked == 1 and selectedCore or 1",
              'part:SetAttribute("NeonCosmeticTier", tier)',
              'part.CastShadow = tier == "Core"',
              "part.CFrame = target.CFrame * offset * relative",
@@ -60,6 +65,8 @@ for item in ("primitive_count += len(primitives)",
     must(audit, item, "GLB primitive count audit")
 must(test, 'Policy.identifyPiece("VANGUARD_torso.001")', "numbered variant regression")
 must(test, 'Policy.visualTier(piece, 1) == "Core"', "seven retained R6 cores")
+must(test, 'Policy.dominantIndex(components) == 2', "largest imported silhouette is core")
+must(test, 'assert(cores == 1', "one mobile core per rig piece")
 must(test, 'Policy.visualTier(piece, index) == "Detail"', "secondary material detail LOD")
 lod = source("src/client/BotLOD.client.luau")
 for item in ('tier == "Detail"', 'part.LocalTransparencyModifier =',

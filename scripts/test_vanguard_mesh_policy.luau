@@ -29,6 +29,40 @@ for _, bad in ipairs({ 0, -1, 1.5, Policy.MAX_PRIMITIVES_PER_PIECE + 1 }) do
     assert(Policy.visualTier("torso", bad) == nil,
         "Reject an out-of-bounds cosmetic primitive")
 end
+-- Imported GLB surface order is arbitrary: the smallest detail often comes
+-- first. The largest valid component, NOT the first, must survive mobile LOD.
+local components = {
+    { Size = { X = 0.12, Y = 0.06, Z = 0.08 } },
+    { Size = { X = 1.4, Y = 1.1, Z = 0.5 } },
+    { Size = { X = 0.3, Y = 0.4, Z = 0.2 } },
+}
+assert(Policy.dominantIndex(components) == 2,
+    "Core silhouette must be largest material primitive")
+for _, piece in ipairs(Policy.Pieces) do
+    local cores = 0
+    for index = 1, #components do
+        local tier = Policy.visualTier(piece, index, Policy.dominantIndex(components))
+        if tier == "Core" then cores += 1 end
+        if index ~= 2 then assert(tier == "Detail") end
+    end
+    assert(cores == 1, "Exactly one dominant Core retained: " .. piece)
+end
+assert(Policy.dominantIndex({
+    { Size = {X = 1, Y = 1, Z = 1} },
+    { Size = {X = 1, Y = 1, Z = 1} },
+}) == 1, "Exact ties retain original component order")
+assert(Policy.dominantIndex({}) == nil)
+assert(Policy.dominantIndex(nil) == nil)
+assert(Policy.dominantIndex({
+    { Size = {X = math.huge, Y = 1, Z = 1} },
+}) == nil, "Infinite geometry must fail validation")
+assert(Policy.dominantIndex({
+    { Size = {X = 2, Y = 0, Z = 1} },
+}) == nil, "Zero-size geometry must fail validation")
+assert(Policy.visualTier("torso", 1, 0) == nil)
+assert(Policy.visualTier("torso", 1, 1.5) == nil)
+assert(Policy.visualTier("torso", 1, 2) == "Detail")
+assert(Policy.visualTier("torso", 2, 2) == "Core")
 assert(Policy.visualTier("unknown", 1) == nil)
 assert(Policy.visualTier(nil, 1) == nil)
 assert(Policy.visualTier("head", 0/0) == nil)
