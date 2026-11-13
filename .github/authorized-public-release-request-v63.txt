@@ -1,0 +1,35 @@
+IRON YARD -- one-time owner-directed PUBLIC v63 production spawn safety update, 13 November 2026.
+
+Target ONLY existing public IRON YARD:
+owner Roblox user 9774173158, universe 10775909016,
+root place 99189039770065. Never create a separate experience,
+change owner, switch to private or modify public visibility.
+Last confirmed public v62 / place 58, source
+784b55bb430c2894b711380d38005d2b10080098.
+
+The user explicitly directed continuing development with a requirement
+that the *real game remain functional*, not prototypes. This single release
+contains merged and green PR #102 only (besides this release marker):
+- When 12 original FFA respawn pads and original SpawnLocation are blocked,
+  choose among at most 49 additional real server collision-checked interior
+  placements and score only physically unoccupied candidates.
+- If the arena has no valid pad, never teleport a real avatar or NPC inside
+  a solid obstacle. Player spawn retries at most twice for the same live
+  character and never interferes with 1v1; bots are retried by normal
+  reconciliation. Existing bots do not crash on a missing spawn position.
+- Preserve strict prevalidated opposite 1v1 pads and both-player atomicity.
+
+Do not modify damage, navigation, round rules, AI, player progression,
+weapon configuration, in-world collision, HUD, or 26 owner-approved assets.
+No new uploads or paid resources.
+
+Require push-triggered successful Rojo/Luau CI on the EXACT v63
+authorization commit before any public release. The original release
+workflow must independently verify source commit, current PUBLIC visibility,
+creator, owner, root place, configured universe and asset access.
+Publish once only if every guard passes; fail closed on mismatch and do
+not blindly retry.
+
+Unit/contract/build success does not independently prove live Roblox physics,
+full gameplay experience or Android performance. Those require a real
+published-server session before declaring all product acceptance complete.
