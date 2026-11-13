@@ -1,0 +1,35 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox v60 update, 13 November 2026.
+
+Target ONLY the existing, public IRON YARD experience at root place
+99189039770065 (universe 10775909016), owned by Roblox user 9774173158.
+Independent public visibility, creator, universe and root place checks
+MUST still succeed. Never create a private, replacement or test experience.
+
+Owner requested fixes after sending real Android landscape screenshots,
+then explicitly said "Go" to continue the fixes and release workflow.
+The previously confirmed published baseline is v59, Roblox place version 55.
+
+Contents to deploy from existing main:
+- PR #91: keep Android action and weapon texts within compact legible
+  bounds without reducing touch hit regions; use scene depth occlusion
+  for enemy bot nameplates and health bars instead of AlwaysOnTop.
+- PR #92: retry only intermittent owner-controlled AssetService Model
+  download failures, at most three attempts per authorized GLB model;
+  keep PBR content validation fail-closed and avoid any new uploads;
+  show sanitized per-weapon readiness in the owner-only PERF panel
+  with a scrollable small Android landscape layout.
+
+Do not change damage, movement, navigation, collision geometry, weapon
+balance, player progression, match rules, creator or audience settings.
+Do not generate, publish or purchase any new asset. Continue to use
+the 26 existing approved owner-owned asset references.
+
+Require successful Rojo/Luau CI on the EXACT new v60 authorization
+commit and independently verify owner, universe ID, place ID, existing
+PUBLIC visibility and source SHA before exactly ONE guarded release.
+On failure refuse publication; never retry blindly or dispatch duplicate
+releases for the same commit.
+
+CI passing does NOT establish Android PBR loading success, visibility,
+GPU frame time, network resilience or actual rendering. Those remain
+live-device QA criteria, not assertions of this authorization.
