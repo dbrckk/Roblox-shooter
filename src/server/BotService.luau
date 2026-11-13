@@ -124,7 +124,10 @@ local function buildCharacter(slot, skill)
     marker.Size = UDim2.fromOffset(142, 40)
     marker.StudsOffsetWorldSpace = Vector3.new(0, 1.6, 0)
     marker.MaxDistance = 155
-    marker.AlwaysOnTop = true
+    -- The previous always-on-top label disclosed bot names and health bars
+    -- through solid warehouse cover; depth-test the head marker instead.
+    -- No client LOS raycasts, polling, hitbox or AI changes are required.
+    marker.AlwaysOnTop = false
     marker.Parent = head
     local title = Instance.new("TextLabel")
     title.BackgroundTransparency = 1

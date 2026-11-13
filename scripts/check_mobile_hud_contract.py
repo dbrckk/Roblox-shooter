@@ -222,4 +222,30 @@ assert 'value:GetPropertyChangedSignal("Value"):Connect(render)' not in round_re
     "Raw stat listeners can fire after a leaderstats container is replaced")
 print("IRON YARD combat HUD listeners: current camera, respawn and leaderstats lifecycle: OK")
 
+
+# Android screenshot regression: cap button typography (including wide
+# landscape displays), preserve touch targets, and keep the weapon caption
+# compact so it no longer obscures the floor/crosshair.
+for needle in (
+    'local textLimit = Instance.new("UITextSizeConstraint")',
+    'textLimit.MinTextSize = 10',
+    'textLimit.MaxTextSize = name == "Fire" and 19 or 16',
+    'textLimit.Parent = b',
+    'b.TextWrapped = false',
+):
+    assert needle in client, f"Unbounded Android button text: {needle}"
+for needle in (
+    'weaponLabel.TextScaled = false',
+    'weaponLabel.TextSize = 17',
+    'weaponLabel.TextTruncate = Enum.TextTruncate.AtEnd',
+):
+    assert needle in controller, f"Weapon name obstructs Android view: {needle}"
+assert 'b.Size = UDim2.fromOffset(rect.w, rect.h)' in client, (
+    "Typography fixes must preserve mobile button hit regions")
+bots = read("src/server/BotService.luau")
+assert 'marker.AlwaysOnTop = false' in bots, (
+    "Bot name and health must not show through opaque walls")
+assert 'humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None' in bots, (
+    "Roblox native labels must not bypass bot marker occlusion")
+
 print("IRON YARD mobile presets, stable readouts and bounded HUD redraws: OK")

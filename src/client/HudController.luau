@@ -329,9 +329,14 @@ function HudController:_buildWeaponLabel()
 	weaponLabel.BackgroundTransparency = 1
 	weaponLabel.Font = Enum.Font.GothamMedium
 	weaponLabel.Position = UDim2.new(0.5, 0, 1, -42)
-	weaponLabel.Size = UDim2.fromOffset(280, 34)
+	weaponLabel.Size = UDim2.fromOffset(280, 28)
 	weaponLabel.TextColor3 = Color3.fromRGB(247, 244, 235)
-	weaponLabel.TextScaled = true
+	-- Never expand to a billboard-sized heading on high-DPI Android.
+	-- The gun name is secondary to crosshair, ammo and touch actions.
+	weaponLabel.TextScaled = false
+	weaponLabel.TextSize = 17
+	weaponLabel.TextXAlignment = Enum.TextXAlignment.Center
+	weaponLabel.TextTruncate = Enum.TextTruncate.AtEnd
 	weaponLabel.Parent = self.gui
 	self.weaponLabel = weaponLabel
 end
