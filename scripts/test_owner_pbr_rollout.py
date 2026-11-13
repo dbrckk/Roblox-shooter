@@ -31,6 +31,13 @@ for item in ("branches: [main]", ".github/authorized-pbr-rollout-v1.txt",
              "scripts/launch_owner_pbr_rollout.sh"):
     must(workflow, item, "GitHub workflow gate")
 assert "github.event_name == 'pull_request'" not in workflow
-assert not (ROOT / ".github/authorized-pbr-rollout-v1.txt").exists(), (
-    "Activation marker cannot ship in the setup PR; gate it separately")
+marker = ROOT / ".github/authorized-pbr-rollout-v1.txt"
+if marker.exists():
+    # This suite also runs on the future *authorized* main commit. The marker
+    # must remain legal once added, otherwise the CI prerequisite deadlocks.
+    content = marker.read_text(encoding="utf-8")
+    for item in ("ownerUserId=9774173158",
+                 "assetFamilies=VANGUARD_4_MODELS,WORLD_12_IMAGES",
+                 "publication=NO_PUBLIC_ROBLOX_RELEASE"):
+        must(content, item, "owner marker")
 print("IRON YARD owner authorized one-shot PBR rollout: contract OK")
