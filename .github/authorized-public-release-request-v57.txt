@@ -1,0 +1,28 @@
+IRON YARD -- one-time owner-authorized PUBLIC Roblox v57 update, 13 November 2026.
+
+Target ONLY the already PUBLIC creator-owned IRON YARD Roblox experience.
+Require a fresh green Rojo CI build for this exact authorization commit,
+and independently verify universe, root place, owner and PUBLIC visibility.
+Do not create a separate private experience or change any visibility.
+
+Purpose: publish the three original industrial PBR world materials:
+freight_steel, warehouse_steel, yard_asphalt. All four 1K channels
+(ColorMap, NormalMap, RoughnessMap, MetalnessMap) per material have
+owner-approved Roblox Image IDs in src/shared/WorldPbrAssetIds.luau.
+All twelve were approved in original upload run 43412637168, then
+reverified WITHOUT re-upload and committed to main by owner recovery
+run 43414519380. Source textures are pinned to successful generator
+run 43389183645, source commit 903deaafacc29011972b86cbea117bd52d211b76.
+
+VANGUARD four operator Model IDs and ten weapon Model IDs remain intact.
+MaterialVariants are added only for the three allowed world surface
+names and base Roblox materials; the collision/hitbox geometry, damage,
+duel mode, progression and movement code are unchanged. Native materials
+remain the fallback if registration cannot complete. The owner PERF
+panel reports world PBR CONFIGURED/FALLBACK; this does not claim that
+images visibly rendered on an Android device or prove stable frame time.
+
+Authorize exactly one guarded PUBLIC place update, after green CI and
+strict existing-owner destination verification. Keep all open gameplay
+and performance QA items tracked, without claiming Roblox Studio
+screenshots or live Android measurements were performed.
