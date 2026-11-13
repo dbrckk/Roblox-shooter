@@ -74,6 +74,29 @@ def main():
             "Uploaded operators incorrectly labeled blocked")
     require("Matériaux du monde — 3 prêts hors moteur, 0 bloqués" in result,
             "Uploaded maps incorrectly labeled blocked")
+    # Regression: the actual uploader emits four trailing-comma lines
+    # under each material rather than the original one-line source format.
+    from upload_world_pbr_images import render_registry as render_world
+    sequence = iter(range(92001, 92013))
+    recorded = {
+        material: {
+            channel: {"assetId": next(sequence)}
+            for channel in ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap")
+        }
+        for material in ("freight_steel", "warehouse_steel", "yard_asphalt")
+    }
+    generated = render_world(9774173158, "c" * 40, recorded)
+    document = build_with({matrix.WORLD: generated})
+    require("Matériaux du monde — 3 prêts hors moteur, 0 bloqués" in document,
+            "Generated multi-line Roblox Image registry was not accepted")
+    missing_channel = generated.replace("MetalnessMap = 92004,", "", 1)
+    try:
+        build_with({matrix.WORLD: missing_channel})
+    except AssertionError as exc:
+        require("four distinct channels" in str(exc),
+                "Incomplete PBR upload rejected for wrong reason: " + str(exc))
+    else:
+        raise AssertionError("Incomplete multi-line PBR upload registry accepted")
     require("aucun ID n'est" not in result
             and "Aucun upload Open Cloud" not in result,
             "False no-upload claim after approved batch")

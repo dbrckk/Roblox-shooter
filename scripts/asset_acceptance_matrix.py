@@ -125,12 +125,25 @@ def world():
     text = source(WORLD)
     owner, commit = header(text)
     rows = []
-    pattern = (r"(\w+)\s*=\s*\{\s*ColorMap\s*=\s*(\d+)\s*,\s*NormalMap\s*=\s*(\d+)"
-               r"\s*,\s*RoughnessMap\s*=\s*(\d+)\s*,\s*MetalnessMap\s*=\s*(\d+)\s*\}")
-    for match in re.finditer(pattern, block(text, "materials")):
+    # The approved uploader writes multi-line Luau with trailing commas.
+    # Parse balanced material blocks, accepting both actual and compact forms.
+    materials = block(text, "materials")
+    names = re.findall(r"(?m)^\s*(\w+)\s*=\s*\{", materials)
+    expected = ("freight_steel", "warehouse_steel", "yard_asphalt")
+    assert len(names) == 3 and set(names) == set(expected), \
+        "world registry must contain exactly the three supported material names"
+    channels = ("ColorMap", "NormalMap", "RoughnessMap", "MetalnessMap")
+    for name in expected:
+        contents = block(materials, name)
+        values = re.findall(
+            r"\b(ColorMap|NormalMap|RoughnessMap|MetalnessMap)\s*=\s*(\d+)",
+            contents)
+        assert len(values) == 4 and {ch for ch, _ in values} == set(channels), \
+            f"world material {name} must declare four distinct channels"
+        by_channel = dict(values)
         rows.append({
-            "name": match.group(1),
-            "ids": [int(match.group(i)) for i in range(2, 6)],
+            "name": name,
+            "ids": [int(by_channel[ch]) for ch in channels],
             "owner": owner,
             "source": commit,
             "detail": "4 canaux PBR",
