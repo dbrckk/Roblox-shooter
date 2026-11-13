@@ -1,11 +1,18 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
 **Date de référence : 13 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `cf7b334bc93d23a83a682502e13d89f75c6059ad`  
-**Expérience Roblox :** IRON YARD publique, **version interne v57 confirmée** par [Actions #43415071087](https://github.com/dbrckk/Roblox-shooter/actions/runs/43415071087) ; **version de place Roblox 53**, source `cf7b334`.  
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `bc58f543a7c80651497de5ba60f6796f84315da9`  
+**Expérience Roblox :** IRON YARD publique, **version interne v59 confirmée** par [Actions #43449396469](https://github.com/dbrckk/Roblox-shooter/actions/runs/43449396469) ; **version de place Roblox 55**, source `bc58f543`.  
 **Condition utilisateur actuelle :** pas de test manuel Android/Roblox Studio possible pour le moment. Les tâches bloquées doivent rester en attente **sans bloquer l'ensemble du chantier**.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v59 : sécurité de la synchronisation PBR (13 novembre 2026)
+
+- **v58 livrée :** [PR #85](https://github.com/dbrckk/Roblox-shooter/pull/85) rétablit explicitement `BasePart.MaterialVariant` côté client, car cette propriété n'est pas répliquée. Les tags proviennent des surfaces serveur propriétaires autorisées et le profil ECO supprime localement les variantes IRON YARD approuvées ; [publication publique #43444851101](https://github.com/dbrckk/Roblox-shooter/actions/runs/43444851101), place Roblox **54**, source `05da755`.
+- **v59 livrée :** [PR #88](https://github.com/dbrckk/Roblox-shooter/pull/88) retire les anciens matériaux PBR quand la clé, le tag ou l'`Enum.Material` ne correspondent plus, y compris après streaming. La règle partagée n'autorise la suppression que des **trois noms exacts** de variantes du jeu, pas des autres matériaux.
+- **Validation :** régressions Luau et CI réussies, [publication publique #43449396469](https://github.com/dbrckk/Roblox-shooter/actions/runs/43449396469) confirmée : place Roblox **55**, source `bc58f543a7c80651497de5ba60f6796f84315da9`. Aucun nouvel ID Roblox ni modification de gameplay.
+- **Risques ouverts :** vérifier directement le rendu et la cadence d'images Android, bascules ECO/BALANCED/QUALITY, affichage PERF `PBR local: N/M`, chargement progressif, continuité du wallrun/mantle et comportement sans assets. Des compteurs de matériaux ne prouvent pas que les textures s'affichent ou que les FPS restent stables.
 
 ### Actualisation — PUBLIC v57 et textures PBR propriétaires du décor (13 novembre 2026)
 
@@ -52,7 +59,7 @@ Toute tâche porte un propriétaire logique (« code client », « code serveur 
 
 | Composant | Réalité vérifiée | Dette ou preuve manquante |
 |---|---|---|
-| Publication | L'expérience **publique** IRON YARD est publiée en **v57** ; la place Roblox a confirmé sa **version 53** | Une publication réussie ne prouve ni le rendu PBR, ni le gameplay moteur, ni les FPS Android |
+| Publication | L'expérience **publique** IRON YARD est publiée en **v59** ; la place Roblox a confirmé sa **version 55** | Une publication réussie ne prouve ni le rendu PBR, ni le gameplay moteur, ni les FPS Android |
 | Base de jeu | FFA, 5 armes, munitions et dégâts côté serveur, HUD tactile, progression, bots et déplacements présents | Temps jusqu'au premier engagement, ressenti des tirs, latence et ergonomie physique non mesurés |
 | Duel 1v1 | **Déjà présent**, pas « à développer de zéro » : `MatchService`, `DuelRules`, `DuelCombatState`, `DuelSpawnPlan`, tests duels en CI | Enchaînements d'abandons, respawns, changements de personnages, état réseau et équité à éprouver dans Roblox |
 | Armes PBR | `WeaponAssetIds.luau` contient **10 IDs non nuls**, 5 armes × LOD0/LOD1 ; politique de validation, cache de viewmodel, ADS et rechargements PBR implémentés | Contrôler résolution réelle de chaque asset, cadrage mobile, textures, animations et pertes au streaming |
