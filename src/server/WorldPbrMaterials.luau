@@ -2,6 +2,7 @@
 -- The default native world is always playable. No client-supplied IDs,
 -- dynamic assets, InsertService or network calls are used by this module.
 local MaterialService = game:GetService("MaterialService")
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Registry = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WorldPbrAssetIds"))
@@ -59,6 +60,11 @@ function WorldPbr.apply(part, key)
     for _, style in ipairs(Policy.Materials) do
         if key == style.key and part.Material == Enum.Material[style.base] then
             part.MaterialVariant = Policy.variantName(key)
+            -- MaterialVariant is not guaranteed to replicate to clients.
+            -- Only an owner-verified, base-material-checked server path can
+            -- label a collider for local visual assignment.
+            part:SetAttribute("IronYardPbrMaterial", key)
+            CollectionService:AddTag(part, "IronYardWorldPbr")
             return true
         end
     end

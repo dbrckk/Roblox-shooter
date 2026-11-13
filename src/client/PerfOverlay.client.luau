@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Stats = game:GetService("Stats")
+local CollectionService = game:GetService("CollectionService")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 
@@ -128,12 +129,24 @@ local function pbrSnapshot()
             end
         end
     end
+    local worldTagged, worldRendered = 0, 0
+    for _, part in ipairs(CollectionService:GetTagged("IronYardWorldPbr")) do
+        if part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
+            worldTagged += 1
+            local key = part:GetAttribute("IronYardPbrMaterial")
+            if type(key) == "string"
+                and part.MaterialVariant == "IronYardPbr_" .. key then
+                worldRendered += 1
+            end
+        end
+    end
     return string.format(
         "\n--- PBR (ce client uniquement) ---\n"
         .. "Kit: %s | bots PBR: %d/%d\n"
         .. "Meshes: %d | Detail visible: %d/%d\n"
-        .. "Decor: %s",
-        kit, imported, total, primitives, visible, details, world)
+        .. "Decor: %s | PBR local: %d/%d",
+        kit, imported, total, primitives, visible, details, world,
+        worldRendered, worldTagged)
 end
 
 -- These readings are client-local and only polled with the private panel.

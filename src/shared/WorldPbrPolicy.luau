@@ -15,6 +15,18 @@ function Policy.variantName(key)
     return nil
 end
 
+-- Pure client admission: no arbitrary material names, and ECO uses the
+-- native base material. nil means the tagged part must not be modified.
+function Policy.clientVariant(key, baseName, preset)
+    for _, style in ipairs(Policy.Materials) do
+        if key == style.key and baseName == style.base then
+            if preset == "ECO" then return "" end
+            return Policy.variantName(key)
+        end
+    end
+    return nil
+end
+
 local function validId(value)
     return type(value) == "number" and value > 0 and value < math.huge
         and value % 1 == 0
