@@ -1,11 +1,18 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
 **Date de référence : 13 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `e6b420b679bf8a8178bee5b2d125f86793c3b0eb`  
-**Expérience Roblox :** IRON YARD publique, **version interne v60 confirmée** par [Actions #43474268716](https://github.com/dbrckk/Roblox-shooter/actions/runs/43474268716) ; **version de place Roblox 56**, source `e6b420b`.  
-**Preuves utilisateur :** deux captures réelles Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v60 ni relevé PERF/FPS ne confirme encore les corrections en moteur**. Les autres validations bloquées doivent rester ouvertes.
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `c0d3b224e845486e40173f163679afe588820f45`  
+**Expérience Roblox :** IRON YARD publique, **version interne v61 confirmée** par [Actions #43513947947](https://github.com/dbrckk/Roblox-shooter/actions/runs/43513947947) ; **version de place Roblox 57**, source `c0d3b224`.  
+**Preuves utilisateur :** deux captures réelles Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v61 ni relevé PERF/FPS ne confirme encore les corrections en moteur**. Les autres validations bloquées doivent rester ouvertes.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v61 : fiabilisation et silhouette VANGUARD sur Android (13 novembre 2026)
+
+- **Import du kit VANGUARD :** [PR #95](https://github.com/dbrckk/Roblox-shooter/pull/95) retente un échec intermittent d'`InsertService:LoadAsset` au plus deux fois par ID autorisé, sans jamais contourner les validations des MeshParts ou télécharger des IDs non approuvés.
+- **Défaut de visibilité distant :** [PR #96](https://github.com/dbrckk/Roblox-shooter/pull/96) élimine la supposition incorrecte « première primitive du GLB = silhouette principale ». Elle retient la primitive au plus grand volume de boîte englobante, marque l'unique Core sur la copie assainie et conserve le premier élément seulement comme fallback manuel. Détails et risques : [VANGUARD_MOBILE_CORE_VISIBILITY_2026-11-13.md](VANGUARD_MOBILE_CORE_VISIBILITY_2026-11-13.md).
+- **Publication vérifiée :** [Actions #43513947947](https://github.com/dbrckk/Roblox-shooter/actions/runs/43513947947) a accepté **Roblox place version 57** ; source exacte `c0d3b224e845486e40173f163679afe588820f45`, expérience PUBLIC et propriétaire revérifiés. Toutes les CI Luau/Rojo ont réussi.
+- **Risques toujours ouverts :** savoir si les modèles VANGUARD et les armes PBR se chargent effectivement sur Android ; mesurer la silhouette aux différentes distances, les profils ECO/QUALITY et FPS/P95, observer les statuts dans PERF. Le correctif du choix Core est vérifié dans le code et les régressions, **pas visuellement dans Roblox**.
 
 ### Actualisation — PUBLIC v60 : corrections Android et livraison des armes PBR (13 novembre 2026)
 
