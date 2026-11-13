@@ -15,7 +15,7 @@
 |---|---:|---:|---:|---:|
 | Armes | 5 | 10 | 5 | 0 |
 | Opérateurs VANGUARD | 4 | 4 | 4 | 0 |
-| Matériaux du monde | 3 | 12 | 0 | 3 |
+| Matériaux du monde | 3 | 12 | 3 | 0 |
 
 ## Armes — 10 IDs propriétaires
 
@@ -40,15 +40,15 @@ Fallback vérifié hors moteur : `WeaponAssetPolicy` et `WeaponAssetLoadPlan` ga
 
 Quatre IDs de modèles propriétaires sont consignés. Leur rendu réel dans Roblox et sur Android reste à vérifier.
 
-## Matériaux du monde — 0 prêts hors moteur, 3 bloqués
+## Matériaux du monde — 3 prêts hors moteur, 0 bloqués
 
 | Asset | IDs | Owner | Source | Structure | Canaux | Fallback | Contrôle runtime manquant | Statut |
 |---|---|---|---|---|---|---|---|---|
-| `freight_steel` | Color `0`<br>Normal `0`<br>Roughness `0`<br>Metalness `0` | 9774173158 | `—` | 4 canaux PBR | Color / Normal / Roughness / Metalness | matériaux Roblox natifs | upload Open Cloud et rendu non confirmés | `BLOCKED_ROBLOX_ASSET_APPROVAL` |
-| `warehouse_steel` | Color `0`<br>Normal `0`<br>Roughness `0`<br>Metalness `0` | 9774173158 | `—` | 4 canaux PBR | Color / Normal / Roughness / Metalness | matériaux Roblox natifs | upload Open Cloud et rendu non confirmés | `BLOCKED_ROBLOX_ASSET_APPROVAL` |
-| `yard_asphalt` | Color `0`<br>Normal `0`<br>Roughness `0`<br>Metalness `0` | 9774173158 | `—` | 4 canaux PBR | Color / Normal / Roughness / Metalness | matériaux Roblox natifs | upload Open Cloud et rendu non confirmés | `BLOCKED_ROBLOX_ASSET_APPROVAL` |
+| `freight_steel` | Color `111567469787123`<br>Normal `132527554211334`<br>Roughness `101204051758497`<br>Metalness `101235706800607` | 9774173158 | `903deaafacc29011972b86cbea117bd52d211b76` | 4 canaux PBR | Color / Normal / Roughness / Metalness | matériaux Roblox natifs | upload Open Cloud et rendu non confirmés | `READY_OFFLINE` |
+| `warehouse_steel` | Color `140140460726517`<br>Normal `78831244971620`<br>Roughness `103344882500626`<br>Metalness `103763537751236` | 9774173158 | `903deaafacc29011972b86cbea117bd52d211b76` | 4 canaux PBR | Color / Normal / Roughness / Metalness | matériaux Roblox natifs | upload Open Cloud et rendu non confirmés | `READY_OFFLINE` |
+| `yard_asphalt` | Color `138045450696080`<br>Normal `133921977945079`<br>Roughness `94859615368621`<br>Metalness `85573136066604` | 9774173158 | `903deaafacc29011972b86cbea117bd52d211b76` | 4 canaux PBR | Color / Normal / Roughness / Metalness | matériaux Roblox natifs | upload Open Cloud et rendu non confirmés | `READY_OFFLINE` |
 
-Les douze PNG et leurs hashes sont produits par `tools/assetforge/generate_world_maps.py` et validés par `audit_world_maps.py`. Aucun upload Open Cloud n'a eu lieu : le jeu garde les matériaux Roblox natifs.
+Douze IDs d'images sont consignés dans le registre propriétaire. La résolution des textures PBR sur Roblox reste à vérifier.
 
 ## Ce que la CI certifie, et ce qu'elle ne certifie pas
 
