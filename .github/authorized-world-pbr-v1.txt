@@ -1,0 +1,7 @@
+# Explicit single-batch owner authorization for original industrial world materials.
+# Does not authorize a new PUBLIC game place version.
+ownerUserId=9774173158
+assetFamily=WORLD_12_IMAGES
+assetSourceRunId=43389183645
+assetSourceCommit=903deaafacc29011972b86cbea117bd52d211b76
+publication=NO_PUBLIC_ROBLOX_RELEASE
