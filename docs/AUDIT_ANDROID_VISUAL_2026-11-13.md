@@ -49,3 +49,7 @@
 ## Règles de décision
 
 Ne pas confondre une CI verte, un ID Roblox approuvé et une texture réellement rendue. Ne pas imputer l'overlay Android de l'application de discussion au HUD Roblox. Ne pas déclarer « tous les problèmes réglés » sans retest en conditions réelles.
+
+### Suivi du lot 2 — résilience du kit VANGUARD (13 novembre)
+
+Le chargeur des quatre modèles VANGUARD n'effectuait qu'un seul appel `InsertService:LoadAsset` par palette. Une erreur transitoire de Roblox suffisait à faire abandonner tout le lot PBR jusqu'au prochain démarrage du serveur. Le correctif ajoute **trois tentatives bornées par palette** (délais 0,35 s / 0,7 s) sans changer la validation des sept pièces, les quatre cartes PBR, la propriété des assets ni le repli procédural. Les états `IronYardPbrStatus=DELIVERY_FAILED` et `VALIDATION_FAILED` distinguent désormais les erreurs de livraison et les modèles invalides. La promotion du lot de quatre palettes reste atomique ; les bots existants passent aux nouveaux modèles au prochain reset de manche (mécanisme déjà présent). Ce lot ne prouve pas que les modèles s'affichent sur Android ; relever le statut `PERF` après publication.

@@ -29,6 +29,14 @@ for item in ("function Kit.primitives(component)",
              "if not Kit.isRenderable(child) then return nil end",
              "if not Policy.keepChild("):
     must(kit, item, "sanitized group")
+for item in ("MAX_DELIVERY_ATTEMPTS = 3",
+             "for attempt = 1, MAX_DELIVERY_ATTEMPTS do",
+             "InsertService:LoadAsset(assetId)",
+             "task.wait(0.35 * (2 ^ (attempt - 1)))",
+             'error("VANGUARD_DELIVERY_FAILED: "',
+             '"DELIVERY_FAILED" or "VALIDATION_FAILED"',
+             "staging:Destroy()"):
+    must(loader, item, "bounded owner asset retry and failure diagnosis")
 for item in ("loaded:GetDescendants()", "Policy.identifyPiece(ancestor.Name)",
              "MeshKit.isRenderable(item)",
              "Policy.MAX_PRIMITIVES_PER_PIECE",
