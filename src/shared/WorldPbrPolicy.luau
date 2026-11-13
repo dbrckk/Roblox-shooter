@@ -27,6 +27,16 @@ function Policy.clientVariant(key, baseName, preset)
     return nil
 end
 
+-- Only names from the signed material whitelist can be cleared on
+-- invalidation. Prefix checks could unintentionally reset unrelated parts.
+function Policy.isOwnedVariant(name)
+    if type(name) ~= "string" then return false end
+    for _, style in ipairs(Policy.Materials) do
+        if name == Policy.variantName(style.key) then return true end
+    end
+    return false
+end
+
 local function validId(value)
     return type(value) == "number" and value > 0 and value < math.huge
         and value % 1 == 0

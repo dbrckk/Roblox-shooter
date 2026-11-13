@@ -6,6 +6,15 @@ assert(Policy.variantName("warehouse_steel") == "IronYardPbr_warehouse_steel")
 assert(Policy.variantName("yard_asphalt") == "IronYardPbr_yard_asphalt")
 assert(Policy.variantName("untrusted") == nil, "Unknown variants are never applied")
 for _, style in ipairs(Policy.Materials) do
+    assert(Policy.isOwnedVariant(Policy.variantName(style.key)),
+        "Client may clean up only its approved PBR variants")
+end
+for _, name in ipairs({ "", "IronYardPbr_untrusted", "MyOtherMaterial", "IronYardPbr_" }) do
+    assert(not Policy.isOwnedVariant(name), "Never reset a different material")
+end
+assert(not Policy.isOwnedVariant(nil), "Invalid material name must be ignored")
+assert(not Policy.isOwnedVariant(12345), "Non-string material name must be ignored")
+for _, style in ipairs(Policy.Materials) do
     assert(Policy.clientVariant(style.key, style.base, "ECO") == "",
         "ECO must render native materials for every approved family")
     assert(Policy.clientVariant(style.key, style.base, "BALANCED") ==

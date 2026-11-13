@@ -11,7 +11,6 @@ local Policy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Wo
 local player = Players.LocalPlayer
 local TAG = "IronYardWorldPbr"
 local KEY = "IronYardPbrMaterial"
-local PREFIX = "IronYardPbr_"
 local watched = {}
 local connections = {}
 
@@ -21,7 +20,15 @@ local function render(part)
     end
     local desired = Policy.clientVariant(part:GetAttribute(KEY),
         part.Material.Name, player:GetAttribute("IronYardGraphicsPreset"))
-    if desired == nil then return end -- Never alter unrelated or invalid parts.
+    if desired == nil then
+        -- A previously valid key can become invalid when its base material
+        -- or replicated attribute changes. Remove ONLY our exact whitelisted
+        -- visual override; never replace an unrelated system's variant.
+        if Policy.isOwnedVariant(part.MaterialVariant) then
+            part.MaterialVariant = ""
+        end
+        return
+    end
 
     if desired ~= "" then
         -- A tag/attribute or MaterialVariant may replicate in either order.
@@ -30,6 +37,11 @@ local function render(part)
             or not MaterialService:GetMaterialVariant(part.Material, desired) then
             desired = ""
         end
+    end
+    -- ECO removes only approved IRON YARD variants, never third-party
+    -- materials that a separate local system may have chosen.
+    if desired == "" and not Policy.isOwnedVariant(part.MaterialVariant) then
+        return
     end
     if part.MaterialVariant ~= desired then
         part.MaterialVariant = desired
@@ -49,7 +61,7 @@ local function unwatch(part)
     -- surface only if this script previously selected our named variant.
     if part:IsA("BasePart") and part:IsDescendantOf(Workspace) then
         local current = part.MaterialVariant
-        if current:sub(1, #PREFIX) == PREFIX then
+        if Policy.isOwnedVariant(current) then
             part.MaterialVariant = ""
         end
     end
@@ -59,6 +71,11 @@ local function watch(part)
     if not part:IsA("BasePart") or watched[part] then return end
     watched[part] = {
         part:GetAttributeChangedSignal(KEY):Connect(function()
+            render(part)
+        end),
+        -- During streamed/rebuilt maps, a collider can change native
+        -- material while its original PBR tag remains attached.
+        part:GetPropertyChangedSignal("Material"):Connect(function()
             render(part)
         end),
         part.AncestryChanged:Connect(function()
