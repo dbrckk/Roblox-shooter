@@ -24,7 +24,21 @@ local function tryImportedMeshKit(model, rig, index, accent)
         local template = variant:FindFirstChild(partName)
         local components = MeshKit.primitives(template)
         if not components then return nil end
-        source[partName] = { template = template, parts = components }
+        -- Attribute identity is pinned per sanitized MeshPart, not by
+        -- GetChildren() order (which may differ for manually installed rigs).
+        -- Require exactly one authored Core flag, otherwise retain the
+        -- legacy first-primitive fallback without hiding every body piece.
+        local selectedCore, marked = nil, 0
+        for componentIndex, candidate in ipairs(components) do
+            if candidate:GetAttribute("IronYardCoreVisual") == true then
+                selectedCore = componentIndex
+                marked += 1
+            end
+        end
+        source[partName] = {
+            template = template, parts = components,
+            coreIndex = marked == 1 and selectedCore or 1,
+        }
     end
 
     local anchors = {
@@ -51,7 +65,7 @@ local function tryImportedMeshKit(model, rig, index, accent)
             -- Every body piece retains a server-authored base MeshPart at any
             -- distance. Secondary material primitives use the existing
             -- mobile/desktop Detail LOD; no collision or hitbox is touched.
-            local tier = MeshPolicy.visualTier(partName, index)
+            local tier = MeshPolicy.visualTier(partName, index, entry.coreIndex)
             assert(tier, "Invalid VANGUARD component/primitive tier")
             part.CastShadow = tier == "Core"
             part:SetAttribute("NeonCosmeticTier", tier)

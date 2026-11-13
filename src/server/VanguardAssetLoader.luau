@@ -92,14 +92,19 @@ local function extractPackage(owner, palette)
             local component = Instance.new("Folder")
             component.Name = name
             local group = selected[name]
-            -- Keep every material primitive's relative local transform.
-            -- A bot aligns the first primitive with its R6 limb, and the
-            -- rest retain their Blender-authored offsets and orientations.
+            -- The importer may return accent material before armor shell.
+            -- Choose the largest validated surface as the ONE Core LOD,
+            -- but preserve the original transform basis and primitive order.
+            local coreIndex = Policy.dominantIndex(group)
+            assert(coreIndex, "Invalid VANGUARD primitive geometry " .. name)
             local basis = group[1].CFrame
             for index, item in ipairs(group) do
                 local clone = MeshKit.cleanClone(item)
                 clone.Name = string.format("Primitive%02d", index)
                 clone.CFrame = basis:ToObjectSpace(item.CFrame)
+                -- Written on the sanitized server-owned template, not
+                -- accepted from an uploaded asset's arbitrary attributes.
+                clone:SetAttribute("IronYardCoreVisual", index == coreIndex)
                 clone.Parent = component
             end
             component.Parent = paletteFolder
