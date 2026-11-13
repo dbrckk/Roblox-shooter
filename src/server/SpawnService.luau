@@ -10,6 +10,7 @@ local SpawnService = {}
 local started = false
 local rng = Random.new()
 local SPAWN_SHIELD_SECONDS = 2.5
+local lastNoSafePadWarningAt = -math.huge
 
 -- Ground is at y=0. All positions are near stable, unobstructed lanes.
 local candidates = {
@@ -120,14 +121,20 @@ local function safestPosition(character)
     local centralPad = Vector3.new(0, 3.4, 130)
     if clearAt(centralPad, character) then return centralPad end
 
-    for _, position in ipairs(candidates) do
-        local score = scoreAt(position)
-        if score > bestScore then
-            best, bestScore = position, score
-        end
+    -- Never teleport a real player or an NPC inside a metal crate or wall.
+    -- The emergency grid is bounded to 49 overlap checks only after all
+    -- curated positions (and the central SpawnLocation) were obstructed.
+    local x, z = SpawnSafety.chooseEmergencyPad(function(px, pz)
+        return clearAt(Vector3.new(px, 3.4, pz), character)
+    end, function(px, pz)
+        return scoreAt(Vector3.new(px, 3.4, pz))
+    end)
+    if x ~= nil then return Vector3.new(x, 3.4, z) end
+    if os.clock() - lastNoSafePadWarningAt >= 10 then
+        lastNoSafePadWarningAt = os.clock()
+        warn("[IRON YARD] No collision-free FFA spawn found; preserving existing positions")
     end
-    warn("IRON YARD: no unobstructed spawn pad; using fallback under shield")
-    return best or centralPad
+    return nil
 end
 function SpawnService.selectSafeSpawn(excludeCharacter)
     return safestPosition(excludeCharacter)
@@ -177,6 +184,11 @@ function SpawnService.place(player, character, preferredPosition, faceToward, ot
     local position = typeof(preferredPosition) == "Vector3"
         and clearAt(preferredPosition, character, otherCharacter) and preferredPosition
         or safestPosition(character)
+    if not position then
+        -- A failed search must not materialize as CFrame.new(nil) or a
+        -- forced teleport into a solid part. Existing Roblox rigs stay alive.
+        return false
+    end
     applyPlacement(character, root, humanoid, position, faceToward)
     return true
 end
@@ -202,7 +214,18 @@ local function watchPlayer(player)
                 if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
                     return
                 end
-                SpawnService.place(player, character)
+                -- On a temporarily saturated arena, retry the genuine
+                -- physical check on this same rig. Never touch a replacement
+                -- character or an active 1v1 during delayed attempts.
+                for attempt = 1, 3 do
+                    if player.Character ~= character or not root:IsDescendantOf(Workspace)
+                        or Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
+                        return
+                    end
+                    if SpawnService.place(player, character) then return end
+                    if attempt < 3 then task.wait(0.7) end
+                end
+                warn("[IRON YARD] Could not reposition current player to a clear FFA pad")
             end
         end)
     end
