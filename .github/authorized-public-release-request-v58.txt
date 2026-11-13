@@ -1,0 +1,29 @@
+IRON YARD -- one-time owner-requested PUBLIC Roblox v58 update, 13 November 2026.
+
+Publish ONLY to the existing, already PUBLIC, creator-owned IRON YARD
+experience. The current public baseline is v57. Never create a private,
+test or replacement place; never change public visibility. Preserve the
+existing universe, root place and verified owner.
+
+Purpose: deliver the accumulated approved world PBR improvements from
+PRs #84 and #85. PR #84 uses warehouse_steel on existing authoritative
+warehouse cover, access stairs and forklift bodies; the existing
+freight_steel and yard_asphalt families remain wired. PR #85 fixes
+client rendering of BasePart.MaterialVariant, documented by Roblox as
+not replicated. Only server-validated real arena Parts are tagged with
+IronYardWorldPbr and a whitelist key. Each client resolves and selects
+an already-approved MaterialService variant; ECO locally reverts to the
+native base material, BALANCED / QUALITY retain approved PBR with safe
+fallback. The owner-private PERF readout shows local PBR selection counts.
+
+Use ONLY the existing 12 original owner-approved world PBR Image IDs,
+4 owner-approved VANGUARD Model IDs and existing weapon assets.
+Do not initiate any asset upload or alter gameplay hitboxes, collisions,
+damage, matchmaking, progression or monetization. CI does not prove
+actual Android GPU frame pacing or rendered visual quality.
+
+Authorize exactly one guarded PUBLIC update after a successful main Rojo
+CI run for THIS exact new release-request commit. Independently
+verify creator, universe, root place, PUBLIC visibility, source SHA,
+and successful publication. Stop rather than publishing an unexpected
+destination or stale source. Do not claim live-device QA was done.
