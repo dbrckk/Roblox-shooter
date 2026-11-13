@@ -1,0 +1,28 @@
+IRON YARD -- one-time owner-requested PUBLIC v62 original warehouse PBR roof update, 13 November 2026.
+
+Publish ONLY to the existing PUBLIC IRON YARD owned by Roblox user
+9774173158, universe 10775909016, starting root place 99189039770065.
+Do not create or publish to a new, private, alternate, replacement,
+or unpublished Roblox experience. Never change visibility or ownership.
+
+Previously confirmed PUBLIC baseline is v61 / Roblox place version 57,
+source c0d3b224e845486e40173f163679afe588820f45.
+The owner explicitly asks to continue improvements to the public FPS;
+this release consists ONLY of changes already reviewed, merged and
+green in PR #99, plus this one-time release marker:
+
+- 2 already existing noncolliding warehouse roof shells now opt into
+  the original, already approved 4-map warehouse_steel MaterialVariant.
+- No new asset uploads or untrusted IDs. All 26 original registries
+  are unchanged: 10 weapon models, 4 VANGUARD models, 12 world images.
+- Owner-only, private diagnostics count each material family and
+  actual local roof MaterialVariant assignments (not rendered GPU proof).
+- ECO keeps native Metal. No new light sources or altered geometry,
+  collision, hitbox, navmesh, damage, player input or bot behaviors.
+
+Require the ordinary push-triggered successful Luau + Rojo CI for this
+EXACT one-shot authorization commit, then the independent publishing
+workflow must verify the expected GitHub source, owner, universe,
+root place and already-PUBLIC visibility. Publish at most one version,
+stop on failed guard, never blindly retry. Never claim successful Android
+rendering, texture quality or FPS from a green CI alone.
