@@ -214,6 +214,8 @@ jobs:
           python3 scripts/asset_acceptance_matrix.py
           python3 scripts/test_asset_activation_pipeline.py
           python3 scripts/test_owner_pbr_rollout.py
+          python3 scripts/test_world_pbr_import_gate.py
+          bash -n scripts/launch_world_pbr_import.sh
           bash -n scripts/launch_owner_pbr_rollout.sh
           echo "Model + world PBR map generation, integrity, upload security tests passed."
 
