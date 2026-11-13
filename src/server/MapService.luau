@@ -75,14 +75,17 @@ local function warehouse(parent)
     local low = part(parent, "VAULT / packing station", Vector3.new(14, 5, 9),
         Vector3.new(-10, 2.5, 82), P.olive, Enum.Material.Metal)
     low:SetAttribute("MantleTarget", true)
+    WorldPbr.apply(low, "warehouse_steel")
     local ledge = part(parent, "VAULT / raised loading deck", Vector3.new(17, 3, 12),
         Vector3.new(13, 7, 85), P.concrete, Enum.Material.Concrete)
     ledge:SetAttribute("MantleTarget", true)
 
     -- A pair of short combat covers, avoiding the spawn routes.
     for _, side in ipairs({ -1, 1 }) do
-        part(parent, "WAREHOUSE / cover " .. side, Vector3.new(9, 4.3, 12),
+        local cover = part(parent, "WAREHOUSE / cover " .. side,
+            Vector3.new(9, 4.3, 12),
             Vector3.new(side * 47, 2.15, -8), P.cover, Enum.Material.Metal)
+        WorldPbr.apply(cover, "warehouse_steel")
     end
 end
 
@@ -92,9 +95,10 @@ local function highground(parent)
             Vector3.new(64, 3, 52), Vector3.new(side * 118, 11.5, 0), P.concrete)
         platform:SetAttribute("MantleTarget", true)
         for step = 1, 5 do
-            part(parent, "CATWALK / access stair " .. side .. ":" .. step,
+            local stair = part(parent, "CATWALK / access stair " .. side .. ":" .. step,
                 Vector3.new(18, step * 2, 5),
                 Vector3.new(side * 76, step, -30 + step * 5), P.cover, Enum.Material.Metal)
+            WorldPbr.apply(stair, "warehouse_steel")
         end
         climbWall(parent, "CATWALK / side bulkhead " .. side,
             Vector3.new(2.5, 16, 64), Vector3.new(side * 148, 8, -60), P.wall)
@@ -150,6 +154,7 @@ local function buildArena(folder)
         local collision = part(folder, "INDUSTRIAL / forklift body",
             Vector3.new(8, 3.1, 11), Vector3.new(forklift.x, 1.55, forklift.z),
             forklift.paint, Enum.Material.Metal)
+        WorldPbr.apply(collision, "warehouse_steel")
         collision:SetAttribute("MantleTarget", true)
         -- Render identity lives ON the authoritative body collider.
         -- Attributes do not affect bullet tests, movement or pathfinding.
