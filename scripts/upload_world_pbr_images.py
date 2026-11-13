@@ -18,6 +18,7 @@ import uuid
 import zlib
 
 from upload_vanguard_models import request_json
+from asset_moderation import verify_asset, await_approval
 
 BASE = "https://apis.roblox.com/assets/v1"
 MATERIALS = ("freight_steel", "warehouse_steel", "yard_asphalt")
@@ -132,13 +133,8 @@ def upload_one(key, owner, material, channel, raw):
             require(isinstance(row, dict), "Completed Image operation missing response")
             asset_id = int(row.get("assetId", 0))
             require(asset_id > 0, "Image operation returned invalid ID")
-            moderation = (row.get("moderationResult") or {}).get("moderationState")
-            require(moderation in (None, "MODERATION_STATE_APPROVED"),
-                    "Image not yet approved for world material activation")
-            creator = (row.get("creationContext") or {}).get("creator") or {}
-            require(str(creator.get("userId")) == str(owner),
-                    "Uploaded image owner differs from the authorized creator")
-            return asset_id
+            moderation = verify_asset(row, asset_id, owner)
+            return asset_id, moderation
         time.sleep(3)
         op = request_json(BASE + "/" + path, key)
     raise TimeoutError("Roblox Image processing still pending, activation withheld")
@@ -192,28 +188,44 @@ def main():
                 and saved.get("sourceCommit") == args.source_commit):
             previous = saved.get("assets", {})
 
+    def checkpoint():
+        args.registry.parent.mkdir(parents=True, exist_ok=True)
+        args.registry.write_text(json.dumps({
+            "ownerUserId": args.owner_user_id,
+            "sourceCommit": args.source_commit,
+            "assets": assets,
+        }, indent=2) + "\n", encoding="utf-8")
+
     for material in MATERIALS:
         for channel in CHANNELS:
             row = previous.get(material, {}).get(channel, {})
             item = assets[material][channel]
-            if row.get("sha256") == item["sha256"] and isinstance(row.get("assetId"), int)                     and row["assetId"] > 0:
-                item["assetId"] = row["assetId"]
+            if (row.get("sha256") == item["sha256"]
+                    and isinstance(row.get("assetId"), int) and row["assetId"] > 0):
+                asset_id = row["assetId"]
+                item["assetId"] = asset_id
+                item["moderation"] = row.get("moderation", "REVIEWING")
+                checkpoint()
+                await_approval(BASE, asset_id, args.owner_user_id, key, request_json)
             else:
                 raw = (args.assets / f"{material}_{channel}.png").read_bytes()
-                item["assetId"] = upload_one(key, args.owner_user_id,
+                asset_id, status = upload_one(key, args.owner_user_id,
                                               material, channel, raw)
-                # Partial uploads may be resumed, but NEVER activate a
-                # partial material registry in the running game.
-                args.registry.parent.mkdir(parents=True, exist_ok=True)
-                args.registry.write_text(json.dumps({
-                    "ownerUserId": args.owner_user_id,
-                    "sourceCommit": args.source_commit,
-                    "assets": assets,
-                }, indent=2) + "\n", encoding="utf-8")
-                print("Image approved: " + material + "/" + channel)
+                item["assetId"] = asset_id
+                item["moderation"] = status
+                checkpoint()
+                print(f"Roblox Image {material}/{channel}: created "
+                      f"assetId={asset_id}, moderation={status}")
+                if status != "APPROVED":
+                    await_approval(BASE, asset_id, args.owner_user_id,
+                                   key, request_json)
+            item["moderation"] = "APPROVED"
+            checkpoint()
+            print("Image approved: " + material + "/" + channel)
     require(all(int(assets[m][c].get("assetId", 0)) > 0
+                and assets[m][c].get("moderation") == "APPROVED"
                 for m in MATERIALS for c in CHANNELS),
-            "Incomplete twelve-image PBR upload")
+            "Incomplete or unapproved twelve-image PBR upload")
     args.module.write_text(render_registry(
         args.owner_user_id, args.source_commit, assets), encoding="utf-8")
     print("All 12 Roblox Image IDs confirmed; world PBR registry generated.")

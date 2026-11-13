@@ -8,6 +8,11 @@ on:
         type: string
         default: ""
         required: false
+      resume_run_id:
+        description: "Optional prior upload run ID with partial moderation checkpoint"
+        type: string
+        required: false
+        default: ""
       creator_user_id:
         description: "Confirmed Roblox user creator ID"
         type: string
@@ -74,6 +79,20 @@ jobs:
             --registry build/world-pbr-checkpoint.json \
             --module src/shared/WorldPbrAssetIds.luau \
             --dry-run
+
+      - name: Resume previously uploaded (possibly Reviewing) asset IDs
+        if: ${{ inputs.resume_run_id != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RESUME_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid resume run ID"; exit 1; }
+          echo "Inspecting checkpoint artifact from previous run $RESUME_RUN_ID"
+          gh run download "$RESUME_RUN_ID" --name world-pbr-upload-checkpoint --dir build
+          test -s build/world-pbr-checkpoint.json
+          echo "Recoverable asset IDs loaded; ownership will be rechecked by Roblox." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Confirm owner-authorized Open Cloud image upload
         if: ${{ inputs.publish_assets }}

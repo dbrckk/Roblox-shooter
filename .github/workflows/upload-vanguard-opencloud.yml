@@ -8,6 +8,11 @@ on:
         type: string
         required: false
         default: ""
+      resume_run_id:
+        description: "Optional prior upload run ID with partial moderation checkpoint"
+        type: string
+        required: false
+        default: ""
       creator_user_id:
         description: "Confirmed Roblox creator User ID (not Universe ID)"
         type: string
@@ -63,6 +68,20 @@ jobs:
           set -euo pipefail
           python3 -m py_compile scripts/upload_vanguard_models.py
           python3 tools/assetforge/validate_exports.py build/assets
+
+      - name: Resume previously uploaded (possibly Reviewing) asset IDs
+        if: ${{ inputs.resume_run_id != '' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RESUME_RUN_ID: ${{ inputs.resume_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$RESUME_RUN_ID" =~ ^[0-9]+$ ]] || { echo "Invalid resume run ID"; exit 1; }
+          echo "Inspecting checkpoint artifact from previous run $RESUME_RUN_ID"
+          gh run download "$RESUME_RUN_ID" --name vanguard-upload-checkpoint --dir build
+          test -s build/vanguard_upload_registry.json
+          echo "Recoverable asset IDs loaded; ownership will be rechecked by Roblox." >> "$GITHUB_STEP_SUMMARY"
 
       - name: Owner-authorized upload or offline validation only
         shell: bash
