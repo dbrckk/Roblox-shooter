@@ -1,11 +1,19 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
-**Date de référence : 12 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `7499f0e8285c2039a614153c33bbefe339b7f4ee`  
-**Expérience Roblox :** IRON YARD publique, **version 55 confirmée** par le workflow de publication GitHub Actions `43316384420`.  
+**Date de référence : 13 novembre 2026**  
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `2cbf077affccfff8bc68f56cd3f9f0306dd087b1`  
+**Expérience Roblox :** IRON YARD publique, **version interne v56 confirmée** par [Actions #43399328281](https://github.com/dbrckk/Roblox-shooter/actions/runs/43399328281) ; **version de place Roblox 52**, source `2cbf077`.  
 **Condition utilisateur actuelle :** pas de test manuel Android/Roblox Studio possible pour le moment. Les tâches bloquées doivent rester en attente **sans bloquer l'ensemble du chantier**.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v56, quatre modèles VANGUARD importés (13 novembre 2026)
+
+- **Upload propriétaire réel confirmé :** [Actions #43397175811](https://github.com/dbrckk/Roblox-shooter/actions/runs/43397175811) a créé et vérifié les quatre IDs VANGUARD, conservés dans `VanguardAssetIds.luau` (olive/sand/slate/rust). Les dix IDs d’armes restent non nuls. Les **douze** IDs d’images PBR du monde sont encore **zéro** ; matériaux Roblox natifs maintenus.
+- **Performance mobile préparée :** [PR #74](https://github.com/dbrckk/Roblox-shooter/pull/74) marque la première primitive de chaque pièce du bot comme `Core` et les autres comme `Detail`. Les clients peuvent réduire les détails à distance sans modifier les hitboxes ni le combat. Aucun gain de FPS n’est encore quantifié.
+- **Validation runtime rendue possible :** [PR #75](https://github.com/dbrckk/Roblox-shooter/pull/75) enrichit le panneau propriétaire `PERF` avec statut des templates, proportion de bots `PBR_MESH`, nombre de primitives et état PBR du décor. Ces compteurs ne remplacent ni rendu capturé ni test Android.
+- **Preuve de publication :** CI du commit d’autorisation `2cbf077` [Actions #43399263509](https://github.com/dbrckk/Roblox-shooter/actions/runs/43399263509) réussie ; [publication publique #43399328281](https://github.com/dbrckk/Roblox-shooter/actions/runs/43399328281) réussie, destination propriétaire vérifiée, **version Roblox 52**.
+- **Prochaine porte de sortie :** constater `IronYardPbrStatus=READY` et des bots `PBR_MESH` en partie réelle, mesurer FPS/P95 Android avant/après, vérifier le cadrage et les textures. Une CI verte n’est pas une preuve visuelle.
 
 ### Actualisation — PUBLIC v55, sécurité des mouvements différés (12 novembre 2026)
 
@@ -33,17 +41,17 @@ Ordre de décision : **fiabilité > fonctionnement réel > sécurité > architec
 
 Toute tâche porte un propriétaire logique (« code client », « code serveur », « pipeline d'assets »), une modification limitée, ses tests et une preuve de sortie. Une tâche nécessitant Roblox ou un téléphone n'est **pas** réputée accomplie avec seulement une compilation Luau.
 
-## 2. État vérifié dans le dépôt (12 novembre)
+## 2. État vérifié dans le dépôt (13 novembre)
 
 | Composant | Réalité vérifiée | Dette ou preuve manquante |
 |---|---|---|
-| Publication | L'expérience **publique** IRON YARD a été publiée en version 54 ; workflow CI et déploiement réussis | Un build/publication réussis ne sont ni un playtest, ni un relevé FPS |
+| Publication | L'expérience **publique** IRON YARD est publiée en **v56** ; la place Roblox a confirmé sa **version 52** | Une publication réussie ne prouve ni le rendu PBR, ni le gameplay moteur, ni les FPS Android |
 | Base de jeu | FFA, 5 armes, munitions et dégâts côté serveur, HUD tactile, progression, bots et déplacements présents | Temps jusqu'au premier engagement, ressenti des tirs, latence et ergonomie physique non mesurés |
 | Duel 1v1 | **Déjà présent**, pas « à développer de zéro » : `MatchService`, `DuelRules`, `DuelCombatState`, `DuelSpawnPlan`, tests duels en CI | Enchaînements d'abandons, respawns, changements de personnages, état réseau et équité à éprouver dans Roblox |
 | Armes PBR | `WeaponAssetIds.luau` contient **10 IDs non nuls**, 5 armes × LOD0/LOD1 ; politique de validation, cache de viewmodel, ADS et rechargements PBR implémentés | Contrôler résolution réelle de chaque asset, cadrage mobile, textures, animations et pertes au streaming |
-| Opérateurs PBR | `VanguardAssetIds.luau` garde **4 IDs à zéro** ; kit Blender original, archives et contrôle GLB présents | Upload propriétaire, approbation, branchement effectif et preuve visuelle |
+| Opérateurs PBR | **4 IDs propriétaires approuvés** dans `VanguardAssetIds.luau` ; runtime multi-matériaux sécurisé, LOD mobile et instrumentation `PERF` inclus dans la v56 publique | Vérifier `READY` et bots `PBR_MESH` dans Roblox, silhouette, textures et performances Android |
 | Décors PBR | `WorldPbrAssetIds.luau` garde **12 IDs à zéro** ; workflow de génération/validation de 3 matériaux × 4 canaux présent | Upload Open Cloud Images propriétaire, IDs approuvés, activation et preuve de rendu |
-| Performance | Pool VFX borné, adaptation transitoire Android, mesures privées FPS/P95/P99, charge IA, coût CPU du viewmodel et chronométrage privé A/B du changement d'arme disponibles | **Aucune mesure Android représentative** disponible pour attribuer un gain précis |
+| Performance | Pool VFX borné, LOD des primitives VANGUARD, mesures privées FPS/P95/P99, charge IA, statut PBR des bots et coût CPU du viewmodel disponibles | **Aucune mesure Android représentative** disponible pour attribuer un gain précis |
 | Progression | `ProgressionLedger` et `ProgressionService` avec `UpdateAsync`, verrou, autosave, retry et états visibles ; tests calculatoires | Sauvegarde, reconnexion et résilience DataStore **sur serveurs Roblox réels** non prouvées |
 | Sécurité | `RemoteGuard`, validation serveur, quotas, génération de chemins IA bornée et refus des anciennes réponses | Audit croisé des changements de manche, spam, sortie de joueur et latence ; épreuve réseau réelle différée |
 | Documentation | V2 et README mélangent anciennes limitations et avancées réelles | V3 est la source de décision ; maintenir les statuts synchronisés |
@@ -93,7 +101,7 @@ L'ordre ci-dessous est strict **par lots terminés**. On ne lance pas trois gran
 **B1. Terminer la chaîne d'assets existants avant d'en fabriquer d'autres.**
 
 1. **Armes :** vérifier et inventorier les dix IDs déjà renseignés, la provenance propriétaire, les LOD, la complétude des MeshParts et SurfaceAppearance, les sockets FX, la correspondance des composants animés et le fallback procédural. Consolider les contrôles offline et détecter les trous **avant** publication.
-2. **VANGUARD :** traiter les quatre IDs à zéro comme un blocage factuel. Vérifier les quatre GLB des archives et leurs cartes PBR, préparer un import propriétaire contrôlé avec préflight **sans upload réel**. Aucune valeur inventée ou fausse confirmation d'upload.
+2. **VANGUARD :** quatre IDs approuvés et consignés ; garder le fallback et vérifier `READY`, les bots `PBR_MESH`, l'apparence, les temps de chargement et le LOD sur appareil. Ne pas confondre upload et rendu validé.
 3. **Matériaux du monde :** utiliser le workflow existant de douze PNG et le validateur des hashes, CRC, UV/normal/roughness/metalness ; préparer un chemin de reprise des uploads partiels. La commande d'upload réelle exige des permissions du créateur, et ne doit pas être lancée par simple push.
 4. Préserver les collisions, raycasts, déplacements, couvertures et les matériaux Roblox natifs de repli. Ne jamais intégrer un modèle contenant des scripts tiers.
 5. Produire une **matrice d'acceptation par asset** : source/ID/owner/LOD/canaux PBR/fallback/contrôle runtime manquant.
@@ -198,7 +206,7 @@ Pour chaque PR de code :
 ### Risques actifs, sans cacher les limites
 
 - **R1 — validation manquante** : stabilité réelle des 1v1 et du DataStore dans l'expérience publiée, FPS Android et collisions/animations importées.
-- **R2 — pipeline visuel incomplet** : quatre IDs VANGUARD et douze IDs de matériaux PBR toujours nuls ; l'arme PBR à dix IDs ne prouve pas que tout le monde est en PBR.
+- **R2 — pipeline visuel incomplet** : quatre IDs VANGUARD sont approuvés, mais pas encore vérifiés visuellement en moteur ; douze IDs de matériaux du décor PBR restent nuls. Les dix IDs d’armes et quatre IDs d’opérateurs ne prouvent pas la fluidité Android.
 - **R3 — dérive documentaire** : ancien audit/V2 et portions du README décrivent encore une publication future ou l'absence de duel alors que la version publique et le 1v1 existent.
 - **R4 — optimisation aveugle** : pas de mesure physique du CPU/GPU ni de comparaison avant/après ; privilégier correctness, allocations bornées et instruments jusqu'à un vrai test.
 - **R5 — livraison** : asset Roblox non autorisé ou source concurrente ; les gates CI et owner et fallback restent impératifs.
