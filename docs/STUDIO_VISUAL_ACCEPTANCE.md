@@ -346,3 +346,22 @@ Device acceptance: on the same Android phone and graphics preset, rotate at roug
 The four uploaded VANGUARD models and twelve world texture IDs are owner-approved. Roblox documents `BasePart.MaterialVariant` as non-replicated. The server therefore tags **only** base-material-validated authoritative arena Parts with `IronYardWorldPbr` and a whitelisted `IronYardPbrMaterial` attribute. Each client resolves these tags against the three registered `MaterialService` variants and applies its own local `MaterialVariant`; unknown keys, missing variants and unconfigured owner registries stay on the native material. Existing collision geometry, server hit registration and visual fallback do not change.
 
 **Android/Studio acceptance:** On owner account, open **PERF**. In BALANCED and QUALITY, confirm `Decor: CONFIGURED | PBR local: 24/24` for a fully streamed arena (the actual denominator can be lower during streaming), then select ECO and confirm `PBR local: 0/<tagged>`. Switch back to BALANCED, rotate/rejoin and cross streaming boundaries; the correct variants should restore without popping on unrelated colliders. Verify material tiling on the asphalt and warehouse access stairs, compare GPU frame pacing before/after ECO, monitor total RAM, and confirm that bullets, wallrunning, mantle targets and forks behave identically. **CI validates wiring, not Android renderer fidelity.**
+
+
+## World PBR invalidation and streaming recovery — 13 November 2026
+
+The locally rendered world PBR variants must also be removed when their
+server-approved material key becomes missing/unknown, the part's underlying
+`Enum.Material` changes, or the `IronYardWorldPbr` tag is removed. Only
+the three explicit IRON YARD variant names are eligible for cleanup; unknown
+variants from other systems must never be cleared by this PBR bridge.
+The client listens for replicated material changes without polling and
+retains the regular ECO/BALANCED/QUALITY switch.
+
+**Real-device acceptance required:** in Studio modify a tagged warehouse
+surface's `IronYardPbrMaterial` to an unknown value, then restore the approved
+key; verify native material and then approved PBR return. Change its base
+material to Wood and back to Metal, and remove/re-add the tag while streaming.
+Confirm no stale custom variant persists, unrelated decorations are untouched,
+and no new server collision/physics changes occur. Then repeat ECO/BALANCED
+changes on Android with PERF visible and record FPS/P95 for comparison.
