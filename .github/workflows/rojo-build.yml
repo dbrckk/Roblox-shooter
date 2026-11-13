@@ -202,9 +202,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m py_compile tools/assetforge/*.py scripts/upload_vanguard_models.py scripts/upload_world_pbr_images.py
+          python3 -m py_compile tools/assetforge/*.py scripts/upload_vanguard_models.py scripts/upload_world_pbr_images.py scripts/asset_moderation.py
           python3 scripts/upload_vanguard_models.py --help > /dev/null
           python3 scripts/upload_world_pbr_images.py --help > /dev/null
+          python3 scripts/test_asset_moderation.py
           python3 scripts/test_vanguard_upload_contract.py
           python3 scripts/test_weapon_upload_contract.py
           python3 scripts/test_audit_vanguard_glb.py

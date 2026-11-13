@@ -20,6 +20,7 @@ import urllib.request
 import uuid
 
 from audit_vanguard_glb import inspect as inspect_glb
+from asset_moderation import verify_asset, await_approval
 
 API = "https://apis.roblox.com/assets/v1"
 PALETTES = ("olive", "sand", "slate", "rust")
@@ -93,13 +94,11 @@ def upload_one(owner, palette, raw, key):
             require(isinstance(response, dict), "Completed operation missing asset response")
             asset_id = int(response.get("assetId", 0))
             require(asset_id > 0, "Completed operation returned no valid asset ID")
-            moderation = (response.get("moderationResult") or {}).get("moderationState")
-            require(moderation in (None, "MODERATION_STATE_APPROVED"),
-                    "Asset is not yet approved; avoid activating it automatically")
-            creator = (response.get("creationContext") or {}).get("creator") or {}
-            require(str(creator.get("userId")) == str(owner),
-                    "Roblox asset creator differs from confirmed owner")
-            return asset_id
+            # Roblox documents both 'Approved' and the older enum spelling.
+            # Also preserve the ID if this operation completed but moderation
+            # is still Reviewing: the next run must reuse, not duplicate it.
+            moderation = verify_asset(response, asset_id, owner)
+            return asset_id, moderation
         time.sleep(3)
         operation = request_json(API + "/" + path, key)
     raise TimeoutError("Model asset processing has not completed; no asset IDs activated")
@@ -163,23 +162,43 @@ def main():
         old = json.loads(args.registry.read_text(encoding="utf-8"))
         if old.get("ownerUserId") == args.owner_user_id and old.get("sourceCommit") == args.source_commit:
             previous = old.get("models", {})
-    for palette in PALETTES:
-        row = previous.get(palette, {})
-        if row.get("sha256") == models[palette]["sha256"] and int(row.get("assetId", 0)) > 0:
-            models[palette]["assetId"] = int(row["assetId"])
-            continue
-        _, raw, _ = model_info(args.assets, palette)
-        models[palette]["assetId"] = upload_one(args.owner_user_id, palette, raw, key)
+    def checkpoint():
         args.registry.parent.mkdir(parents=True, exist_ok=True)
         args.registry.write_text(json.dumps({
             "ownerUserId": args.owner_user_id,
             "sourceCommit": args.source_commit,
             "models": models,
         }, indent=2) + "\n", encoding="utf-8")
-        print(f"Roblox Model asset created for {palette}; ID confirmed by Open Cloud.")
 
-    require(all(int(models[x].get("assetId", 0)) > 0 for x in PALETTES),
-            "Incomplete VANGUARD upload; not activating models")
+    for palette in PALETTES:
+        row = previous.get(palette, {})
+        if (row.get("sha256") == models[palette]["sha256"]
+                and isinstance(row.get("assetId"), int) and row["assetId"] > 0):
+            # A prior run may have created this asset while Roblox was still
+            # reviewing it. Check the EXISTING ID, not another POST.
+            asset_id = row["assetId"]
+            models[palette]["assetId"] = asset_id
+            models[palette]["moderation"] = row.get("moderation", "REVIEWING")
+            checkpoint()
+            await_approval(API, asset_id, args.owner_user_id, key, request_json)
+        else:
+            _, raw, _ = model_info(args.assets, palette)
+            asset_id, status = upload_one(args.owner_user_id, palette, raw, key)
+            models[palette]["assetId"] = asset_id
+            models[palette]["moderation"] = status
+            # Save the ID BEFORE waiting for moderation, so a timeout is
+            # recoverable using the checkpoint artifact with no duplicate.
+            checkpoint()
+            print(f"Roblox Model {palette}: created assetId={asset_id}, "
+                  f"moderation={status}")
+            if status != "APPROVED":
+                await_approval(API, asset_id, args.owner_user_id, key, request_json)
+        models[palette]["moderation"] = "APPROVED"
+        checkpoint()
+        print(f"Roblox Model {palette}: owner and approval confirmed.")
+    require(all(int(models[x].get("assetId", 0)) > 0
+                and models[x].get("moderation") == "APPROVED" for x in PALETTES),
+            "Incomplete or unapproved VANGUARD upload; not activating models")
     args.module.write_text(render_registry(args.owner_user_id, args.source_commit, models),
                            encoding="utf-8")
     print("Four owner-authorized GLB Model assets confirmed; Lua model registry generated.")
