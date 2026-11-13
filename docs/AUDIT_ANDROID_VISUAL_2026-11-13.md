@@ -4,6 +4,8 @@
 **Base auditée :** `9cf32b4b2f80d73a5b1718066190274e767e49e4` (v59 publiée ; version de place Roblox 55).  
 **Portée :** captures de jeu + code versionné. Aucun relevé de FPS, logs Roblox Studio, état du panneau PERF ni mesure de rendu GPU joints.
 
+**Actualisation du 13 novembre :** les correctifs prioritaires de l'interface et des marqueurs IA ([PR #91](https://github.com/dbrckk/Roblox-shooter/pull/91)), ainsi que la robustesse et la visibilité des statuts de chargement PBR ([PR #92](https://github.com/dbrckk/Roblox-shooter/pull/92)), sont fusionnés et **publiés en v60** ([preuve Roblox #43474268716](https://github.com/dbrckk/Roblox-shooter/actions/runs/43474268716), version de place **56**). Les critères de visualisation et performance sur Android ci-dessous restent à valider par captures **après v60**.
+
 ## Constats vérifiés et limites
 
 | Priorité | Observation Android | Cause vérifiée / statut | Preuve de sortie |
@@ -19,7 +21,7 @@
 
 ## Plan d'action — lots complets, séquentiels
 
-### Lot 1 — Fix immédiat HUD et lisibilité de combat (ce lot)
+### Lot 1 — Fix immédiat HUD et lisibilité de combat (code public v60 ; retest Android ouvert)
 - Plafonner les tailles de texte des dix touches Android tout en conservant leur géométrie et les tests `TouchLayout`.
 - Afficher le nom de l'arme comme une légende compacte, ammo et santé inchangés.
 - Faire respecter la profondeur de la scène par les étiquettes IA, sans raycast local supplémentaire.
