@@ -1,0 +1,8 @@
+# Owner authorizes restoration of existing, previously approved Image IDs.
+# This recovery may GET existing assets but must never POST duplicate Images.
+ownerUserId=9774173158
+assetFamily=WORLD_12_IMAGES
+priorUploadRunId=43412637168
+assetSourceRunId=43389183645
+assetSourceCommit=903deaafacc29011972b86cbea117bd52d211b76
+publication=NO_PUBLIC_ROBLOX_RELEASE
