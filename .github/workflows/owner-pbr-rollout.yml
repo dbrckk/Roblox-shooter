@@ -1,0 +1,41 @@
+name: Owner-authorized one-time original PBR rollout
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/authorized-pbr-rollout-v1.txt"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: iron-yard-one-time-pbr-rollout
+  cancel-in-progress: false
+
+jobs:
+  owner-rollout:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Check out owner-authorized marker and trusted upload coordinator
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Verify uploader code before granting any Roblox upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/launch_owner_pbr_rollout.sh
+          python3 scripts/test_owner_pbr_rollout.py
+          python3 scripts/test_asset_activation_pipeline.py
+          python3 scripts/asset_acceptance_matrix.py
+
+      - name: Build, upload and verify owner-controlled original PBR assets
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROBLOX_ASSETS_KEY_AVAILABLE: ${{ secrets.ROBLOX_OPEN_CLOUD_ASSETS_KEY != '' }}
+        run: bash scripts/launch_owner_pbr_rollout.sh
