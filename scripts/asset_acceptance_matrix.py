@@ -149,7 +149,9 @@ def world():
             "detail": "4 canaux PBR",
             "channels": "Color / Normal / Roughness / Metalness",
             "fallback": "matériaux Roblox natifs",
-            "runtime": "upload Open Cloud et rendu non confirmés",
+            "runtime": ("rendu Roblox et FPS Android non observés"
+                        if all(int(by_channel[ch]) > 0 for ch in channels)
+                        else "upload Open Cloud et rendu non confirmés"),
         })
     return rows, commit
 
