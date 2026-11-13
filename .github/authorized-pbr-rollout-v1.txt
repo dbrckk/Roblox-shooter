@@ -1,0 +1,6 @@
+# One-time owner authorization for original IRON YARD visual asset upload.
+# This is an opt-in data-assets release only; it NEVER publishes a Roblox place.
+# Uploaded permanent assets must match the original audited archive and owner.
+ownerUserId=9774173158
+assetFamilies=VANGUARD_4_MODELS,WORLD_12_IMAGES
+publication=NO_PUBLIC_ROBLOX_RELEASE
