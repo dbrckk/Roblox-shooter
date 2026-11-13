@@ -1,11 +1,18 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
 **Date de référence : 13 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `c0d3b224e845486e40173f163679afe588820f45`  
-**Expérience Roblox :** IRON YARD publique, **version interne v61 confirmée** par [Actions #43513947947](https://github.com/dbrckk/Roblox-shooter/actions/runs/43513947947) ; **version de place Roblox 57**, source `c0d3b224`.  
-**Preuves utilisateur :** deux captures réelles Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v61 ni relevé PERF/FPS ne confirme encore les corrections en moteur**. Les autres validations bloquées doivent rester ouvertes.
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `784b55bb430c2894b711380d38005d2b10080098`  
+**Expérience Roblox :** IRON YARD publique, **version interne v62 confirmée** par [Actions #43515519494](https://github.com/dbrckk/Roblox-shooter/actions/runs/43515519494) ; **version de place Roblox 58**, source `784b55bb`.  
+**Preuves utilisateur :** deux captures Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v62 ni relevé PERF/FPS ne confirme encore les corrections visuelles en moteur**. Les autres validations bloquées doivent rester ouvertes.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v62 : toit 3D PBR et diagnostic propriétaire (13 novembre 2026)
+
+- **Toit PBR :** [PR #99](https://github.com/dbrckk/Roblox-shooter/pull/99) ajoute le matériau original déjà approuvé `warehouse_steel` sur les deux grandes plaques de toiture sans collision, raycast ni nouvelles textures. L'architecture et les vitres restent inchangées ; ECO conserve `Enum.Material.Metal`.
+- **État d'activation mesurable :** le panneau propriétaire PERF affiche désormais `freight_steel`, `warehouse_steel`, `yard_asphalt` et `Roof: N/M`, chacun comptant les applications locales par rapport aux surfaces actuellement streamées. Voir [WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md](WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md).
+- **Publication confirmée :** [workflow #43515519494](https://github.com/dbrckk/Roblox-shooter/actions/runs/43515519494), **version de place Roblox 58**, source `784b55bb430c2894b711380d38005d2b10080098`. Destination PUBLIC et propriétaire vérifiés, pas de nouvelle importation d'assets.
+- **QA encore obligatoire :** comparaison des surfaces ECO/BALANCED/QUALITY, FPS/P95, statut exact PBR des 5 armes et des 4 palettes VANGUARD sur appareil Android ; un compteur d'assignation n'atteste pas que la texture est visuellement correcte.
 
 ### Actualisation — PUBLIC v61 : fiabilisation et silhouette VANGUARD sur Android (13 novembre 2026)
 
