@@ -1,0 +1,42 @@
+name: Recover twelve already approved world PBR Images
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/authorized-world-pbr-recovery-v1.txt"
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: iron-yard-one-time-world-pbr-recovery
+  cancel-in-progress: false
+
+jobs:
+  upload-owner-world:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Read owner-approved marker and original importer
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Verify strict source, owner and CI preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          bash -n scripts/recover_world_pbr.sh
+          python3 scripts/test_world_pbr_recovery_contract.py
+          python3 scripts/test_world_pbr_checkpoint.py
+          python3 scripts/test_asset_activation_pipeline.py
+          python3 scripts/asset_acceptance_matrix.py
+
+      - name: Import only approved owner Images and verify new registry
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ROBLOX_ASSETS_KEY_AVAILABLE: ${{ secrets.ROBLOX_OPEN_CLOUD_ASSETS_KEY != '' }}
+        run: bash scripts/recover_world_pbr.sh
