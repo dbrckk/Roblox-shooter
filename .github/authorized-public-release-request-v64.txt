@@ -1,0 +1,24 @@
+IRON YARD -- one-time owner-directed PUBLIC v64 functional stability release, 14 November 2026.
+
+Deploy ONLY to the existing PUBLIC IRON YARD owned by Roblox user
+9774173158, universe 10775909016, root place 99189039770065.
+Never change visibility, create another experience or use a private place.
+
+Last verified PUBLIC baseline: v63, Roblox place version 59,
+source 6a9c4c42bed7a27f26a5fbb819ecb816c640cb18.
+This release contains the reviewed, CI-green MatchService scheduler
+fault containment fix from PR #105, source commit
+41f2e3fcb11b20e5cdf663cd4c3a019042e1c1b0.
+No new game mode, no prototype, no mock behavior, no new assets.
+
+The actual game loop now survives a transient Roblox runtime exception.
+After three consecutive failures it clears the duel combat state,
+unanchors only the original duel-preparation character roots, discards
+stale duel state and returns to WAITING. No fake victories or
+progression resets. Ordinary phase timings and weapon logic are unchanged.
+
+Require a successful Rojo/Luau main CI for the EXACT one-shot release
+authorization commit and independent Open Cloud checks of the original
+owner, universe, root place and PUBLIC visibility before uploading.
+Publish at most once. Never bypass a failed guard or claim live Android
+runtime verification based on a green GitHub CI.
