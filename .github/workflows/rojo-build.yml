@@ -241,6 +241,7 @@ jobs:
           python3 scripts/check_match_lobby_contract.py
           python3 scripts/check_duel_prep_contract.py
           python3 scripts/check_match_transition_contract.py
+          python3 scripts/check_match_scheduler_recovery.py
           python3 scripts/check_weapon_contract.py
           python3 scripts/check_ttk_contract.py
           python3 scripts/check_weapon_presentation_contract.py
