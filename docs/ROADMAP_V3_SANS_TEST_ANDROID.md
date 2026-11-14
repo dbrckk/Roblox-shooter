@@ -1,11 +1,18 @@
 # IRON YARD — Feuille de route V3 : finition production sans test Android immédiat
 
-**Date de référence : 13 novembre 2026**  
-**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `6a9c4c42bed7a27f26a5fbb819ecb816c640cb18`  
-**Expérience Roblox :** IRON YARD publique, **version interne v63 confirmée** par [Actions #43517233138](https://github.com/dbrckk/Roblox-shooter/actions/runs/43517233138) ; **version de place Roblox 59**, source `6a9c4c42`.  
-**Preuves utilisateur :** deux captures Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v63 ni relevé PERF/FPS ne confirme encore le fonctionnement et la qualité visuelle en conditions réelles**. Les validations Roblox en moteur restent ouvertes.
+**Date de référence : 14 novembre 2026**  
+**Dépôt :** `dbrckk/Roblox-shooter` · **branche :** `main` · **base d'audit initiale :** `ca97f32e3bf86874351bc0232ac6d14f15f46b4e` · **mise à jour de l'état public :** `49bfaf7856a663a4feda51c71db38617f4d65671`  
+**Expérience Roblox :** IRON YARD publique, **version interne v66 confirmée** par [Actions #43619963067](https://github.com/dbrckk/Roblox-shooter/actions/runs/43619963067) ; **version de place Roblox 62**, source `49bfaf7856`.  
+**Preuves utilisateur :** deux captures Android du 13 novembre 2026 ont déclenché l'audit HUD/visuels ; **aucune capture post-v66 ni relevé PERF/FPS ne confirme encore l'ensemble du gameplay et la qualité visuelle en conditions réelles**. Les validations Roblox en moteur restent ouvertes.
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
+
+### Actualisation — PUBLIC v64 à v66 : continuité des manches, IA et morts (14 novembre 2026)
+
+- **v64 :** [PR #105](https://github.com/dbrckk/Roblox-shooter/pull/105) protège la boucle unique de MatchService contre une exception Roblox. Après trois échecs successifs, elle libère les racines de préparation de duel et revient à WAITING, sans attribuer de victoire fictive. Publication [#43570550592](https://github.com/dbrckk/Roblox-shooter/actions/runs/43570550592), place 60.
+- **v65 :** [PR #107](https://github.com/dbrckk/Roblox-shooter/pull/107) isole les erreurs par bot dans les tâches d'apparition, de combat et de pose ; un bot qui échoue trois fois est retiré, puis sa recréation physique est retentée après cinq secondes. Publication [#43571293139](https://github.com/dbrckk/Roblox-shooter/actions/runs/43571293139), place 61.
+- **v66 :** [PR #109](https://github.com/dbrckk/Roblox-shooter/pull/109) planifie avant les opérations à risque le nettoyage normal 2,5 s d'un bot mort, de sorte qu'une erreur d'animation/navigation ne puisse pas bloquer indéfiniment un slot de combat. Le nettoyage différé ne détruit jamais un autre bot grâce au contrôle d'identité. Critères : [BOT_DEATH_CLEANUP_PRODUCTION_2026-11-14.md](BOT_DEATH_CLEANUP_PRODUCTION_2026-11-14.md). Publication **réussie** [#43619963067](https://github.com/dbrckk/Roblox-shooter/actions/runs/43619963067), place 62, source `49bfaf7856a663a4feda51c71db38617f4d65671`.
+- **À valider en moteur (non prouvé par CI) :** une FFA complète et son podium, l'enchaînement des manches, deux joueurs prêts pour un duel et leurs réapparitions, les quatre bots qui meurent et reviennent en FFA, absence de bots dans un duel actif, tirs à travers les cadavres, FPS/P95 Android et aspect PBR. Les tests GitHub/Rojo sécurisent le code, **pas** les événements réels Humanoid et GPU.
 
 ### Actualisation — PUBLIC v63 : réapparitions sûres en conditions de saturation (13 novembre 2026)
 
