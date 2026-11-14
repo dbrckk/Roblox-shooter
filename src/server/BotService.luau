@@ -428,10 +428,25 @@ local function createBot(slot)
     end)
     humanoid.Died:Connect(function()
         bot.deaths += 1
-        BotNavigation.invalidate(bot)
-        bot.joints.facing.Enabled = false
-        -- Disable collision and ray query FIRST so no death-frame corpse
-        -- can block bullets or the movement of a surviving combatant.
+        -- Schedule slot release FIRST. A transient navigation error or a
+        -- broken cosmetic death animation must not leave a dead bot occupying
+        -- its roster slot indefinitely, preventing a real FFA replacement.
+        -- The identity guard keeps delayed cleanup from deleting a new bot.
+        task.delay(config.DespawnAfterDeath, function()
+            if slots[slot] ~= bot then return end
+            slots[slot] = nil
+            if model.Parent then model:Destroy() end
+        end)
+
+        -- Navigation teardown is best effort. It must never skip physical
+        -- deactivation of the corpse or the short animated death sequence.
+        local navOk, navErr = pcall(BotNavigation.invalidate, bot)
+        if not navOk then reportSchedulerFault("death-nav:" .. slot, navErr) end
+        if bot.joints.facing and bot.joints.facing.Parent then
+            bot.joints.facing.Enabled = false
+        end
+        -- Disable collision and ray query BEFORE posing the body. Dead bots
+        -- must not block the next player's shots or movement.
         for _, component in ipairs(model:GetDescendants()) do
             if component:IsA("BasePart") then
                 component.CanCollide = false
@@ -439,12 +454,10 @@ local function createBot(slot)
                 component.CanTouch = false
             end
         end
-        BotDeathAnimation.play(bot)
-        task.delay(config.DespawnAfterDeath, function()
-            if slots[slot] ~= bot then return end
-            slots[slot] = nil
-            if model.Parent then model:Destroy() end
+        local poseOk, poseErr = pcall(function()
+            BotDeathAnimation.play(bot)
         end)
+        if not poseOk then reportSchedulerFault("death-pose:" .. slot, poseErr) end
     end)
     return bot
 end
