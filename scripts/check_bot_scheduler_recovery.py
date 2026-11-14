@@ -33,3 +33,22 @@ assert 'if not model then return nil end' in s
 assert 'python3 scripts/check_bot_scheduler_recovery.py' in ci
 assert 'CombatAwards.recordVictory' not in s, "Recovery must never invent wins"
 print("IRON YARD bot reconcile/combat/pose tasks: fault isolated and bounded")
+
+# Death can originate from an actual hit while a cosmetic/PathfindingService
+# operation fails. The 2.5-second live slot release must already be queued
+# before any such fallible operation, and cannot evict a replacement bot.
+death = s.split('humanoid.Died:Connect(function()', 1)[1].split(
+    '\n    return bot', 1)[0]
+cleanup = 'task.delay(config.DespawnAfterDeath, function()'
+assert cleanup in death, "Missing mandatory real bot corpse cleanup"
+assert death.index(cleanup) < death.index('pcall(BotNavigation.invalidate, bot)')
+assert death.index(cleanup) < death.index('BotDeathAnimation.play(bot)')
+assert 'if slots[slot] ~= bot then return end' in death
+assert death.index('slots[slot] = nil') < death.index('model:Destroy()')
+assert 'local navOk, navErr = pcall(BotNavigation.invalidate, bot)' in death
+assert 'local poseOk, poseErr = pcall(function()' in death
+assert death.index('component.CanQuery = false') < death.index(
+    'BotDeathAnimation.play(bot)')
+assert 'reportSchedulerFault("death-nav:" .. slot, navErr)' in death
+assert 'reportSchedulerFault("death-pose:" .. slot, poseErr)' in death
+print("IRON YARD bot death: cleanup precedes fallible navigation and posing")

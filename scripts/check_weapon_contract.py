@@ -1094,6 +1094,9 @@ def main():
         has(dust_pool, needle, "Bounded 4-bot recycled defeat-dust policy")
     require(bot.index("component.CanQuery = false") < bot.index("BotDeathAnimation.play(bot)"),
             "Dead bot hitboxes must be removed before posing its body")
+    require(bot.index("task.delay(config.DespawnAfterDeath, function()") <
+            bot.index("BotDeathAnimation.play(bot)"),
+            "A failed cosmetic animation must never prevent real bot respawn")
     require("playDeathStagger(bot)" not in bot,
             "Retired single-pose death tween must no longer run")
     awards = source("src/server/CombatAwards.luau")
