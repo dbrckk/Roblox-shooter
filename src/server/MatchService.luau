@@ -566,8 +566,7 @@ function MatchService.start()
                         publishDuelScores()
                         transition("WAITING", 0)
                     end)
-                    if not recovered and now - lastWarningAt >= 10 then
-                        lastWarningAt = now
+                    if not recovered then
                         warn("[IRON YARD] Match recovery failed: " .. tostring(recoveryErr))
                     end
                     consecutiveFailures = 0
