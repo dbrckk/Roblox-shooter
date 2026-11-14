@@ -260,6 +260,7 @@ jobs:
           python3 scripts/check_bot_navigation_budget.py
           python3 scripts/check_bot_los_budget.py
           python3 scripts/check_bot_perf_contract.py
+          python3 scripts/check_bot_scheduler_recovery.py
           python3 scripts/check_bot_detail_cache.py
           python3 scripts/check_art_sector_cache.py
 

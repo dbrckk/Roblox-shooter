@@ -33,6 +33,21 @@ local slots = {}
 local roundKills = {}
 local started = false
 local rng = Random.new()
+-- Server-only recovery telemetry; never expose Roblox identifiers or exception
+-- content to clients. A broken bot cannot terminate every other bot's AI.
+local faultWarningAt = {}
+local botRetryAfter = {}
+local totalSchedulerFaults = 0
+
+local function reportSchedulerFault(source, err)
+    totalSchedulerFaults += 1
+    Workspace:SetAttribute("IronYardBotSchedulerFaults", totalSchedulerFaults)
+    local now = os.clock()
+    if now - (faultWarningAt[source] or -math.huge) >= 10 then
+        faultWarningAt[source] = now
+        warn("[IRON YARD] Bot " .. source .. " recovered from error: " .. tostring(err))
+    end
+end
 
 local function createPart(model, name, size, offset, color, collide)
     local p = Instance.new("Part")
@@ -816,8 +831,15 @@ local function reconcile()
             end
             -- Retired AI must not remain a ghost leader after a human joins.
             roundKills[slot] = 0
-        elseif not bot and humans > 0 then
-            createBot(slot)
+        elseif not bot and humans > 0
+            and os.clock() >= (botRetryAfter[slot] or 0) then
+            -- Creating one damaged bot must not permanently kill the
+            -- reconciliation task or prevent the other slots from spawning.
+            local ok, err = pcall(createBot, slot)
+            if not ok then
+                botRetryAfter[slot] = os.clock() + 5
+                reportSchedulerFault("create:" .. slot, err)
+            end
         end
     end
     local alive = 0
@@ -952,7 +974,11 @@ function BotService.resetRound()
         end
     end
     for _, slot in ipairs(rebuild) do
-        createBot(slot)
+        local ok, err = pcall(createBot, slot)
+        if not ok then
+            botRetryAfter[slot] = os.clock() + 5
+            reportSchedulerFault("round-create:" .. slot, err)
+        end
     end
 end
 
@@ -966,9 +992,12 @@ function BotService.start()
     folder.Name = "NeonStrikeBots"
     folder.Parent = Workspace
     Workspace:SetAttribute("NeonBotCount", 0)
+    Workspace:SetAttribute("IronYardBotSchedulerFaults", 0)
     task.spawn(function()
         while started do
-            reconcile()
+            local ok, err = pcall(reconcile)
+            if not ok then reportSchedulerFault("reconcile", err) end
+            -- Keep reconciliation alive even after a transient Roblox error.
             task.wait(1.25)
         end
     end)
@@ -978,8 +1007,25 @@ function BotService.start()
             local now = os.clock()
             local dt = math.clamp(now - previous, 0, 0.4)
             previous = now
-            for _, bot in pairs(slots) do
-                updateBot(bot, dt)
+            for slot, bot in pairs(slots) do
+                local ok, err = pcall(updateBot, bot, dt)
+                if ok then
+                    bot.thinkFailures = 0
+                else
+                    bot.thinkFailures = (bot.thinkFailures or 0) + 1
+                    reportSchedulerFault("combat:" .. slot, err)
+                    if bot.thinkFailures >= 3 and slots[slot] == bot then
+                        -- Quarantine only the malfunctioning bot. The
+                        -- existing safe-pad reconcile will rebuild this
+                        -- slot after a bounded five-second cooldown.
+                        slots[slot] = nil
+                        botRetryAfter[slot] = os.clock() + 5
+                        pcall(BotNavigation.invalidate, bot)
+                        if bot.model and bot.model.Parent then
+                            bot.model:Destroy()
+                        end
+                    end
+                end
             end
             -- Four light dispatcher checks per 0.2s spread costly
             -- target LOS/path decisions over four 50ms server slices.
@@ -1016,9 +1062,17 @@ function BotService.start()
                     bot.nextAnimationAt = BotMotionProfile.nextPoseAt(
                         now, nearestSquared, bot.slot)
                     local poseSample = BotPerfService.begin()
-                    BotAnimation.step(bot, now, bot.isAiming == true)
-                    BotPerfService.count("pose")
-                    BotPerfService.measure("poseMs", poseSample)
+                    local ok, err = pcall(BotAnimation.step,
+                        bot, now, bot.isAiming == true)
+                    if ok then
+                        BotPerfService.count("pose")
+                        BotPerfService.measure("poseMs", poseSample)
+                    else
+                        -- A cosmetic animation failure cannot freeze AI
+                        -- decisions or block all other characters' poses.
+                        bot.nextAnimationAt = now + 2
+                        reportSchedulerFault("pose:" .. bot.slot, err)
+                    end
                 end
             end
             task.wait(1 / 30)

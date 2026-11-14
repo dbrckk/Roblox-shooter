@@ -84,7 +84,7 @@ for needle in (
     "now, config.ThinkInterval, bot.slot)",
 ):
     assert needle in service, f"Five-hertz per-bot cadence integration missing: {needle}"
-assert "BotAnimation.step(bot, now, bot.isAiming == true)" in service, (
+assert "local ok, err = pcall(BotAnimation.step,\n                        bot, now, bot.isAiming == true)" in service, (
     "Existing visible bot animations must remain untouched"
 )
 print("IRON YARD capped navmesh, unchanged collision probes and MoveTo coalescing: OK")

@@ -126,7 +126,7 @@ for phrase in (
     "now, nearestSquared, bot.slot)",
     "local offset = root.Position - botPosition",
     "offset:Dot(offset)",
-    "BotAnimation.step(bot, now, bot.isAiming == true)",
+    "local ok, err = pcall(BotAnimation.step,\n                        bot, now, bot.isAiming == true)",
     "task.wait(1 / 30)",
 ):
     assert phrase in bot, "Staggered server bot pose integration missing: " + phrase
