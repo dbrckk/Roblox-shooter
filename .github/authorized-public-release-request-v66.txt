@@ -1,0 +1,28 @@
+IRON YARD -- one-time owner-directed PUBLIC v66 functional bot cleanup release, 14 November 2026.
+
+The owner requires a real functional PUBLIC experience without prototypes.
+Publish only to existing PUBLIC IRON YARD, owner Roblox user 9774173158,
+universe 10775909016, root place 99189039770065.
+Do NOT create another experience, a private alpha, or modify visibility,
+ownership, asset permissions, matchmaking or gameplay rules.
+
+Previous confirmed PUBLIC v65: Roblox place version 61,
+source 6539826f1a92d3318e4f429d2eddec8094ee89a1.
+This single release contains reviewed, tested and merged PR #109,
+commit 1ebc975fdbe9864eaf3e3c087f88eb5983b56263, plus only this
+one-shot release authorization marker.
+
+The production Humanoid.Died listener now registers its existing 2.5s
+corpse cleanup before invoking any failure-prone bot navigation teardown
+or animation. It guards optional cleanup and death posing with pcall.
+If those operations raise, the bot still relinquishes its roster slot,
+letting collision-validated reconciliation replace it. Late timers
+cannot delete newer replacement bots thanks to strict slot identity.
+All other death choreography, hitbox behavior, scores, damage,
+navigation rules and assets are unchanged.
+
+Require successful exact-SHA push Rojo/Luau CI on main and independent
+publisher checks for existing PUBLIC experience, creator, universe,
+root place, source and configured authorization. Publish at most once.
+Abort on a failed guard. Never claim live Android physics/FPS validation
+from automated CI or Roblox Open Cloud success alone.
