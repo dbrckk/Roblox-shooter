@@ -1,0 +1,30 @@
+IRON YARD -- one-time owner-directed PUBLIC v65 bot gameplay stability update, 14 November 2026.
+
+Existing public destination ONLY: Roblox user 9774173158,
+universe 10775909016, root place 99189039770065.
+Never create a replacement/temporary/private experience, change creator
+or alter PUBLIC visibility.
+
+Last verified PUBLIC baseline is v64 (Roblox place version 60),
+source b33d010f1a2f7b9c00b1e10fdf3330ebae66b7a6.
+This release contains reviewed production fix PR #107, exact source
+a49243b4a9c39744e0014e4db12da7d0aa555b1d, and this one-time
+authorization marker. No new features, demos, prototype AI or assets.
+
+Scope:
+- Isolate existing server bot reconciliation, combat and cosmetic pose
+  loops from unexpected per-bot runtime exceptions.
+- After three consecutive combat errors in the same bot, quarantine
+  that bot for five seconds and let the existing collision-validated
+  safe-spawn flow recreate only its slot. Other AI remain active.
+- Keep respawn creation and per-bot animation failures from freezing
+  all opponents or the whole match.
+- Throttle server warnings; only expose a numeric failure count.
+- Preserve original damage, navigation, PvP, hitboxes, score, cosmetic
+  quality presets, persistence, and match rules.
+
+Publish at most ONCE after successful exact-source main Rojo/Luau push
+CI and independent checks of destination, existing PUBLIC visibility,
+universe, root place, owner, configured Open Cloud authorization and
+source SHA. Stop on failed guard; never retry blindly or claim live
+Android FPS/multiplayer acceptance from CI alone.
