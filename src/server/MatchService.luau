@@ -522,17 +522,58 @@ function MatchService.start()
     publishDuelScores()
     transition("WAITING", 0)
     task.spawn(function()
-        while true do
-            local readyCount=0
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player:GetAttribute("IronYardDuelReady")==true then
-                    readyCount+=1
+        -- The match scheduler is a single long-lived task. An unexpected
+        -- Roblox service exception must not permanently stop all rounds,
+        -- timers and duel recovery for every player in this server.
+        local consecutiveFailures = 0
+        local lastWarningAt = -math.huge
+        while started do
+            local ok, err = pcall(function()
+                local readyCount = 0
+                for _, player in ipairs(Players:GetPlayers()) do
+                    if player:GetAttribute("IronYardDuelReady") == true then
+                        readyCount += 1
+                    end
+                end
+                if Workspace:GetAttribute("IronYardDuelReadyCount") ~= readyCount then
+                    Workspace:SetAttribute("IronYardDuelReadyCount", readyCount)
+                end
+                tick()
+            end)
+            if ok then
+                consecutiveFailures = 0
+            else
+                consecutiveFailures += 1
+                local now = os.clock()
+                if now - lastWarningAt >= 10 then
+                    lastWarningAt = now
+                    warn("[IRON YARD] Match scheduler failed; recovering: " .. tostring(err))
+                end
+                if consecutiveFailures >= 3 then
+                    -- A partially executed duel can leave real players
+                    -- anchored. Release ONLY the original duel prep roots,
+                    -- discard stale bout state and resume an ordinary lobby.
+                    -- Never award a win or reset player progression on error.
+                    local recovered, recoveryErr = pcall(function()
+                        DuelCombatState.clear()
+                        releaseDuelPrep()
+                        duel = nil
+                        mode = "FFA"
+                        finalResult = nil
+                        Workspace:SetAttribute("IronYardMatchMode", mode)
+                        Workspace:SetAttribute("IronYardDuelLastResult", "")
+                        Workspace:SetAttribute("IronYardFinalStandings", "")
+                        publishDuelScores()
+                        transition("WAITING", 0)
+                    end)
+                    if not recovered and now - lastWarningAt >= 10 then
+                        lastWarningAt = now
+                        warn("[IRON YARD] Match recovery failed: " .. tostring(recoveryErr))
+                    end
+                    consecutiveFailures = 0
                 end
             end
-            if Workspace:GetAttribute("IronYardDuelReadyCount")~=readyCount then
-                Workspace:SetAttribute("IronYardDuelReadyCount",readyCount)
-            end
-            tick()
+            -- A failing tick must still yield. No tight retry loop.
             task.wait(0.20)
         end
     end)
