@@ -88,6 +88,7 @@ local CLIENT_PERF_ATTRIBUTES = {
     "IronYardPerfWeaponSamples", "IronYardPerfWeaponMeanMs",
     "IronYardPerfWeaponPeakMs", "IronYardPerfWeaponParts",
     "IronYardPerfWeaponId", "IronYardPerfWeaponSource",
+    "IronYardPerfWeaponLOD", "IronYardPerfWeaponWantedLOD",
     "IronYardPerfFxActive", "IronYardPerfFxCap",
     "IronYardPerfRemoteAudioRefs",
 }
@@ -104,12 +105,15 @@ local function weaponMetrics()
     end
     return string.format(
         "Arme %s / %s: %d pieces\n"
+        .. "LOD: %s / %s demandé\n"
         .. "CPU arme: %.2fms moy | %.2fms pic\n"
         .. "Effets transitoires: %d / %d\n"
         .. "Audio distant: %d refs",
         player:GetAttribute("IronYardPerfWeaponId") or "?",
         player:GetAttribute("IronYardPerfWeaponSource") or "?",
         player:GetAttribute("IronYardPerfWeaponParts") or 0,
+        player:GetAttribute("IronYardPerfWeaponLOD") or "-",
+        player:GetAttribute("IronYardPerfWeaponWantedLOD") or "-",
         player:GetAttribute("IronYardPerfWeaponMeanMs") or 0,
         player:GetAttribute("IronYardPerfWeaponPeakMs") or 0,
         player:GetAttribute("IronYardPerfFxActive") or 0,
@@ -127,10 +131,11 @@ local function weaponDeliverySnapshot()
         table.insert(states, weaponId .. ": " .. tostring(state or "UNKNOWN"))
     end
     return string.format(
-        "\n--- ARMES PBR (serveur) ---\n%s: %s/%d disponibles\n%s",
+        "\n--- ARMES PBR (serveur) ---\n%s: %s/%d complets, %s partiels\n%s",
         tostring(Workspace:GetAttribute("IronYardWeaponMeshStatus") or "UNKNOWN"),
         tostring(Workspace:GetAttribute("IronYardWeaponMeshReadyCount") or 0),
-        5, table.concat(states, "  |  "))
+        5, tostring(Workspace:GetAttribute("IronYardWeaponMeshPartialCount") or 0),
+        table.concat(states, "  |  "))
 end
 
 -- Private and opt-in only: count locally replicated bot visuals without

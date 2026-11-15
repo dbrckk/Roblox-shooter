@@ -238,7 +238,7 @@ for needle in (
     'descendant:Destroy()',
     'LoadPlan.queue(Policy.Weapons, function(weaponId)',
     'LoadPlan.workers(#queue)',
-    'if validPair(existing, job.weaponId) then',
+    'elseif not validPair(existing, job.weaponId) then',
     'task.spawn(worker)',
     'reportStatus(ReplicatedStorage:FindFirstChild(ROOT_NAME), pending, true)',
     'template:SetAttribute("IronYardStudioApproved", true)',
@@ -269,7 +269,7 @@ refresh_section = visuals.split(
     "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)",1)[1]
 refresh_section = refresh_section.split("function WeaponVisuals:setSprinting",1)[0]
 assert refresh_section.index("WeaponMeshRefresh.shouldRefresh(") < (
-    refresh_section.index("self:_getImportedWeapon(self.currentWeaponId, lod)")
+    refresh_section.index("self:_selectImportedWeapon(self.currentWeaponId, lod)")
 ), "Skip texture scans until the safe idle window"
 assert 'if not safe then return end' in refresh_section
 
@@ -278,7 +278,7 @@ load_plan = get("src/shared/WeaponAssetLoadPlan.luau")
 for needle in (
     "Plan.MAX_WORKERS = 2",
     "function Plan.queue(weapons, pairFor, isComplete)",
-    "function Plan.status(ready, pending, authorized)",
+    "function Plan.status(ready, pending, authorized, partial)",
     "if pair ~= nil and isComplete(weaponId) ~= true then",
     'return authorized == true and "FALLBACK" or "DISABLED"',
 ):
@@ -286,7 +286,8 @@ for needle in (
 assert 'Workspace:SetAttribute("IronYardWeaponMeshReadyCount", ready)' in asset_loader
 assert 'Workspace:SetAttribute("IronYardWeaponMeshPendingCount", pending)' in asset_loader
 assert 'replacement.Parent = root' in asset_loader
-assert 'if existing then existing:Destroy() end' in asset_loader
+assert 'existing:Destroy()' in asset_loader
+assert 'if not templateIsComplete(old, job.weaponId) then' in asset_loader
 assert 'if liveRoot == root then' in asset_loader
 assert 'task.spawn(loadConfigured)' in asset_loader
 assert asset_loader.count('AssetService:LoadAssetAsync(assetId)') == 1
@@ -564,7 +565,7 @@ assert "\n    return false" not in getter, (
     "An incomplete imported template must be nil, not a truthy refresh status"
 )
 assert getter.count("return nil") >= 5
-assert visuals.index("local origin = self:_getImportedWeapon(self.currentWeaponId, lod)") < (
+assert visuals.index("local origin, _, availableLod = self:_selectImportedWeapon(self.currentWeaponId, lod)") < (
     visuals.index("self:setWeapon(weaponId)", visuals.index(
         "function WeaponVisuals:_refreshImportedWeaponIfSafe(now)"))
 ), "Verify complete source before resetting an equipped weapon"
@@ -658,7 +659,7 @@ for needle in (
     '"MagazineBase", Vector3.new(0.22, 0.09, 0.20)',
     '"Extractor", Vector3.new(0.035, 0.032, 0.14)',
     'local supportMotion = self.currentWeaponId == "Shotgun"',
-    'localOffset = localOffset * workingHand * supportMotion',
+    'localOffset = leftHandPose * entry.handOffset',
     'role == WeaponPartMotionRole.MAGAZINE then',
     'or role == WeaponPartMotionRole.PISTOL_SLIDE',
     'or role == WeaponPartMotionRole.SHOTGUN_PUMP then',
@@ -1111,10 +1112,10 @@ for needle in (
     "self.reloadHandY += (handY - self.reloadHandY) * handAlpha",
     "self.reloadHandZ += (handZ - self.reloadHandZ) * handAlpha",
     "local workingHand = CFrame.new(self.reloadHandX, self.reloadHandY, self.reloadHandZ)",
-    "localOffset = localOffset * workingHand * supportMotion",
+    "localOffset = leftHandPose * entry.handOffset",
     "WeaponReloadHandPlan.pistolVisibility(progress, self.reloadActive)",
     "WeaponReloadHandPlan.boltGrip(",
-    "localOffset = localOffset * boltHand",
+    "localOffset = boltHand * entry.handOffset",
     "1 - pistolHandVisibility",
     "and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)",
 ):
@@ -1130,10 +1131,20 @@ assert 'target = 1' in visuals and '1 - pistolHandVisibility' in visuals
 assert 'function Policy.blendAlpha(dt, rate)' in get("src/shared/ViewmodelRenderPolicy.luau")
 assert '"magazineDipBlend", "pistolOffhandAlpha"' in swap_state
 assert visuals.index('if opacity >= 1 then continue end') < (
-    visuals.index('localOffset = localOffset * workingHand * supportMotion'))
+    visuals.index('localOffset = leftHandPose * entry.handOffset'))
 assert visuals.count('RunService:BindToRenderStep("IronYardWeaponViewmodel",') == 1
-assert visuals.count('CFrame.new(-0.27, -0.54, 0.08)') == 2, (
-    "PBR and procedural pistol must share the same support-hand origin")
+assert visuals.count('CFrame.new(-0.27, -0.54, 0.08)') == 1
+for needle in (
+    'self:_addArms(model, "Pistol")', 'self:_addArms(model, weaponId)',
+    'local hands = HAND_POSES[weaponId]',
+    'entry.handOffset = localPose',
+    'supportMotion * hands.left * workingHand',
+    'if entry.armFinish then',
+):
+    assert needle in visuals, f"Shared first-person hand geometry or pose missing: {needle}"
+assert 'not self.currentWeaponImported or self.activeMeshLod ~= availableLod' in refresh_section
+assert 'local origin, selected, lod = self:_selectImportedWeapon(weaponId, wantedLod)' in visuals
+assert 'WeaponMeshPolicy.alternateLod(wantedLod)' in visuals
 # Ensure authentic Blender pistol magazine survives validated owner-only
 # loading, reaches first-person PBR, and follows physical Part reload timing.
 assert '"IRONYARD_Pistol_Magazine"' in weapon_forge

@@ -53,7 +53,7 @@ for needle in (
     '"DELIVERY_FAILED" or "VALIDATION_FAILED"',
     'publishWeaponState(job.weaponId, "LOADING")',
     'publishWeaponState(job.weaponId, finalState)',
-    'validPair(root:FindFirstChild(job.weaponId)',
+    'availableState(root:FindFirstChild(job.weaponId)',
 ):
     assert needle in weapon_loader, f"Weapon import fail-closed recovery missing: {needle}"
 assert weapon_loader.index('local package = fetchOwnedModel(assetId)') < (

@@ -13,6 +13,12 @@
 - États répliqués, **uniquement informatifs** pour les cinq armes : `DISABLED`, `UNCONFIGURED`, `QUEUED`, `LOADING`, `READY`, `DELIVERY_FAILED`, `VALIDATION_FAILED`, `ROOT_CHANGED`. Jamais d'URL, de clé d'API ou de détail brut d'erreur répliqué.
 - Le panneau PERF, déjà réservé au propriétaire/Studio, affiche les états et le compteur `IronYardWeaponMeshReadyCount`; il devient défilable et tient dans la hauteur d'un paysage Android.
 
+## Disponibilité par niveau de détail
+
+Chaque variante validée peut s'afficher même si l'autre échoue au chargement. Le serveur privilégie le LOD1 lors de l'import. Les profils mobiles restent en LOD1 et gardent la géométrie de secours si ce niveau manque. En qualité élevée, le client peut afficher LOD1 en attendant LOD0. Le panneau PERF indique le niveau demandé, le niveau affiché et le nombre d'armes disponibles dans un seul niveau, avec les états `LOD0_ONLY` et `LOD1_ONLY`.
+
+La géométrie des mains en première personne est commune aux corps d'armes PBR et de secours. Le chargement partiel conserve les mêmes positions de prise et les animations de la version précédente.
+
 ## Critères de vérification moteur
 
 1. Ouvrir **PERF** à l'arrivée : attendre fin de `LOADING`. `READY 5/5` est un résultat serveur **attendu**, pas garanti.

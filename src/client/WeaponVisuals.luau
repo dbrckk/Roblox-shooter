@@ -10,6 +10,7 @@ local AdaptiveCombatFxPolicy = require(ReplicatedStorage:WaitForChild("Shared"):
 local ImpactMarkPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ImpactMarkPool"))
 local WeaponFeel = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponFeelProfile"))
 local WeaponSway = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponSwayPolicy"))
+local ViewmodelArmPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("ViewmodelArmPlan"))
 local WeaponDetailPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponDetailPlan"))
 local WeaponMeshPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponMeshPolicy"))
 local WeaponPbrFxSockets = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponPbrFxSockets"))
@@ -48,6 +49,29 @@ local WEAPON_OFFSETS = {
 	Pistol = CFrame.new(0.72, -0.58, -1.2) * CFrame.Angles(math.rad(-2), math.rad(7), math.rad(-1)),
 	Sniper = CFrame.new(0.5, -0.5, -1.46) * CFrame.Angles(math.rad(-1), math.rad(4), 0),
 	Knife = CFrame.new(0.7, -0.58, -1.08) * CFrame.Angles(math.rad(-18), math.rad(16), math.rad(-12)),
+}
+
+-- Use the same hand anchors for the imported and fallback builds.
+local HAND_POSES = {
+    AssaultRifle = {
+        left = CFrame.new(-0.32, -0.31, -0.66) * CFrame.Angles(math.rad(-8), 0, 0),
+        right = CFrame.new(0.07, -0.36, 0.09) * CFrame.Angles(math.rad(-10), 0, 0),
+    },
+    Pistol = {
+        left = CFrame.new(-0.27, -0.54, 0.08) * CFrame.Angles(math.rad(-8), math.rad(12), 0),
+        right = CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0),
+    },
+    Shotgun = {
+        left = CFrame.new(-0.29, -0.35, -0.83) * CFrame.Angles(math.rad(-8), 0, 0),
+        right = CFrame.new(0.08, -0.40, 0.13) * CFrame.Angles(math.rad(-11), 0, 0),
+    },
+    Sniper = {
+        left = CFrame.new(-0.34, -0.3, -0.58) * CFrame.Angles(math.rad(-6), math.rad(-4), math.rad(3)),
+        right = CFrame.new(0.08, -0.38, 0.06) * CFrame.Angles(math.rad(-11), 0, 0),
+    },
+    Knife = {
+        right = CFrame.new(0.02, -0.32, 0.22) * CFrame.Angles(math.rad(-21), math.rad(7), math.rad(-8)),
+    },
 }
 
 local SPRINT_OFFSETS = {
@@ -259,6 +283,15 @@ function WeaponVisuals:_applyCareerFinish()
     local finish = OperatorFinishes.forLevel(level)
     local accent, metal = rgb(finish.accent), rgb(finish.metal)
     local fabric, glove = rgb(finish.fabric), rgb(finish.glove)
+    local armColors = {
+        fabric = fabric,
+        cuff = fabric:Lerp(glove, 0.43),
+        glove = glove,
+        finger = glove:Lerp(Color3.fromRGB(19, 23, 23), 0.40),
+        guard = glove:Lerp(metal, 0.48),
+        webbing = fabric:Lerp(accent, 0.67),
+        tab = accent,
+    }
     local accents = {
         Handguard=true, StockPad=true, RecoilPad=true, PumpAction=true,
         PumpGrooveA=true, PumpGrooveB=true, ScopeFront=true, ForeRail=true,
@@ -275,20 +308,15 @@ function WeaponVisuals:_applyCareerFinish()
         if WeaponMeshPolicy.canRetint(entry) then
             local name = entry.part.Name
             local color = entry.baseColor
-            if entry.finishRole == "accent" then
+            if entry.armFinish then
+                color = armColors[entry.armFinish]
+            elseif entry.finishRole == "accent" then
                 color = accent
             elseif entry.finishRole == "panel" then
                 color = entry.baseColor:Lerp(metal, 0.62)
             elseif entry.finishRole == "dark" then
                 color = entry.baseColor
-            elseif string.find(name, "Forearm", 1, true)
-                or string.find(name, "Sleeve", 1, true) then
-                color = fabric
-            elseif string.find(name, "Glove", 1, true)
-                or string.find(name, "Knuckle", 1, true) then
-                color = glove
-            elseif string.find(name, "WristStrap", 1, true)
-                or accents[name] then
+            elseif accents[name] then
                 color = accent
             elseif panels[name] then
                 color = entry.baseColor:Lerp(metal, 0.78)
@@ -299,40 +327,34 @@ function WeaponVisuals:_applyCareerFinish()
     self.model:SetAttribute("IronYardCareerFinish", finish.name)
 end
 
--- Tactical first-person arms: matte fabric sleeves, reinforced gloves and
--- restrained olive accents, consistent with the VANGUARD industrial palette.
--- These are one local viewmodel's cosmetic parts, never server hitboxes.
-function WeaponVisuals:_addArms(model, leftHandOffset, rightHandOffset)
-    local fabric = Color3.fromRGB(100, 113, 92)
-    local glove = Color3.fromRGB(42, 49, 46)
-    local padding = Color3.fromRGB(78, 89, 78)
-    local strap = Color3.fromRGB(128, 133, 107)
+local ARM_MATERIALS = {
+    fabric = Enum.Material.Fabric, cuff = Enum.Material.Fabric,
+    glove = Enum.Material.Leather, finger = Enum.Material.Leather,
+    guard = Enum.Material.SmoothPlastic, webbing = Enum.Material.Fabric,
+    tab = Enum.Material.Fabric,
+}
 
-    local function createArm(side, pose, forearmLength)
-        local sleeve = pose * CFrame.new(0, 0.06, 0.28) * CFrame.Angles(math.rad(8), 0, 0)
-        self:_addPart(model, "Part", side .. "Forearm",
-            Vector3.new(0.27, 0.28, forearmLength), fabric, sleeve, Enum.Material.Fabric)
-        self:_addPart(model, "Part", side .. "SleeveHem",
-            Vector3.new(0.31, 0.31, 0.14), padding,
-            pose * CFrame.new(0, 0.05, 0.13), MATERIAL_SMOOTH)
-        self:_addPart(model, "Part", side .. "Glove",
-            Vector3.new(0.29, 0.22, 0.27), glove,
-            pose * CFrame.new(0, 0, -0.13), MATERIAL_SMOOTH)
-        self:_addPart(model, "Part", side .. "KnucklePanel",
-            Vector3.new(0.27, 0.055, 0.19), padding,
-            pose * CFrame.new(0, 0.133, -0.18), MATERIAL_SMOOTH)
-        self:_addPart(model, "Part", side .. "WristStrap",
-            Vector3.new(0.33, 0.08, 0.12), strap,
-            pose * CFrame.new(0, 0.075, 0.065), Enum.Material.Fabric)
-        self:_addPart(model, "Part", side .. "SleevePanel",
-            Vector3.new(0.17, 0.025, 0.29), padding,
-            pose * CFrame.new(0, 0.22, 0.38), Enum.Material.Fabric)
+-- Pieces are cosmetic, created only at equip and rendered in the existing
+-- viewmodel pass. A hand stores offsets relative to its own grip anchor.
+function WeaponVisuals:_addArms(model, weaponId)
+    local hands = HAND_POSES[weaponId]
+    local baseColor = Color3.fromRGB(52, 61, 53)
+    local function createArm(side, pose, left)
+        for _, piece in ipairs(ViewmodelArmPlan.pieces) do
+            local x, y, z, rx, ry, rz = ViewmodelArmPlan.pose(piece, left)
+            local localPose = CFrame.new(x, y, z)
+                * CFrame.Angles(math.rad(rx), math.rad(ry), math.rad(rz))
+            self:_addPart(model, "Part", side .. piece.name,
+                Vector3.new(piece.size[1], piece.size[2], piece.size[3]),
+                baseColor, pose * localPose, ARM_MATERIALS[piece.finish],
+                nil, Enum.PartType[piece.shape])
+            local entry = self.parts[#self.parts]
+            entry.armFinish = piece.finish
+            entry.handOffset = localPose
+        end
     end
-
-    createArm("Right", rightHandOffset, 0.72)
-    if leftHandOffset then
-        createArm("Left", leftHandOffset, 0.74)
-    end
+    createArm("Right", hands.right, false)
+    if hands.left then createArm("Left", hands.left, true) end
 end
 
 function WeaponVisuals:_clearModel()
@@ -347,9 +369,7 @@ function WeaponVisuals:_clearModel()
 end
 
 function WeaponVisuals:_createPistol(model)
-	self:_addArms(model,
-        CFrame.new(-0.27, -0.54, 0.08) * CFrame.Angles(math.rad(-8), math.rad(12), 0),
-        CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
+	self:_addArms(model, "Pistol")
 	self:_addPart(model, "Part", "Grip", Vector3.new(0.24, 0.62, 0.24), Color3.fromRGB(24, 27, 34), CFrame.new(0, -0.29, 0.07) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "GripPanelLeft", Vector3.new(0.03, 0.46, 0.18), Color3.fromRGB(50, 57, 70), CFrame.new(-0.135, -0.3, 0.07) * CFrame.Angles(math.rad(-14), 0, 0), MATERIAL_SMOOTH)
     -- The sidearm now has a distinct magazine and baseplate that animate
@@ -377,7 +397,7 @@ function WeaponVisuals:_createPistol(model)
 end
 
 function WeaponVisuals:_createSniper(model)
-	self:_addArms(model, CFrame.new(-0.34, -0.3, -0.58) * CFrame.Angles(math.rad(-6), math.rad(-4), math.rad(3)), CFrame.new(0.08, -0.38, 0.06) * CFrame.Angles(math.rad(-11), 0, 0))
+	self:_addArms(model, "Sniper")
 	self:_addPart(model, "Part", "Stock", Vector3.new(0.34, 0.3, 0.9), Color3.fromRGB(30, 36, 43), CFrame.new(0, -0.08, 0.42), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "CheekRest", Vector3.new(0.28, 0.12, 0.42), Color3.fromRGB(43, 51, 62), CFrame.new(0, 0.14, 0.42), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "Receiver", Vector3.new(0.36, 0.25, 0.95), Color3.fromRGB(58, 67, 78), CFrame.new(0, 0.02, -0.34), MATERIAL_METAL)
@@ -427,9 +447,7 @@ function WeaponVisuals:_createAssaultRifle(model)
     local graphite = Color3.fromRGB(65, 74, 71)
     local olive = Color3.fromRGB(111, 121, 88)
     local steel = Color3.fromRGB(126, 132, 119)
-    self:_addArms(model,
-        CFrame.new(-0.32, -0.31, -0.66) * CFrame.Angles(math.rad(-8), 0, 0),
-        CFrame.new(0.07, -0.36, 0.09) * CFrame.Angles(math.rad(-10), 0, 0))
+    self:_addArms(model, "AssaultRifle")
     self:_addPart(model, "Part", "Receiver", Vector3.new(0.42, 0.31, 1.25), graphite, CFrame.new(0, 0, -0.36), MATERIAL_METAL)
     self:_addPart(model, "Part", "UpperRail", Vector3.new(0.28, 0.08, 1.20), charcoal, CFrame.new(0, 0.20, -0.44), MATERIAL_METAL)
     self:_addPart(model, "Part", "EjectionPort", Vector3.new(0.025, 0.09, 0.34), charcoal, CFrame.new(0.222, 0.09, -0.27), MATERIAL_SMOOTH)
@@ -484,9 +502,7 @@ function WeaponVisuals:_createShotgun(model)
     local sand = Color3.fromRGB(178, 161, 128)
     local charcoal = Color3.fromRGB(38, 42, 40)
     local steel = Color3.fromRGB(89, 99, 97)
-    self:_addArms(model,
-        CFrame.new(-0.29, -0.35, -0.83) * CFrame.Angles(math.rad(-8), 0, 0),
-        CFrame.new(0.08, -0.40, 0.13) * CFrame.Angles(math.rad(-11), 0, 0))
+    self:_addArms(model, "Shotgun")
     self:_addPart(model, "Part", "Receiver", Vector3.new(0.50, 0.33, 1.05), steel, CFrame.new(0, 0, -0.17), MATERIAL_METAL)
     self:_addPart(model, "Part", "Stock", Vector3.new(0.36, 0.33, 1.00), charcoal, CFrame.new(0, -0.11, 0.83), MATERIAL_SMOOTH)
     self:_addPart(model, "Part", "RecoilPad", Vector3.new(0.38, 0.46, 0.12), sand, CFrame.new(0, -0.14, 1.34), MATERIAL_SMOOTH)
@@ -535,7 +551,7 @@ function WeaponVisuals:_createShotgun(model)
 end
 
 function WeaponVisuals:_createKnife(model)
-	self:_addArms(model, nil, CFrame.new(0.02, -0.32, 0.22) * CFrame.Angles(math.rad(-21), math.rad(7), math.rad(-8)))
+	self:_addArms(model, "Knife")
 	self:_addPart(model, "Part", "Handle", Vector3.new(0.2, 0.2, 0.7), Color3.fromRGB(28, 32, 39), CFrame.new(0, -0.04, 0.16), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "HandleWrapA", Vector3.new(0.23, 0.03, 0.12), Color3.fromRGB(88, 96, 110), CFrame.new(0, 0.11, 0.26), MATERIAL_SMOOTH)
 	self:_addPart(model, "Part", "HandleWrapB", Vector3.new(0.23, 0.03, 0.12), Color3.fromRGB(88, 96, 110), CFrame.new(0, -0.13, 0.04), MATERIAL_SMOOTH)
@@ -581,35 +597,23 @@ function WeaponVisuals:_getImportedWeapon(weaponId, lod)
     return origin, selected
 end
 
+function WeaponVisuals:_selectImportedWeapon(weaponId, wantedLod)
+    local origin, selected = self:_getImportedWeapon(weaponId, wantedLod)
+    if origin then return origin, selected, wantedLod end
+    local alternate = WeaponMeshPolicy.alternateLod(wantedLod)
+    if not alternate then return nil end
+    origin, selected = self:_getImportedWeapon(weaponId, alternate)
+    if origin then return origin, selected, alternate end
+    return nil
+end
+
 function WeaponVisuals:_createImportedWeapon(model, weaponId)
-    local lod = WeaponMeshPolicy.lod(
+    local wantedLod = WeaponMeshPolicy.lod(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
         UserInputService.TouchEnabled)
-    local origin, selected = self:_getImportedWeapon(weaponId, lod)
+    local origin, selected, lod = self:_selectImportedWeapon(weaponId, wantedLod)
     if not origin then return false end
-    -- Preserve the original hand positions when a validated imported mesh
-    -- replaces a procedural firearm. No imported script/rig is executed.
-    if weaponId == "Pistol" then
-        self:_addArms(model,
-            CFrame.new(-0.27, -0.54, 0.08) * CFrame.Angles(math.rad(-8), math.rad(12), 0),
-            CFrame.new(0.03, -0.36, 0.18) * CFrame.Angles(math.rad(-11), 0, 0))
-    elseif weaponId == "Knife" then
-        self:_addArms(model, nil, CFrame.new(0.02, -0.32, 0.22)
-            * CFrame.Angles(math.rad(-21), math.rad(7), math.rad(-8)))
-    elseif weaponId == "AssaultRifle" then
-        self:_addArms(model,
-            CFrame.new(-0.32, -0.31, -0.66) * CFrame.Angles(math.rad(-8), 0, 0),
-            CFrame.new(0.07, -0.36, 0.09) * CFrame.Angles(math.rad(-10), 0, 0))
-    elseif weaponId == "Shotgun" then
-        self:_addArms(model,
-            CFrame.new(-0.29, -0.35, -0.83) * CFrame.Angles(math.rad(-8), 0, 0),
-            CFrame.new(0.08, -0.40, 0.13) * CFrame.Angles(math.rad(-11), 0, 0))
-    elseif weaponId == "Sniper" then
-        self:_addArms(model,
-            CFrame.new(-0.34, -0.3, -0.58)
-                * CFrame.Angles(math.rad(-6), math.rad(-4), math.rad(3)),
-            CFrame.new(0.08, -0.38, 0.06) * CFrame.Angles(math.rad(-11), 0, 0))
-    end
+    self:_addArms(model, weaponId)
     for _, componentName in ipairs(WeaponMeshPolicy.components(weaponId)) do
       if selected[componentName] then
        for _, sourcePart in ipairs(selected[componentName]) do
@@ -869,8 +873,8 @@ function WeaponVisuals:_refreshImportedWeaponIfSafe(now)
             sinceEquip = now - self.equipStartedAt,
         })
     if not safe then return end
-    local origin = self:_getImportedWeapon(self.currentWeaponId, lod)
-    if origin then
+    local origin, _, availableLod = self:_selectImportedWeapon(self.currentWeaponId, lod)
+    if origin and (not self.currentWeaponImported or self.activeMeshLod ~= availableLod) then
         -- This is not an actual equip. Preserve the currently interpolated
         -- camera, hands, aim, recoil and reload pose while rebuilding the
         -- visuals from newly replicated or higher/lower LOD meshes.
@@ -1083,6 +1087,9 @@ function WeaponVisuals:_finishPrivatePerfFrame(startedAt, frameDt)
     player:SetAttribute("IronYardPerfWeaponMeanMs", snapshot.meanMs)
     player:SetAttribute("IronYardPerfWeaponPeakMs", snapshot.peakMs)
     player:SetAttribute("IronYardPerfWeaponParts", #self.parts)
+    player:SetAttribute("IronYardPerfWeaponLOD", self.activeMeshLod)
+    player:SetAttribute("IronYardPerfWeaponWantedLOD",
+        WeaponMeshPolicy.lod(player:GetAttribute("IronYardGraphicsPreset"), UserInputService.TouchEnabled))
     player:SetAttribute("IronYardPerfWeaponId", self.currentWeaponId or "NONE")
     player:SetAttribute("IronYardPerfWeaponSource",
         not self.model and "NONE" or (self.currentWeaponImported and "PBR" or "PARTS"))
@@ -1225,19 +1232,20 @@ function WeaponVisuals:_render(deltaTime)
     end
     -- Only the sniper owns an animated right-hand bolt grip. Avoid
     -- constructing a throwaway CFrame for every pistol/rifle/pump frame.
+    local hands = HAND_POSES[self.currentWeaponId]
     local boltHand
     if self.currentWeaponId == "Sniper" then
         local boltX, boltY, boltZ = WeaponReloadHandPlan.boltGrip(
             self.currentWeaponId, boltPull, boltLift, self.reloadActive, self.scoped)
-        boltHand = CFrame.new(boltX, boltY, boltZ)
-            * CFrame.Angles(0, math.rad(15 * boltLift),
-                math.rad(-18 * boltPull))
+        boltHand = CFrame.new(boltX, boltY, boltZ) * hands.right
+            * CFrame.Angles(0, math.rad(15 * boltLift), math.rad(-18 * boltPull))
     end
     -- Pump and support hand move together on a shot; never pump the fore-end
     -- into the left glove while it is inserting a cartridge.
     local supportMotion = self.currentWeaponId == "Shotgun" and not self.reloadActive
         and CFrame.new(0, 0, actionTravel * feel.actionTravel * 0.72)
         or CFrame.new()
+    local leftHandPose = hands and hands.left and supportMotion * hands.left * workingHand
     local shellX, shellY, shellZ, shellRoll
     if self.currentWeaponId == "Shotgun" then
         shellX, shellY, shellZ, shellRoll = ShotgunReloadVisual.sample(
@@ -1263,17 +1271,14 @@ function WeaponVisuals:_render(deltaTime)
                 if entry.part.Transparency ~= opacity then
                     entry.part.Transparency = opacity
                 end
-                -- Six invisible pistol glove/sleeve Parts have no gameplay
-                -- collisions, queries or visible effects. Avoid 6 CFrame
-                -- multiplications and writes per frame while fully hidden.
-                -- The first visible frame resumes from the CURRENT root.
+                -- Hidden support glove and sleeve resume on the current frame.
                 if opacity >= 1 then continue end
             end
-            -- One transform for glove, wrist, sleeve, and forearm.
-            localOffset = localOffset * workingHand * supportMotion
+            if entry.handOffset and leftHandPose then
+                localOffset = leftHandPose * entry.handOffset
+            end
         elseif role == WeaponPartMotionRole.SNIPER_RIGHT_HAND then
-            -- The right glove matches the unlock/pull/return/lock sequence.
-            localOffset = localOffset * boltHand
+            if entry.handOffset then localOffset = boltHand * entry.handOffset end
         elseif role == WeaponPartMotionRole.SHOTGUN_LOADING_SHELL then
             if shellX then
                 if not shellMotion then

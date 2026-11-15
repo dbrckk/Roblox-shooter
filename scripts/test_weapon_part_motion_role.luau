@@ -63,3 +63,17 @@ assert(Role.classify("Pistol", nil) == Role.STATIC)
 assert(Role.classify("Pistol", 123) == Role.STATIC)
 assert(Role.classify(nil, "ChargingHandle") == Role.STATIC)
 print("IRON YARD: all procedural/PBR weapon roles cached with exact legacy motion: OK")
+
+local ArmPlan = require("../src/shared/ViewmodelArmPlan")
+local seen = {}
+assert(#ArmPlan.pieces == 10, "Bound first-person geometry to ten pieces per hand")
+for _, piece in ipairs(ArmPlan.pieces) do
+    assert(not seen[piece.name])
+    seen[piece.name] = true
+    for _, size in ipairs(piece.size) do assert(size >= 0.02 and size <= 0.74) end
+    local x, y, z, rx, ry, rz = ArmPlan.pose(piece, false)
+    local lx, ly, lz, lrx, lry, lrz = ArmPlan.pose(piece, true)
+    assert(lx == -x and ly == y and lz == z)
+    assert(lrx == rx and lry == -ry and lrz == -rz)
+end
+assert(seen.GloveThumb and seen.KnuckleGuard and seen.SleeveCuff)

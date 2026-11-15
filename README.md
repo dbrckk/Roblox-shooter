@@ -42,7 +42,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 - **Récompenses de combat** : médailles de précision, enchaînements DOUBLE KILL / TRIPLE KILL et bonus de série, attribués par le serveur. Les XP de manche et de session restent visibles indépendamment de la carrière.
 - **Carrière persistante côté serveur (nouveau)** : XP total, niveau, nombre de victimes, headshots et victoires stockés par UserId via Roblox DataStore `UpdateAsync`, avec verrou de session, sauvegarde régulière, fermeture sécurisée et signalement d'un échec de sauvegarde. **L'enregistrement sur un vrai serveur Roblox n'a pas encore été testé** : la CI ne valide pas l'accès aux services de Roblox. [Contrats et conditions de validation](docs/PROGRESSION_PERSISTENCE.md).
 - **Architecture enrichie** : structure de l'entrepôt, portes de quai, conduits, garde-corps de passerelle et grues détaillées. Ces parties restent purement décoratives, sans nouvelles collisions.
-- **Animations d'armes** : gants tactiques complets, mouvements cohérents pendant le rechargement, glissière du pistolet, pompe du fusil et verrou du sniper.
+- **Animations d'armes** : gants renforcés, poignets et manches en première personne pour tout l'arsenal. Les pièces d'une même main suivent la même pose pendant le rechargement et le verrou du sniper. Les corps d'armes PBR conservent les variantes disponibles même si l'autre niveau de détail échoue.
 
 
 ## Publication Roblox DIRECTEMENT PUBLIQUE

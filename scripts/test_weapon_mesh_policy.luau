@@ -59,3 +59,6 @@ assert(#pistolPieces==3 and pistolPieces[1]=="IRONYARD_Pistol_Static"
     and pistolPieces[3]=="IRONYARD_Pistol_Magazine")
 assert(P.components("Knife")[1]=="IRONYARD_Knife_Static")
 assert(P.components("unknown")==nil)
+
+assert(P.alternateLod("LOD0") == "LOD1")
+assert(P.alternateLod("LOD1") == nil and P.alternateLod(nil) == nil)
