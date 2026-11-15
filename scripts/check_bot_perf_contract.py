@@ -131,7 +131,7 @@ for phrase in (
 ):
     assert phrase in bot, "Staggered server bot pose integration missing: " + phrase
 assert '(root.Position - bot.root.Position).Magnitude' not in bot.split(
-    'for _, bot in pairs(slots) do\n                if bot.model.Parent', 1)[1], (
+    'for _, bot in pairs(slots) do\n                if hasActiveRig(bot)', 1)[1], (
     "Cosmetic pose scheduling must use squared distance, not repeated roots")
 for phrase in (
     "Cadence.SLOTS = 4",
