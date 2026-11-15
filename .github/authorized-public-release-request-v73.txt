@@ -1,0 +1,7 @@
+IRON YARD v73 — single public update, 15 November 2026.
+
+Deploy PR #118 (0fab1e0a1847b1578a4532d1d45a37109a9cb228) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This release connects both catwalk approaches with intermediate landings and adds close-range wayfinding. The duel scoreboard shows the real starting sector and countdown. The twelve existing starting positions retain their rotation. Automated geometry checks passed; movement and readability on Android still need an in-game check.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
