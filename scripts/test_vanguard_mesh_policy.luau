@@ -96,3 +96,19 @@ assert(not Policy.keepChild("SurfaceAppearance", false, true),
 assert(not Policy.keepChild("SurfaceAppearance", true, false),
     "Second material is rejected")
 print("IRON YARD exact PBR piece identity, four complete maps and mesh child allowlist: OK")
+
+local layered = {
+    { Size = { X = 0.1, Y = 0.1, Z = 0.1 } },
+    { Size = { X = 1, Y = 1, Z = 1 } },
+    { Size = { X = 0.8, Y = 0.8, Z = 0.7 } },
+    { Size = { X = 0.5, Y = 0.7, Z = 0.9 } },
+}
+assert(Policy.silhouetteIndex(components, 2) == nil, "Tiny trim stays short-range")
+assert(Policy.silhouetteIndex(layered, 2) == 3, "Only the largest substantial secondary piece is retained")
+assert(Policy.silhouetteIndex({ layered[2] }, 1) == nil)
+assert(Policy.visualTier("head", 2, 2, 3) == "Core")
+assert(Policy.visualTier("head", 3, 2, 3) == "Silhouette")
+assert(Policy.visualTier("head", 4, 2, 3) == "Detail")
+for index, palette in ipairs(Policy.Palettes) do
+    assert(Policy.paletteFor(index) == palette and Policy.paletteFor(index + 4) == palette)
+end

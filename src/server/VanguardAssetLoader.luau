@@ -32,18 +32,16 @@ local function loadOwnedPackage(assetId)
     error("VANGUARD_DELIVERY_FAILED: " .. lastError, 0)
 end
 
-local function hasCompleteTemplateSet(folder)
+local function reportStatus(root, preferred)
+    local ready = 0
     for _, palette in ipairs(COLORS) do
-        local variant = folder:FindFirstChild(palette)
-        if not variant then return false end
-        for _, piece in ipairs(PIECES) do
-            local mesh = variant:FindFirstChild(piece)
-            if not MeshKit.primitives(mesh) then
-                return false
-            end
-        end
+        if Kit.paletteReady(root, palette) then ready += 1 end
     end
-    return true
+    Workspace:SetAttribute("IronYardPbrTemplatesLoaded", ready > 0)
+    Workspace:SetAttribute("IronYardVanguardReadyCount", ready)
+    Workspace:SetAttribute("IronYardPbrStatus",
+        preferred or (ready == #COLORS and "READY" or (ready > 0 and "PARTIAL" or "FALLBACK")))
+    return ready
 end
 
 local function extractPackage(owner, palette)
@@ -51,7 +49,10 @@ local function extractPackage(owner, palette)
     assert(typeof(id) == "number" and id > 0 and id % 1 == 0,
         "Missing uploaded VANGUARD model asset ID: " .. palette)
     local loaded = loadOwnedPackage(id)
-    assert(loaded and loaded:IsA("Model"), "Roblox asset is not a Model package")
+    if not loaded or not loaded:IsA("Model") then
+        if loaded then loaded:Destroy() end
+        error("Roblox asset is not a Model package", 0)
+    end
     -- The loaded container stays outside Workspace. Even a creator-owned
     -- package is untrusted: only validated and sanitized meshes cross over.
     local success, extracted = pcall(function()
@@ -86,6 +87,12 @@ local function extractPackage(owner, palette)
             assert(group and Policy.primitiveCountValid(#group),
                 "Missing or oversized imported VANGUARD piece " .. name)
         end
+        -- Reject malformed geometry before allocating the template hierarchy.
+        local coreIndices = {}
+        for _, name in ipairs(PIECES) do
+            coreIndices[name] = Policy.dominantIndex(selected[name])
+            assert(coreIndices[name], "Invalid VANGUARD primitive geometry " .. name)
+        end
         local paletteFolder = Instance.new("Folder")
         paletteFolder.Name = palette
         for _, name in ipairs(PIECES) do
@@ -95,8 +102,7 @@ local function extractPackage(owner, palette)
             -- The importer may return accent material before armor shell.
             -- Choose the largest validated surface as the ONE Core LOD,
             -- but preserve the original transform basis and primitive order.
-            local coreIndex = Policy.dominantIndex(group)
-            assert(coreIndex, "Invalid VANGUARD primitive geometry " .. name)
+            local coreIndex = coreIndices[name]
             local basis = group[1].CFrame
             for index, item in ipairs(group) do
                 local clone = MeshKit.cleanClone(item)
@@ -118,64 +124,81 @@ end
 
 -- Uploading/importing a PBR GLB can take seconds. NEVER block game
 -- initialization, spawning or matchmaking on remote asset availability.
+local function syncManualStatus()
+    local root = ServerStorage:FindFirstChild("VanguardTemplates")
+    for _, palette in ipairs(COLORS) do
+        local status = Kit.paletteReady(root, palette) and "READY" or "UNCONFIGURED"
+        Workspace:SetAttribute("IronYardVanguard_" .. palette, status)
+    end
+    if root then
+        reportStatus(root)
+    else
+        reportStatus(nil, "DISABLED")
+    end
+end
+
 local function loadConfiguredPbr()
-    local staging = Instance.new("Folder")
-    staging.Name = "_VanguardTemplatesStaging"
-    local success, message = pcall(function()
-        for _, palette in ipairs(COLORS) do
-            extractPackage(staging, palette)
+    local root = ServerStorage:FindFirstChild("VanguardTemplates")
+    if not root then
+        root = Instance.new("Folder")
+        root.Name = "VanguardTemplates"
+        root.Parent = ServerStorage
+    end
+    local failure
+    for _, palette in ipairs(COLORS) do
+        if Kit.paletteReady(root, palette) then
+            Workspace:SetAttribute("IronYardVanguard_" .. palette, "READY")
+            continue
         end
-    end)
-    if not success or not hasCompleteTemplateSet(staging) then
+        local assetId = AssetIds.paletteModelIds[palette]
+        if type(assetId) ~= "number" or not (assetId > 0 and assetId < math.huge)
+            or assetId % 1 ~= 0 then
+            Workspace:SetAttribute("IronYardVanguard_" .. palette, "UNCONFIGURED")
+            continue
+        end
+        Workspace:SetAttribute("IronYardVanguard_" .. palette, "LOADING")
+        local staging = Instance.new("Folder")
+        local success, message = pcall(extractPackage, staging, palette)
+        if ServerStorage:FindFirstChild("VanguardTemplates") ~= root then
+            staging:Destroy()
+            syncManualStatus()
+            return
+        end
+        if success and Kit.paletteReady(staging, palette) and not Kit.paletteReady(root, palette) then
+            local old = root:FindFirstChild(palette)
+            if old then old:Destroy() end
+            staging:FindFirstChild(palette).Parent = root
+        end
+        -- An operator may finish a manual import while the asset call yields.
+        if Kit.paletteReady(root, palette) then
+            Workspace:SetAttribute("IronYardVanguard_" .. palette, "READY")
+            reportStatus(root, "LOADING")
+        else
+            local code = not success and type(message) == "string"
+                and message:find("VANGUARD_DELIVERY_FAILED", 1, true)
+                and "DELIVERY_FAILED" or "VALIDATION_FAILED"
+            failure = failure or code
+            Workspace:SetAttribute("IronYardVanguard_" .. palette, code)
+            warn("[IRON YARD] VANGUARD " .. palette .. " could not load: " .. tostring(message))
+        end
         staging:Destroy()
-        local code = not success and type(message) == "string"
-            and message:find("VANGUARD_DELIVERY_FAILED", 1, true)
-            and "DELIVERY_FAILED" or "VALIDATION_FAILED"
-        Workspace:SetAttribute("IronYardPbrStatus", code)
-        warn("[IRON YARD] PBR package import incomplete; keeping procedural avatars: "
-            .. tostring(message))
-        return
     end
-    if ServerStorage:FindFirstChild("VanguardTemplates") then
-        -- A Studio or plugin import may have appeared during asynchronous load.
-        staging:Destroy()
-        Workspace:SetAttribute("IronYardPbrStatus", "MANUAL")
-        return
+    if reportStatus(root) == 0 and failure then
+        Workspace:SetAttribute("IronYardPbrStatus", failure)
     end
-    staging.Name = "VanguardTemplates"
-    staging.Parent = ServerStorage
-    Workspace:SetAttribute("IronYardPbrTemplatesLoaded", true)
-    Workspace:SetAttribute("IronYardPbrStatus", "READY")
-    print("[IRON YARD] Owner-controlled PBR kit ready; new bots use MeshParts.")
 end
 
 function VanguardAssetLoader.start()
     if started then return end
     started = true
-    Workspace:SetAttribute("IronYardPbrTemplatesLoaded", false)
-    Workspace:SetAttribute("IronYardPbrStatus", "DISABLED")
-
-    local manual = ServerStorage:FindFirstChild("VanguardTemplates")
-    if manual then
-        local valid = hasCompleteTemplateSet(manual)
-        Workspace:SetAttribute("IronYardPbrTemplatesLoaded", valid)
-        Workspace:SetAttribute("IronYardPbrStatus", valid and "MANUAL" or "FALLBACK")
-        return
-    end
+    syncManualStatus()
+    if Workspace:GetAttribute("IronYardVanguardReadyCount") == #COLORS then return end
     if typeof(AssetIds) ~= "table" or typeof(AssetIds.paletteModelIds) ~= "table" then
-        warn("[IRON YARD] Missing asset registry; using procedural visuals")
         return
     end
     if game.CreatorType ~= Enum.CreatorType.User or game.CreatorId ~= AssetIds.ownerUserId then
-        return -- No cross-creator insertion.
+        return
     end
-    for _, palette in ipairs(COLORS) do
-        local id = AssetIds.paletteModelIds[palette]
-        if typeof(id) ~= "number" or id <= 0 or id % 1 ~= 0 then
-            return
-        end
-    end
-
     Workspace:SetAttribute("IronYardPbrStatus", "LOADING")
     task.spawn(loadConfiguredPbr)
 end

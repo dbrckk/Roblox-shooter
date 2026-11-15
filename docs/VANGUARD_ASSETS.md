@@ -111,7 +111,7 @@ The original Blender body pieces contain several PBR material slots. Roblox may 
 one named glTF mesh into several MeshParts during Model import. The server now
 accepts **1–8 sanitized primitives per one of the seven R6 pieces**, identified
 by canonical Blender names, numbered suffixes, or the nearest named glTF
-ancestor. A complete four-palette set is staged before enabling PBR avatars.
+ancestor. Each palette is validated as a complete seven-piece set before enabling its PBR avatar.
 
 Each primitive must provide a real MeshId and four non-empty SurfaceAppearance
 maps; scripts, attachments, bindables and all other imported descendants are
@@ -121,22 +121,13 @@ legacy Studio templates with one MeshPart per piece remain compatible.
 This remains an offline/import compatibility change until real Roblox asset
 IDs and in-engine appearance are verified.
 
-## LOD des modèles PBR propriétaires — 13 novembre 2026
+## Silhouettes et chargement des palettes
 
-Les quatre modèles propriétaire VANGUARD ont reçu des IDs réels par le workflow
-[43397175811](https://github.com/dbrckk/Roblox-shooter/actions/runs/43397175811),
-puis leurs IDs ont été consignés dans le registre Git. Ce résultat certifie
-l'upload et la traçabilité, **pas le rendu réel dans Roblox ni une publication
-du place publique**.
+Sur mobile BALANCED, les détails fins s'effacent au-delà de 65 studs et les pièces d'armure secondaires au-delà de 95 studs. Une pièce principale reste visible pour chacun des sept éléments du rig. Pour les modèles PBR, une deuxième primitive est retenue si son volume englobant atteint au moins 28 % de celui de la pièce principale. Les deux seuils du client utilisent une marge de 12 studs entre disparition et réapparition.
 
-Avec les meshes multi-matériaux, chaque pièce R6 (tête, torse, quatre membres,
-fusil) conserve **sa première primitive comme Core**, toujours visible.
-Les autres primitives sont **Detail** : le client peut les masquer à distance
-avec les seuils ECO/BALANCED/QUALITY existants, particulièrement sur Android.
-Le serveur conserve tous les assets, les hitboxes R6 et les soudures ;
-aucune collision, trajectoire, navigation ou règle de combat ne change.
-La réduction de rendu est locale, réversible et n'est pas une garantie de FPS
-avant mesure en moteur.
+Chaque palette charge et valide ses sept composants indépendamment. Un échec sur une palette laisse les trois autres disponibles. Un bot de secours passe au PBR de sa propre palette au début d'une manche ou à sa prochaine création. Le modèle de secours utilise un casque, un plastron, des épaulières, des genouillères et des bottes aux formes arrondies.
+
+Le panneau **PERF** présente le statut par palette et le nombre de pièces de silhouette visibles. Ces compteurs ne mesurent ni la qualité des pixels ni le temps de rendu GPU. Vérifier en FFA Android les profils ECO et BALANCED, notamment autour de 65 et 95 studs.
 
 ## Lecture des modèles PBR en jeu via PERF (13 novembre 2026)
 

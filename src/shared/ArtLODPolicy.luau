@@ -69,6 +69,7 @@ function Policy.limits(preset, isTouch)
     end
     return {
         botHide = bot, botShow = bot - 12,
+        botSilhouetteHide = bot + 30, botSilhouetteShow = bot + 18,
         artHide = art, artShow = art - 16,
     }
 end

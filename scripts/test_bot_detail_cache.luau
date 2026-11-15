@@ -73,3 +73,18 @@ for _ = 1, 100 do
 end
 assert(replacements == 100)
 print("IRON YARD bot LOD cache: streaming, hysteresis, quality and respawn: OK")
+
+local silhouette = {}
+assert(Cache.observe(state, silhouette, "Silhouette") and state.silhouettes[silhouette])
+assert(not state.details[silhouette], "Silhouette stays outside the fine-detail set")
+local middle = (limits.botHide + 12)^2
+local _, detailHidden = Cache.decide(state, middle, limits.botHide, limits.botShow)
+local _, middleHidden = Cache.decideSilhouette(state, middle, limits.botSilhouetteHide, limits.botSilhouetteShow)
+assert(detailHidden and not middleHidden, "Medium range keeps the broad armor")
+local farChanged, farHidden = Cache.decideSilhouette(state,
+    (limits.botSilhouetteHide + 1)^2, limits.botSilhouetteHide, limits.botSilhouetteShow)
+assert(farChanged and farHidden)
+assert(not Cache.decideSilhouette(state, (limits.botSilhouetteHide - 1)^2,
+    limits.botSilhouetteHide, limits.botSilhouetteShow))
+assert(Cache.observe(state, silhouette, "Detail") and not state.silhouettes[silhouette])
+assert(Cache.remove(state, silhouette) and not state.details[silhouette])
