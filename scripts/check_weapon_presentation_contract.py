@@ -762,7 +762,7 @@ for needle in (
     "if camera.FieldOfView ~= target then",
     "local function setScoped(enabled)",
     "if enabled == scoped then",
-    "setScoped(false)\n\t\tenforceFirstPerson()",
+    "clearHeldCombatInput()\n\t\tenforceFirstPerson()",
     'workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()',
     "task.defer(enforceFirstPerson)",
 ):

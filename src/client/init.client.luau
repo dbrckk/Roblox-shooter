@@ -14,6 +14,7 @@ local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget"))
 local remoteFxState = RemoteCombatFxBudget.new()
 local TouchLayout = require(shared:WaitForChild("TouchLayout"))
+local TouchAimPolicy = require(shared:WaitForChild("TouchAimPolicy"))
 local GamepadCombatPolicy = require(shared:WaitForChild("GamepadCombatPolicy"))
 local AutomaticFireCadence = require(shared:WaitForChild("AutomaticFireCadence"))
 local FireEpochPolicy = require(shared:WaitForChild("FireEpochPolicy"))
@@ -35,6 +36,9 @@ local ammoByWeapon = {}
 local latestAmmoEpoch = 0
 local observedFireEpoch = 0
 local touchWeaponButtons = {}
+local releaseTouchFire = nil
+local updateTouchActions = nil
+local applyTouchDrag = nil
 local updateTouchVisibility = nil
 local cancelAimForMobility = nil
 local clearHeldCombatInput = nil
@@ -349,6 +353,7 @@ local function setSprinting(enabled)
 	end
 
 	sprinting = enabled
+    if updateTouchActions then updateTouchActions() end
 	applyLocalMoveSpeed()
 	visuals:setSprinting(sprinting)
 	remotes.SetSprinting:FireServer(sprinting)
@@ -772,6 +777,7 @@ local function setScoped(enabled)
         return
     end
     scoped = enabled
+    if updateTouchActions then updateTouchActions() end
     applyCameraFov()
     hud:setScoped(scoped)
     visuals:setScoped(scoped)
@@ -1066,20 +1072,24 @@ local function updateCameraFeel(deltaTime)
 	camera.FieldOfView += (targetFov - camera.FieldOfView) * math.clamp(deltaTime * 8, 0, 1)
 end
 
--- Shared mouse/gamepad fire owner. One automatic-fire task at most:
--- pressing RT and the mouse together cannot spawn duplicate firing loops.
+-- One automatic-fire task across mouse, controller and touch, including
+-- devices that switch inputs while a trigger is already down.
 -- Semi-auto weapons still require a fresh button press. Server cadence and
 -- authoritative ammo remain the final decision for every request.
 local mouseFireHeld = false
 local gamepadFireHeld = false
+local touchFireHeld = false
 local gamepadAimHeld = false
 local gamepadSprintHeld = false
 local gamepadJumpHeld = false
 local primaryFireTaskActive = false
 
-local function beginHeldFire(gamepad)
-    local previouslyHeld = mouseFireHeld or gamepadFireHeld
-    if gamepad then
+local function beginHeldFire(gamepad, touch)
+    local previouslyHeld = mouseFireHeld or gamepadFireHeld or touchFireHeld
+    if touch then
+        if touchFireHeld then return end
+        touchFireHeld = true
+    elseif gamepad then
         if gamepadFireHeld then return end
         gamepadFireHeld = true
     else
@@ -1090,13 +1100,13 @@ local function beginHeldFire(gamepad)
     if primaryFireTaskActive then return end
     primaryFireTaskActive = true
     task.spawn(function()
-        while mouseFireHeld or gamepadFireHeld do
+        while mouseFireHeld or gamepadFireHeld or touchFireHeld do
             local weapon = WeaponConfig.get(currentWeaponId)
             -- Poll once per real automatic cooldown instead of 2.5 times
             -- per cooldown. Keep the single task alive during a semi-auto
             -- weapon swap, so re-equipping the AR resumes held fire.
             task.wait(AutomaticFireCadence.waitSeconds(weapon))
-            if (mouseFireHeld or gamepadFireHeld) and not hud:isSettingsOpen()
+            if (mouseFireHeld or gamepadFireHeld or touchFireHeld) and not hud:isSettingsOpen()
                 and AutomaticFireCadence.isAutomatic(WeaponConfig.get(currentWeaponId)) then
                 fireWeapon(currentWeaponId)
             end
@@ -1120,6 +1130,7 @@ local function releaseControllerInputs()
 end
 
 clearHeldCombatInput = function()
+    if releaseTouchFire then releaseTouchFire() end
     mouseFireHeld = false
     releaseControllerInputs()
     setScoped(false)
@@ -1244,7 +1255,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 UserInputService.JumpRequest:Connect(function()
-	if hud:isSettingsOpen() then
+	if hud:isSettingsOpen() or playerGui:GetAttribute("IronYardDuelMenuOpen") then
 		return
 	end
 
@@ -1396,11 +1407,16 @@ remotes.MovementState.OnClientEvent:Connect(function(message)
 	end
 end)
 
-player.CharacterAdded:Connect(function()
+player.CharacterRemoving:Connect(function()
+    if releaseTouchFire then releaseTouchFire() end
+end)
+
+player.CharacterAdded:Connect(function(character)
     task.defer(function()
+        if player.Character ~= character then return end
         -- Respawn with the same equipped weapon used to preserve sniper ADS
         -- and an outdated scope overlay. Always release ADS on a new life.
-        setScoped(false)
+        clearHeldCombatInput()
 		enforceFirstPerson()
 		setSprinting(false)
 		stopLocalWallRun(false)
@@ -1430,6 +1446,7 @@ workspace:GetAttributeChangedSignal("IronYardFireEpoch"):Connect(function()
     local epoch = workspace:GetAttribute("IronYardFireEpoch")
     if not FireEpochPolicy.valid(epoch) or epoch <= observedFireEpoch then return end
     observedFireEpoch = epoch
+    if releaseTouchFire then releaseTouchFire() end
     lastLocalFire = {}
     nextLocalGlobalFireAt = 0
     lastReloadRequestAt = -math.huge
@@ -1480,6 +1497,7 @@ RunService:BindToRenderStep("IronYardClientCameraFeel",
 	applyBoostThrust(deltaTime)
 	applyAirControl(deltaTime)
 	applyFallGravity(deltaTime)
+    if applyTouchDrag then applyTouchDrag() end
 	updateCameraFeel(deltaTime)
 
     -- Local-only reticle feedback. The scope/ADS dot hides hip-fire bars
@@ -1513,9 +1531,11 @@ equipWeapon(currentWeaponId)
 if UserInputService.TouchEnabled then
     local touchGui = Instance.new("ScreenGui")
     touchGui.Name = "NeonStrikeTouchControls"
-    touchGui.IgnoreGuiInset = false -- respect device notch and Roblox safe inset
+    touchGui.IgnoreGuiInset = false
+    touchGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
     touchGui.ResetOnSpawn = false
     touchGui.DisplayOrder = 30
+    touchGui.Enabled = false
     touchGui.Parent = playerGui
 
     local touchRoot = Instance.new("Frame")
@@ -1526,14 +1546,13 @@ if UserInputService.TouchEnabled then
     touchRoot.Parent = touchGui
 
     local allButtons = {}
-    local function button(name, label, x, y, width, height)
-        -- Legacy offsets are not used: the renderer positions every control
-        -- using the viewport-safe TouchLayout geometry below.
+    local function button(name, label)
+        -- Positions are assigned after the safe-area viewport is measured.
         local b = Instance.new("TextButton")
         b.Name = name
         b.AnchorPoint = Vector2.new(0, 0)
         b.Position = UDim2.fromOffset(0, 0)
-        b.Size = UDim2.fromOffset(width, height)
+        b.Size = UDim2.fromOffset(0, 0)
         b.Font = Enum.Font.GothamBold
         b.Text = label
         -- TextScaled without a maximum fills entire buttons with huge glyphs,
@@ -1549,6 +1568,7 @@ if UserInputService.TouchEnabled then
         b.BackgroundTransparency = 0.17
         b.TextColor3 = Color3.fromRGB(250, 239, 213)
         b.AutoButtonColor = true
+        b.Active = true
         b.Parent = touchRoot
         local corner = Instance.new("UICorner")
         corner.CornerRadius = UDim.new(0, 10)
@@ -1561,61 +1581,64 @@ if UserInputService.TouchEnabled then
         return b
     end
 
-    local fire = button("Fire", "FIRE", -22, -153, 100, 100)
-    local aim = button("Aim", "AIM", -135, -163, 70, 65)
-    local sprint = button("Sprint", "RUN", -22, -276, 78, 55)
-    local slide = button("Slide", "SLIDE", -112, -276, 78, 55)
-    local reload = button("Reload", "RLD", -205, -276, 72, 55)
-    local rifle = button("AssaultRifle", "AR", -22, -348, 50, 48)
-    local pistol = button("Pistol", "P", -80, -348, 50, 48)
-    local shotgun = button("Shotgun", "SG", -138, -348, 50, 48)
-    local sniper = button("Sniper", "S", -196, -348, 50, 48)
-    local knife = button("Knife", "K", -254, -348, 50, 48)
+    local fire = button("Fire", "FIRE")
+    local aim = button("Aim", "AIM")
+    local sprint = button("Sprint", "RUN")
+    local slide = button("Slide", "SLIDE")
+    local reload = button("Reload", "RLD")
+    local rifle = button("AssaultRifle", "AR")
+    local pistol = button("Pistol", "P")
+    local shotgun = button("Shotgun", "SG")
+    local sniper = button("Sniper", "S")
+    local knife = button("Knife", "K")
     touchWeaponButtons = {
         AssaultRifle = rifle, Pistol = pistol, Shotgun = shotgun,
         Sniper = sniper, Knife = knife,
     }
 
-    local function layoutControls()
-        local viewport = touchRoot.AbsoluteSize
-        if viewport.X < 300 or viewport.Y < 260 then return end
-        local preset = player:GetAttribute("IronYardTouchSizePreset")
-        if preset ~= "COMPACT" and preset ~= "STANDARD" and preset ~= "LARGE" then
-            preset = "STANDARD"
-        end
-        local positions = TouchLayout.compute(viewport.X, viewport.Y, preset)
-        local valid, reason = TouchLayout.check(viewport.X, viewport.Y, positions)
-        if not valid then
-            warn("[IRON YARD] Touch controls are out of safe bounds: " .. tostring(reason))
-            return
-        end
-        for name, b in pairs(allButtons) do
-            local rect = positions[name]
-            b.Position = UDim2.fromOffset(rect.x, rect.y)
-            b.Size = UDim2.fromOffset(rect.w, rect.h)
-        end
-    end
-    touchRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutControls)
-    player:GetAttributeChangedSignal("IronYardTouchSizePreset"):Connect(layoutControls)
-    task.defer(layoutControls)
-
-    refreshTouchSelection()
+    local layoutReady = false
     local heldFireInput = nil
+    local heldStateConnection = nil
+    local heldDeathConnection = nil
+    local dragDelta = Vector2.zero
+    local aimPreset = player:GetAttribute("IronYardFireAimPreset")
+    local lastTouchPosition
+    player:GetAttributeChangedSignal("IronYardFireAimPreset"):Connect(function()
+        aimPreset = player:GetAttribute("IronYardFireAimPreset")
+    end)
+
+    releaseTouchFire = function()
+        if heldStateConnection then
+            heldStateConnection:Disconnect()
+            heldStateConnection = nil
+        end
+        if heldDeathConnection then
+            heldDeathConnection:Disconnect()
+            heldDeathConnection = nil
+        end
+        heldFireInput = nil
+        touchFireHeld = false
+        dragDelta = Vector2.zero
+        lastTouchPosition = nil
+    end
+
+    updateTouchActions = function()
+        local neutral = Color3.fromRGB(38, 45, 43)
+        local active = Color3.fromRGB(106, 117, 90)
+        aim.BackgroundColor3 = scoped and active or neutral
+        aim.Text = scoped and "ADS" or "AIM"
+        sprint.BackgroundColor3 = sprinting and active or neutral
+    end
 
     updateTouchVisibility = function()
         local phase = workspace:GetAttribute("NeonMatchPhase")
         local playable = not hud:isSettingsOpen()
             and playerGui:GetAttribute("IronYardDuelMenuOpen") ~= true
             and (phase == "LIVE" or phase == "COUNTDOWN")
-        -- An Android Bluetooth pad should not be covered by the virtual
-        -- touchscreen. Return buttons immediately after the user touches
-        -- the display again. Hiding touch UI must not cancel pad ADS.
         local controllerActive = GamepadCombatPolicy.isGamepad(
             UserInputService:GetLastInputType().Name)
-        local enabled = playable and not controllerActive
-        if not enabled then
-            heldFireInput = nil -- stops any running automatic-fire loop
-        end
+        local enabled = playable and not controllerActive and layoutReady
+        if not enabled then releaseTouchFire() end
         if not playable then
             if scoped then setScoped(false) end
             if sprinting then setSprinting(false) end
@@ -1623,45 +1646,85 @@ if UserInputService.TouchEnabled then
         touchGui.Enabled = enabled
     end
 
-    workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(updateTouchVisibility)
-    UserInputService.LastInputTypeChanged:Connect(updateTouchVisibility)
-    playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(function()
-        -- The briefing is non-blocking, but controls remain clearly visible
-        -- in COUNTDOWN and are fully hidden in RESULTS.
+    local function layoutControls()
+        local viewport = touchRoot.AbsoluteSize
+        if viewport.X < TouchLayout.MIN_WIDTH or viewport.Y < TouchLayout.MIN_HEIGHT then
+            layoutReady = false
+            updateTouchVisibility()
+            return
+        end
+        local preset = player:GetAttribute("IronYardTouchSizePreset")
+        if preset ~= "COMPACT" and preset ~= "STANDARD" and preset ~= "LARGE" then
+            preset = "STANDARD"
+        end
+        local positions = TouchLayout.compute(viewport.X, viewport.Y, preset)
+        local valid, reason = TouchLayout.check(viewport.X, viewport.Y, positions)
+        layoutReady = valid
+        if not valid then
+            warn("[IRON YARD] Touch controls are out of safe bounds: " .. tostring(reason))
+        else
+            for name, b in pairs(allButtons) do
+                local rect = positions[name]
+                b.Position = UDim2.fromOffset(rect.x, rect.y)
+                b.Size = UDim2.fromOffset(rect.w, rect.h)
+            end
+        end
         updateTouchVisibility()
-    end)
-    updateTouchVisibility()
+    end
+    touchRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutControls)
+    player:GetAttributeChangedSignal("IronYardTouchSizePreset"):Connect(layoutControls)
+    task.defer(layoutControls)
+
+    refreshTouchSelection()
+    updateTouchActions()
+    UserInputService.LastInputTypeChanged:Connect(updateTouchVisibility)
+
+    local function releaseEndedTouch(input)
+        if input == heldFireInput then releaseTouchFire() end
+    end
 
     fire.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.Touch
-            and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-        if not touchGui.Enabled or hud:isSettingsOpen()
-            or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE"
-            or heldFireInput then return end
+        if input.UserInputType ~= Enum.UserInputType.Touch or heldFireInput
+            or not touchGui.Enabled or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+        local _, humanoid = getCharacterParts()
+        if not humanoid or humanoid.Health <= 0 then return end
         heldFireInput = input
-        fireWeapon(currentWeaponId)
-        task.spawn(function()
-            while heldFireInput == input and fire.Parent do
-                -- Touch and gamepad use the same validated gun cadence.
-                -- An interim semi-auto selection must not permanently kill
-                -- a held automatic-fire input when the player switches back.
-                local selected = WeaponConfig.get(currentWeaponId)
-                task.wait(AutomaticFireCadence.waitSeconds(selected))
-                if heldFireInput == input and touchGui.Enabled
-                    and not hud:isSettingsOpen()
-                    and workspace:GetAttribute("NeonMatchPhase") == "LIVE"
-                    and AutomaticFireCadence.isAutomatic(WeaponConfig.get(currentWeaponId)) then
-                    fireWeapon(currentWeaponId)
-                end
+        lastTouchPosition = Vector2.new(input.Position.X, input.Position.Y)
+        heldStateConnection = input:GetPropertyChangedSignal("UserInputState"):Connect(function()
+            if input.UserInputState == Enum.UserInputState.Cancel
+                or input.UserInputState == Enum.UserInputState.End then
+                releaseEndedTouch(input)
             end
         end)
+        heldDeathConnection = humanoid.Died:Connect(releaseTouchFire)
+        beginHeldFire(false, true)
     end)
-    fire.InputEnded:Connect(function(input)
-        if input == heldFireInput then heldFireInput = nil end
+    UserInputService.TouchMoved:Connect(function(input)
+        if input ~= heldFireInput then return end
+        local point = Vector2.new(input.Position.X, input.Position.Y)
+        dragDelta += point - lastTouchPosition
+        lastTouchPosition = point
     end)
-    UserInputService.WindowFocusReleased:Connect(function()
-        heldFireInput = nil
-    end)
+    UserInputService.TouchEnded:Connect(releaseEndedTouch)
+    applyTouchDrag = function()
+        if dragDelta == Vector2.zero then return end
+        local delta = dragDelta
+        dragDelta = Vector2.zero
+        local camera = getCamera()
+        local _, humanoid = getCharacterParts()
+        if not camera or camera.CameraType ~= Enum.CameraType.Custom
+            or not humanoid or humanoid.Health <= 0 then return end
+        local size = camera.ViewportSize
+        local yaw, pitch = TouchAimPolicy.rotation(delta.X, delta.Y, math.min(size.X, size.Y),
+            aimPreset, scoped and camera.FieldOfView or baseFieldOfView, baseFieldOfView)
+        local look = camera.CFrame.LookVector
+        local current = math.asin(math.clamp(look.Y, -1, 1))
+        pitch = math.clamp(current + pitch, -TouchAimPolicy.MAX_PITCH, TouchAimPolicy.MAX_PITCH) - current
+        if yaw == 0 and pitch == 0 then return end
+        local position = camera.CFrame.Position
+        camera.CFrame = CFrame.new(position) * CFrame.Angles(0, yaw, 0)
+            * CFrame.lookAlong(Vector3.zero, look) * CFrame.Angles(pitch, 0, 0)
+    end
 
     aim.Activated:Connect(function()
         if touchGui.Enabled and not hud:isSettingsOpen() then setScoped(not scoped) end

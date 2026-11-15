@@ -87,14 +87,13 @@ def main():
     for token in (
         'WaitForChild("AutomaticFireCadence")',
         "task.wait(AutomaticFireCadence.waitSeconds(weapon))",
-        "task.wait(AutomaticFireCadence.waitSeconds(selected))",
         "AutomaticFireCadence.isAutomatic(WeaponConfig.get(currentWeaponId))",
     ):
         has(client, token, "Shared automatic-fire pacing for mouse, controller and touch")
     require("fireCooldown * 0.40" not in client,
             "Do not poll automatic fire 2.5x the configured weapon cadence")
-    require(client.count("AutomaticFireCadence.waitSeconds(") == 2,
-            "Both the mouse/gamepad and touch fire loops must share the cadence")
+    require(client.count("AutomaticFireCadence.waitSeconds(") == 1,
+            "Touch, mouse and controller must use one cadence loop")
 
     briefing = source("src/client/Briefing.client.luau")
     guide = source("src/shared/FirstMatchGuide.luau")
@@ -119,7 +118,7 @@ def main():
         "GamepadCombatPolicy.action(input.KeyCode.Name)",
         "GamepadCombatPolicy.cycle(WeaponConfig.Order,",
         "if onGamepadPressed(input, gameProcessed) then return end",
-        "local function beginHeldFire(gamepad)",
+        "local function beginHeldFire(gamepad, touch)",
         "local primaryFireTaskActive = false",
         "UserInputService.GamepadDisconnected:Connect(releaseControllerInputs)",
         "UserInputService.WindowFocusReleased:Connect(clearHeldCombatInput)",
@@ -135,7 +134,7 @@ def main():
         has(client, token, "Controller input, safe release, camera and mobile UX")
     assert client.index("local primaryFireTaskActive = false") < (
         client.index("UserInputService.InputBegan:Connect(function(input, gameProcessed)")
-    ), "Only one automatic-fire task shared by mouse and gamepad"
+    ), "Only one automatic-fire task shared by mouse, gamepad and touch"
     assert client.index("if onGamepadPressed(input, gameProcessed) then return end") < (
         client.index("if gameProcessed then", client.index(
             "UserInputService.InputBegan:Connect(function(input, gameProcessed)")
@@ -1135,7 +1134,7 @@ def main():
     for needle in ('touchGui.IgnoreGuiInset = false', "TouchLayout.compute(viewport.X, viewport.Y, preset)",
                    'touchRoot:GetPropertyChangedSignal("AbsoluteSize")',
                    'updateTouchVisibility = function()', 'touchGui.Enabled = enabled',
-                   'heldFireInput = nil -- stops any running automatic-fire loop'):
+                   'if not enabled then releaseTouchFire() end', 'beginHeldFire(false, true)'):
         has(client, needle, "Responsive safe-area touch and results gating")
     for needle in ('local MAX_ENTRIES = touch and 2 or 4', 'frame.Visible = viewport.X >= 360',
                    'IronYardBriefingOpen'):

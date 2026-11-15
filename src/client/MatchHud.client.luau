@@ -8,11 +8,13 @@ local remotes = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("PrecisionNet")).getRemotes(false)
 local DuelReadout = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("DuelReadout"))
+local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TouchLayout"))
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "NeonStrikeMatchHud"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = false
+gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
 gui.DisplayOrder = 20
 local playerGui = player:WaitForChild("PlayerGui")
 gui.Parent = playerGui
@@ -126,6 +128,11 @@ end
 
 local duelToggle = duelButton(gui, "DuelOneVsOne", "1v1",
     UDim2.fromOffset(100, 38), UDim2.fromOffset(10, 136))
+if UserInputService.TouchEnabled then
+    local rect = TouchLayout.MENU_BUTTONS.Duel
+    duelToggle.Size = UDim2.fromOffset(rect.w, rect.h)
+    duelToggle.Position = UDim2.fromOffset(rect.x, rect.y)
+end
 local menu = Instance.new("Frame")
 menu.Name = "DuelLobby"
 menu.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -234,6 +241,17 @@ local function duelLabel()
         duelToggle.Text = "1v1 · WAITING"
     else
         duelToggle.Text = UserInputService.TouchEnabled and "1v1" or "V  ·  1v1"
+    end
+    if UserInputService.TouchEnabled then
+        if returnAvailable then
+            duelToggle.Text = state == "RETURNING" and "…" or "FFA"
+        elseif state == "CONNECTING" then
+            duelToggle.Text = "…"
+        elseif incoming or state == "FAILED" then
+            duelToggle.Text = "1v1 !"
+        elseif ready then
+            duelToggle.Text = "1v1 ✓"
+        end
     end
     status.Text = states[state] or "1v1 DUEL"
     search.Text = ready and "CANCEL REQUEST" or "FIND OPPONENT"
