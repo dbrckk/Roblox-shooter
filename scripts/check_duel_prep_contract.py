@@ -65,5 +65,5 @@ assert 'elseif remaining <= 0 then' in branch
 assert 'startLiveDuelBout()' in branch
 assert branch.index('retryInterruptedDuelPrep()') < branch.index('startLiveDuelBout()')
 assert 'if duel and phase ~= "RESULTS" and not duelPlayersIntact() then' in tick
-assert 'DuelRules.forfeitSide(Players:GetPlayers(), a, b)' in tick
+assert 'DuelRules.forfeitSide(players, a, b)' in tick
 print("IRON YARD duel preparation: early stale-rig cleanup, bounded recovery, no double bout OK")

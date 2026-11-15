@@ -501,11 +501,11 @@ def main():
     ):
         has(network, token, "Duel ready event")
     for token in (
-        'remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled)',
+        'remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target)',
         'RemoteGuard.allow(player, "SetDuelReady")',
         'local function startDuelSeries(players)',
         'local function startDuelBout()',
-        'if not duel and mode == "FFA" then',
+        'if DuelRoom.isLocal and not duel and mode == "FFA" then',
         'local candidates = readyPlayers()',
         'local function finishDuelBout(result)',
         'local a,b,n,complete,winner,finishReason=DuelRules.advance(',
@@ -523,7 +523,7 @@ def main():
         'players[2]:SetAttribute("IronYardDuelReady", false)',
         'duel.waitSince = nil',
         'duel.waitSince = duel.waitSince or os.clock()',
-        'DuelRules.sameParticipants(Players:GetPlayers(), a, b)',
+        'DuelRules.sameParticipants(DuelRoom.players(), a, b)',
         'aPlayer=players[1], bPlayer=players[2]',
         'duel.waitSince = os.clock()',
         'local function releaseDuelPrep()',
@@ -569,7 +569,7 @@ def main():
     has(match, 'if winningPlayer and winningPlayer.Parent == Players',
         "Only present combatants can receive duel victories")
     for token in (
-        "local side = DuelRules.forfeitSide(Players:GetPlayers(), a, b)",
+        "local side = DuelRules.forfeitSide(players, a, b)",
         'endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)',
         'local forfeitChampion = reason == "FORFEIT"',
         "RoundStandings.build(duelRows(), round, forfeitChampion)",
@@ -644,7 +644,7 @@ def main():
         'DuelReadout.boutLabel(lastDuelResult,',
         '"IronYardDuelLastResult"',
         'remotes.SetDuelReady:FireServer',
-        'duelToggle.Activated:Connect(function()',
+        'duelToggle.Activated:Connect(toggleDuel)',
         '"IronYardDuelScoreA"', '"IronYardDuelScoreB"',
         '"DUEL_BREAK"', '"IronYardDuelReadyCount"',
         '"DUEL_PREP"', 'updateIntro(phase, seconds, matchMode)',
@@ -653,7 +653,7 @@ def main():
         'duelProgress.Name = "DuelProgress"',
         'local myRoundBars, rivalRoundBars = {}, {}',
         'for i = 1, 5 do',
-        'duelToggle.Visible = humans <= 2',
+        'duelToggle.Visible = shown',
     ):
         has(match_hud, token, "Real opt-in duel HUD")
     has(client, 'if workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',

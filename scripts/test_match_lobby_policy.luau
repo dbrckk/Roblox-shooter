@@ -27,3 +27,6 @@ for _, bad in ipairs({-1, 0/0, math.huge, 1.5}) do
 end
 assert(not Policy.shouldReset("0", "RESULTS", "DUEL", true))
 print("IRON YARD empty lobby: FFA/duel results cleared, survivors preserved, idempotent waiting OK")
+
+assert(not Policy.shouldReset(0, "WAITING", "DUEL", false, "DUEL"))
+assert(Policy.shouldReset(0, "RESULTS", "DUEL", true, "DUEL"))

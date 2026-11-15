@@ -4,12 +4,12 @@
 -- match mode for the next joining player.
 local Policy = {}
 
-function Policy.shouldReset(rosterCount, phase, mode, hasDuel)
+function Policy.shouldReset(rosterCount, phase, mode, hasDuel, restingMode)
     if type(rosterCount) ~= "number" or rosterCount ~= rosterCount
         or rosterCount < 0 or rosterCount == math.huge
         or rosterCount % 1 ~= 0 then return false end
     return rosterCount == 0 and
-        (phase ~= "WAITING" or mode ~= "FFA" or hasDuel == true)
+        (phase ~= "WAITING" or mode ~= (restingMode or "FFA") or hasDuel == true)
 end
 
 return Policy

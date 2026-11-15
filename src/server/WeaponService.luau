@@ -8,6 +8,7 @@ local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local ShotInputPolicy = require(shared:WaitForChild("ShotInputPolicy"))
 local FireEpochPolicy = require(shared:WaitForChild("FireEpochPolicy"))
 local WeaponSpreadPolicy = require(shared:WaitForChild("WeaponSpreadPolicy"))
+local DuelRoom = require(script.Parent:WaitForChild("DuelRoom"))
 local DuelCombatState = require(script.Parent:WaitForChild("DuelCombatState"))
 local AimStancePolicy = require(shared:WaitForChild("AimStancePolicy"))
 local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
@@ -208,13 +209,13 @@ end
 local function duelCanFire(player)
     return DuelCombatState.canFire(player,
         workspace:GetAttribute("NeonMatchPhase"),
-        workspace:GetAttribute("IronYardMatchMode"), #Players:GetPlayers())
+        workspace:GetAttribute("IronYardMatchMode"), DuelRoom.combatantCount())
 end
 
 local function duelCanDamage(attacker, targetPlayer, targetCharacter)
     return DuelCombatState.canDamage(attacker, targetPlayer, targetCharacter,
         workspace:GetAttribute("NeonMatchPhase"),
-        workspace:GetAttribute("IronYardMatchMode"), #Players:GetPlayers())
+        workspace:GetAttribute("IronYardMatchMode"), DuelRoom.combatantCount())
 end
 
 local function damageHit(attacker, weaponId, config, raycastResult, origin)

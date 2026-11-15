@@ -97,7 +97,11 @@ local function applyCameraFov()
 end
 
 local function applyMenuMouseState(isOpen)
-	if isOpen then
+    local needsPointer = isOpen
+        or playerGui:GetAttribute("IronYardDuelMenuOpen") == true
+        or (workspace:GetAttribute("IronYardDedicatedDuel")
+            and workspace:GetAttribute("NeonMatchPhase") ~= "LIVE")
+    if needsPointer then
 		player.CameraMode = Enum.CameraMode.Classic
 		UserInputService.MouseIconEnabled = true
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
@@ -841,6 +845,7 @@ local function requestReload()
 end
 
 local function fireWeapon(weaponId)
+    if playerGui:GetAttribute("IronYardDuelMenuOpen") then return end
 	local config = WeaponConfig.get(weaponId)
 	if not config then
 		return
@@ -1139,7 +1144,7 @@ local function onGamepadPressed(input, gameProcessed)
         hud:toggleSettings()
         return true
     end
-    if hud:isSettingsOpen() then return true end
+    if hud:isSettingsOpen() or playerGui:GetAttribute("IronYardDuelMenuOpen") then return true end
     if action == "FIRE" then
         beginHeldFire(true)
     elseif action == "AIM" then
@@ -1179,7 +1184,7 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 		return
 	end
 
-	if hud:isSettingsOpen() then
+	if hud:isSettingsOpen() or playerGui:GetAttribute("IronYardDuelMenuOpen") then
 		return
 	end
 
@@ -1440,7 +1445,17 @@ workspace:GetAttributeChangedSignal("IronYardFireEpoch"):Connect(function()
 end)
 
 -- A new round resets the authoritative aim timer. Reannounce held aim once.
+local function syncDuelMenuInput()
+    if playerGui:GetAttribute("IronYardDuelMenuOpen") and clearHeldCombatInput then
+        clearHeldCombatInput()
+    end
+    applyMenuMouseState(hud:isSettingsOpen())
+    if updateTouchVisibility then updateTouchVisibility() end
+end
+playerGui:GetAttributeChangedSignal("IronYardDuelMenuOpen"):Connect(syncDuelMenuInput)
+workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(syncDuelMenuInput)
 workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
+    syncDuelMenuInput()
     local newPhase = workspace:GetAttribute("NeonMatchPhase")
     if newPhase ~= "LIVE" and newPhase ~= "COUNTDOWN" then
         -- Releasing an old trigger during results or duel breaks must not
@@ -1590,6 +1605,7 @@ if UserInputService.TouchEnabled then
     updateTouchVisibility = function()
         local phase = workspace:GetAttribute("NeonMatchPhase")
         local playable = not hud:isSettingsOpen()
+            and playerGui:GetAttribute("IronYardDuelMenuOpen") ~= true
             and (phase == "LIVE" or phase == "COUNTDOWN")
         -- An Android Bluetooth pad should not be covered by the virtual
         -- touchscreen. Return buttons immediately after the user touches

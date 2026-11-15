@@ -23,7 +23,7 @@ UNIVERSAL_TARGET = "WAITING"
 # `delegates` means the target transition is emitted by a helper, not here.
 BRANCHES = [
     dict(frm="WAITING", to="COUNTDOWN", func="tick",
-         needle='if phase == "WAITING" then\n        transition("COUNTDOWN"'),
+         needle='if phase == "WAITING" then'),
     dict(frm="COUNTDOWN", to="LIVE", func="startRound",
          needle='transition("LIVE", ROUND_SECONDS)'),
     dict(frm="COUNTDOWN", to="DUEL_PREP", func="startDuelBout",
@@ -35,7 +35,7 @@ BRANCHES = [
          needle='transition("RESULTS", RESULTS_SECONDS,',
          also=[("tick", 'if topScore >= ELIMINATIONS_TO_WIN or remaining <= 0 then')]),
     dict(frm="LIVE", to="DUEL_PREP", func="tick", delegates=True,
-         needle='if not duel and mode == "FFA" then',
+         needle='if DuelRoom.isLocal and not duel and mode == "FFA" then',
          also=[("startDuelBout", 'transition("DUEL_PREP", DuelRules.PREP_SECONDS)')]),
     dict(frm="LIVE", to="DUEL_BREAK", func="finishDuelBout",
          needle='transition("DUEL_BREAK", DUEL_BREAK_SECONDS)'),
@@ -203,10 +203,16 @@ def main():
         require(needle in server or needle in source("src/server/WeaponService.luau"),
                 f"Matrix rule lost its wiring: {label} ({needle})")
 
-    require('#Players:GetPlayers() == 0' in bodies["startRound"],
+    require('#players == 0' in bodies["startRound"],
             "startRound must not publish WAITING without an empty roster")
-    require('if phase == "WAITING" then\n        transition("COUNTDOWN"' in server,
+    waiting = bodies["tick"].split('if phase == "WAITING" then', 1)[1].split("local remaining", 1)[0]
+    require('transition("COUNTDOWN", COUNTDOWN_SECONDS)' in waiting,
             "WAITING must go through COUNTDOWN")
+    require('DuelRoom.isDedicated and not dedicatedPair(players)' in waiting,
+            "A reserved duel must wait for both admitted players")
+    require('local rematch = readyPlayers()' in bodies["tick"]
+            and 'if rematch and duelPlayersIntact() and dedicatedPair(rematch) then' in bodies["tick"],
+            "Only the original pair can start the dedicated rematch countdown")
     require('transition("WAITING", 0)' in server,
             "The empty-roster reset must publish WAITING")
     require('elseif phase == "RESULTS" and remaining <= 0 then' in server,
