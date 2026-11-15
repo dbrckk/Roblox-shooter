@@ -24,6 +24,14 @@ function Plan.forCollider(name, width, height, depth)
         return { kind = "DECK", side = side, number = side == -1 and 1 or 2 }
     end
 
+    local landingSide = name:match("^CATWALK / access landing (%-?1)$")
+    if landingSide then
+        local landing = Plan.landing(tonumber(landingSide))
+        if not matches(width, landing.width) or not matches(height, landing.height)
+            or not matches(depth, landing.depth) then return nil end
+        return { kind = "LANDING", side = tonumber(landingSide) }
+    end
+
     local sideText, stepText = name:match("^CATWALK / access stair (%-?1):([1-5])$")
     if not sideText or (sideText ~= "-1" and sideText ~= "1") then
         return nil
@@ -33,6 +41,10 @@ function Plan.forCollider(name, width, height, depth)
         or not matches(height, step * 2)
         or not matches(depth, 5) then return nil end
     return { kind = "STEP", side = tonumber(sideText), step = step }
+end
+
+function Plan.landing(side)
+    return { x = side * 85, y = 10.75, z = -5, width = 5, height = 1.5, depth = 5 }
 end
 
 function Plan.deckStrips()

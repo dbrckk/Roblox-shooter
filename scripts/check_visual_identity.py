@@ -322,11 +322,16 @@ def main():
                    'p:SetAttribute("NeonArtTier", tier)',
                    '"diamondplate deck "', '"deck end girder "',
                    '"deck orientation stencil "', '"stair diamondplate "',
-                   '"stair warning nose "', "decks ~= 2 or steps ~= 10"):
+                   '"stair warning nose "', "decks ~= 2 or steps ~= 10 or landings ~= 2",
+                   '"turn arrow shaft "', '"stair access marker "', '"landing warning edge "'):
         check(needle in catwalk_art,
               "Catwalk native metal skins or physics contract missing: " + needle)
     check('Instance.new("SpotLight")' not in catwalk_art,
           "Catwalk decking must not add realtime server lights")
+
+    for needle in ('CatwalkDeckPlan.landing(side)', '"CATWALK / access landing "',
+                   'landing:SetAttribute("MantleTarget", true)'):
+        check(needle in map_source, "Physical catwalk landing not wired: " + needle)
 
     # Production forklift visuals follow authoritative colliders, not a
     # second set of hardcoded coordinates; styles and art remain nonblocking.

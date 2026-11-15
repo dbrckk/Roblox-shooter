@@ -13,20 +13,10 @@ local SPAWN_SHIELD_SECONDS = 2.5
 local lastNoSafePadWarningAt = -math.huge
 
 -- Ground is at y=0. All positions are near stable, unobstructed lanes.
-local candidates = {
-    Vector3.new(-144, 3.4, 145),
-    Vector3.new(144, 3.4, 145),
-    Vector3.new(-144, 3.4, -144),
-    Vector3.new(144, 3.4, -144),
-    Vector3.new(-70, 3.4, 145),
-    Vector3.new(70, 3.4, 145),
-    Vector3.new(-70, 3.4, -145),
-    Vector3.new(70, 3.4, -145),
-    Vector3.new(0, 3.4, 140),
-    Vector3.new(0, 3.4, -142),
-    Vector3.new(-145, 3.4, 16),
-    Vector3.new(145, 3.4, 16),
-}
+local candidates = {}
+for index, pad in ipairs(DuelSpawnPlan.PADS) do
+    candidates[index] = Vector3.new(pad.x, 3.4, pad.z)
+end
 
 local function livePositions(excludeCharacter)
     local positions, ignoredCharacters = {}, {}
@@ -280,6 +270,8 @@ function SpawnService.placeDuelPair(a, b, bout)
     -- validation failure or a fallback to unrelated FFA spawn points.
     applyPlacement(aChar, aRoot, aHumanoid, first, second)
     applyPlacement(bChar, bRoot, bHumanoid, second, first)
+    aChar:SetAttribute("IronYardDuelPad", firstIndex)
+    bChar:SetAttribute("IronYardDuelPad", secondIndex)
     return true
 end
 
