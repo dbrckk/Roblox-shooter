@@ -996,8 +996,8 @@ function BotService.resetRound()
     end
     local rebuild = {}
     for slot, bot in pairs(slots) do
-        local requiresPbrUpgrade = Workspace:GetAttribute("IronYardPbrTemplatesLoaded") == true
-            and bot.model:GetAttribute("NeonVisualSource") ~= "PBR_MESH"
+        local requiresPbrUpgrade = bot.model:GetAttribute("NeonVisualSource") ~= "PBR_MESH"
+            and BotVisuals.paletteReady(slot)
         if not hasActiveRig(bot) or bot.humanoid.Health <= 0 or requiresPbrUpgrade then
             -- Rebuild at the NEXT ROUND rather than modifying an active
             -- combatant or stalling gameplay while InsertService is loading.

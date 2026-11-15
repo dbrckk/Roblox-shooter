@@ -17,6 +17,7 @@ local PrecisionNet = require(Shared:WaitForChild("PrecisionNet"))
 local FrameWindow = require(Shared:WaitForChild("ClientFrameWindow"))
 local WeaponSwapMetrics = require(Shared:WaitForChild("WeaponSwapMetrics"))
 local WorldPbrPolicy = require(Shared:WaitForChild("WorldPbrPolicy"))
+local VanguardMeshPolicy = require(Shared:WaitForChild("VanguardMeshPolicy"))
 local remote = PrecisionNet.getRemotes(false).PerformanceDiagnostics
 
 local gui = Instance.new("ScreenGui")
@@ -145,6 +146,12 @@ local function pbrSnapshot()
     local world = tostring(Workspace:GetAttribute("IronYardWorldPbrStatus") or "UNKNOWN")
     local folder = Workspace:FindFirstChild("NeonStrikeBots")
     local total, imported, primitives, details, visible = 0, 0, 0, 0, 0
+    local silhouettes, visibleSilhouettes = 0, 0
+    local palettes = {}
+    for _, palette in ipairs(VanguardMeshPolicy.Palettes) do
+        table.insert(palettes, palette .. ": "
+            .. tostring(Workspace:GetAttribute("IronYardVanguard_" .. palette) or "?"))
+    end
     if folder then
         for _, bot in ipairs(folder:GetChildren()) do
             if bot:IsA("Model") and bot:GetAttribute("IsArenaBot") == true then
@@ -155,11 +162,13 @@ local function pbrSnapshot()
                         if child:IsA("MeshPart")
                             and child:GetAttribute("NeonCosmeticTier") ~= nil then
                             primitives += 1
+                            local loadedVisibly = child.LocalTransparencyModifier < 0.5
                             if child:GetAttribute("NeonCosmeticTier") == "Detail" then
                                 details += 1
-                                if child.LocalTransparencyModifier < 0.5 then
-                                    visible += 1
-                                end
+                                if loadedVisibly then visible += 1 end
+                            elseif child:GetAttribute("NeonCosmeticTier") == "Silhouette" then
+                                silhouettes += 1
+                                if loadedVisibly then visibleSilhouettes += 1 end
                             end
                         end
                     end
@@ -202,10 +211,12 @@ local function pbrSnapshot()
     end
     return string.format(
         "\n--- PBR (ce client uniquement) ---\n"
-        .. "Kit: %s | bots PBR: %d/%d\n"
-        .. "Meshes: %d | Detail visible: %d/%d\n"
+        .. "Kit: %s | palettes: %d/4 | bots PBR: %d/%d\n%s\n"
+        .. "Meshes: %d | Detail visible: %d/%d\nSilhouette: %d/%d\n"
         .. "Decor: %s | PBR local: %d/%d\n%s\nRoof: %d/%d",
-        kit, imported, total, primitives, visible, details, world,
+        kit, Workspace:GetAttribute("IronYardVanguardReadyCount") or 0,
+        imported, total, table.concat(palettes, "\n"), primitives, visible, details,
+        visibleSilhouettes, silhouettes, world,
         worldRendered, worldTagged, table.concat(familyLines, "\n"),
         roofRendered, roofTagged) .. weaponDeliverySnapshot()
 end

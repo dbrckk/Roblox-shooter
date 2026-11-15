@@ -43,6 +43,15 @@ function Kit.primitives(component)
     return children
 end
 
+function Kit.paletteReady(root, palette)
+    local variant = root and root:FindFirstChild(palette)
+    if not variant or not (variant:IsA("Folder") or variant:IsA("Model")) then return false end
+    for _, piece in ipairs(Policy.Pieces) do
+        if not Kit.primitives(variant:FindFirstChild(piece)) then return false end
+    end
+    return true
+end
+
 function Kit.cleanClone(source)
     assert(Kit.isRenderable(source), "Imported rig part lacks a full PBR material")
     local clone = source:Clone()

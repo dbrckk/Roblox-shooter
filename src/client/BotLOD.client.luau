@@ -14,6 +14,8 @@ local player = Players.LocalPlayer
 local isTouch = UserInputService.TouchEnabled
 local hideDetailBeyond = 0
 local unhideDetailBefore = 0
+local hideSilhouetteBeyond = 0
+local showSilhouetteBefore = 0
 local artHideBeyond = 0
 local artUnhideBefore = 0
 
@@ -22,6 +24,8 @@ local function updateGraphicsLimits()
         player:GetAttribute("IronYardGraphicsPreset"), isTouch)
     hideDetailBeyond = limits.botHide
     unhideDetailBefore = limits.botShow
+    hideSilhouetteBeyond = limits.botSilhouetteHide
+    showSilhouetteBefore = limits.botSilhouetteShow
     artHideBeyond = limits.artHide
     artUnhideBefore = limits.artShow
 end
@@ -31,8 +35,8 @@ local rendered = setmetatable({}, { __mode = "k" })
 
 -- A bot's visual inventory is constructed once. Incremental events handle
 -- streaming and rebuilds without scanning every armor part once per second.
--- Only cosmetic Tier=Detail parts are ever modified; the Humanoid rig,
--- imported Core silhouettes and real hitboxes are left completely untouched.
+-- Detail and Silhouette are cosmetic tiers. The core mesh and actual
+-- Humanoid hitboxes are outside the distance-managed sets.
 local botCache = {}
 
 local function releaseBot(model)
@@ -46,6 +50,10 @@ local function releaseBot(model)
         entry.partConnections[part] = nil
     end
     for part in pairs(entry.state.details) do
+        if part.Parent then part.LocalTransparencyModifier = 0 end
+        BotDetailCache.remove(entry.state, part)
+    end
+    for part in pairs(entry.state.silhouettes) do
         if part.Parent then part.LocalTransparencyModifier = 0 end
         BotDetailCache.remove(entry.state, part)
     end
@@ -79,7 +87,8 @@ local function watchBot(model)
             -- A late-streamed Detail instantly inherits the bot's current
             -- visibility. Changing Detail to Core restores its real opacity.
             part.LocalTransparencyModifier =
-                tier == "Detail" and entry.state.hidden == true and 1 or 0
+                ((tier == "Detail" and entry.state.hidden == true)
+                or (tier == "Silhouette" and entry.state.silhouetteHidden == true)) and 1 or 0
         end
         -- Only wait for a tier that has not yet replicated. The server sets
         -- tier before parenting, but streaming may deliver attributes later.
@@ -122,6 +131,15 @@ local function getDistanceSquared(model)
     return delta:Dot(delta)
 end
 
+local function applyBotVisibility(parts, hidden)
+    local modifier = hidden and 1 or 0
+    for part in pairs(parts) do
+        if part.Parent and part.LocalTransparencyModifier ~= modifier then
+            part.LocalTransparencyModifier = modifier
+        end
+    end
+end
+
 local function updateModel(model)
     if not model:IsA("Model") or not model:GetAttribute("IsArenaBot") then return end
     local distanceSquared = getDistanceSquared(model)
@@ -129,15 +147,11 @@ local function updateModel(model)
     local entry = botCache[model] or watchBot(model)
     local changed, hidden = BotDetailCache.decide(entry.state,
         distanceSquared, hideDetailBeyond, unhideDetailBefore)
-    if not changed then return end
-    for part in pairs(entry.state.details) do
-        if part.Parent then
-            local modifier = hidden and 1 or 0
-            if part.LocalTransparencyModifier ~= modifier then
-                part.LocalTransparencyModifier = modifier
-            end
-        end
-    end
+    local silhouetteChanged, silhouetteHidden = BotDetailCache.decideSilhouette(entry.state,
+        distanceSquared, hideSilhouetteBeyond, showSilhouetteBefore)
+    if not changed and not silhouetteChanged then return end
+    if changed then applyBotVisibility(entry.state.details, hidden) end
+    if silhouetteChanged then applyBotVisibility(entry.state.silhouettes, silhouetteHidden) end
 end
 
 -- Server-authored visual art is static except for gantries moving

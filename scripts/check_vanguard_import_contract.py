@@ -20,8 +20,8 @@ workflow = source(".github/workflows/rojo-build.yml")
 
 for item in ("Policy.MAX_PRIMITIVES_PER_PIECE = 8",
              "function Policy.primitiveCountValid(count)",
-             "function Policy.visualTier(piece, primitiveIndex, coreIndex)",
-             "function Policy.dominantIndex(primitives)",
+             "function Policy.visualTier(piece, primitiveIndex, coreIndex, silhouetteIndex)",
+             "function Policy.dominantIndex(primitives, excluded)",
              'normalized:match("^" .. prefixed .. "%d+$")',
              'normalized:match("^" .. prefixed .. "primitive%d+$")'):
     must(policy, item, "bounded identity policy")
@@ -42,17 +42,17 @@ for item in ("loaded:GetDescendants()", "Policy.identifyPiece(ancestor.Name)",
              "MeshKit.isRenderable(item)",
              "Policy.MAX_PRIMITIVES_PER_PIECE",
              "basis:ToObjectSpace(item.CFrame)",
-             "local coreIndex = Policy.dominantIndex(group)",
+             "coreIndices[name] = Policy.dominantIndex(selected[name])",
              'clone:SetAttribute("IronYardCoreVisual", index == coreIndex)',
              "MeshKit.cleanClone(item)",
-             "MeshKit.primitives(mesh)",
+             "Kit.paletteReady(staging, palette)",
              "staging:Destroy()"):
-    must(loader, item, "loader safety and atomic fallback")
+    must(loader, item, "loader safety and atomic per-palette publication")
 for item in ("MeshKit.primitives(template)",
              "MeshKit.cleanClone(template)",
-             "MeshPolicy.visualTier(partName, index, entry.coreIndex)",
+             "MeshPolicy.visualTier(partName, index, entry.coreIndex, entry.silhouetteIndex)",
              'candidate:GetAttribute("IronYardCoreVisual") == true',
-             "marked == 1 and selectedCore or 1",
+             "marked == 1 and selectedCore or MeshPolicy.dominantIndex(components)",
              'part:SetAttribute("NeonCosmeticTier", tier)',
              'part.CastShadow = tier == "Core"',
              "part.CFrame = target.CFrame * offset * relative",
@@ -66,6 +66,10 @@ for item in ("primitive_count += len(primitives)",
 must(test, 'Policy.identifyPiece("VANGUARD_torso.001")', "numbered variant regression")
 must(test, 'Policy.visualTier(piece, 1) == "Core"', "seven retained R6 cores")
 must(test, 'Policy.dominantIndex(components) == 2', "largest imported silhouette is core")
+must(loader, 'staging:FindFirstChild(palette).Parent = root', "publish each validated palette separately")
+must(loader, 'Workspace:SetAttribute("IronYardVanguard_" .. palette, code)', "isolate failures per palette")
+must(visuals, 'silhouetteIndex = MeshPolicy.silhouetteIndex(components, core)', "bounded mid-range silhouette")
+must(source("src/server/BotService.luau"), 'and BotVisuals.paletteReady(slot)', "upgrade only a ready palette")
 must(test, 'assert(cores == 1', "one mobile core per rig piece")
 must(test, 'Policy.visualTier(piece, index) == "Detail"', "secondary material detail LOD")
 lod = source("src/client/BotLOD.client.luau")

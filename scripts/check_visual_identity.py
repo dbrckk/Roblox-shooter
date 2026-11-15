@@ -21,7 +21,7 @@ def check(condition, message):
         raise AssertionError(message)
 
 def find_lua_palette(code, field):
-    expr = re.search(r"local\s+" + re.escape(field) + r"\s*=\s*\{([^{}]*)\}", code)
+    expr = re.search(r"(?:local\s+|Policy\.)" + re.escape(field) + r"\s*=\s*\{([^{}]*)\}", code)
     check(expr is not None, "Luau palette not found: " + field)
     return re.findall(r'"([a-z]+)"', expr.group(1))
 
@@ -536,7 +536,7 @@ def main():
           "Server should not own short-lived cosmetic impact objects")
 
 
-    bot = find_lua_palette(source("src/server/BotVisuals.luau"), "importedPalette")
+    bot = find_lua_palette(source("src/shared/VanguardMeshPolicy.luau"), "Palettes")
     studio = find_lua_palette(source("tools/studio/install_vanguard.lua"), "palettes")
     blender = find_py_palette(source("tools/assetforge/build_vanguard.py"), "COLORS")
     validate = None
@@ -558,7 +558,7 @@ def main():
     for color in PALETTES:
         check(color + " = " in asset_registry, "Missing owner-controlled PBR palette ID: " + color)
     for key in ("game.CreatorType", "game.CreatorId", "InsertService:LoadAsset",
-                "staging.Parent = ServerStorage"):
+                "root.Parent = ServerStorage"):
         check(key in loader, "Owner-controlled asset loader missing: " + key)
     policy = source("src/shared/VanguardMeshPolicy.luau")
     kit = source("src/server/VanguardMeshKit.luau")
@@ -573,7 +573,7 @@ def main():
                    "Policy.keepChild(child.ClassName, child.Parent == clone,",
                    "child:Destroy()", "clone.CanQuery = false"):
         check(needle in kit, "Untrusted owner-controlled PBR package bypasses sanitization: " + needle)
-    for needle in ("MeshKit.primitives(mesh)", "MeshKit.isRenderable(item)",
+    for needle in ("Kit.paletteReady(staging, palette)", "MeshKit.isRenderable(item)",
                    "MeshKit.cleanClone(item)", "Policy.identifyPiece(item.Name)",
                    "Policy.identifyPiece(ancestor.Name)", "loaded:Destroy()"):
         check(needle in loader, "Owner-controlled asset loader lacks verified safe extraction: " + needle)
@@ -586,7 +586,7 @@ def main():
                    "if previous then previous:Destroy() end"):
         check(needle in studio, "Studio PBR installation is unsafe or not atomic: " + needle)
     for key in ("task.spawn(loadConfiguredPbr)", "IronYardPbrStatus",
-                "hasCompleteTemplateSet(", "IronYardPbrTemplatesLoaded"):
+                "Kit.paletteReady(", "IronYardPbrTemplatesLoaded"):
         check(key in loader, "Non-blocking verified PBR import is missing: " + key)
     check("requiresPbrUpgrade" in source("src/server/BotService.luau"),
           "Bots must acquire imported PBR meshes at a safe round boundary")

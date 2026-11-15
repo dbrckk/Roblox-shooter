@@ -73,7 +73,10 @@ assert 'WorldPbr.apply(sheet, "warehouse_steel")' in art
 assert overlay.count('.. pbrSnapshot() .. localSwapSummary()') == 2, (
     "Include PBR readiness both before and after server telemetry is available")
 assert 'model:SetAttribute("NeonVisualSource", "PBR_MESH")' in bot
-assert 'Workspace:SetAttribute("IronYardPbrStatus", "READY")' in loader
+assert 'ready == #COLORS and "READY"' in loader
+assert 'Workspace:SetAttribute("IronYardVanguardReadyCount", ready)' in loader
+assert 'Workspace:GetAttribute("IronYardVanguard_" .. palette)' in overlay
+assert '"Silhouette" then' in overlay
 assert 'Workspace:SetAttribute("IronYardWorldPbrStatus", "CONFIGURED")' in world
 assert 'python3 scripts/check_owner_pbr_diagnostics.py' in ci
 print("IRON YARD mobile owner-private PBR runtime observability: OK")

@@ -23,7 +23,7 @@ required = (
     "folder.ChildRemoved:Connect(releaseBot)",
     "local delta = root.Position - from",
     "return delta:Dot(delta)",
-    "if not changed then return end",
+    "if not changed and not silhouetteChanged then return end",
     "local function updateArt()",
 )
 for token in required:
@@ -36,10 +36,12 @@ bot_poller = client.split("local function updateModel(model)", 1)[1].split(
     "-- Server-authored visual art", 1)[0]
 assert 'item.LocalTransparencyModifier = hidden and 1 or 0' not in bot_poller, (
     "Do not revert to per-second writes for every bot descendant")
-assert "if not changed then return end" in bot_poller, (
+assert "if not changed and not silhouetteChanged then return end" in bot_poller, (
     "Only a change in visual mode may update existing bot Parts")
-assert 'tier == "Detail"' in client and 'tier == "Detail"' in pure, (
-    "Core rig and authoritative hitbox parts must stay visible and collidable")
+assert 'tier == "Detail"' in client and 'tier == "Detail"' in pure
+assert 'tier == "Silhouette"' in client and 'tier == "Silhouette"' in pure
+assert "BotDetailCache.decideSilhouette(entry.state," in client
+assert "applyBotVisibility(entry.state.silhouettes, silhouetteHidden)" in client
 assert 'part.CanCollide =' not in client and 'part.CanQuery =' not in client, (
     "Client LOD must never alter Roblox collisions or combat query behavior")
 assert "local function applyGroupState(group, hidden)" in client, (
