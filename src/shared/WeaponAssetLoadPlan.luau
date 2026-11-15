@@ -41,14 +41,14 @@ function Plan.queue(weapons, pairFor, isComplete)
     return queue
 end
 
-function Plan.status(ready, pending, authorized)
+function Plan.status(ready, pending, authorized, partial)
     if type(ready) ~= "number" or type(pending) ~= "number"
         or ready ~= ready or pending ~= pending then return "FALLBACK" end
     ready = math.clamp(math.floor(ready), 0, Plan.TOTAL_WEAPONS)
     pending = math.max(math.floor(pending), 0)
     if ready == Plan.TOTAL_WEAPONS then return "READY" end
     if pending > 0 then return "LOADING" end
-    if ready > 0 then
+    if ready > 0 or (type(partial) == "number" and partial > 0) then
         return authorized == true and "PARTIAL" or "MANUAL"
     end
     return authorized == true and "FALLBACK" or "DISABLED"

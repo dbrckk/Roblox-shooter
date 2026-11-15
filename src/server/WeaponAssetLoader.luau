@@ -130,45 +130,60 @@ local function importVariant(assetId, weaponId, lod)
     return result
 end
 
-local function loadPair(weaponId, ids)
-    local staging = Instance.new("Folder")
-    staging.Name = weaponId
-    local success, result = pcall(function()
-        for _, lod in ipairs(Policy.LODs) do
-            local template = importVariant(ids[lod], weaponId, lod)
-            template.Parent = staging
-        end
-    end)
-    if not success or not templateIsComplete(staging:FindFirstChild("LOD0"), weaponId)
-        or not templateIsComplete(staging:FindFirstChild("LOD1"), weaponId) then
-        staging:Destroy()
-        warn("[IRON YARD] Weapon mesh not activated: " .. weaponId
-            .. " (" .. tostring(result) .. ")")
-        local code = not success and type(result) == "string"
-            and result:find("ASSET_DELIVERY_FAILED", 1, true)
-            and "DELIVERY_FAILED" or "VALIDATION_FAILED"
-        return nil, code
-    end
-    return staging
-end
-
-local function completeCount(root)
-    if not root or not root:IsA("Folder") then return 0 end
-    local count = 0
-    for _, weaponId in ipairs(Policy.Weapons) do
-        local folder = root:FindFirstChild(weaponId)
-        if folder and templateIsComplete(folder:FindFirstChild("LOD0"), weaponId)
-            and templateIsComplete(folder:FindFirstChild("LOD1"), weaponId) then
-            count += 1
-        end
-    end
-    return count
+local function availableLods(category, weaponId)
+    local quality = category and templateIsComplete(category:FindFirstChild("LOD0"), weaponId)
+    local mobile = category and templateIsComplete(category:FindFirstChild("LOD1"), weaponId)
+    return quality == true, mobile == true
 end
 
 local function validPair(category, weaponId)
-    return category ~= nil
-        and templateIsComplete(category:FindFirstChild("LOD0"), weaponId)
-        and templateIsComplete(category:FindFirstChild("LOD1"), weaponId)
+    local quality, mobile = availableLods(category, weaponId)
+    return quality and mobile
+end
+
+local function availableState(category, weaponId)
+    local quality, mobile = availableLods(category, weaponId)
+    if quality and mobile then return "READY" end
+    if quality then return "LOD0_ONLY" end
+    if mobile then return "LOD1_ONLY" end
+    return nil
+end
+
+local function loadMissing(weaponId, ids, existing)
+    local staging = Instance.new("Folder")
+    staging.Name = weaponId
+    local failureState
+    -- Prioritize the mobile template. Each LOD still uses the same full
+    -- owner-authorized import and sanitization path.
+    for _, lod in ipairs({ "LOD1", "LOD0" }) do
+        if existing and templateIsComplete(existing:FindFirstChild(lod), weaponId) then continue end
+        local success, result = pcall(importVariant, ids[lod], weaponId, lod)
+        if success then
+            result.Parent = staging
+        else
+            warn("[IRON YARD] Weapon mesh not activated: " .. weaponId
+                .. " / " .. lod .. " (" .. tostring(result) .. ")")
+            local code = type(result) == "string"
+                and result:find("ASSET_DELIVERY_FAILED", 1, true)
+                and "DELIVERY_FAILED" or "VALIDATION_FAILED"
+            failureState = failureState or code
+        end
+    end
+    return staging, failureState
+end
+
+local function countAvailable(root)
+    if not root or not root:IsA("Folder") then return 0, 0 end
+    local ready, partial = 0, 0
+    for _, weaponId in ipairs(Policy.Weapons) do
+        local state = availableState(root:FindFirstChild(weaponId), weaponId)
+        if state == "READY" then
+            ready += 1
+        elseif state then
+            partial += 1
+        end
+    end
+    return ready, partial
 end
 
 local function publishWeaponState(weaponId, state)
@@ -178,11 +193,12 @@ local function publishWeaponState(weaponId, state)
 end
 
 local function reportStatus(root, pending, authorized)
-    local ready = completeCount(root)
+    local ready, partial = countAvailable(root)
     Workspace:SetAttribute("IronYardWeaponMeshReadyCount", ready)
     Workspace:SetAttribute("IronYardWeaponMeshPendingCount", pending)
+    Workspace:SetAttribute("IronYardWeaponMeshPartialCount", partial)
     Workspace:SetAttribute("IronYardWeaponMeshStatus",
-        LoadPlan.status(ready, pending, authorized))
+        LoadPlan.status(ready, pending, authorized, partial))
 end
 
 local function loadConfigured()
@@ -206,16 +222,15 @@ local function loadConfigured()
     end)
     local pending = #queue
     for _, weaponId in ipairs(Policy.Weapons) do
-        local state = validPair(root:FindFirstChild(weaponId), weaponId)
-            and "READY" or (Policy.pair(Registry, weaponId)
-                and "QUEUED" or "UNCONFIGURED")
+        local state = availableState(root:FindFirstChild(weaponId), weaponId)
+            or (Policy.pair(Registry, weaponId) and "QUEUED" or "UNCONFIGURED")
         publishWeaponState(weaponId, state)
     end
     reportStatus(root, pending, true)
     if pending == 0 then return end
 
     -- Two simultaneous owner-authorized Model loads at most. Each worker
-    -- downloads LOD0 and LOD1 sequentially and publishes only full pairs.
+    -- downloads missing LODs sequentially and publishes validated variants.
     -- The queue index is incremented before any yielding Roblox API call.
     local index = 0
     local function worker()
@@ -225,32 +240,45 @@ local function loadConfigured()
             if not job then return end
 
             publishWeaponState(job.weaponId, "LOADING")
-            local replacement, failureState = loadPair(job.weaponId, job.ids)
+            local replacement, failureState = loadMissing(job.weaponId, job.ids,
+                root:FindFirstChild(job.weaponId))
             local finalState = failureState or "VALIDATION_FAILED"
-            if replacement then
-                local liveRoot = ReplicatedStorage:FindFirstChild(ROOT_NAME)
-                if liveRoot == root then
-                    local existing = root:FindFirstChild(job.weaponId)
-                    if validPair(existing, job.weaponId) then
-                        -- Studio may have installed a complete kit during
-                        -- the download. Never overwrite its approved work.
-                        replacement:Destroy()
-                    else
-                        -- A malformed/incomplete manual kit previously
-                        -- prevented valid owner assets from ever activating.
-                        -- Keep it until the replacement has been validated,
-                        -- then swap without yielding or losing the fallback.
+            local liveRoot = ReplicatedStorage:FindFirstChild(ROOT_NAME)
+            if liveRoot == root then
+                local existing = root:FindFirstChild(job.weaponId)
+                if #replacement:GetChildren() > 0 then
+                    if existing and existing:IsA("Folder") then
+                        for _, variant in ipairs(replacement:GetChildren()) do
+                            local old = existing:FindFirstChild(variant.Name)
+                            if not templateIsComplete(old, job.weaponId) then
+                                variant.Parent = existing
+                                if old then old:Destroy() end
+                            end
+                        end
+                    elseif not existing then
                         replacement.Parent = root
-                        if existing then existing:Destroy() end
+                        replacement = nil
+                    elseif not validPair(existing, job.weaponId) then
+                        -- Preserve any valid model under a custom Studio wrapper.
+                        for _, lod in ipairs(Policy.LODs) do
+                            local old = existing:FindFirstChild(lod)
+                            if templateIsComplete(old, job.weaponId) then
+                                local duplicate = replacement:FindFirstChild(lod)
+                                if duplicate then duplicate:Destroy() end
+                                old:Clone().Parent = replacement
+                            end
+                        end
+                        existing:Destroy()
+                        replacement.Parent = root
+                        replacement = nil
                     end
-                    finalState = validPair(root:FindFirstChild(job.weaponId),
-                        job.weaponId) and "READY" or "VALIDATION_FAILED"
-                else
-                    -- Studio may replace the entire root during a download.
-                    replacement:Destroy()
-                    finalState = "ROOT_CHANGED"
                 end
+                finalState = availableState(root:FindFirstChild(job.weaponId), job.weaponId)
+                    or finalState
+            else
+                finalState = "ROOT_CHANGED"
             end
+            if replacement then replacement:Destroy() end
             publishWeaponState(job.weaponId, finalState)
             pending -= 1
             reportStatus(ReplicatedStorage:FindFirstChild(ROOT_NAME), pending, true)
@@ -267,8 +295,8 @@ function Loader.start()
     local current = ReplicatedStorage:FindFirstChild(ROOT_NAME)
     reportStatus(current, 0, false)
     for _, weaponId in ipairs(Policy.Weapons) do
-        publishWeaponState(weaponId, validPair(current and current:FindFirstChild(weaponId),
-            weaponId) and "READY" or "DISABLED")
+        publishWeaponState(weaponId, availableState(current and current:FindFirstChild(weaponId),
+            weaponId) or "DISABLED")
     end
     if not Policy.sameOwner(Registry,
         game.CreatorType == Enum.CreatorType.User and "User" or "Other",

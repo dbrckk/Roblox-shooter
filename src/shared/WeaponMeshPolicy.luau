@@ -42,6 +42,13 @@ function P.lod(preset,touch)
         and "LOD1" or "LOD0"
 end
 
+-- A desktop/high-quality profile may still use the validated mobile mesh.
+-- Keep a mobile profile on its own budget if only the high-cost LOD exists.
+function P.alternateLod(requested)
+    if requested == "LOD0" then return "LOD1" end
+    return nil
+end
+
 function P.mapsReady(m)
     if type(m)~="table" then return false end
     for _,k in ipairs(P.Maps) do

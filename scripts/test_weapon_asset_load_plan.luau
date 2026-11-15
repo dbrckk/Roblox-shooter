@@ -27,6 +27,9 @@ assert(Plan.status(5,1,true) == "READY")
 assert(Plan.status(5,0,false) == "READY")
 assert(Plan.status(0,0/0,true) == "FALLBACK")
 assert(Plan.status(0,3,false) == "LOADING")
+assert(Plan.status(0,0,true,1) == "PARTIAL")
+assert(Plan.status(0,0,false,1) == "MANUAL")
+assert(Plan.status(3,1,true,2) == "LOADING")
 
 -- Stable worklist: only full ID pairs of uninstalled or damaged weapons.
 local ids = {
