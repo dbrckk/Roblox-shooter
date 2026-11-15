@@ -1,0 +1,7 @@
+IRON YARD v71 — single public update, 15 November 2026.
+
+Deploy the merged VANGUARD visual update from PR #116 (94f2dea1739d15eaab2ef8013ac2519cae29254a) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This update enables individually validated palettes, retains broad armor shapes beyond the fine-detail LOD and rounds key fallback armor. It extends PERF with palette-specific labels and mid-range visibility counters.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher. In-engine image and Android frame times remain to verify.
