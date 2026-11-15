@@ -49,6 +49,21 @@ local function reportSchedulerFault(source, err)
     end
 end
 
+local function removeBot(slot, bot)
+    if slots[slot] ~= bot then return end
+    slots[slot] = nil
+    local ok, err = pcall(BotNavigation.invalidate, bot)
+    bot.model:Destroy()
+    if not ok then reportSchedulerFault("remove-nav:" .. slot, err) end
+end
+
+local function hasActiveRig(bot)
+    return bot.model.Parent == folder
+        and bot.humanoid.Parent == bot.model
+        and bot.root.Parent == bot.model
+        and bot.head.Parent == bot.model
+end
+
 local function createPart(model, name, size, offset, color, collide)
     local p = Instance.new("Part")
     p.Name = name
@@ -195,6 +210,7 @@ local function buildCharacter(slot, skill)
     end)
 
     -- The complete armor is assembled before parenting to Workspace.
+    updateProtectionLabel()
     local appearance = BotVisuals.decorate(model, {
         torso = torso,
         head = head,
@@ -203,11 +219,6 @@ local function buildCharacter(slot, skill)
         leftLeg = leftLeg,
         rightLeg = rightLeg,
     }, slot)
-    model.Parent = folder
-    SpawnService.protectCharacter(model, 2.0)
-    updateProtectionLabel()
-    -- Keep NPC physics server-owned; cosmetics are massless, non-colliding parts.
-    pcall(function() root:SetNetworkOwner(nil) end)
     return model, humanoid, root, head, {
         root = rootJoint,
         neck = neck,
@@ -417,7 +428,6 @@ local function createBot(slot)
         requestedGoal = nil,
         stuckRecoveries = 0,
     }
-    slots[slot] = bot
     model:SetAttribute("IronYardNavMode", "IDLE")
     local previousHealth = humanoid.Health
     humanoid.HealthChanged:Connect(function(value)
@@ -459,6 +469,12 @@ local function createBot(slot)
         end)
         if not poseOk then reportSchedulerFault("death-pose:" .. slot, poseErr) end
     end)
+    -- Attach lifecycle handlers before the rig enters Workspace.
+    model.Parent = folder
+    slots[slot] = bot
+    SpawnService.protectCharacter(model, 2.0)
+    -- Keep NPC physics server-owned; cosmetics are massless, non-colliding parts.
+    pcall(function() root:SetNetworkOwner(nil) end)
     return bot
 end
 
@@ -696,7 +712,7 @@ local function serviceReload(bot, now)
 end
 
 local function updateBot(bot, dt)
-    if not bot.model.Parent or bot.humanoid.Health <= 0 then return end
+    if not hasActiveRig(bot) or bot.humanoid.Health <= 0 then return end
     local now = os.clock()
     if now < bot.nextThinkAt then return end
     bot.nextThinkAt = BotThinkCadence.nextAt(
@@ -838,13 +854,16 @@ local function reconcile()
     for slot = 1, config.MaxBots do
         local bot = slots[slot]
         if slot > targetCount then
-            if bot then
-                slots[slot] = nil
-                if bot.model.Parent then bot.model:Destroy() end
-            end
+            if bot then removeBot(slot, bot) end
             -- Retired AI must not remain a ghost leader after a human joins.
             roundKills[slot] = 0
-        elseif not bot and humans > 0
+            botRetryAfter[slot] = nil
+        else
+            -- A rig can disappear without firing Humanoid.Died. Its score
+            -- belongs to the roster slot and survives a replacement.
+            if bot and not hasActiveRig(bot) then removeBot(slot, bot) end
+        end
+        if slot <= targetCount and not slots[slot]
             and os.clock() >= (botRetryAfter[slot] or 0) then
             -- Creating one damaged bot must not permanently kill the
             -- reconciliation task or prevent the other slots from spawning.
@@ -857,7 +876,7 @@ local function reconcile()
     end
     local alive = 0
     for _, bot in pairs(slots) do
-        if bot.model.Parent and bot.humanoid.Health > 0 then
+        if hasActiveRig(bot) and bot.humanoid.Health > 0 then
             alive += 1
         end
     end
@@ -902,6 +921,74 @@ function BotService.getLeader()
     return selected, best, tied
 end
 
+local function resetBotForRound(bot, slot)
+    bot.kills = 0
+    bot.deaths = 0
+    bot.ammoRemaining = config.MagazineSize
+    bot.reloadUntil = 0
+    bot.nextThinkAt = BotThinkCadence.firstAt(
+        os.clock(), config.ThinkInterval, slot)
+    bot.target = nil
+    bot.targetSwitchedAt = -math.huge
+    bot.shotsSinceReposition = 0
+    bot.lastRepositionAt = -math.huge
+    bot.requestedGoal = nil
+    bot.stuckMonitor = nil
+    bot.stuckMonitorGoal = nil
+    bot.stuckRecoveries = 0
+    bot.detourAttempts = 0
+    bot.pathFailures = 0
+    bot.navMode = "IDLE"
+    bot.navModeSince = os.clock()
+    bot.model:SetAttribute("IronYardNavMode", "IDLE")
+    bot.lastTargetSeenAt = 0
+    bot.lastKnownTargetPosition = nil
+    bot.investigationTurn = 0
+    bot.lastDamageAt = -math.huge
+    bot.lastHitStamp = nil
+    bot.hitSide = 0
+    bot.hitFront = 0
+    bot.suppressedUntil = 0
+    bot.recentThreatOrigin = nil
+    bot.lastConfirmedThreatAt = -math.huge
+    SupplyService.resetBotGoal(bot)
+    BotHearingService.resetBot(bot)
+    bot.model:SetAttribute("IronYardLastHitPosition", nil)
+    bot.model:SetAttribute("IronYardLastHitTime", nil)
+    BotTactics.reset(bot)
+    bot.aimDirection = bot.root.CFrame.LookVector
+    BotNavigation.invalidate(bot)
+    bot.humanoid.Health = bot.humanoid.MaxHealth
+    bot.joints.facing.Enabled = false
+    bot.humanoid.AutoRotate = true
+    bot.root.AssemblyLinearVelocity = Vector3.zero
+    bot.root.AssemblyAngularVelocity = Vector3.zero
+    local safeRoundSpawn = SpawnService.selectSafeSpawn(bot.model)
+    if safeRoundSpawn then
+        bot.model:PivotTo(CFrame.new(safeRoundSpawn))
+    end
+    -- If every pad is blocked, keep the already-live bot where it
+    -- was; a nil CFrame must never terminate the round reset.
+    bot.lastAnimationPosition = bot.root.Position
+    bot.lastAnimationFacing = bot.root.CFrame.LookVector
+    bot.lastAnimationVelocity = bot.root.AssemblyLinearVelocity
+    bot.turnBlend = 0
+    bot.reversalBlend = 0
+    bot.coverApproachBlend = 0
+    bot.coverBraceBlend = 0
+    bot.gaitPhase = 0
+    bot.walkBlend = 0
+    bot.forwardBlend = 0
+    bot.lateralBlend = 0
+    bot.airBlend = 0
+    bot.reloadBlend = 0
+    bot.isAiming = false
+    bot.nextAnimationAt = BotMotionProfile.nextPoseAt(
+        os.clock(), 0, slot)
+    bot.animationAt = os.clock()
+    SpawnService.protectCharacter(bot.model, 2.0)
+end
+
 function BotService.resetRound()
     table.clear(roundKills)
     for slot = 1, config.MaxBots do
@@ -911,79 +998,19 @@ function BotService.resetRound()
     for slot, bot in pairs(slots) do
         local requiresPbrUpgrade = Workspace:GetAttribute("IronYardPbrTemplatesLoaded") == true
             and bot.model:GetAttribute("NeonVisualSource") ~= "PBR_MESH"
-        if bot.humanoid.Health <= 0 or requiresPbrUpgrade then
+        if not hasActiveRig(bot) or bot.humanoid.Health <= 0 or requiresPbrUpgrade then
             -- Rebuild at the NEXT ROUND rather than modifying an active
             -- combatant or stalling gameplay while InsertService is loading.
             -- The old bot's delayed death cleanup checks identity first.
-            slots[slot] = nil
-            if bot.model.Parent then bot.model:Destroy() end
+            removeBot(slot, bot)
             table.insert(rebuild, slot)
         else
-            bot.kills = 0
-            bot.deaths = 0
-            bot.ammoRemaining = config.MagazineSize
-            bot.reloadUntil = 0
-            bot.nextThinkAt = BotThinkCadence.firstAt(
-                os.clock(), config.ThinkInterval, slot)
-            bot.target = nil
-            bot.targetSwitchedAt = -math.huge
-            bot.shotsSinceReposition = 0
-            bot.lastRepositionAt = -math.huge
-            bot.requestedGoal = nil
-            bot.stuckMonitor = nil
-            bot.stuckMonitorGoal = nil
-            bot.stuckRecoveries = 0
-            bot.detourAttempts = 0
-            bot.pathFailures = 0
-            bot.navMode = "IDLE"
-            bot.navModeSince = os.clock()
-            bot.model:SetAttribute("IronYardNavMode", "IDLE")
-            bot.lastTargetSeenAt = 0
-            bot.lastKnownTargetPosition = nil
-            bot.investigationTurn = 0
-            bot.lastDamageAt = -math.huge
-            bot.lastHitStamp = nil
-            bot.hitSide = 0
-            bot.hitFront = 0
-            bot.suppressedUntil = 0
-            bot.recentThreatOrigin = nil
-            bot.lastConfirmedThreatAt = -math.huge
-            SupplyService.resetBotGoal(bot)
-            BotHearingService.resetBot(bot)
-            bot.model:SetAttribute("IronYardLastHitPosition", nil)
-            bot.model:SetAttribute("IronYardLastHitTime", nil)
-            BotTactics.reset(bot)
-            bot.aimDirection = bot.root.CFrame.LookVector
-            BotNavigation.invalidate(bot)
-            bot.humanoid.Health = bot.humanoid.MaxHealth
-            bot.joints.facing.Enabled = false
-            bot.humanoid.AutoRotate = true
-            bot.root.AssemblyLinearVelocity = Vector3.zero
-            bot.root.AssemblyAngularVelocity = Vector3.zero
-            local safeRoundSpawn = SpawnService.selectSafeSpawn(bot.model)
-            if safeRoundSpawn then
-                bot.model:PivotTo(CFrame.new(safeRoundSpawn))
+            local ok, err = pcall(resetBotForRound, bot, slot)
+            if not ok then
+                botRetryAfter[slot] = os.clock() + 5
+                removeBot(slot, bot)
+                reportSchedulerFault("round-reset:" .. slot, err)
             end
-            -- If every pad is blocked, keep the already-live bot where it
-            -- was; a nil CFrame must never terminate the round reset.
-            bot.lastAnimationPosition = bot.root.Position
-            bot.lastAnimationFacing = bot.root.CFrame.LookVector
-            bot.lastAnimationVelocity = bot.root.AssemblyLinearVelocity
-            bot.turnBlend = 0
-            bot.reversalBlend = 0
-            bot.coverApproachBlend = 0
-            bot.coverBraceBlend = 0
-            bot.gaitPhase = 0
-            bot.walkBlend = 0
-            bot.forwardBlend = 0
-            bot.lateralBlend = 0
-            bot.airBlend = 0
-            bot.reloadBlend = 0
-            bot.isAiming = false
-            bot.nextAnimationAt = BotMotionProfile.nextPoseAt(
-                os.clock(), 0, slot)
-            bot.animationAt = os.clock()
-            SpawnService.protectCharacter(bot.model, 2.0)
         end
     end
     for _, slot in ipairs(rebuild) do
@@ -1031,12 +1058,8 @@ function BotService.start()
                         -- Quarantine only the malfunctioning bot. The
                         -- existing safe-pad reconcile will rebuild this
                         -- slot after a bounded five-second cooldown.
-                        slots[slot] = nil
                         botRetryAfter[slot] = os.clock() + 5
-                        pcall(BotNavigation.invalidate, bot)
-                        if bot.model and bot.model.Parent then
-                            bot.model:Destroy()
-                        end
+                        removeBot(slot, bot)
                     end
                 end
             end
@@ -1063,7 +1086,7 @@ function BotService.start()
                 end
             end
             for _, bot in pairs(slots) do
-                if bot.model.Parent and bot.humanoid.Health > 0
+                if hasActiveRig(bot) and bot.humanoid.Health > 0
                     and now >= (bot.nextAnimationAt or 0) then
                     local nearestSquared = math.huge
                     local botPosition = bot.root.Position
