@@ -2,6 +2,7 @@
 -- Pure Luau; MapService owns collision and raycasts. Never accept arbitrary
 -- prefixed parts or modified dimensions as a legitimate combat cover.
 local CoverSurfacePlan = {}
+CoverSurfacePlan.MAX_RELIEF = 0.18
 
 local function dimension(value, expected)
     return type(value) == "number" and value == value
@@ -79,10 +80,83 @@ function CoverSurfacePlan.forCollider(name, x, y, z)
         width = z,
         faceLength = x - 0.8,
         faceHeight = y - 0.65,
-        stripeCount = math.clamp(math.floor(x / 4), 2, 5),
-        surfaceOffset = z * 0.5 + 0.038,
+        stripeCount = 2,
+        surfaceOffset = z * 0.5 + 0.04,
         serial = marked and serial or nil,
     }
+end
+
+-- Every panel is described in face-local coordinates. The cosmetic outline
+-- remains within the collider tangents, with only a thin normal allowance.
+function CoverSurfacePlan.panels(plan)
+    local pieces = {}
+    local x, y, z = plan.length, plan.height, plan.width
+    local function add(face, name, u, v, depth, w, h, thickness, finish, tier, roll)
+        table.insert(pieces, {
+            face = face, name = name, u = u, v = v, depth = depth,
+            w = w, h = h, thickness = thickness, finish = finish, tier = tier, roll = roll or 0,
+        })
+    end
+    for _, face in ipairs({ "Front", "Back" }) do
+        add(face, "pressed shell", 0, 0, plan.surfaceOffset - z * 0.5, plan.faceLength, plan.faceHeight, 0.048, "body", "Core")
+        add(face, "stamped base", 0, -y * 0.33, 0.074, x - 1.1, 0.33, 0.033, "metal", "Core")
+        for _, side in ipairs({ -1, 1 }) do
+            add(face, "raised edge " .. side, side * (x * 0.5 - 0.55), 0, 0.076,
+                0.20, y * 0.72, 0.039, "metal", "Core")
+        end
+
+        if plan.style == "CAST_CONCRETE" then
+            for index = -1, 1 do
+                add(face, "cast expansion seam " .. index, index * x * 0.24, y * 0.16, 0.068,
+                    0.10, y * 0.42, 0.025, "inset", "Detail")
+            end
+        elseif plan.style == "ARMED_ROADBLOCK" then
+            add(face, "diamondplate strike shield", 0, y * 0.08, 0.085,
+                x * 0.66, y * 0.37, 0.06, "strike", "Core")
+            for _, side in ipairs({ -1, 1 }) do
+                add(face, "shield rail " .. side, 0, side * y * 0.11 + y * 0.08, 0.129,
+                    x * 0.59, 0.075, 0.025, "metal", "Detail")
+            end
+        else
+            add(face, "pressed door center", 0, y * 0.07, 0.068,
+                x * 0.76, y * 0.58, 0.04, "inset", "Core")
+            for rib = -1, 1 do
+                add(face, "cargo shutter rib " .. rib, 0, (rib + 0.5) * y * 0.16, 0.098,
+                    x * 0.68, 0.12, 0.025, "metal", "Detail")
+            end
+        end
+        for i = 1, plan.stripeCount do
+            local u = (i - (plan.stripeCount + 1) * 0.5) * x * 0.57
+            add(face, "safety bar " .. i, u, -y * 0.18, 0.113, 0.30,
+                math.min(0.75, y * 0.20), 0.033, "warning", "Core", -0.28)
+        end
+    end
+    for _, face in ipairs({ "Left", "Right" }) do
+        add(face, "end cap", 0, 0, 0.041, z - 0.43, y - 0.46, 0.055, "body", "Core")
+        add(face, "end cap foot", 0, -y * 0.33, 0.083, z - 0.67, 0.27, 0.037, "metal", "Core")
+        add(face, "end warning strip", 0, y * 0.22, 0.086, z * 0.51, 0.16,
+            0.029, "warning", "Detail")
+    end
+    add("Top", "low-profile cap", 0, 0, 0.033, x - 0.28, z - 0.24, 0.045, "metal", "Core")
+    if plan.serial then
+        add("Front", "freight serial plate", x * 0.22, y * 0.31, 0.150,
+            math.min(4.6, x * 0.47), 0.68, 0.026, "label", "Core")
+        pieces[#pieces].serial = plan.serial
+    end
+    return pieces
+end
+
+function CoverSurfacePlan.withinFace(plan, piece)
+    local across = piece.face == "Left" or piece.face == "Right"
+    local width, height = across and plan.width or plan.length,
+        piece.face == "Top" and plan.width or plan.height
+    local sine, cosine = math.abs(math.sin(piece.roll)), math.abs(math.cos(piece.roll))
+    local halfWidth = (piece.w * cosine + piece.h * sine) * 0.5
+    local halfHeight = (piece.w * sine + piece.h * cosine) * 0.5
+    return math.abs(piece.u) + halfWidth <= width * 0.5
+        and math.abs(piece.v) + halfHeight <= height * 0.5
+        and piece.depth >= 0
+        and piece.depth + piece.thickness * 0.5 <= CoverSurfacePlan.MAX_RELIEF
 end
 
 return CoverSurfacePlan

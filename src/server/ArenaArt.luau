@@ -303,46 +303,6 @@ local function warehouseArchitecture(parent)
             Vector3.new(0.43, 0.42, 86), CFrame.new(x, roofHeight + 1.0, 18),
             COLOR.slate, Enum.Material.Metal, "Detail")
     end
-
-    -- Roll-up doors are thin facades over an ALREADY-solid warehouse bulkhead
-    -- at z=61. No fake traversable entrance and no misleading hit geometry.
-    for index, x in ipairs({ -20, 0, 20 }) do
-        local faceZ = 62.68
-        prop(parent, "WAREHOUSE / shutter " .. index,
-            Vector3.new(14.2, 10.0, 0.14), CFrame.new(x, 6, faceZ),
-            COLOR.steel, Enum.Material.Metal, "Core")
-        for row = 0, 5 do
-            prop(parent, "WAREHOUSE / shutter slat " .. index .. ":" .. row,
-                Vector3.new(13.5, 0.09, 0.08),
-                CFrame.new(x, 1.5 + row * 1.65, faceZ + 0.10),
-                row % 2 == 0 and COLOR.slate or COLOR.wall,
-                Enum.Material.Metal, "Detail")
-        end
-        for _, side in ipairs({ -1, 1 }) do
-            prop(parent, "WAREHOUSE / shutter track " .. index .. ":" .. side,
-                Vector3.new(0.33, 11.1, 0.29),
-                CFrame.new(x + side * 7.35, 6, faceZ + 0.09),
-                COLOR.ink, Enum.Material.Metal, "Core")
-        end
-        prop(parent, "WAREHOUSE / dock marker " .. index,
-            Vector3.new(3.0, 1.2, 0.12),
-            CFrame.new(x, 13.8, faceZ), COLOR.orange,
-            Enum.Material.SmoothPlastic, "Detail")
-    end
-
-    for _, side in ipairs({ -1, 1 }) do
-        -- The outer side-wall face is at x= +/-31.5.
-        local x = side * 31.72
-        for index = 0, 5 do
-            local z = -23 + index * 15
-            prop(parent, "WAREHOUSE / vertical conduit " .. side .. ":" .. index,
-                Vector3.new(0.23, 11.0, 0.23), CFrame.new(x, 8.7, z),
-                COLOR.ink, Enum.Material.Metal, "Detail")
-            prop(parent, "WAREHOUSE / junction box " .. side .. ":" .. index,
-                Vector3.new(0.58, 1.15, 0.76), CFrame.new(x + side * 0.19, 12.6, z),
-                COLOR.sand, Enum.Material.Metal, "Detail")
-        end
-    end
 end
 
 -- A recognisable pitched warehouse roof is missing from the original open
@@ -626,7 +586,7 @@ function ArenaArt.build(arena)
     containerDetails(decor)
     cornerCranes(decor)
     warehouseArchitecture(decor)
-    WarehouseCladding.decorate(decor)
+    WarehouseCladding.decorate(decor, arena)
     WarehouseEntranceArt.decorate(decor, arena)
     warehouseRoof(decor)
     CatwalkDeckArt.decorate(decor, arena)

@@ -1,5 +1,5 @@
 -- IRON YARD / non-replicated Roblox MaterialVariant client delivery.
--- Server tags ONLY authorized real arena colliders after owner and base-material
+-- Server tags authorized arena surfaces after owner and base-material
 -- validation. This script changes visuals locally; physics and hitboxes stay server-owned.
 local CollectionService = game:GetService("CollectionService")
 local MaterialService = game:GetService("MaterialService")
@@ -86,8 +86,7 @@ local function watch(part)
 end
 
 -- CollectionService tag signals handle late replication and streaming.
--- At most the real 24 PBR-tagged gameplay surfaces are tracked: no per-frame
--- arena scans, no network events and no new Parts.
+-- Track only PBR-tagged surfaces. No per-frame arena scans or network events.
 table.insert(connections, CollectionService:GetInstanceAddedSignal(TAG):Connect(watch))
 table.insert(connections, CollectionService:GetInstanceRemovedSignal(TAG):Connect(unwatch))
 table.insert(connections, player:GetAttributeChangedSignal("IronYardGraphicsPreset"):Connect(reconcile))

@@ -13,6 +13,23 @@ local function valid(name, x, y, z, kind)
         "Cosmetic armor may not pretend to extend the physical cover")
     assert(plan.stripeCount >= 2 and plan.stripeCount <= 5,
         "Road and freight warning details must be bounded")
+    local panels = Plan.panels(plan)
+    assert(#panels >= 25 and #panels <= 30, "Cover visual budget is bounded")
+    local seenFaces = {}
+    local panelNames = {}
+    for _, piece in ipairs(panels) do
+        assert(Plan.withinFace(plan, piece), name .. " overshoots its collider: " .. piece.name)
+        local serial = piece.face .. ":" .. piece.name
+        assert(not panelNames[serial], "Reject coplanar duplicates")
+        panelNames[serial] = true
+        seenFaces[piece.face] = true
+    end
+    for _, face in ipairs({ "Left", "Right", "Front", "Back", "Top" }) do
+        assert(seenFaces[face], "Missing face " .. face)
+    end
+    local bad = table.clone(panels[1])
+    bad.depth = Plan.MAX_RELIEF
+    assert(not Plan.withinFace(plan, bad), "Reject protruding coverings")
     counts[kind] += 1
     if plan.serial then
         assert(#plan.serial < 32, "Identification must remain legible")
