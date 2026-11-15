@@ -1,0 +1,7 @@
+IRON YARD v68 — single public update, 15 November 2026.
+
+Deploy the merged 1v1 update from PR #113 (4902a71ff74fecaf3e0e9515c636382603a298a8) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This update pairs consenting players from FFA in a reserved server of the same experience and adds targeted invites, a rematch vote and return to the public FFA. CI is green. Real Roblox client validation remains open.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
