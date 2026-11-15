@@ -1,0 +1,12 @@
+IRON YARD v67 — single public update, 15 November 2026.
+
+Deploy the merged bot lifecycle fixes from PR #112
+(3a92b821295014094de3e29ba9573b1e2044d280) to the existing public experience:
+creator user 9774173158, universe 10775909016, root place 99189039770065.
+The last confirmed release is v66, Roblox place version 62.
+
+A detached or incomplete NPC rig can be replaced even if Humanoid.Died
+never fires. During a round reset, a failing NPC is retired and retried
+through safe-spawn reconciliation after a five-second cooldown.
+
+Use the existing exact-commit CI, target verification and one-shot publisher.
