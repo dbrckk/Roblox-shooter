@@ -1,0 +1,7 @@
+IRON YARD v69 — single public update, 15 November 2026.
+
+Deploy the merged mobile combat update from PR #114 (96ea752283005426e3ec51e5ec5410cd9bfe97de) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This update improves safe-area layout, enables touch fire drag with zoom-scaled sensitivity and uses one held-fire cadence across touch, mouse and gamepad. Android in-engine feel and frame-time measurements remain open.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
