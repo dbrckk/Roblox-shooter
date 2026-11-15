@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
+local DuelRoom = require(script.Parent:WaitForChild("DuelRoom"))
 local DuelCombatState = require(script.Parent:WaitForChild("DuelCombatState"))
 local MovementService = require(script.Parent:WaitForChild("MovementService"))
 local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
@@ -28,7 +29,8 @@ local ELIMINATIONS_TO_WIN = 15
 local DUEL_BOUT_SECONDS = 80
 local DUEL_BREAK_SECONDS = 7
 local duel = nil
-local mode = "FFA"
+local lobbyMode = DuelRoom.isDedicated and "DUEL" or "FFA"
+local mode = lobbyMode
 
 local phase = "WAITING"
 local deadline = 0
@@ -50,7 +52,7 @@ end
 local lastStandingsPayload = nil
 
 local function readyPlayers()
-    local players = Players:GetPlayers()
+    local players = DuelRoom.players()
     if #players ~= 2 then return nil end
     if DuelRules.canStart(#players,
         players[1]:GetAttribute("IronYardDuelReady"),
@@ -59,6 +61,11 @@ local function readyPlayers()
         return players
     end
     return nil
+end
+
+local function dedicatedPair(players)
+    return #players == 2
+        and not DuelRoom.isReturning(players[1]) and not DuelRoom.isReturning(players[2])
 end
 
 local function duelParticipants()
@@ -71,7 +78,7 @@ local function duelPlayersIntact()
     if not duel then return false end
     local a,b = duelParticipants()
     return a and b and a.Parent == Players and b.Parent == Players
-        and DuelRules.sameParticipants(Players:GetPlayers(), a, b)
+        and DuelRules.sameParticipants(DuelRoom.players(), a, b)
 end
 
 local function duelRows()
@@ -94,7 +101,7 @@ end
 
 local function currentStandings()
     local entries = {}
-    for _, player in ipairs(Players:GetPlayers()) do
+    for _, player in ipairs(DuelRoom.players()) do
         local stats = player:FindFirstChild("leaderstats")
         local deaths = stats and stats:FindFirstChild("Deaths")
         table.insert(entries, {
@@ -316,6 +323,8 @@ end
 
 local function startDuelSeries(players)
     DuelCombatState.clear()
+    finalResult = nil
+    Workspace:SetAttribute("IronYardFinalStandings", "")
     duel = {
         aPlayer=players[1], bPlayer=players[2],
         aId=players[1].UserId, bId=players[2].UserId,
@@ -362,13 +371,23 @@ local function finishDuelBout(result)
 end
 
 local function startRound()
-    if #Players:GetPlayers() == 0 then
+    local players = DuelRoom.players()
+    if #players == 0 then
         transition("WAITING", 0)
         return
     end
     finalResult = nil
     Workspace:SetAttribute("IronYardFinalStandings", "")
-    local candidates=readyPlayers()
+    if DuelRoom.isDedicated then
+        if dedicatedPair(players) then
+            startDuelSeries(players)
+        else
+            for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
+            transition("WAITING", 0)
+        end
+        return
+    end
+    local candidates = DuelRoom.isLocal and readyPlayers()
     if candidates then
         startDuelSeries(candidates)
         return
@@ -406,14 +425,15 @@ local function endRound()
 end
 
 local function tick()
-    local players = Players:GetPlayers()
+    if not DuelRoom.isDedicated and not DuelRoom.isLocal then DuelRoom.match() end
+    local players = DuelRoom.players()
     -- Last disconnect is not an abandoned 1v1 with a surviving winner.
     -- Clear stale duel mode and public RESULTS before the next player joins.
-    if MatchLobbyPolicy.shouldReset(#players, phase, mode, duel ~= nil) then
+    if MatchLobbyPolicy.shouldReset(#players, phase, mode, duel ~= nil, lobbyMode) then
         DuelCombatState.clear()
         releaseDuelPrep()
         duel = nil
-        mode = "FFA"
+        mode = lobbyMode
         finalResult = nil
         Workspace:SetAttribute("IronYardMatchMode", mode)
         Workspace:SetAttribute("IronYardDuelLastResult", "")
@@ -426,13 +446,22 @@ local function tick()
     if duel and phase ~= "RESULTS" and not duelPlayersIntact() then
         local a,b = duelParticipants()
         -- Player object references remain truthy after disconnect. Only
-        -- the original combatant still present in the live roster can win
-        -- by forfeit; a third observer or an empty server forces a draw.
-        local side = DuelRules.forfeitSide(Players:GetPlayers(), a, b)
+        -- the original combatant still present in the live roster can win.
+        local side = DuelRules.forfeitSide(players, a, b)
         endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)
         return
     end
     if phase == "WAITING" then
+        if DuelRoom.isDedicated and not dedicatedPair(players) then
+            if DuelRoom.waitExpired() then
+                for _, waitingPlayer in ipairs(players) do
+                    if waitingPlayer:GetAttribute("IronYardDuelTravel") == nil then
+                        DuelRoom.returnToFfa(waitingPlayer)
+                    end
+                end
+            end
+            return
+        end
         transition("COUNTDOWN", COUNTDOWN_SECONDS)
         return
     end
@@ -444,13 +473,16 @@ local function tick()
     end
 
     if phase == "COUNTDOWN" then
-        if remaining <= 0 then
+        if DuelRoom.isDedicated and not dedicatedPair(players) then
+            for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
+            transition("WAITING", 0)
+        elseif remaining <= 0 then
             startRound()
         end
     elseif phase == "LIVE" then
         -- The two humans explicitly requested a duel; start now rather
         -- than forcing them to wait out the remainder of a four-minute FFA.
-        if not duel and mode == "FFA" then
+        if DuelRoom.isLocal and not duel and mode == "FFA" then
             local candidates = readyPlayers()
             if candidates then
                 startDuelSeries(candidates)
@@ -491,6 +523,20 @@ local function tick()
             transition("DUEL_BREAK", 1)
         end
     elseif phase == "RESULTS" and remaining <= 0 then
+        if DuelRoom.isDedicated then
+            if duel and duel.returnStarted then return end
+            local rematch = readyPlayers()
+            if rematch and duelPlayersIntact() and dedicatedPair(rematch) then
+                DuelCombatState.clear()
+                duel = nil
+                publishDuelScores()
+                transition("COUNTDOWN", COUNTDOWN_SECONDS)
+            elseif duel then
+                duel.returnStarted = true
+                for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
+            end
+            return
+        end
         DuelCombatState.clear()
         duel = nil
         mode = "FFA"
@@ -505,17 +551,36 @@ function MatchService.start()
     if started then return end
     started = true
     DuelCombatState.clear()
+    DuelRoom.start()
     local remotes = PrecisionNet.getRemotes(true)
-    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled)
+    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end
         if player.Parent ~= Players then return end
-        -- No new ready flags during an active 1v1 or with 3+ players.
-        -- Release requests are always accepted. RESULTS allows rematches.
-        if enabled and (#Players:GetPlayers() > 2 or
-            (duel ~= nil and phase ~= "RESULTS")) then return end
-        player:SetAttribute("IronYardDuelReady", enabled)
+        if DuelRoom.isDedicated then
+            if phase == "RESULTS" and duel and not duel.returnStarted and duelPlayersIntact()
+                and not DuelRoom.isReturning(duel.aPlayer) and not DuelRoom.isReturning(duel.bPlayer)
+                and (duel.aPlayer == player or duel.bPlayer == player) then
+                player:SetAttribute("IronYardDuelReady", enabled)
+            end
+        elseif DuelRoom.isLocal then
+            if enabled and (#Players:GetPlayers() > 2 or
+                (duel ~= nil and phase ~= "RESULTS")) then return end
+            player:SetAttribute("IronYardDuelReady", enabled)
+        else
+            DuelRoom.request(player, enabled, target)
+        end
     end)
+    remotes.ReturnToFfa.OnServerEvent:Connect(function(player)
+        if not RemoteGuard.allow(player, "ReturnToFfa") then return end
+        if DuelRoom.isDedicated and (phase == "WAITING" or phase == "RESULTS"
+            or (phase == "COUNTDOWN" and not duel)) then
+            player:SetAttribute("IronYardDuelReady", false)
+            DuelRoom.returnToFfa(player)
+        end
+    end)
+    Workspace:SetAttribute("IronYardDedicatedDuel", DuelRoom.isDedicated)
+    Workspace:SetAttribute("IronYardDuelLocal", DuelRoom.isLocal)
     Workspace:SetAttribute("IronYardMatchMode", mode)
     Workspace:SetAttribute("IronYardDuelReadyCount", 0)
     Workspace:SetAttribute("IronYardDuelLastResult", "")
@@ -530,7 +595,7 @@ function MatchService.start()
         while started do
             local ok, err = pcall(function()
                 local readyCount = 0
-                for _, player in ipairs(Players:GetPlayers()) do
+                for _, player in ipairs(DuelRoom.players()) do
                     if player:GetAttribute("IronYardDuelReady") == true then
                         readyCount += 1
                     end
@@ -558,7 +623,7 @@ function MatchService.start()
                         DuelCombatState.clear()
                         releaseDuelPrep()
                         duel = nil
-                        mode = "FFA"
+                        mode = lobbyMode
                         finalResult = nil
                         Workspace:SetAttribute("IronYardMatchMode", mode)
                         Workspace:SetAttribute("IronYardDuelLastResult", "")

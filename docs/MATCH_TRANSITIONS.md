@@ -1,9 +1,22 @@
 # IRON YARD — matrice des transitions de manche (A1, V3)
 
-**Date : 12 novembre 2026** · **Source inspectée :** `src/server/MatchService.luau` (541 lignes), `DuelRules`, `DuelCombatState`, `MatchLobbyPolicy`, `RoundStandings`, `VictoryAwardPolicy`, `CombatAwards`, `WeaponService` (gardes de phase), `SpawnService`.
+**Audit initial : 12 novembre 2026** · **Source inspectée :** `src/server/MatchService.luau` (541 lignes), `DuelRules`, `DuelCombatState`, `MatchLobbyPolicy`, `RoundStandings`, `VictoryAwardPolicy`, `CombatAwards`, `WeaponService` (gardes de phase), `SpawnService`.
 **Rôle :** établir la liste **fermée** des états et des transitions réellement atteignables depuis les handlers serveur, puis la vérifier en CI. Ce document décrit le code tel qu'il est : il ne propose aucun nouveau mode et ne réécrit aucune règle.
 
-> **Résultat de l'audit : aucun défaut de transition démontré.** Les onze cas exigés par A1 produisent déjà le résultat attendu par les politiques pures. **Aucun comportement de manche n'a donc été modifié** : le lot livre la matrice, ses tests et un contrat anti-dérive. Les points restant à prouver sont moteur (deux clients Roblox réels, réseau perturbé), pas logiques.
+> **Résultat de l'audit : aucun défaut de transition démontré.** Les onze cas exigés par A1 produisent déjà le résultat attendu par les politiques pures. **Aucun comportement de manche n'a donc été modifié dans cet audit initial** : le lot livre la matrice, ses tests et un contrat anti-dérive. Les points restant à prouver sont moteur (deux clients Roblox réels, réseau perturbé), pas logiques.
+
+## Parcours public du 1v1 réservé
+
+Le menu **1v1** (touche **V** sur PC) propose une recherche dans le serveur FFA courant et une invitation ciblée à un joueur de ce serveur. Une invitation exige l’accord des deux. La FFA continue pour le reste du serveur. Les deux combattants rejoignent une instance réservée de la place publique existante, sans création d’une autre expérience.
+
+Le serveur source enregistre les deux identités dans MemoryStore avant le transfert. Le serveur réservé vérifie son roster avant de démarrer le compte à rebours. L’armement et les dégâts suivent les personnages des combattants admis. Le retour en FFA est automatique après les résultats, sauf si les deux combattants choisissent **REMATCH**. **BACK TO FFA** permet de revenir plus tôt ou de réessayer un retour échoué. Si un seul joueur arrive, l’attente est bornée et le retour est proposé. Roblox Studio conserve le duel local pour vérifier les transitions sans téléportation.
+
+**Validation publiée à faire**
+
+1. Avec trois joueurs dans une FFA, lancer deux recherches. Vérifier que les deux volontaires se retrouvent seuls en duel et que le troisième poursuit sa manche.
+2. Répéter avec une invitation et vérifier que le duel commence uniquement après acceptation. Tester aussi l’expiration et le départ du destinataire.
+3. Jouer jusqu’aux résultats. Faire une revanche à deux, puis vérifier le retour en FFA si un seul joueur accepte. Vérifier également le départ pendant une manche et pendant le compte à rebours.
+4. Vérifier la restauration de l’XP après le retour, puis jouer sur Android avec les menus et le panneau PERF.
 
 ## 1. États
 
@@ -11,22 +24,22 @@
 |---|---|---|---|
 | `WAITING` | aucun match publié | démarrage serveur, roster vidé | `COUNTDOWN` dès qu'un joueur est présent |
 | `COUNTDOWN` | 6 s avant `startRound` | `WAITING`, fin de `RESULTS` | `LIVE` (FFA), `DUEL_PREP` ou `DUEL_BREAK` (duel) |
-| `LIVE` | manche jouable | fin de `COUNTDOWN`, fin de `DUEL_PREP` | `RESULTS` (FFA ou série close), `DUEL_BREAK`, `DUEL_PREP` (duel accepté en cours de FFA) |
+| `LIVE` | manche jouable | fin de `COUNTDOWN`, fin de `DUEL_PREP` | `RESULTS` (FFA ou série close), `DUEL_BREAK`, `DUEL_PREP` (duel local accepté en cours de FFA) |
 | `DUEL_PREP` | 3 s, deux racines ancrées | `startDuelBout` réussi | `LIVE` si la préparation est `READY`, `DUEL_BREAK` si interrompue, `RESULTS` si les participants changent |
 | `DUEL_BREAK` | 7 s entre deux manches de duel (2 s au premier échec, 1 s en réessai) | fin de manche, préparation interrompue, échec de placement | `DUEL_PREP`, `DUEL_BREAK` (réessai borné), `RESULTS` (récupération expirée) |
 | `RESULTS` | 12 s, tableau final figé | fin de manche FFA, fin de série, abandon, lobby modifié | `COUNTDOWN` uniquement |
 
-`mode` ne prend que `FFA` ou `DUEL`. `DUEL_PREP` et `DUEL_BREAK` n'existent qu'en mode `DUEL` ; `RESULTS` remet `mode = "FFA"` et `duel = nil` avant de repartir.
+`mode` ne prend que `FFA` ou `DUEL`. `DUEL_PREP` et `DUEL_BREAK` n'existent qu'en mode `DUEL`. La fin de `RESULTS` efface la série avant de repartir sur un compte à rebours. Dans une instance réservée, ce compte à rebours exige le consentement des deux combattants.
 
 ## 2. Événements réellement possibles
 
-Aucun événement client ne pilote directement une phase. Les seules entrées sont `SetDuelReady` (booléen, rate-limité par `RemoteGuard`) et la boucle `tick()` à 0,2 s qui observe le roster, les délais, la santé et les drapeaux de préparation.
+Aucun événement client ne pilote directement une phase. `SetDuelReady` enregistre une recherche, une invitation ou un choix de revanche. `ReturnToFfa` demande un retour depuis une instance réservée en attente, pendant le compte à rebours ou aux résultats. Les deux événements sont limités par `RemoteGuard`. La boucle `tick()` observe les joueurs admis, les délais et l’état des personnages.
 
 | Événement | Origine | Effet |
 |---|---|---|
 | `RosterEmptied` | `Players.PlayerRemoving` | `WAITING`, duel et podium effacés (`MatchLobbyPolicy`) |
-| `DuelRequested` | `SetDuelReady × 2`, exactement 2 joueurs | `DUEL` : série ou manche immédiate |
-| `StartDeadline` | fin de `COUNTDOWN` | `startRound` : duel si consentement complet, sinon FFA |
+| `DuelRequested` | `SetDuelReady × 2`, deux demandes compatibles | Transfert des deux joueurs vers une instance réservée, ou duel local dans Studio |
+| `StartDeadline` | fin de `COUNTDOWN` | `startRound` : duel si la paire attendue est présente en instance réservée, sinon FFA en instance publique |
 | `BoutDecided` | santé serveur d'une manche | point, `DRAW`, ou fin de série |
 | `PrepDeadline` | 3 s écoulées | `LIVE` si `DuelRules.prepState == READY` |
 | `PrepInterrupted` | personnage mort/remplacé, racine désancrée | `DUEL_BREAK` sans crédit |
@@ -34,8 +47,8 @@ Aucun événement client ne pilote directement une phase. Les seules entrées so
 | `RecoveryExpired` | 20 s cumulées (`DuelRules.recoveryExpired`) | `RESULTS` sans vainqueur |
 | `RoundDeadline` | 240 s (FFA) ou 80 s (duel) | résultats |
 | `ScoreLimit` | 15 éliminations FFA | résultats |
-| `ParticipantsChanged` | départ, arrivée d'un tiers, remplacement | `RESULTS` (forfait ou annulation) |
-| `ResultsDeadline` | 12 s écoulées | `COUNTDOWN`, `duel` et `mode` remis à zéro |
+| `ParticipantsChanged` | départ, remplacement ou arrivée d'un tiers en test local | `RESULTS` (forfait ou annulation) |
+| `ResultsDeadline` | 12 s écoulées | `COUNTDOWN` en FFA ou sur accord de revanche. En instance réservée sans accord, retour à la FFA publique |
 
 ## 3. Matrice des transitions légales
 
@@ -50,11 +63,11 @@ Aucun événement client ne pilote directement une phase. Les seules entrées so
 
 **Arêtes interdites et pourquoi :**
 
-- `RESULTS → LIVE/DUEL_*` : `RESULTS` remet `duel = nil` et `mode = "FFA"` ; tout rejeu passe par `COUNTDOWN`.
+- `RESULTS → LIVE/DUEL_*` : tout rejeu efface la série précédente et passe par `COUNTDOWN`.
 - `WAITING → LIVE` : le compte à rebours ne peut pas être contourné, même par un `SetDuelReady`.
 - `COUNTDOWN → RESULTS` : aucune manche n'a encore de score.
 - `DUEL_PREP → DUEL_PREP` : une préparation ratée repasse par `DUEL_BREAK`, jamais par un nouveau `DUEL_PREP`.
-- `DUEL_PREP → RESULTS` est **légal uniquement** quand les participants changent (départ d'un combattant, tiers entrant) : `MatchService` termine alors la série par `endDuel` au lieu de laisser une préparation orpheline. Une simple interruption de préparation passe par `DUEL_BREAK`, jamais par un résultat.
+- `DUEL_PREP → RESULTS` est **légal uniquement** quand les participants changent (départ d'un combattant, ou tiers entrant dans un test local) : `MatchService` termine alors la série par `endDuel` au lieu de laisser une préparation orpheline. Une simple interruption de préparation passe par `DUEL_BREAK`, jamais par un résultat.
 - `LIVE → DUEL_BREAK` en `FFA` : impossible, `DUEL_BREAK` n'a de sens qu'avec une série.
 
 ## 4. Cas A1 et leur couverture
@@ -69,7 +82,7 @@ Aucun événement client ne pilote directement une phase. Les seules entrées so
 | T6 | Égalité de manche | `DRAW` publié, aucun XP de victoire | `advance`, `VictoryAwardPolicy` |
 | T7 | Mort après changement de phase | aucun tir/dégât hors `LIVE` | `DuelCombatState.canFire`, garde de phase `WeaponService` |
 | T8 | Respawn tardif | préparation `INTERRUPTED`, pas de seconde vie | `prepState`, `healthForBout` |
-| T9 | Lobby avec troisième joueur | `LOBBY_CHANGED` depuis `LIVE`, `DUEL_PREP` ou `DUEL_BREAK`, aucun vainqueur inventé | `sameParticipants`, `forfeitSide`, arête `DUEL_PREP → RESULTS` |
+| T9 | Lobby Studio avec troisième joueur | `LOBBY_CHANGED` depuis `LIVE`, `DUEL_PREP` ou `DUEL_BREAK`, aucun vainqueur inventé | `sameParticipants`, `forfeitSide`, arête `DUEL_PREP → RESULTS` |
 | T10 | Redémarrage de manche | `advance` refuse après clôture, prime réarmée une seule fois | `DuelRules.advance`, `VictoryAwardPolicy.reset` |
 | T11 | Nouvelle demande de duel | consentement consommé, rejeu via `COUNTDOWN` | `startDuelSeries` + matrice |
 

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local BuildInfo = require(Shared:WaitForChild("BuildInfo"))
 local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
+local remotes = require(Shared:WaitForChild("PrecisionNet")).getRemotes(false)
 
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
@@ -110,6 +111,35 @@ end
 local countdown = label("NextRound", 11,
     UDim2.fromOffset(16, 315), UDim2.new(1, -32, 0, 16), muted)
 
+local function resultAction(name, text, offset)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Text = text
+    button.Size = UDim2.fromOffset(164, 36)
+    button.Position = UDim2.fromOffset(offset, 274)
+    button.BackgroundColor3 = Color3.fromRGB(61, 72, 65)
+    button.TextColor3 = bone
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.BorderSizePixel = 0
+    button.Visible = false
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 7)
+    corner.Parent = button
+    button.Parent = root
+    return button
+end
+
+local rematch = resultAction("Rematch", "REMATCH", 44)
+local back = resultAction("BackToFFA", "BACK TO FFA", 226)
+back.Modal = true
+rematch.Activated:Connect(function()
+    remotes.SetDuelReady:FireServer(player:GetAttribute("IronYardDuelReady") ~= true)
+end)
+back.Activated:Connect(function()
+    remotes.ReturnToFfa:FireServer()
+end)
+
 local function safeCount(attr)
     local value = player:GetAttribute(attr)
     return CareerReadout.count(value)
@@ -150,6 +180,8 @@ end
 
 local function render()
     if Workspace:GetAttribute("NeonMatchPhase") ~= "RESULTS" then
+        back.Visible = false
+        rematch.Visible = false
         root.Visible = false
         return
     end
@@ -176,6 +208,8 @@ local function render()
     title.TextColor3 = isWinner and green or amber
     if isDuel and snapshot and snapshot.reason == "SPAWN_TIMEOUT" then
         winnerLabel.Text = "DUEL CANCELLED / RESPAWN UNAVAILABLE"
+    elseif isDuel and snapshot and snapshot.reason == "FORFEIT" then
+        winnerLabel.Text = "FORFEIT  /  " .. string.sub(tostring(winner), 1, 30)
     elseif isDuel and snapshot and snapshot.reason == "LOBBY_CHANGED" then
         winnerLabel.Text = "DUEL CANCELLED / LOBBY CHANGED"
     else
@@ -232,11 +266,36 @@ local function render()
             leaderboard[i].TextColor3 = muted
         end
     end
+    local dedicated = isDuel and Workspace:GetAttribute("IronYardDedicatedDuel") == true
+    local travel = player:GetAttribute("IronYardDuelTravel")
+    local hasOpponent = dedicated and participants == 2 and #Players:GetPlayers() == 2
+    leaderboard[3].Visible = not dedicated
+    rematch.Visible = dedicated and myStanding ~= nil
+    rematch.Interactable = hasOpponent and myStanding ~= nil and seconds > 0 and travel ~= "RETURNING"
+    local ready = player:GetAttribute("IronYardDuelReady") == true
+    local readyCount = Workspace:GetAttribute("IronYardDuelReadyCount") or 0
+    rematch.Text = not hasOpponent and "OPPONENT LEFT"
+        or string.format(ready and "CANCEL  ·  %d/2" or "REMATCH  ·  %d/2", readyCount)
+    back.Visible = dedicated and myStanding ~= nil
+    back.Interactable = travel ~= "RETURNING"
+    back.Text = travel == "RETURNING" and "RETURNING…" or "BACK TO FFA"
+
     local build = typeof(BuildInfo.sourceSha) == "string"
         and #BuildInfo.sourceSha == 40 and BuildInfo.short or nil
     countdown.Text = string.format(isDuel and "NEXT MATCH IN %ds"
         or "NEXT ROUND IN %ds", math.max(0, seconds))
         .. (build and ("   /   BUILD " .. build) or "")
+    if dedicated then
+        if travel == "FAILED" then
+            countdown.Text = "RETURN FAILED  /  TAP BACK TO FFA TO RETRY"
+        elseif travel == "RETURNING" or seconds <= 0 then
+            countdown.Text = "CONNECTING…"
+        elseif readyCount == 2 then
+            countdown.Text = string.format("REMATCH IN %ds", seconds)
+        else
+            countdown.Text = string.format("BACK TO FFA IN %ds", seconds)
+        end
+    end
     root.Visible = true
 end
 
@@ -260,18 +319,22 @@ local attributeConnections = {}
 for _, attr in ipairs({
     "NeonMatchPhase", "NeonMatchWinner", "NeonMatchRound",
     "NeonMatchTimeLeft", "IronYardWinnerUserId", "IronYardStandings",
-    "IronYardFinalStandings",
+    "IronYardFinalStandings", "IronYardDedicatedDuel", "IronYardMatchMode",
+    "IronYardDuelReadyCount",
 }) do
     table.insert(attributeConnections,
         Workspace:GetAttributeChangedSignal(attr):Connect(render))
 end
 for _, attr in ipairs({
     "IronYardLifetimeXP", "IronYardProgressLevel", "IronYardRoundXP",
-    "IronYardSavedXP", "IronYardProgressStatus",
+    "IronYardSavedXP", "IronYardProgressStatus", "IronYardDuelReady", "IronYardDuelTravel",
 }) do
     table.insert(attributeConnections,
         player:GetAttributeChangedSignal(attr):Connect(render))
 end
+
+Players.PlayerAdded:Connect(function() task.defer(render) end)
+Players.PlayerRemoving:Connect(function() task.defer(render) end)
 
 -- leaderstats and their values can arrive late or be replaced between
 -- rounds. A new container must not leave old Value listeners subscribed.

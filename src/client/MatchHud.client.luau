@@ -3,6 +3,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local remotes = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("PrecisionNet")).getRemotes(false)
 local DuelReadout = require(ReplicatedStorage:WaitForChild("Shared")
@@ -104,50 +105,192 @@ local function updateDuelProgress(mode, phase, myWins, rivalWins)
     end
 end
 
--- Public player-facing opt-in. No test or developer controls.
-local duelToggle = Instance.new("TextButton")
-duelToggle.Name = "DuelOneVsOne"
-duelToggle.Position = UDim2.fromOffset(10, 96)
-duelToggle.Size = UDim2.fromOffset(140, 36)
-duelToggle.BackgroundColor3 = Color3.fromRGB(42, 49, 46)
-duelToggle.TextColor3 = Color3.fromRGB(241, 218, 175)
-duelToggle.Font = Enum.Font.GothamBold
-duelToggle.TextSize = 12
-duelToggle.BorderSizePixel = 0
-duelToggle.AutoButtonColor = true
-duelToggle.Parent = gui
-local duelCorner = Instance.new("UICorner")
-duelCorner.CornerRadius = UDim.new(0, 9)
-duelCorner.Parent = duelToggle
-local duelStroke = Instance.new("UIStroke")
-duelStroke.Color = Color3.fromRGB(201, 163, 103)
-duelStroke.Transparency = 0.35
-duelStroke.Thickness = 1
-duelStroke.Parent = duelToggle
+local function duelButton(parent, name, text, size, position)
+    local button = Instance.new("TextButton")
+    button.Name = name
+    button.Text = text
+    button.Size = size
+    button.Position = position
+    button.BackgroundColor3 = Color3.fromRGB(55, 65, 61)
+    button.TextColor3 = Color3.fromRGB(247, 223, 177)
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 13
+    button.TextTruncate = Enum.TextTruncate.AtEnd
+    button.BorderSizePixel = 0
+    local buttonCorner = Instance.new("UICorner")
+    buttonCorner.CornerRadius = UDim.new(0, 8)
+    buttonCorner.Parent = button
+    button.Parent = parent
+    return button
+end
+
+local duelToggle = duelButton(gui, "DuelOneVsOne", "1v1",
+    UDim2.fromOffset(100, 38), UDim2.fromOffset(10, 136))
+local menu = Instance.new("Frame")
+menu.Name = "DuelLobby"
+menu.AnchorPoint = Vector2.new(0.5, 0.5)
+menu.Position = UDim2.fromScale(0.5, 0.54)
+menu.Size = UDim2.new(0.84, 0, 0.79, 0)
+menu.BackgroundColor3 = Color3.fromRGB(27, 35, 35)
+menu.BorderSizePixel = 0
+menu.Visible = false
+menu.Parent = gui
+local menuLimit = Instance.new("UISizeConstraint")
+menuLimit.MaxSize = Vector2.new(360, 310)
+menuLimit.Parent = menu
+local menuCorner = Instance.new("UICorner")
+menuCorner.CornerRadius = UDim.new(0, 12)
+menuCorner.Parent = menu
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(1, -62, 0, 38)
+status.Position = UDim2.fromOffset(12, 5)
+status.BackgroundTransparency = 1
+status.TextColor3 = Color3.fromRGB(247, 223, 177)
+status.Font = Enum.Font.GothamBold
+status.TextSize = 13
+status.TextTruncate = Enum.TextTruncate.AtEnd
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.Parent = menu
+local close = duelButton(menu, "Close", "×", UDim2.fromOffset(35, 32),
+    UDim2.new(1, -44, 0, 7))
+close.Modal = true
+local search = duelButton(menu, "Search", "FIND OPPONENT",
+    UDim2.new(1, -24, 0, 38), UDim2.fromOffset(12, 47))
+local invite = duelButton(menu, "AcceptInvite", "",
+    UDim2.new(1, -24, 0, 38), UDim2.fromOffset(12, 91))
+
+local roster = Instance.new("ScrollingFrame")
+roster.Name = "LobbyPlayers"
+roster.BackgroundTransparency = 1
+roster.BorderSizePixel = 0
+roster.ScrollBarThickness = 4
+roster.CanvasSize = UDim2.fromOffset(0, 0)
+roster.AutomaticCanvasSize = Enum.AutomaticSize.Y
+roster.Parent = menu
+local list = Instance.new("UIListLayout")
+list.Padding = UDim.new(0, 5)
+list.SortOrder = Enum.SortOrder.Name
+list.Parent = roster
+
+local states = {
+    SEARCHING = "LOOKING FOR A 1v1",
+    INVITED = "WAITING FOR INVITE RESPONSE",
+    CONNECTING = "CONNECTING TO DUEL…",
+    RETURNING = "RETURNING TO FFA…",
+    FAILED = "CONNECTION FAILED · TRY AGAIN",
+    UNAVAILABLE = "PLAYER UNAVAILABLE",
+    INVITE_EXPIRED = "INVITATION EXPIRED",
+}
+
+local function setMenu(visible)
+    if menu.Visible == visible then return end
+    menu.Visible = visible
+    gui.DisplayOrder = visible and 45 or 20
+    playerGui:SetAttribute("IronYardDuelMenuOpen", visible)
+end
+
+local function updateRoster()
+    for _, child in ipairs(roster:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    if Workspace:GetAttribute("IronYardDuelLocal") then return end
+    for _, other in ipairs(Players:GetPlayers()) do
+        if other ~= player and other:GetAttribute("IronYardDuelTravel") ~= "CONNECTING" then
+            local button = duelButton(roster, other.Name, "INVITE  " .. other.DisplayName,
+                UDim2.new(1, -7, 0, 36), UDim2.fromOffset(0, 0))
+            button.Activated:Connect(function()
+                remotes.SetDuelReady:FireServer(true, other.UserId)
+                setMenu(false)
+            end)
+        end
+    end
+end
 
 local function duelLabel()
-    local mode = Workspace:GetAttribute("IronYardMatchMode")
     local phase = Workspace:GetAttribute("NeonMatchPhase")
-    local humans = #Players:GetPlayers()
+    local dedicated = Workspace:GetAttribute("IronYardDedicatedDuel") == true
+    local state = player:GetAttribute("IronYardDuelTravel")
     local ready = player:GetAttribute("IronYardDuelReady") == true
-    -- Never overlay the action HUD with an unavailable 1v1 option.
-    duelToggle.Visible = humans <= 2
-        and (mode ~= "DUEL" or phase == "RESULTS")
+    local incomingId = player:GetAttribute("IronYardDuelInvitation")
+    local incoming = incomingId and Players:GetPlayerByUserId(incomingId)
+    local canQueue = not dedicated
+        and Workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" and phase ~= "RESULTS"
+    local returnAvailable = dedicated and (phase == "WAITING" or phase == "COUNTDOWN")
+    local shown = (canQueue or returnAvailable)
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
-    duelToggle.Active = humans <= 2
-    duelToggle.AutoButtonColor = humans <= 2
-    duelToggle.Text = humans > 2 and "DUEL / 2 PLAYERS"
-        or (ready and "DUEL READY  ✓" or "JOIN 1v1 DUEL")
-    duelToggle.BackgroundColor3 = ready
-        and Color3.fromRGB(70, 93, 72) or Color3.fromRGB(42, 49, 46)
+    duelToggle.Visible = shown
+    if not shown or returnAvailable then setMenu(false) end
+
+    if returnAvailable then
+        duelToggle.Text = state == "RETURNING" and "RETURNING…" or "BACK TO FFA"
+    elseif state == "CONNECTING" then
+        duelToggle.Text = "CONNECTING…"
+    elseif state == "FAILED" then
+        duelToggle.Text = "1v1 · RETRY"
+    elseif incoming then
+        duelToggle.Text = "1v1 · INVITE"
+    elseif ready then
+        duelToggle.Text = "1v1 · WAITING"
+    else
+        duelToggle.Text = UserInputService.TouchEnabled and "1v1" or "V  ·  1v1"
+    end
+    status.Text = states[state] or "1v1 DUEL"
+    search.Text = ready and "CANCEL REQUEST" or "FIND OPPONENT"
+    local busy = state == "CONNECTING"
+    search.Interactable = not busy
+    invite.Visible = incoming ~= nil and not busy
+    invite.Text = incoming and ("ACCEPT  " .. incoming.DisplayName) or ""
+    local top = invite.Visible and 135 or 91
+    roster.Visible = not busy
+    roster.Position = UDim2.fromOffset(12, top)
+    roster.Size = UDim2.new(1, -24, 1, -top - 8)
 end
-duelToggle.Activated:Connect(function()
-    if #Players:GetPlayers() > 2 then return end
+
+local function toggleDuel()
+    if not duelToggle.Visible then return end
+    if Workspace:GetAttribute("IronYardDedicatedDuel") then
+        remotes.ReturnToFfa:FireServer()
+        return
+    end
+    local opening = not menu.Visible
+    if opening then updateRoster() end
+    setMenu(opening)
+end
+
+duelToggle.Activated:Connect(toggleDuel)
+close.Activated:Connect(function() setMenu(false) end)
+search.Activated:Connect(function()
     remotes.SetDuelReady:FireServer(player:GetAttribute("IronYardDuelReady") ~= true)
+    if player:GetAttribute("IronYardDuelReady") ~= true then setMenu(false) end
 end)
-player:GetAttributeChangedSignal("IronYardDuelReady"):Connect(duelLabel)
-Players.PlayerAdded:Connect(function() task.defer(duelLabel) end)
-Players.PlayerRemoving:Connect(function() task.defer(duelLabel) end)
+invite.Activated:Connect(function()
+    local incomingId = player:GetAttribute("IronYardDuelInvitation")
+    if incomingId then
+        remotes.SetDuelReady:FireServer(true, incomingId)
+        setMenu(false)
+    end
+end)
+UserInputService.InputBegan:Connect(function(input, used)
+    if not used and input.KeyCode == Enum.KeyCode.V
+        and playerGui:GetAttribute("IronYardSettingsOpen") ~= true then
+        toggleDuel()
+    end
+end)
+for _, name in ipairs({ "IronYardDuelReady", "IronYardDuelTravel", "IronYardDuelInvitation" }) do
+    player:GetAttributeChangedSignal(name):Connect(duelLabel)
+end
+playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
+    if playerGui:GetAttribute("IronYardSettingsOpen") then setMenu(false) end
+end)
+local function rosterChanged()
+    task.defer(function()
+        if menu.Visible then updateRoster() end
+        duelLabel()
+    end)
+end
+Players.PlayerAdded:Connect(rosterChanged)
+Players.PlayerRemoving:Connect(rosterChanged)
 
 -- A single reusable, touch-safe introduction layer. Only state changes
 -- schedule a short tween; no per-frame allocations or additional remotes.
@@ -271,10 +414,15 @@ local function update()
         end
     elseif phase == "WAITING" then
         headerText = "IRON YARD  |  FREIGHT TERMINAL"
-        detailText = "WAITING FOR OPERATORS"
+        detailText = Workspace:GetAttribute("IronYardDedicatedDuel")
+            and (player:GetAttribute("IronYardDuelTravel") == "FAILED"
+                and "RETURN FAILED · TRY BACK TO FFA" or "WAITING FOR OPPONENT")
+            or "WAITING FOR OPERATORS"
     elseif phase == "COUNTDOWN" then
         headerText = string.format("ROUND %d  |  STARTING", count + 1)
-        detailText = readyCount == 2 and #Players:GetPlayers() == 2
+        local localDuel = Workspace:GetAttribute("IronYardDuelLocal")
+            and readyCount == 2 and #Players:GetPlayers() == 2
+        detailText = (Workspace:GetAttribute("IronYardDedicatedDuel") or localDuel)
             and ("1v1 DUEL NEXT  /  " .. seconds .. "s")
             or string.format("FIRST TO %d ELIMINATIONS   /   %ds", target, seconds)
     elseif phase == "LIVE" then
@@ -331,7 +479,7 @@ end)
 for _, name in ipairs({
     "NeonMatchPhase", "NeonMatchRound", "NeonMatchTimeLeft",
     "NeonMatchWinner", "NeonMatchScoreLimit", "NeonBotCount",
-    "IronYardMatchMode", "IronYardDuelReadyCount",
+    "IronYardMatchMode", "IronYardDuelReadyCount", "IronYardDedicatedDuel", "IronYardDuelLocal",
     "IronYardDuelBout", "IronYardDuelScoreA", "IronYardDuelScoreB",
     "IronYardDuelPlayerA", "IronYardDuelPlayerB", "IronYardDuelLastResult",
 }) do
@@ -340,5 +488,6 @@ for _, name in ipairs({
         duelLabel()
     end)
 end
+player:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(update)
 duelLabel()
 update()

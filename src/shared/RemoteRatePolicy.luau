@@ -9,6 +9,7 @@ local PROFILES = {
     SetSprinting = { rate = 10, burst = 6 },
     SetAiming = { rate = 10, burst = 8 },
     SetDuelReady = { rate = 3, burst = 3 },
+    ReturnToFfa = { rate = 1, burst = 2 },
     -- Move updates are sent at ~12.5 Hz while boost/wallrun is active.
     MovementAction = { rate = 34, burst = 22 },
     MovementUpdate = { rate = 22, burst = 14 },
