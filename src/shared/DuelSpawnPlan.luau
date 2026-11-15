@@ -3,6 +3,29 @@
 local Plan = {}
 Plan.PAIRS = {{1,4}, {2,3}, {5,8}, {6,7}, {9,10}, {11,12}}
 
+-- Indices are shared with the spawn transaction and its preparation HUD.
+-- Coordinates remain in studs and Y is the existing ground-level spawn height.
+Plan.PADS = {
+    { x = -144, z = 145, label = "WEST / OUTER YARD" },
+    { x = 144, z = 145, label = "EAST / OUTER YARD" },
+    { x = -144, z = -144, label = "WEST / APPROACH" },
+    { x = 144, z = -144, label = "EAST / APPROACH" },
+    { x = -70, z = 145, label = "WEST / WAREHOUSE SIDE" },
+    { x = 70, z = 145, label = "EAST / WAREHOUSE SIDE" },
+    { x = -70, z = -145, label = "WEST / FREIGHT LANE" },
+    { x = 70, z = -145, label = "EAST / FREIGHT LANE" },
+    { x = 0, z = 140, label = "CENTRAL / WAREHOUSE SIDE" },
+    { x = 0, z = -142, label = "CENTRAL / FREIGHT LANE" },
+    { x = -145, z = 16, label = "WEST / UNDER THE CATWALK" },
+    { x = 145, z = 16, label = "EAST / UNDER THE CATWALK" },
+}
+
+function Plan.padLabel(index)
+    if type(index) ~= "number" or index ~= index then return nil end
+    local pad = Plan.PADS[index]
+    return pad and pad.label or nil
+end
+
 function Plan.select(clear, bout)
     if type(clear) ~= "table" or type(bout) ~= "number"
         or bout ~= bout or bout == math.huge or bout == -math.huge

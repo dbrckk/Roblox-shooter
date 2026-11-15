@@ -47,3 +47,17 @@ end
 assert(Plan.forCollider(nil, 64, 3, 52) == nil,
     "Unknown collider names fail closed")
 print("IRON YARD two fully cladded decks, ten physical access steps: OK")
+
+for _, side in ipairs({ -1, 1 }) do
+    local landing = Plan.landing(side)
+    assert(Plan.forCollider("CATWALK / access landing " .. side,
+        landing.width, landing.height, landing.depth).kind == "LANDING")
+    local center = side * landing.x
+    local near, far = center - landing.width / 2, center + landing.width / 2
+    assert(near < 85 and far > 86, "Landing bridges the one-stud seam on either side")
+    local top = landing.y + landing.height / 2
+    assert(top - 10 == 1.5 and 13 - top == 1.5, "Last rise is split evenly across the landing")
+    assert(landing.z - landing.depth / 2 == -7.5 and landing.z + landing.depth / 2 == -2.5,
+        "Turn remains aligned with the final tread")
+end
+assert(Plan.forCollider("CATWALK / access landing 1", 6, 1.5, 5) == nil)

@@ -46,3 +46,12 @@ assert "function SpawnService.place(player, character," in spawn, (
     "Normal FFA spawning must remain available")
 assert "applyPlacement(character, root, humanoid, position, faceToward)" in spawn
 print("IRON YARD duel spawns: two original rigs and both opposite pads verified before either move; FFA fallback excluded")
+
+assert 'ipairs(DuelSpawnPlan.PADS)' in spawn, "HUD pad IDs and real coordinates must share one plan"
+assert duel.index('applyPlacement(bChar, bRoot, bHumanoid, second, first)') < duel.index(
+    'aChar:SetAttribute("IronYardDuelPad", firstIndex)')
+assert 'bChar:SetAttribute("IronYardDuelPad", secondIndex)' in duel
+hud = (root / "src/client/MatchHud.client.luau").read_text(encoding="utf-8")
+assert 'GetAttributeChangedSignal("IronYardDuelPad"):Connect(update)' in hud
+assert 'DuelSpawnPlan.padLabel(pad) or "PREPARE"' in hud
+assert 'DuelIntro' not in hud, "Keep the center clear during preparation"

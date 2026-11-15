@@ -2,6 +2,8 @@
 -- Collision geometry and mantle/wallrun attributes are authoritative.
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CatwalkDeckPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CatwalkDeckPlan"))
 local ArenaArt = require(script.Parent:WaitForChild("ArenaArt"))
 local IndustrialProps = require(script.Parent:WaitForChild("IndustrialProps"))
 local CoverArt = require(script.Parent:WaitForChild("CoverArt"))
@@ -100,6 +102,14 @@ local function highground(parent)
                 Vector3.new(side * 76, step, -30 + step * 5), P.cover, Enum.Material.Metal)
             WorldPbr.apply(stair, "warehouse_steel")
         end
+        -- The last tread ends at X=85 and Y=10. The deck edge starts
+        -- at X=86 and Y=13. Bridge that seam with a 1.5-stud landing.
+        local layout = CatwalkDeckPlan.landing(side)
+        local landing = part(parent, "CATWALK / access landing " .. side,
+            Vector3.new(layout.width, layout.height, layout.depth),
+            Vector3.new(layout.x, layout.y, layout.z), P.cover, Enum.Material.Metal)
+        landing:SetAttribute("MantleTarget", true)
+        WorldPbr.apply(landing, "warehouse_steel")
         climbWall(parent, "CATWALK / side bulkhead " .. side,
             Vector3.new(2.5, 16, 64), Vector3.new(side * 148, 8, -60), P.wall)
         marking(parent, "CATWALK / caution rail " .. side,

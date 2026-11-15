@@ -646,7 +646,7 @@ def main():
         'duelToggle.Activated:Connect(toggleDuel)',
         '"IronYardDuelScoreA"', '"IronYardDuelScoreB"',
         '"DUEL_BREAK"', '"IronYardDuelReadyCount"',
-        '"DUEL_PREP"', 'updateIntro(phase, seconds, matchMode)',
+        '"DUEL_PREP"', 'DuelSpawnPlan.padLabel(pad) or "PREPARE"',
         'local function updateDuelProgress(mode, phase, myWins, rivalWins)',
         'updateDuelProgress(matchMode, phase, myWins, rivalWins)',
         'duelProgress.Name = "DuelProgress"',

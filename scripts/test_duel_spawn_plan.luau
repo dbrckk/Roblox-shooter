@@ -115,3 +115,16 @@ for i=1,10000 do
     end
 end
 print("IRON YARD opposite duel spawns: "..evaluations.." obstacle masks and alternating sides OK")
+
+local padUse = {}
+assert(#P.PADS == 12)
+for _, pair in ipairs(P.PAIRS) do
+    local left, right = P.PADS[pair[1]], P.PADS[pair[2]]
+    for _, index in ipairs(pair) do
+        assert(not padUse[index] and #P.padLabel(index) <= 26)
+        padUse[index] = true
+    end
+    local dx, dz = right.x - left.x, right.z - left.z
+    assert(dx * dx + dz * dz > 260^2, "Both pads have distinct, opposed viewing origins")
+end
+assert(P.padLabel(nil) == nil and P.padLabel(0/0) == nil and P.padLabel(13) == nil)
