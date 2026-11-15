@@ -26,10 +26,10 @@ defeat_presentation = read("src/shared/DefeatPresentation.luau")
 
 for needle in (
     'Layout.PRESETS = { "COMPACT", "STANDARD", "LARGE" }',
-    "Layout.SETTINGS_BUTTON =",
+    "Layout.MENU_BUTTONS =",
     'local factor = FACTORS[preset or "STANDARD"]',
     'assert(factor, "Unknown touch size preset")',
-    'if intersects(r, settings) then',
+    'if intersects(r, menu) then',
 ):
     assert needle in layout, f"Broken mobile geometry/preset: {needle}"
 
@@ -39,9 +39,11 @@ for needle in (
     'self.player:SetAttribute("IronYardTouchSizePreset"',
     'self.touchSizeValueLabel = self:_makeStepper(panel, "BUTTON SIZE"',
     'self.sensitivityValueLabel = self:_makeStepper(panel, "MOUSE SENS"',
-    'local settingsRect = TouchLayout.SETTINGS_BUTTON',
+    'local settingsRect = TouchLayout.MENU_BUTTONS.Settings',
     'self.gui.DisplayOrder = open and 50 or self.defaultDisplayOrder',
     'SetAttribute("IronYardSettingsOpen", open)',
+    'settingsGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets',
+    'self.fireAimValueLabel = self:_makeStepper(panel, "FIRE DRAG"',
 ):
     assert needle in controller, f"Mobile settings wiring missing: {needle}"
 
@@ -52,11 +54,17 @@ for needle in (
     "TouchLayout.check(viewport.X, viewport.Y, positions)",
     'if not valid then',
     'touchGui.Enabled = enabled',
+    'touchGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets',
+    'UserInputService.TouchEnded:Connect(releaseEndedTouch)',
+    'input.UserInputState == Enum.UserInputState.Cancel',
+    'TouchAimPolicy.rotation(delta.X, delta.Y',
 ):
     assert needle in client, f"Touch control sizing not wired: {needle}"
 
 for needle in (
     'top.Visible = playerGui:GetAttribute("IronYardBriefingOpen") ~= true',
+    'gui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets',
+    'local rect = TouchLayout.MENU_BUTTONS.Duel',
     'playerGui:GetAttributeChangedSignal("IronYardBriefingOpen"):Connect(function()',
     '    update()\n    duelLabel()\nend)',
 ):

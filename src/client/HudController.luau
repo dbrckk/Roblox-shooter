@@ -179,7 +179,11 @@ function HudController:_buildCrosshair()
 	hitMarker.Size = UDim2.fromOffset(90, 50)
 	hitMarker.Text = "x"
 	hitMarker.TextColor3 = Color3.fromRGB(255, 255, 255)
-	hitMarker.TextScaled = true
+    local touchHitMarker = UserInputService.TouchEnabled
+	hitMarker.TextScaled = not touchHitMarker
+    hitMarker.TextSize = 31
+    hitMarker.TextStrokeColor3 = Color3.fromRGB(25, 28, 27)
+    hitMarker.TextStrokeTransparency = touchHitMarker and 0.25 or 1
 	hitMarker.TextTransparency = 1
 	hitMarker.Visible = false
 	hitMarker.Parent = self.gui
@@ -470,10 +474,23 @@ function HudController:_buildScopeOverlay()
     self.scopeOverlay = scopeOverlay
     self.scopeRing = scopeRing
 end
+local FIRE_AIM_LABELS = { "LOW", "MID", "HIGH" }
+
 function HudController:_buildSettingsMenu()
     local touch = UserInputService.TouchEnabled
-    local settingsRect = TouchLayout.SETTINGS_BUTTON
-    local button = makeButton(self.gui, "SettingsButton",
+    local settingsRect = TouchLayout.MENU_BUTTONS.Settings
+    local settingsGui = self.gui
+    if touch then
+        settingsGui = Instance.new("ScreenGui")
+        settingsGui.Name = "IronYardTouchSettings"
+        settingsGui.IgnoreGuiInset = false
+        settingsGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets
+        settingsGui.DisplayOrder = 32
+        settingsGui.ResetOnSpawn = false
+        settingsGui.Parent = self.gui.Parent
+        self.touchSettingsGui = settingsGui
+    end
+    local button = makeButton(settingsGui, "SettingsButton",
         touch and "SET" or "M SETTINGS",
         touch and UDim2.fromOffset(settingsRect.x, settingsRect.y)
             or UDim2.new(1, -138, 0, 18),
@@ -487,15 +504,15 @@ function HudController:_buildSettingsMenu()
 	panel.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
 	panel.BorderSizePixel = 0
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(340, 290)
+    panel.Size = UDim2.fromOffset(340, touch and 295 or 290)
     -- Adapt to small landscape Android viewports, including notched phones.
     local responsiveScale = Instance.new("UIScale")
     responsiveScale.Parent = panel
     local function fitPanel()
         local camera = workspace.CurrentCamera
-        if not camera then return end
-        local viewport = camera.ViewportSize
-        responsiveScale.Scale = math.clamp(math.min(viewport.X / 366, viewport.Y / 318), 0.60, 1)
+        local viewport = touch and settingsGui.AbsoluteSize or (camera and camera.ViewportSize)
+        if not viewport or viewport.X <= 0 or viewport.Y <= 0 then return end
+        responsiveScale.Scale = math.min(viewport.X / 352, viewport.Y / 307, 1)
     end
     local viewportConnection
     local function attachCamera()
@@ -506,11 +523,16 @@ function HudController:_buildSettingsMenu()
         end
         fitPanel()
     end
-    workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(attachCamera)
-    attachCamera()
+    if touch then
+        settingsGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitPanel)
+        fitPanel()
+    else
+        workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(attachCamera)
+        attachCamera()
+    end
 	panel.Visible = false
 	panel.ZIndex = 10
-	panel.Parent = self.gui
+	panel.Parent = settingsGui
 	makeCorner(panel, 6)
 	makeStroke(panel, Color3.fromRGB(90, 102, 126), 0.15, 1)
 	self.settingsPanel = panel
@@ -522,7 +544,7 @@ function HudController:_buildSettingsMenu()
 	local closeButton = makeButton(panel, "Close", "X", UDim2.new(1, -48, 0, 18), UDim2.fromOffset(28, 28))
 	closeButton.ZIndex = 11
 
-	self.fovValueLabel = self:_makeStepper(panel, "FOV", UDim2.fromOffset(22, 74), 60, 100, 5, function()
+	self.fovValueLabel = self:_makeStepper(panel, "FOV", UDim2.fromOffset(22, touch and 60 or 74), 60, 100, 5, function()
 		return tostring(self.baseFov)
 	end, function(delta)
 		self.baseFov = clampSetting(self.baseFov + delta, 60, 100)
@@ -533,16 +555,23 @@ function HudController:_buildSettingsMenu()
 	end)
 
     if touch then
-        -- MouseDeltaSensitivity is mouse-only: mobile users receive a
-        -- real touch-button size control instead of a misleading slider.
         self.touchSizeValueLabel = self:_makeStepper(panel, "BUTTON SIZE",
-            UDim2.fromOffset(22, 132), 1, #TouchLayout.PRESETS, 1, function()
+            UDim2.fromOffset(22, 111), 1, #TouchLayout.PRESETS, 1, function()
                 return TOUCH_SIZE_LABELS[self.touchSizeIndex]
             end, function(delta)
                 self.touchSizeIndex = math.clamp(self.touchSizeIndex + delta,
                     1, #TouchLayout.PRESETS)
                 self.player:SetAttribute("IronYardTouchSizePreset",
                     TouchLayout.PRESETS[self.touchSizeIndex])
+                self:_refreshSettingsText()
+            end)
+        self.fireAimIndex = 2
+        self.fireAimValueLabel = self:_makeStepper(panel, "FIRE DRAG",
+            UDim2.fromOffset(22, 162), 1, 3, 1, function()
+                return FIRE_AIM_LABELS[self.fireAimIndex]
+            end, function(delta)
+                self.fireAimIndex = math.clamp(self.fireAimIndex + delta, 1, 3)
+                self.player:SetAttribute("IronYardFireAimPreset", self.fireAimIndex)
                 self:_refreshSettingsText()
             end)
     else
@@ -558,7 +587,7 @@ function HudController:_buildSettingsMenu()
     end
 
     self.graphicsValueLabel = self:_makeStepper(panel, "GRAPHICS",
-        UDim2.fromOffset(22, 192), 1, 3, 1, function()
+        UDim2.fromOffset(22, touch and 213 or 192), 1, 3, 1, function()
             return GRAPHICS_LABELS[self.graphicsIndex]
         end, function(delta)
             self.graphicsIndex = math.clamp(self.graphicsIndex + delta, 1, #GRAPHICS_PRESETS)
@@ -567,8 +596,8 @@ function HudController:_buildSettingsMenu()
         end)
 
     local hint = makeText(panel, "Hint",
-        UserInputService.TouchEnabled and "Tap X to close" or "Press M to close",
-        UDim2.fromOffset(22, 253), UDim2.fromOffset(230, 22), 12)
+        touch and "Drag on FIRE to aim while shooting" or "Press M to close",
+        UDim2.fromOffset(22, touch and 263 or 253), UDim2.fromOffset(260, 22), 12)
 	hint.TextColor3 = Color3.fromRGB(162, 173, 190)
 	hint.ZIndex = 11
 
@@ -625,6 +654,9 @@ function HudController:_refreshSettingsText()
     end
     if self.graphicsValueLabel then
         self.graphicsValueLabel.Text = GRAPHICS_LABELS[self.graphicsIndex]
+    end
+    if self.fireAimValueLabel then
+        self.fireAimValueLabel.Text = FIRE_AIM_LABELS[self.fireAimIndex]
     end
     if self.touchSizeValueLabel then
         self.touchSizeValueLabel.Text = TOUCH_SIZE_LABELS[self.touchSizeIndex]
@@ -751,7 +783,11 @@ function HudController:setSettingsOpen(open)
 	self.settingsOpen = open
 	self.settingsPanel.Visible = open
     -- Settings modal must render above the match HUD and results screens.
-    self.gui.DisplayOrder = open and 50 or self.defaultDisplayOrder
+    if self.touchSettingsGui then
+        self.touchSettingsGui.DisplayOrder = open and 50 or 32
+    else
+        self.gui.DisplayOrder = open and 50 or self.defaultDisplayOrder
+    end
     self.player:WaitForChild("PlayerGui"):SetAttribute("IronYardSettingsOpen", open)
 
 	if self.options.onSettingsOpenChanged then
@@ -876,6 +912,9 @@ function HudController:showHitFeedback(message)
     self.hitMarker.Size = UDim2.fromOffset(
         killed and 100 or (headshot and 100 or 82),
         killed and 60 or (headshot and 60 or 46))
+    if UserInputService.TouchEnabled then
+        self.hitMarker.TextSize = killed and 35 or (headshot and 31 or 27)
+    end
 
     local readoutText = FeedbackPolicy.readout("Hit", message.damage, headshot)
     if readoutText then

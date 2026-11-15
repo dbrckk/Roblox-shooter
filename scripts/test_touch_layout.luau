@@ -1,7 +1,7 @@
 local Layout = require("../src/shared/TouchLayout")
 
 local screens = {
-    {300, 260}, {320, 280}, {360, 300}, {400, 800}, {568, 320},
+    {260, 210}, {280, 225}, {300, 240}, {300, 260}, {320, 280}, {360, 300}, {400, 800}, {568, 320},
     {640, 360}, {740, 360}, {800, 400}, {915, 412},
     {1024, 768}, {1280, 720}, {1920, 1080},
 }
@@ -22,8 +22,11 @@ for _, viewport in ipairs(screens) do
             "Fire must be below utility controls")
         sizes[preset] = layout.Fire.w
     end
-    assert(sizes.COMPACT < sizes.STANDARD and sizes.STANDARD < sizes.LARGE,
-        "Touch sizes must change materially on every tested viewport")
+    assert(sizes.COMPACT <= sizes.STANDARD and sizes.STANDARD <= sizes.LARGE,
+        "Sizes must remain ordered even when a small viewport caps the presets")
+    if h >= 260 and w >= 300 then
+        assert(sizes.COMPACT < sizes.LARGE, "Presets should change size where space allows")
+    end
     local default = Layout.compute(w, h)
     assert(default.Fire.w == sizes.STANDARD, "Default preset is standard")
     print("IRON YARD mobile " .. w .. "x" .. h
@@ -38,7 +41,17 @@ fake.Slide = fake.Reload
 local passed = Layout.check(568, 320, fake)
 assert(not passed, "Control overlap detector must reject collisions")
 local blocked = Layout.compute(320, 280, "LARGE")
-blocked.Knife = Layout.SETTINGS_BUTTON
+blocked.Knife = Layout.MENU_BUTTONS.Settings
 assert(not Layout.check(320, 280, blocked),
     "Settings access must never overlap the mobile weapon strip")
-print("IRON YARD Android touch controls: 36 presets, safe settings and no overlaps OK")
+blocked.Knife = Layout.MENU_BUTTONS.Duel
+assert(not Layout.check(320, 280, blocked), "Duel button must stay clear of weapon selection")
+for w = Layout.MIN_WIDTH, 1200, 13 do
+    for h = Layout.MIN_HEIGHT, 700, 11 do
+        for _, preset in ipairs(Layout.PRESETS) do
+            local valid, reason = Layout.check(w, h, Layout.compute(w, h, preset))
+            assert(valid, string.format("%dx%d %s: %s", w, h, preset, tostring(reason)))
+        end
+    end
+end
+print("IRON YARD touch controls: compact safe-area sweep, menus and overlap checks OK")
