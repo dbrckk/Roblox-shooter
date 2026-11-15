@@ -182,17 +182,17 @@ def main():
                    'lanes = lanes'):
         check(needle in entrance_plan, "Warehouse entrance must derive from physical walls")
     warehouse_cladding = source("src/server/WarehouseCladding.luau")
-    for needle in ("WarehouseCladding.decorate(decor)",
+    for needle in ("WarehouseCladding.decorate(decor, arena)",
                    'local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))',
                    'lens:SetAttribute("IronYardLightRole", role)'):
         check(needle in art, "Warehouse cladding / lighting role integration missing: " + needle)
-    for needle in ('function Cladding.decorate(decor)',
+    for needle in ('function Cladding.decorate(decor, arena)',
                    '"CLADDING / "', 'p.CanCollide = false',
                    'p.CanQuery = false', 'p.CanTouch = false',
                    'p.CastShadow = false',
                    'p:SetAttribute("NeonArtTier", tier or "Detail")',
-                   'Plan.sidePanels()', 'Plan.bulkheadPanels()',
-                   'WarehouseBerthSerial'):
+                   'Plan.sidePanels()', 'Plan.bulkheadPanels()', 'Plan.exteriorPanels(face)',
+                   'Plan.withinExterior(face, piece)', 'WarehouseBerthSerial', 'WarehouseExteriorWayfinding'):
         check(needle in warehouse_cladding, "Warehouse material safety/detail missing: " + needle)
     cladding_plan = source("src/shared/WarehouseCladdingPlan.luau")
     for needle in ("function Plan.sidePanels()", "function Plan.bulkheadPanels()"):
@@ -415,11 +415,13 @@ def main():
     for needle in ('local function stencil(plate, message)',
                    '"CoverFreightIdentification"',
                    'surface.Face = Enum.NormalId.Front',
-                   '"cast expansion seam "', '"diamondplate strike shield "',
-                   '"cargo shutter rib "', '"freight serial plate"',
-                   'if plan.serial then', 'return part'):
+                   'Plan.panels(plan)', 'Plan.withinFace(plan, piece)',
+                   'part.CFrame = collider.CFrame * placement', 'return part'):
         check(needle in cover,
               "Combat cover distinctive skins and ID decals missing: " + needle)
+    for needle in ('"cast expansion seam "', '"diamondplate strike shield"',
+                   '"cargo shutter rib "', '"freight serial plate"', '"end cap"'):
+        check(needle in cover_plan, "Missing planned combat cover detail: " + needle)
     check('Instance.new("PointLight")' not in cover
           and 'Instance.new("SpotLight")' not in cover,
           "Cover facades must not add server-side real-time lights")

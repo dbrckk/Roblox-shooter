@@ -9,6 +9,7 @@ local Cladding = {}
 local P = {
     steel = Color3.fromRGB(113, 124, 122),
     zinc = Color3.fromRGB(147, 148, 139),
+    trim = Color3.fromRGB(128, 140, 137),
     graphite = Color3.fromRGB(59, 71, 73),
     patina = Color3.fromRGB(123, 101, 81),
     rust = Color3.fromRGB(155, 99, 74),
@@ -139,10 +140,55 @@ local function bulkhead(folder)
     end
 end
 
-function Cladding.decorate(decor)
+local function exteriorLabel(part, message)
+    local surface = Instance.new("SurfaceGui")
+    surface.Name = "WarehouseExteriorWayfinding"
+    surface.Face = Enum.NormalId.Front
+    surface.CanvasSize = Vector2.new(520, 72)
+    surface.LightInfluence = 0.28
+    surface.MaxDistance = 140
+    surface.Parent = part
+    local label = Instance.new("TextLabel")
+    label.BackgroundTransparency = 1
+    label.Size = UDim2.fromScale(1, 1)
+    label.Font = Enum.Font.GothamBold
+    label.TextScaled = true
+    label.TextColor3 = P.graphite
+    label.Text = message
+    label.Parent = surface
+end
+
+local function exteriorWalls(folder, arena)
+    for _, name in ipairs({
+        "WAREHOUSE / west wall", "WAREHOUSE / east wall", "WAREHOUSE / north bulkhead",
+    }) do
+        local wall = arena:FindFirstChild(name)
+        if not wall or not wall:IsA("BasePart") then continue end
+        local size = wall.Size
+        local face = Plan.exteriorFace(wall.Name, size.X, size.Y, size.Z)
+        if not face then continue end
+        local normal = Vector3.new(face.normalX, 0, face.normalZ)
+        local origin = normal * face.halfDepth
+        local basis = wall.CFrame * CFrame.lookAt(origin, origin + normal)
+        for _, piece in ipairs(Plan.exteriorPanels(face)) do
+            if not Plan.withinExterior(face, piece) then continue end
+            local surface = panel(folder, face.label .. " / " .. piece.name,
+                Vector3.new(piece.w, piece.h, piece.thickness),
+                basis * CFrame.new(piece.u, piece.v, -piece.depth),
+                P[piece.finish], piece.text and Enum.Material.SmoothPlastic or Enum.Material.Metal, piece.tier)
+            if piece.finish == "steel" or piece.finish == "zinc" then
+                WorldPbr.apply(surface, "warehouse_steel")
+            end
+            if piece.text then exteriorLabel(surface, piece.text) end
+        end
+    end
+end
+
+function Cladding.decorate(decor, arena)
     -- The supplied folder is the existing visual-LOD-managed arena decor.
     sideWalls(decor)
     bulkhead(decor)
+    exteriorWalls(decor, arena)
 end
 
 return Cladding

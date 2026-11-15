@@ -28,3 +28,25 @@ for _, bay in ipairs(doors) do
         "Bulkhead metal stays within collider silhouette")
 end
 print("IRON YARD warehouse metal cladding layouts and sealed berths: OK")
+
+local shutters, plaques, vents = 0, 0, 0
+for _, input in ipairs({
+    { "WAREHOUSE / west wall", 3, 16, 72, -1, 0 },
+    { "WAREHOUSE / east wall", 3, 16, 72, 1, 0 },
+    { "WAREHOUSE / north bulkhead", 64, 16, 3, 0, 1 },
+}) do
+    local face = assert(P.exteriorFace(input[1], input[2], input[3], input[4]))
+    assert(face.normalX == input[5] and face.normalZ == input[6])
+    local pieces = P.exteriorPanels(face)
+    assert(#pieces <= 35)
+    for _, piece in ipairs(pieces) do
+        assert(P.withinExterior(face, piece), "Panel protrudes: " .. piece.name)
+        if piece.name:match("^closed loading shutter") then shutters += 1 end
+        if piece.name:match("^vent surround") then vents += 1 end
+        if piece.text then plaques += 1 end
+    end
+end
+assert(shutters == 3 and plaques == 5 and vents == 8)
+assert(P.exteriorFace("WAREHOUSE / north bulkhead", 63, 16, 3) == nil)
+assert(P.exteriorFace("WAREHOUSE / west wall", 3, 0/0, 72) == nil)
+assert(P.exteriorFace("WAREHOUSE / cover 1", 3, 16, 72) == nil)
