@@ -53,6 +53,7 @@ end
 
 local function beginTransfer(group, state)
     local transfer = {
+        group = group,
         attempts = {},
         retries = {},
     }
@@ -135,6 +136,7 @@ local function reserve(first, second)
     task.spawn(function()
         local ok, code = pcall(function()
             local reservedCode, serverId = TeleportService:ReserveServerAsync(game.PlaceId)
+            if pending[first] ~= transfer or pending[second] ~= transfer then return nil end
             local saved = rosterStore:SetAsync(serverId, { first.UserId, second.UserId }, ROSTER_TTL)
             if saved ~= true then return nil end
             return reservedCode
@@ -347,9 +349,16 @@ function Room.start()
     end
     Players.PlayerRemoving:Connect(function(player)
         clearRequest(player)
+        local transfer = pending[player]
         pending[player] = nil
         leaving[player] = nil
         if not Room.isDedicated then
+            -- Once teleport is dispatched, departure can be a successful transfer.
+            if transfer and not transfer.code then
+                for _, partner in ipairs(transfer.group) do
+                    finishTransfer(partner, transfer, "DUEL_PARTNER_LEFT")
+                end
+            end
             clearClosedInvitations(Workspace:GetServerTimeNow(), player)
             publishInvitations()
         end
