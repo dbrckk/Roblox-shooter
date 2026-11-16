@@ -74,7 +74,10 @@ def main():
 
     for needle in ('transferDeck(decor, arena)', 'LoadingDeckPlan.DECK_NAME',
                    'LoadingDeckPlan.RAMP_NAME', '"TRANSFER / ramp edge stripe "',
-                   '"06 / TRANSFER"'):
+                   '"06 / TRANSFER"', 'LoadingDeckPlan.descentMarker(deck.Size.Z, ramp.Size.X)',
+                   'origin:PointToObjectSpace(ramp.Position).X',
+                   'transferLabel(plaque, "YARD RAMP", Enum.NormalId.Top',
+                   '"TRANSFER / yard ramp descent chevron "'):
         check(needle in art, "Transfer deck route art missing: " + needle)
     for needle in ('loadingDeck(parent)', 'plan.DECK_NAME', 'plan.RAMP_NAME',
                    'deck:SetAttribute("MantleTarget", true)', 'plan.support(side)',

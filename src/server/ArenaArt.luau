@@ -571,6 +571,25 @@ local function groundWear(parent)
     end
 end
 
+local function transferLabel(part, text, face, canvasSize, maxDistance, color)
+    local gui = Instance.new("SurfaceGui")
+    gui.Face = face
+    gui.CanvasSize = canvasSize
+    gui.LightInfluence = 0.35
+    gui.MaxDistance = maxDistance
+    gui.Parent = part
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(0.94, 0.9)
+    label.Position = UDim2.fromScale(0.03, 0.05)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.Text = text
+    label.TextScaled = true
+    label.TextColor3 = color
+    label.Parent = gui
+end
+
 local function transferDeck(decor, arena)
     local deck = arena:FindFirstChild(LoadingDeckPlan.DECK_NAME)
     local ramp = arena:FindFirstChild(LoadingDeckPlan.RAMP_NAME)
@@ -592,20 +611,23 @@ local function transferDeck(decor, arena)
             frame, COLOR.ink, Enum.Material.Metal, "Core")
         local stencilled = prop(decor, "TRANSFER / bay designation " .. face, Vector3.new(6.6, 1.22, 0.05),
             frame * CFrame.new(face * 3.8, 0.05, -0.083), COLOR.steel, Enum.Material.Metal, "Core")
-        local gui = Instance.new("SurfaceGui")
-        gui.Face = Enum.NormalId.Front
-        gui.CanvasSize = Vector2.new(520, 95)
-        gui.LightInfluence = 0.35
-        gui.MaxDistance = 75
-        gui.Parent = stencilled
-        local label = Instance.new("TextLabel")
-        label.Size = UDim2.fromScale(1, 1)
-        label.BackgroundTransparency = 1
-        label.Font = Enum.Font.GothamBold
-        label.Text = "06 / TRANSFER"
-        label.TextScaled = true
-        label.TextColor3 = COLOR.paper
-        label.Parent = gui
+        transferLabel(stencilled, "06 / TRANSFER", Enum.NormalId.Front,
+            Vector2.new(520, 95), 75, COLOR.paper)
+    end
+
+    local marker = LoadingDeckPlan.descentMarker(deck.Size.Z, ramp.Size.X)
+    local rampX = origin:PointToObjectSpace(ramp.Position).X
+    local plaque = prop(decor, "TRANSFER / yard ramp descent label",
+        Vector3.new(marker.labelWidth, 0.028, marker.labelDepth),
+        origin * CFrame.new(rampX, top + 0.043, marker.labelZ) * CFrame.Angles(0, math.pi, 0),
+        COLOR.ink, Enum.Material.SmoothPlastic, "Core")
+    transferLabel(plaque, "YARD RAMP", Enum.NormalId.Top, Vector2.new(430, 129), 56, COLOR.orange)
+
+    local arrow = origin * CFrame.new(rampX, top + 0.047, marker.arrowZ) * CFrame.Angles(0, math.pi, 0)
+    for _, side in ipairs({ -1, 1 }) do
+        prop(decor, "TRANSFER / yard ramp descent chevron " .. side, Vector3.new(1.64, 0.026, 0.24),
+            arrow * CFrame.new(side * 0.56, 0, 0) * CFrame.Angles(0, side * math.rad(37), 0),
+            COLOR.orange, Enum.Material.SmoothPlastic, "Core")
     end
 
     local rampTop = ramp.Size.Y / 2
