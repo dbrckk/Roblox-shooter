@@ -18,7 +18,9 @@ local ROSTER_TTL = 120
 local TRAVEL_TIMEOUT = 40
 local ARRIVAL_TIMEOUT = 40
 local INVITE_TIMEOUT = 30
+local REINVITE_DELAY = 30
 local entries, order, pending, admitted = {}, {}, {}, {}
+local reinviteAfter = {}
 local leaving = {}
 local closing = false
 local expected
@@ -119,6 +121,23 @@ local function publishInvitations()
     end
 end
 
+local function delayReinvite(senderId, recipientId)
+    local recipients = reinviteAfter[senderId]
+    if not recipients then
+        recipients = {}
+        reinviteAfter[senderId] = recipients
+    end
+    local expires = os.clock() + REINVITE_DELAY
+    recipients[recipientId] = expires
+    task.delay(REINVITE_DELAY, function()
+        if recipients[recipientId] ~= expires then return end
+        recipients[recipientId] = nil
+        if next(recipients) == nil then
+            reinviteAfter[senderId] = nil
+        end
+    end)
+end
+
 function Room.request(player, enabled, target, invitation)
     if pending[player] then return end
     if invitation ~= nil and (target == nil or typeof(invitation) ~= "string") then return end
@@ -139,13 +158,22 @@ function Room.request(player, enabled, target, invitation)
                 if enabled then
                     reserve(opponent, player)
                 else
+                    delayReinvite(opponent.UserId, player.UserId)
                     clearRequest(opponent)
                     setState(opponent, "INVITE_DECLINED")
                 end
                 publishInvitations()
             end
             return
-        elseif not opponent or opponent == player or pending[opponent] then
+        end
+        local recipients = reinviteAfter[player.UserId]
+        local expires = recipients and recipients[target]
+        if expires and os.clock() < expires then
+            -- A blocked invitation leaves an existing search or request intact.
+            if not entries[player] then setState(player, "INVITE_COOLDOWN") end
+            return
+        end
+        if not opponent or opponent == player or pending[opponent] then
             clearRequest(player)
             setState(player, "UNAVAILABLE")
             return
