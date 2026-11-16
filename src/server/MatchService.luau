@@ -564,7 +564,8 @@ function MatchService.start()
         if player.Parent ~= Players then return end
         if invitation ~= nil and (DuelRoom.isDedicated or DuelRoom.isLocal) then return end
         if DuelRoom.isDedicated then
-            if phase == "RESULTS" and duel and not duel.returnStarted and duelPlayersIntact()
+            if phase == "RESULTS" and os.clock() < deadline
+                and duel and not duel.returnStarted and duelPlayersIntact()
                 and dedicatedPair(DuelRoom.players())
                 and (duel.aPlayer == player or duel.bPlayer == player) then
                 player:SetAttribute("IronYardDuelReady", enabled)

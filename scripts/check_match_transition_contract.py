@@ -213,6 +213,12 @@ def main():
     require('local rematch = readyPlayers()' in bodies["tick"]
             and 'if rematch and duelPlayersIntact() and dedicatedPair(rematch) then' in bodies["tick"],
             "Only the original pair can start the dedicated rematch countdown")
+    ready_handler = server.split("remotes.SetDuelReady.OnServerEvent:Connect", 1)[1].split(
+        "remotes.ReturnToFfa.OnServerEvent:Connect", 1)[0]
+    dedicated_vote = ready_handler.split("if DuelRoom.isDedicated then", 1)[1].split(
+        "elseif DuelRoom.isLocal then", 1)[0]
+    require('phase == "RESULTS" and os.clock() < deadline' in dedicated_vote,
+            "The dedicated rematch vote must close at the server deadline before the next tick")
     require('transition("WAITING", 0)' in server,
             "The empty-roster reset must publish WAITING")
     require('elseif phase == "RESULTS" and remaining <= 0 then' in server,
