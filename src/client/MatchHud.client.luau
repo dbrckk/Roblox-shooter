@@ -168,7 +168,10 @@ close.Modal = true
 local search = duelButton(menu, "Search", "FIND OPPONENT",
     UDim2.new(1, -24, 0, 38), UDim2.fromOffset(12, 47))
 local invite = duelButton(menu, "AcceptInvite", "",
-    UDim2.new(1, -24, 0, 38), UDim2.fromOffset(12, 91))
+    UDim2.new(1, -124, 0, 38), UDim2.fromOffset(12, 91))
+local decline = duelButton(menu, "DeclineInvite", "DECLINE",
+    UDim2.fromOffset(94, 38), UDim2.new(1, -106, 0, 91))
+decline.Visible = false
 
 local roster = Instance.new("ScrollingFrame")
 roster.Name = "LobbyPlayers"
@@ -191,6 +194,7 @@ local states = {
     FAILED = "CONNECTION FAILED · TRY AGAIN",
     UNAVAILABLE = "PLAYER UNAVAILABLE",
     INVITE_EXPIRED = "INVITATION EXPIRED",
+    INVITE_DECLINED = "INVITATION DECLINED",
 }
 
 local function setMenu(visible)
@@ -244,6 +248,8 @@ local function duelLabel()
         duelToggle.Text = "1v1 · RETRY"
     elseif incoming then
         duelToggle.Text = "1v1 · INVITE"
+    elseif state == "INVITE_DECLINED" then
+        duelToggle.Text = "1v1 · DECLINED"
     elseif ready then
         duelToggle.Text = "1v1 · WAITING"
     else
@@ -254,7 +260,7 @@ local function duelLabel()
             duelToggle.Text = state == "RETURNING" and "…" or "FFA"
         elseif state == "CONNECTING" then
             duelToggle.Text = "…"
-        elseif incoming or state == "FAILED" then
+        elseif incoming or state == "FAILED" or state == "INVITE_DECLINED" then
             duelToggle.Text = "1v1 !"
         elseif ready then
             duelToggle.Text = "1v1 ✓"
@@ -265,6 +271,7 @@ local function duelLabel()
     local busy = state == "CONNECTING"
     search.Interactable = not busy
     invite.Visible = incoming ~= nil and not busy
+    decline.Visible = invite.Visible
     invite.Text = incoming and ("ACCEPT  " .. incoming.DisplayName) or ""
     displayedInvitation = invite.Visible and invitation or nil
     displayedInviterId = invite.Visible and incomingId or nil
@@ -294,6 +301,11 @@ end)
 invite.Activated:Connect(function()
     if displayedInvitation then
         remotes.SetDuelReady:FireServer(true, displayedInviterId, displayedInvitation)
+    end
+end)
+decline.Activated:Connect(function()
+    if displayedInvitation then
+        remotes.SetDuelReady:FireServer(false, displayedInviterId, displayedInvitation)
     end
 end)
 UserInputService.InputBegan:Connect(function(input, used)
