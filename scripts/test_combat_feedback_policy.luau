@@ -40,3 +40,28 @@ assert(Vfx.shouldDisplayHit(10.36, 10, 3, 1, elimination.duration))
 assert(not Vfx.shouldDisplayHit(10.15, 10, 2, 1, head.duration))
 assert(Vfx.shouldDisplayHit(10.15, 10, 2, 2, head.duration))
 print("IRON YARD real-HP combat feedback, shield recognition and readouts: OK")
+
+local Direction = require("../src/shared/DamageDirectionPolicy")
+local function assertDirection(dx, dz, fx, fz, rx, rz, expectedX, expectedY)
+    local x, y = Direction.project(dx, dz, fx, fz, rx, rz)
+    assert(x ~= nil and math.abs(x - expectedX) < 1e-6 and math.abs(y - expectedY) < 1e-6,
+        "Incoming damage must stay in the correct screen quadrant")
+end
+
+-- The same source moves from ahead, to the left, to behind as the player turns.
+assertDirection(0, -20, 0, -1, 1, 0, 0, -1)
+assertDirection(0, -20, 1, 0, 0, 1, -1, 0)
+assertDirection(0, -20, 0, 1, -1, 0, 0, 1)
+assertDirection(0, -20, -1, 0, 0, -1, 1, 0)
+-- Steep pitch and camera roll do not change horizontal bearing.
+local diagonal = math.sqrt(0.5)
+assertDirection(20, -20, 0, -0.02, 0.6, 0.2, diagonal, -diagonal)
+assertDirection(0, -20, 0, 0, 1, 0, 0, -1)
+assert(Direction.project(0.1, 0.1, 0, -1, 1, 0) == nil)
+assert(Direction.project(10, 5, 0, 0, 0, 0) == nil)
+assert(Direction.project(0/0, 0, 0, -1, 1, 0) == nil)
+assert(Direction.transparency(0.1, false) == 0)
+assert(Direction.transparency(0.5, false) > 0 and Direction.transparency(0.5, false) < 1)
+assert(Direction.transparency(Direction.DURATION, false) == 1)
+assert(Direction.transparency(Direction.DURATION - 0.01, true) == 0)
+print("IRON YARD incoming damage: four directions, camera rotation, steep aim and reduced motion passed")
