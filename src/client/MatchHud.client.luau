@@ -333,7 +333,7 @@ local displayedInvitation
 local displayedInviterId
 local displayedInviteExpiry
 local SEARCH_STARTED_ATTRIBUTE = "IronYardDuelSearchStartedAt"
-local OUTGOING_INVITE_ATTRIBUTE = "IronYardDuelOutgoingInviteExpiresAt"
+local OUTGOING_INVITE_ATTRIBUTE = "IronYardDuelOutgoingInvite"
 local duelClockTask
 local function duelLabel()
     if duelClockTask then
@@ -384,13 +384,17 @@ local function duelLabel()
             nextRefresh = math.min(nextRefresh, seconds + 1 - elapsed)
         end
     end
-    local outgoingSeconds
-    local outgoingExpiry = player:GetAttribute(OUTGOING_INVITE_ATTRIBUTE)
-    if invited and shown and type(outgoingExpiry) == "number" then
-        local remaining = outgoingExpiry - now
-        if remaining > 0 then
-            outgoingSeconds = math.ceil(remaining)
-            nextRefresh = math.min(nextRefresh, remaining - outgoingSeconds + 1)
+    local outgoingSeconds, outgoingRecipient
+    local outgoing = player:GetAttribute(OUTGOING_INVITE_ATTRIBUTE)
+    if invited and shown and type(outgoing) == "string" then
+        local recipient, expiryMillis = outgoing:match("^(%d+):(%d+)$")
+        if recipient then
+            local remaining = tonumber(expiryMillis) / 1000 - now
+            if remaining > 0 then
+                outgoingSeconds = math.ceil(remaining)
+                outgoingRecipient = Players:GetPlayerByUserId(tonumber(recipient))
+                nextRefresh = math.min(nextRefresh, remaining - outgoingSeconds + 1)
+            end
         end
     end
     duelToggle.Visible = shown
@@ -438,7 +442,8 @@ local function duelLabel()
     elseif outgoingSeconds then
         duelToggle.Text ..= string.format("\n%ds", outgoingSeconds)
     end
-    status.Text = outgoingSeconds and string.format("INVITE SENT  ·  %ds LEFT", outgoingSeconds)
+    status.Text = outgoingSeconds and string.format("%ds LEFT  ·  %s", outgoingSeconds,
+        outgoingRecipient and outgoingRecipient.DisplayName or "INVITE SENT")
         or (elapsedText and ("1v1 SEARCH  ·  " .. elapsedText))
         or (states[state] or "1v1 DUEL")
     search.Text = ready and "CANCEL REQUEST" or "FIND OPPONENT"
