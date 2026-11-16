@@ -122,6 +122,28 @@ for needle in ("function Policy.ammo(", "function Policy.health(",
     assert needle in combat_policy, f"Combat HUD snapshot policy missing: {needle}"
 assert "self:_pulseDamage(self.previousHealth - health)" in controller, (
     "Health UI deduplication must never delay or remove damage feedback")
+
+camera_feel = client.split("local function updateCameraFeel(deltaTime)", 1)[1].split(
+    "-- One automatic-fire task", 1
+)[0]
+reduced_camera, standard_camera = camera_feel.split(
+    "if GuiService.ReducedMotionEnabled then", 1
+)[1].split("local _, humanoid = getCharacterParts()", 1)
+for needle in ("cameraRoll = 0", "if not scoped and camera.FieldOfView ~= baseFieldOfView then",
+               "camera.FieldOfView = baseFieldOfView", "return"):
+    assert needle in reduced_camera, f"Reduced-motion camera path missing: {needle}"
+assert "camera.CFrame *=" not in reduced_camera
+assert "camera.CFrame *=" in standard_camera and "baseFieldOfView + fovBonus" in standard_camera
+pulse = controller.split("function HudController:_pulseDamage(loss)", 1)[1].split(
+    "function HudController:_buildBoostMeter()", 1
+)[0]
+assert pulse.index("if GuiService.ReducedMotionEnabled then return end") < pulse.index(
+    "self.damagePulseFade:Play()")
+assert "TweenService:Create" not in pulse, "Repeated damage reuses the fade"
+assert 'GuiService:GetPropertyChangedSignal("ReducedMotionEnabled"):Connect' in controller
+assert "flash.BackgroundTransparency = 1" in controller.split(
+    'GuiService:GetPropertyChangedSignal("ReducedMotionEnabled"):Connect', 1
+)[1].split("end)", 1)[0]
 for needle in (
     "if header.Text ~= headerText then header.Text = headerText end",
     "if detail.Text ~= detailText then detail.Text = detailText end",

@@ -310,21 +310,25 @@ function HudController:_buildDamagePulse()
     flash.Active = false
     flash.Parent = self.gui
     self.damagePulse = flash
-    self.damagePulseToken = 0
+    self.damagePulseFade = TweenService:Create(flash, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
+        BackgroundTransparency = 1,
+    })
+
+    local motionConnection = GuiService:GetPropertyChangedSignal("ReducedMotionEnabled"):Connect(function()
+        if not GuiService.ReducedMotionEnabled then return end
+        self.damagePulseFade:Cancel()
+        flash.BackgroundTransparency = 1
+        self.hitMarkerPulse:Cancel()
+        self.hitMarkerScale.Scale = 1
+    end)
+    self.gui.Destroying:Connect(function() motionConnection:Disconnect() end)
 end
 
 function HudController:_pulseDamage(loss)
-    if not self.damagePulse then return end
-    self.damagePulseToken += 1
-    local token = self.damagePulseToken
+    if GuiService.ReducedMotionEnabled then return end
+    self.damagePulseFade:Cancel()
     self.damagePulse.BackgroundTransparency = 1 - math.clamp(loss / 350, 0.05, 0.20)
-    local fade = TweenService:Create(self.damagePulse, TweenInfo.new(0.35, Enum.EasingStyle.Quad), {
-        BackgroundTransparency = 1,
-    })
-    fade:Play()
-    fade.Completed:Connect(function()
-        if self.damagePulseToken == token then self.damagePulse.BackgroundTransparency = 1 end
-    end)
+    self.damagePulseFade:Play()
 end
 
 function HudController:_buildBoostMeter()
@@ -1008,10 +1012,12 @@ function HudController:showHitFeedback(message)
         mark.BackgroundColor3 = color
         mark.Visible = headshot
     end
-    self.hitMarkerPulse:Cancel()
-    self.hitMarkerScale.Scale = 1.09
     self.hitMarker.Visible = true
-    self.hitMarkerPulse:Play()
+    if not GuiService.ReducedMotionEnabled then
+        self.hitMarkerPulse:Cancel()
+        self.hitMarkerScale.Scale = 1.09
+        self.hitMarkerPulse:Play()
+    end
 
     local volume = FeedbackPolicy.soundVolume(style, self.hitSoundLevel)
     if volume > 0 then
