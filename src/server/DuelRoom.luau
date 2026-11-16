@@ -46,7 +46,7 @@ end
 
 local function beginTransfer(group, state)
     local transfer = {
-        token = HttpService:GenerateGUID(false),
+        attempts = {},
         retries = {},
     }
     for _, player in ipairs(group) do
@@ -60,12 +60,20 @@ local function beginTransfer(group, state)
 end
 
 local function teleport(group, transfer, code)
+    -- Each TeleportAsync call has its own identity, even for a retry to
+    -- the same room. A delayed failure from the previous call is stale.
+    local attempt = HttpService:GenerateGUID(false)
+    for _, player in ipairs(group) do transfer.attempts[player] = attempt end
     local options = Instance.new("TeleportOptions")
     if code then options.ReservedServerAccessCode = code end
-    options:SetTeleportData({ ironYardTransfer = transfer.token })
+    options:SetTeleportData({ ironYardTransfer = attempt })
     local ok = pcall(TeleportService.TeleportAsync, TeleportService, game.PlaceId, group, options)
     if not ok then
-        for _, player in ipairs(group) do finishTransfer(player, transfer, "FAILED") end
+        for _, player in ipairs(group) do
+            if transfer.attempts[player] == attempt then
+                finishTransfer(player, transfer, "FAILED")
+            end
+        end
     end
 end
 
@@ -237,8 +245,11 @@ function Room.start()
     TeleportService.TeleportInitFailed:Connect(function(player, _, _, placeId, options)
         local transfer = pending[player]
         if not transfer or not options or placeId ~= game.PlaceId then return end
+        local attempt = transfer.attempts[player]
+        if not attempt then return end
         local data = options:GetTeleportData()
-        if type(data) ~= "table" or data.ironYardTransfer ~= transfer.token then return end
+        if type(data) ~= "table" or data.ironYardTransfer ~= attempt then return end
+        transfer.attempts[player] = nil
         if transfer.retries[player] then
             finishTransfer(player, transfer, "FAILED")
             return
