@@ -6,6 +6,14 @@ Rules.SERVER_RANGE = 12
 local function finite(n)
     return type(n) == "number" and n == n and n > -math.huge and n < math.huge
 end
+function Rules.stationState(mode, phase, now, readyAt)
+    if mode == "DUEL" then return "DUEL_CLOSED" end
+    if phase ~= "LIVE" or not (finite(now) and finite(readyAt)) then
+        return "STANDBY"
+    end
+    return now >= readyAt and "READY" or "RECHARGING"
+end
+
 function Rules.canUse(phase, health, maxHealth, distance, now, readyAt)
     if phase ~= "LIVE" then return false end
     if not (finite(health) and finite(maxHealth) and finite(distance)
