@@ -485,6 +485,7 @@ def main():
     duel_supply = source("src/server/SupplyService.luau")
     supply_rules = source("src/shared/SupplyRules.luau")
     medical_prompt = source("src/client/MedicalPrompt.client.luau")
+    medical_guide = source("src/client/MedicalGuide.client.luau")
     medical_feedback = source("src/client/MedicalFeedback.client.luau")
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
@@ -583,6 +584,15 @@ def main():
         'player.CharacterRemoving:Connect',
     ):
         has(medical_prompt, token, "Only the local player’s injured character sees a ready prompt")
+    for token in (
+        'CollectionService:GetTagged(Rules.PROMPT_TAG)',
+        'prompt:GetAttribute(Rules.PROMPT_READY_ATTRIBUTE) ~= true',
+        'Rules.shouldGuide(Workspace:GetAttribute("IronYardMatchMode")',
+        'ProximityPromptService.PromptShown:Connect',
+        'RunService.Heartbeat:Connect',
+        'if elapsed < 0.2 then return end',
+    ):
+        has(medical_guide, token, "Medical bearing uses replicated readiness and bounded client updates")
     has(medical_feedback, 'Rules.formatHealAmount(msg.amount)',
         "Healing confirmation uses the server amount with the same formatting")
     has(supply_rules, 'if mode == "DUEL" then return "DUEL_CLOSED" end',
