@@ -81,3 +81,20 @@ assert(R.guideBearing(-12, 0, 1, 0) == -90)
 assert(math.abs(R.guideBearing(0, 8, 1, 0)) == 180)
 assert(R.guideBearing(8, 0, 0, 1) == 0, "The heading follows the camera")
 print("IRON YARD low-health medical guidance and directional compass: OK")
+
+local stations = {
+    { readyAt = 123 },
+    { readyAt = 119 },
+    { readyAt = 121 },
+    { readyAt = 122 },
+}
+assert(R.nextOpening(stations, 110) == 119)
+assert(R.nextOpening(stations, 119) == 0, "Availability wins at the first deadline")
+stations[2].readyAt = 134
+assert(R.nextOpening(stations, 119) == 121, "Use the next deadline after a second use")
+stations[4].readyAt = 0
+assert(R.nextOpening(stations, 119) == 0, "A round reset clears the countdown")
+stations[4].readyAt = math.huge
+assert(R.nextOpening(stations, 119) == 0)
+assert(R.nextOpening({}, 119) == 0 and R.nextOpening(stations, 0 / 0) == 0)
+print("IRON YARD aggregate medical countdown: OK")

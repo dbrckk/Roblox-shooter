@@ -571,6 +571,8 @@ def main():
         'Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(refresh)',
         'Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(refresh)',
         'or not hasClearAccess(character, root, station)',
+        'Rules.nextOpening(stations, now)',
+        'folder:SetAttribute(Rules.NEXT_OPENING_ATTRIBUTE, deadline)',
     ):
         has(duel_supply, token, "Medical prompt and authoritative admission are synchronized")
     for token in (
@@ -591,6 +593,8 @@ def main():
         'ProximityPromptService.PromptShown:Connect',
         'RunService.Heartbeat:Connect',
         'if elapsed < 0.2 then return end',
+        'folder:GetAttribute(Rules.NEXT_OPENING_ATTRIBUTE)',
+        'Rules.rechargeSeconds(Workspace:GetServerTimeNow(), deadline)',
     ):
         has(medical_guide, token, "Medical bearing uses replicated readiness and bounded client updates")
     has(medical_feedback, 'Rules.formatHealAmount(msg.amount)',
