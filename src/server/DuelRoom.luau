@@ -16,6 +16,7 @@ Room.isDedicated = not Room.isLocal and game.PrivateServerId ~= "" and game.Priv
 
 local ROSTER_TTL = 120
 local TRAVEL_TIMEOUT = 40
+local TRAVEL_RETRY_DELAY = 1.5
 local ARRIVAL_TIMEOUT = 40
 local INVITE_TIMEOUT = 30
 local REINVITE_DELAY = 30
@@ -67,20 +68,35 @@ local function beginTransfer(group, state)
     return transfer
 end
 
-local function teleport(group, transfer, code)
+local teleport
+
+local function transferFailed(player, transfer, attempt)
+    if pending[player] ~= transfer or transfer.attempts[player] ~= attempt then return end
+    transfer.attempts[player] = nil
+    if transfer.retries[player] then
+        finishTransfer(player, transfer, "FAILED")
+        return
+    end
+    transfer.retries[player] = true
+    task.delay(TRAVEL_RETRY_DELAY, function()
+        if pending[player] == transfer and player.Parent == Players then
+            teleport({ player }, transfer)
+        end
+    end)
+end
+
+teleport = function(group, transfer)
     -- Each TeleportAsync call has its own identity, even for a retry to
     -- the same room. A delayed failure from the previous call is stale.
     local attempt = HttpService:GenerateGUID(false)
     for _, player in ipairs(group) do transfer.attempts[player] = attempt end
     local options = Instance.new("TeleportOptions")
-    if code then options.ReservedServerAccessCode = code end
+    if transfer.code then options.ReservedServerAccessCode = transfer.code end
     options:SetTeleportData({ ironYardTransfer = attempt })
     local ok = pcall(TeleportService.TeleportAsync, TeleportService, game.PlaceId, group, options)
     if not ok then
         for _, player in ipairs(group) do
-            if transfer.attempts[player] == attempt then
-                finishTransfer(player, transfer, "FAILED")
-            end
+            transferFailed(player, transfer, attempt)
         end
     end
 end
@@ -147,7 +163,7 @@ local function reserve(first, second)
             return
         end
         transfer.code = code
-        teleport(group, transfer, code)
+        teleport(group, transfer)
     end)
 end
 
@@ -374,17 +390,7 @@ function Room.start()
         if not attempt then return end
         local data = options:GetTeleportData()
         if type(data) ~= "table" or data.ironYardTransfer ~= attempt then return end
-        transfer.attempts[player] = nil
-        if transfer.retries[player] then
-            finishTransfer(player, transfer, "FAILED")
-            return
-        end
-        transfer.retries[player] = true
-        task.delay(1.5, function()
-            if pending[player] == transfer and player.Parent == Players then
-                teleport({ player }, transfer, transfer.code)
-            end
-        end)
+        transferFailed(player, transfer, attempt)
     end)
 end
 
