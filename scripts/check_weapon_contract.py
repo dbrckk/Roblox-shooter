@@ -484,6 +484,7 @@ def main():
     duel_spawn_plan = source("src/shared/DuelSpawnPlan.luau")
     duel_supply = source("src/server/SupplyService.luau")
     supply_rules = source("src/shared/SupplyRules.luau")
+    medical_prompt = source("src/client/MedicalPrompt.client.luau")
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
         "function Duel.sameParticipants(players, first, second)",
@@ -562,12 +563,22 @@ def main():
         has(duel_spawn_plan, token, "Validated opposing spawn pad policy")
     for token in (
         'prompt.Enabled = state == "READY"',
+        'prompt:SetAttribute(Rules.PROMPT_READY_ATTRIBUTE, state == "READY")',
+        'CollectionService:AddTag(prompt, Rules.PROMPT_TAG)',
         'stationState(now, station.readyAt) ~= "READY"',
         'Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(refresh)',
         'Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(refresh)',
         'or not hasClearAccess(character, root, station)',
     ):
         has(duel_supply, token, "Medical prompt and authoritative admission are synchronized")
+    for token in (
+        'local visible = serverReady(prompt) and injured',
+        'Rules.needsHeal(humanoid.Health, humanoid.MaxHealth)',
+        'GetAttributeChangedSignal(Rules.PROMPT_READY_ATTRIBUTE)',
+        'GetPropertyChangedSignal("Enabled")',
+        'player.CharacterRemoving:Connect',
+    ):
+        has(medical_prompt, token, "Only the local player’s injured character sees a ready prompt")
     has(supply_rules, 'if mode == "DUEL" then return "DUEL_CLOSED" end',
         "Medical is closed throughout a duel")
     has(match, 'if winningPlayer and winningPlayer.Parent == Players',

@@ -2,6 +2,7 @@
 -- Every visual is non-collidable, non-queryable and cannot block projectiles.
 local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local Rules = require(shared:WaitForChild("SupplyRules"))
@@ -100,6 +101,8 @@ local function create(parent, index, x, z)
     prompt.MaxActivationDistance = 10
     prompt.RequiresLineOfSight = true
     prompt.Enabled = false
+    prompt:SetAttribute(Rules.PROMPT_READY_ATTRIBUTE, false)
+    CollectionService:AddTag(prompt, Rules.PROMPT_TAG)
     prompt.Parent = console
 
     local sign = Instance.new("BillboardGui")
@@ -135,6 +138,7 @@ local function create(parent, index, x, z)
         local now = Workspace:GetServerTimeNow()
         local state = stationState(now, station.readyAt)
         local status = STATUS[state]
+        prompt:SetAttribute(Rules.PROMPT_READY_ATTRIBUTE, state == "READY")
         prompt.Enabled = state == "READY"
         signal.Color = status.color
         signal.Material = state == "READY" and Enum.Material.Neon or Enum.Material.SmoothPlastic
