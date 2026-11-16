@@ -61,9 +61,10 @@ label.TextXAlignment = Enum.TextXAlignment.Left
 label.TextColor3 = mint
 label.Parent = card
 
-local function nearestReady(position)
+local function nearestReady(position, previousPrompt)
     local best, bestDelta, bestName
     local distanceSquared = math.huge
+    local previousDelta, previousSquared
     for _, prompt in ipairs(CollectionService:GetTagged(Rules.PROMPT_TAG)) do
         if not prompt:IsA("ProximityPrompt") or not prompt:IsDescendantOf(Workspace)
             or prompt:GetAttribute(Rules.PROMPT_READY_ATTRIBUTE) ~= true then continue end
@@ -71,10 +72,16 @@ local function nearestReady(position)
         if not anchor or not anchor:IsA("BasePart") then continue end
         local delta = anchor.Position - position
         local squared = delta:Dot(delta)
+        if prompt == previousPrompt then
+            previousDelta, previousSquared = delta, squared
+        end
         local name = anchor.Parent and anchor.Parent.Name or anchor.Name
         if squared < distanceSquared or (bestName and squared == distanceSquared and name < bestName) then
             best, bestDelta, distanceSquared, bestName = prompt, delta, squared, name
         end
+    end
+    if previousPrompt ~= best and Rules.keepGuideTarget(previousSquared, distanceSquared) then
+        return previousPrompt, previousDelta, previousSquared
     end
     return best, bestDelta, distanceSquared
 end
@@ -85,6 +92,7 @@ local openMenus = {
     "IronYardDuelMenuOpen",
 }
 local shownPrompts = {}
+local targetPrompt
 local function showHint(text, bearing)
     local directional = bearing ~= nil
     if pointer.Visible ~= directional then
@@ -113,6 +121,7 @@ local function update()
     if not humanoid or not root or not camera
         or not Rules.shouldGuide(Workspace:GetAttribute("IronYardMatchMode"),
             Workspace:GetAttribute("NeonMatchPhase"), humanoid.Health, humanoid.MaxHealth) then
+        targetPrompt = nil
         card.Visible = false
         return
     end
@@ -125,12 +134,14 @@ local function update()
 
     local seconds = rechargeSeconds()
     if seconds > 0 then
+        targetPrompt = nil
         showHint(string.format("MEDICAL  /  NEXT IN %ds", seconds), nil)
         return
     end
 
-    local prompt, delta, distanceSquared = nearestReady(root.Position)
-    if not prompt or shownPrompts[prompt] or delta.X * delta.X + delta.Z * delta.Z < 1 then
+    local prompt, delta, distanceSquared = nearestReady(root.Position, targetPrompt)
+    targetPrompt = prompt
+    if not prompt or next(shownPrompts) ~= nil or delta.X * delta.X + delta.Z * delta.Z < 1 then
         card.Visible = false
         return
     end
@@ -154,9 +165,13 @@ local connections = {
         end
     end),
     CollectionService:GetInstanceRemovedSignal(Rules.PROMPT_TAG):Connect(function(prompt)
+        local wasShown = shownPrompts[prompt] == true
         shownPrompts[prompt] = nil
+        if targetPrompt == prompt then targetPrompt = nil end
+        if wasShown or card.Visible then update() end
     end),
     player.CharacterRemoving:Connect(function()
+        targetPrompt = nil
         table.clear(shownPrompts)
         card.Visible = false
     end),
