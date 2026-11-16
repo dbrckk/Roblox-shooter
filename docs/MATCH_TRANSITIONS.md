@@ -13,6 +13,8 @@ Le serveur source enregistre les deux identités dans MemoryStore avant le trans
 
 Une fois un retour en FFA engagé, la salle réservée ferme la revanche, même si le transfert échoue. Après un échec ou un délai dépassé, **BACK TO FFA** redevient disponible. La relance reste individuelle et n’est pas déclenchée en boucle par le serveur.
 
+Le premier joueur admis déclenche une attente de 40 secondes, affichée dans le HUD. Si le second est admis avant l’échéance, le duel peut commencer et les revanches conservent leur fonctionnement. Si l’échéance est atteinte, les joueurs admis repartent en FFA, même si le second arrive avant la prochaine mise à jour du serveur.
+
 **Validation publiée à faire**
 
 1. Avec trois joueurs dans une FFA, lancer deux recherches. Vérifier que les deux volontaires se retrouvent seuls en duel et que le troisième poursuit sa manche.

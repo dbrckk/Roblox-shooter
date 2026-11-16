@@ -16,13 +16,15 @@ Room.isDedicated = not Room.isLocal and game.PrivateServerId ~= "" and game.Priv
 
 local ROSTER_TTL = 120
 local TRAVEL_TIMEOUT = 40
+local ARRIVAL_TIMEOUT = 40
 local INVITE_TIMEOUT = 30
 local entries, order, pending, admitted = {}, {}, {}, {}
 local leaving = {}
 local closing = false
 local expected
 local started = false
-local firstArrival
+local arrivalDeadline
+local pairArrived = false
 local rosterStore
 
 local function setState(player, state)
@@ -165,8 +167,9 @@ function Room.combatantCount()
     return count
 end
 
-function Room.waitExpired()
-    return firstArrival ~= nil and os.clock() - firstArrival >= TRAVEL_TIMEOUT
+function Room.arrivalSecondsLeft()
+    if pairArrived or not arrivalDeadline then return nil end
+    return math.max(0, math.ceil(arrivalDeadline - os.clock()))
 end
 
 function Room.returnToFfa(player, retryRequested)
@@ -205,7 +208,13 @@ local function admit(player)
         return
     end
     admitted[player.UserId] = player
-    firstArrival = firstArrival or os.clock()
+    local now = os.clock()
+    arrivalDeadline = arrivalDeadline or now + ARRIVAL_TIMEOUT
+    local first, second = admitted[expected[1]], admitted[expected[2]]
+    if now < arrivalDeadline and first and first.Parent == Players
+        and second and second.Parent == Players then
+        pairArrived = true
+    end
 end
 
 function Room.start()
@@ -220,7 +229,10 @@ function Room.start()
         clearRequest(player)
         pending[player] = nil
         leaving[player] = nil
-        if admitted[player.UserId] == player then admitted[player.UserId] = nil end
+        if admitted[player.UserId] == player then
+            admitted[player.UserId] = nil
+            pairArrived = false
+        end
     end)
     TeleportService.TeleportInitFailed:Connect(function(player, _, _, placeId, options)
         local transfer = pending[player]

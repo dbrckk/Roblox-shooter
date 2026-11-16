@@ -451,11 +451,19 @@ local function tick()
         return
     end
     if phase == "WAITING" then
-        if DuelRoom.isDedicated and not dedicatedPair(players) then
-            if DuelRoom.isClosing() or DuelRoom.waitExpired() then
+        local arrivalSeconds = DuelRoom.isDedicated and DuelRoom.arrivalSecondsLeft() or nil
+        if DuelRoom.isDedicated and (not dedicatedPair(players) or arrivalSeconds == 0) then
+            if DuelRoom.isClosing() or arrivalSeconds == 0 then
+                if lastPublishedSecond ~= 0 then
+                    lastPublishedSecond = 0
+                    publish(0)
+                end
                 for _, waitingPlayer in ipairs(players) do
                     DuelRoom.returnToFfa(waitingPlayer)
                 end
+            elseif arrivalSeconds and arrivalSeconds ~= lastPublishedSecond then
+                lastPublishedSecond = arrivalSeconds
+                publish(arrivalSeconds)
             end
             return
         end

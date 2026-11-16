@@ -208,8 +208,8 @@ def main():
     waiting = bodies["tick"].split('if phase == "WAITING" then', 1)[1].split("local remaining", 1)[0]
     require('transition("COUNTDOWN", COUNTDOWN_SECONDS)' in waiting,
             "WAITING must go through COUNTDOWN")
-    require('DuelRoom.isDedicated and not dedicatedPair(players)' in waiting,
-            "A reserved duel must wait for both admitted players")
+    require('DuelRoom.isDedicated and (not dedicatedPair(players) or arrivalSeconds == 0)' in waiting,
+            "A reserved duel must receive both players before the arrival deadline")
     require('local rematch = readyPlayers()' in bodies["tick"]
             and 'if rematch and duelPlayersIntact() and dedicatedPair(rematch) then' in bodies["tick"],
             "Only the original pair can start the dedicated rematch countdown")
