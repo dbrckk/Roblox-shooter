@@ -1,0 +1,7 @@
+IRON YARD v86 — single public update, 16 November 2026.
+
+Deploy PR #131 (8591ebdff17acdc0dce9f06133c5c6e2d4dd20be) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+When all medical stations are recharging, show seconds until the first station opens on the low-health FFA HUD. Luau, Rojo, automated checks and local client/server simulations passed.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
