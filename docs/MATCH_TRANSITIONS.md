@@ -13,6 +13,8 @@ Une invitation reste valable 30 secondes. Le bouton **ACCEPT** répond uniquemen
 
 Si le destinataire quitte le serveur avant de répondre à une invitation encore valide, le menu de l’émetteur indique **INVITED PLAYER LEFT THE SERVER**. Il peut lancer une recherche ou inviter quelqu’un d’autre immédiatement.
 
+Si le destinataire commence un transfert vers un autre duel, l’invitation en attente est fermée dès le début du transfert. Le menu de l’émetteur indique **PLAYER JOINING ANOTHER DUEL**, et il peut lancer une nouvelle recherche ou invitation.
+
 **DECLINE** retire l’invitation affichée et indique immédiatement le refus à l’émetteur. La recherche en cours du destinataire continue. S’il reste d’autres invitations, la suivante s’affiche dans le même menu.
 
 Après un refus, l’émetteur attend 30 secondes avant de pouvoir réinviter la même personne dans le même serveur FFA. La liste affiche le temps restant sur le bouton de cette personne et le réactive à l’échéance. L’émetteur peut chercher un 1v1 ou inviter quelqu’un d’autre pendant ce délai. Le destinataire peut lui-même lancer une invitation s’il change d’avis.

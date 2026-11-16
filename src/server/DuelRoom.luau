@@ -84,26 +84,26 @@ local function teleport(group, transfer, code)
     end
 end
 
-local function reserve(first, second)
-    clearRequest(first)
-    clearRequest(second)
-    local group = { first, second }
-    local transfer = beginTransfer(group, "CONNECTING")
-    task.spawn(function()
-        local ok, code = pcall(function()
-            local reservedCode, serverId = TeleportService:ReserveServerAsync(game.PlaceId)
-            local saved = rosterStore:SetAsync(serverId, { first.UserId, second.UserId }, ROSTER_TTL)
-            if saved ~= true then return nil end
-            return reservedCode
-        end)
-        if not ok or not code or pending[first] ~= transfer or pending[second] ~= transfer
-            or first.Parent ~= Players or second.Parent ~= Players then
-            for _, player in ipairs(group) do finishTransfer(player, transfer, "FAILED") end
-            return
+local function clearClosedInvitations(now, departingPlayer)
+    for index = #order, 1, -1 do
+        local player = order[index]
+        local entry = entries[player]
+        local target = entry.target
+        if not target then continue end
+
+        local state
+        if now >= entry.expires then
+            state = "INVITE_EXPIRED"
+        elseif target == departingPlayer or target.Parent ~= Players then
+            state = "INVITE_TARGET_LEFT"
+        elseif pending[target] then
+            state = "INVITE_TARGET_BUSY"
+        else
+            continue
         end
-        transfer.code = code
-        teleport(group, transfer, code)
-    end)
+        clearRequest(player)
+        setState(player, state)
+    end
 end
 
 local function publishInvitations()
@@ -123,6 +123,30 @@ local function publishInvitations()
             player:SetAttribute("IronYardDuelInvitation", incoming)
         end
     end
+end
+
+local function reserve(first, second)
+    clearRequest(first)
+    clearRequest(second)
+    local group = { first, second }
+    local transfer = beginTransfer(group, "CONNECTING")
+    clearClosedInvitations(Workspace:GetServerTimeNow())
+    publishInvitations()
+    task.spawn(function()
+        local ok, code = pcall(function()
+            local reservedCode, serverId = TeleportService:ReserveServerAsync(game.PlaceId)
+            local saved = rosterStore:SetAsync(serverId, { first.UserId, second.UserId }, ROSTER_TTL)
+            if saved ~= true then return nil end
+            return reservedCode
+        end)
+        if not ok or not code or pending[first] ~= transfer or pending[second] ~= transfer
+            or first.Parent ~= Players or second.Parent ~= Players then
+            for _, player in ipairs(group) do finishTransfer(player, transfer, "FAILED") end
+            return
+        end
+        transfer.code = code
+        teleport(group, transfer, code)
+    end)
 end
 
 local function publishReinviteDeadlines(sender)
@@ -184,8 +208,8 @@ function Room.request(player, enabled, target, invitation)
                     delayReinvite(opponent, player.UserId)
                     clearRequest(opponent)
                     setState(opponent, "INVITE_DECLINED")
+                    publishInvitations()
                 end
-                publishInvitations()
             end
             return
         end
@@ -227,27 +251,16 @@ function Room.request(player, enabled, target, invitation)
     setState(player, opponent and "INVITED" or "SEARCHING")
 end
 
-local function clearClosedInvitations(now, departingPlayer)
-    for index = #order, 1, -1 do
-        local player = order[index]
-        local entry = entries[player]
-        local target = entry.target
-        if not target then continue end
-
-        local expired = now >= entry.expires
-        if not expired and target ~= departingPlayer and target.Parent == Players then continue end
-        clearRequest(player)
-        setState(player, expired and "INVITE_EXPIRED" or "INVITE_TARGET_LEFT")
-    end
-end
-
 function Room.match()
     clearClosedInvitations(Workspace:GetServerTimeNow())
     local first, second = Queue.pair(entries, order, function(player)
         return player.Parent == Players and not pending[player]
     end)
-    if first then reserve(first, second) end
-    publishInvitations()
+    if first then
+        reserve(first, second)
+    else
+        publishInvitations()
+    end
 end
 
 function Room.players()
