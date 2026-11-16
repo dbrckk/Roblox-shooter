@@ -105,6 +105,7 @@ jobs:
           ./luau scripts/test_duel_rules.luau
           ./luau scripts/test_duel_queue.luau
           python3 scripts/test_duel_network.py ./luau
+          python3 scripts/test_combat_input_lifecycle.py ./luau
           ./luau scripts/test_match_transitions.luau
           ./luau scripts/test_match_lobby_policy.luau
           ./luau scripts/test_duel_readout.luau
