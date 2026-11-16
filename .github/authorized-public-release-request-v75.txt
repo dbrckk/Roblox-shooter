@@ -1,0 +1,7 @@
+IRON YARD v75 — single public update, 16 November 2026.
+
+Deploy PR #120 (f6a5f32c91d3798e99399961487402aa64a3669b) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Model and integrate the central freight inspection station in native Roblox geometry. The existing 14 x 5 x 9 stud cover remains the sole authoritative collider and mantle target. The model uses no external asset IDs. Automated build and structural checks passed; Roblox client gameplay remains to be checked.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
