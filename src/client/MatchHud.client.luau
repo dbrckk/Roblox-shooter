@@ -1,5 +1,6 @@
 -- IRON YARD - competitive match scoreboard.
 local Players = game:GetService("Players")
+local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
@@ -198,28 +199,85 @@ local states = {
     INVITE_COOLDOWN = "REINVITE BLOCKED · TRY AGAIN LATER",
 }
 
+local REINVITE_ATTRIBUTE = "IronYardDuelReinviteDeadlines"
+local reinviteDeadlines = {}
+local inviteRows = {}
+local countdownTask
+
 local function setMenu(visible)
     if menu.Visible == visible then return end
     menu.Visible = visible
+    if not visible and countdownTask then
+        task.cancel(countdownTask)
+        countdownTask = nil
+    end
     gui.DisplayOrder = visible and 45 or 20
     playerGui:SetAttribute("IronYardDuelMenuOpen", visible)
 end
 
+local function refreshInviteRows()
+    if countdownTask then
+        task.cancel(countdownTask)
+        countdownTask = nil
+    end
+    if not menu.Visible then return end
+
+    local now = Workspace:GetServerTimeNow()
+    local nextRefresh = math.huge
+    for userId, row in pairs(inviteRows) do
+        local deadline = reinviteDeadlines[tostring(userId)]
+        local remaining = type(deadline) == "number" and deadline - now or 0
+        local blocked = remaining > 0
+        local seconds = math.ceil(remaining)
+        local text = blocked and string.format("WAIT %ds  ·  %s", seconds, row.name)
+            or ("INVITE  " .. row.name)
+        if row.button.Text ~= text then row.button.Text = text end
+        row.button.Interactable = not blocked
+        row.button.AutoButtonColor = not blocked
+        if blocked then
+            nextRefresh = math.min(nextRefresh, remaining - seconds + 1)
+        end
+    end
+    if nextRefresh < math.huge then
+        countdownTask = task.delay(math.max(0.02, nextRefresh), function()
+            countdownTask = nil
+            refreshInviteRows()
+        end)
+    end
+end
+
+local function readReinviteDeadlines()
+    local raw = player:GetAttribute(REINVITE_ATTRIBUTE)
+    reinviteDeadlines = {}
+    if type(raw) == "string" then
+        local ok, deadlines = pcall(HttpService.JSONDecode, HttpService, raw)
+        if ok and type(deadlines) == "table" then reinviteDeadlines = deadlines end
+    end
+    refreshInviteRows()
+end
+
 local function updateRoster()
+    table.clear(inviteRows)
     for _, child in ipairs(roster:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
-    if Workspace:GetAttribute("IronYardDuelLocal") then return end
+    if Workspace:GetAttribute("IronYardDuelLocal") then
+        refreshInviteRows()
+        return
+    end
     for _, other in ipairs(Players:GetPlayers()) do
         if other ~= player and other:GetAttribute("IronYardDuelTravel") ~= "CONNECTING" then
             local button = duelButton(roster, other.Name, "INVITE  " .. other.DisplayName,
                 UDim2.new(1, -7, 0, 36), UDim2.fromOffset(0, 0))
+            inviteRows[other.UserId] = { button = button, name = other.DisplayName }
             button.Activated:Connect(function()
+                if not button.Interactable then return end
                 remotes.SetDuelReady:FireServer(true, other.UserId)
                 setMenu(false)
             end)
         end
     end
+    refreshInviteRows()
 end
 
 local displayedInvitation
@@ -289,8 +347,8 @@ local function toggleDuel()
         return
     end
     local opening = not menu.Visible
-    if opening then updateRoster() end
     setMenu(opening)
+    if opening then updateRoster() end
 end
 
 duelToggle.Activated:Connect(toggleDuel)
@@ -318,6 +376,8 @@ end)
 for _, name in ipairs({ "IronYardDuelReady", "IronYardDuelTravel", "IronYardDuelInvitation" }) do
     player:GetAttributeChangedSignal(name):Connect(duelLabel)
 end
+player:GetAttributeChangedSignal(REINVITE_ATTRIBUTE):Connect(readReinviteDeadlines)
+readReinviteDeadlines()
 playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
     if playerGui:GetAttribute("IronYardSettingsOpen") then setMenu(false) end
 end)
