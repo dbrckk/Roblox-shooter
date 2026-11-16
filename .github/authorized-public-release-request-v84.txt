@@ -1,0 +1,7 @@
+IRON YARD v84 — single public update, 16 November 2026.
+
+Deploy PR #129 (f7b977eecb8484e4cfa308bb5201626a631db943) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Display the player's recoverable HP before use and the server-confirmed amount afterwards. Luau, Rojo, automated checks and the local client event simulation passed.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
