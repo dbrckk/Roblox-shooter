@@ -132,13 +132,18 @@ local function create(parent, index, x, z)
 
     local station = { model = model, console = console, readyAt = 0, revision = 0 }
     local function refresh()
-        local state = stationState(Workspace:GetServerTimeNow(), station.readyAt)
+        local now = Workspace:GetServerTimeNow()
+        local state = stationState(now, station.readyAt)
         local status = STATUS[state]
         prompt.Enabled = state == "READY"
         signal.Color = status.color
         signal.Material = state == "READY" and Enum.Material.Neon or Enum.Material.SmoothPlastic
         label.TextColor3 = status.color
-        label.Text = "MEDICAL " .. string.format("%02d", index) .. "\n" .. status.text
+        local text = status.text
+        if state == "RECHARGING" then
+            text ..= string.format("  /  %ds", Rules.rechargeSeconds(now, station.readyAt))
+        end
+        label.Text = "MEDICAL " .. string.format("%02d", index) .. "\n" .. text
         model:SetAttribute("IronYardMedicalReadyAt", station.readyAt)
     end
     station.reset = function()
@@ -175,16 +180,19 @@ local function create(parent, index, x, z)
         if player then
             remotes.WeaponFeedback:FireClient(player, { kind = "MedicalHeal", amount = amount })
         end
-        local function finishCooldown()
+        -- Follow the absolute deadline even if a scheduled update runs late.
+        local function tickCooldown()
             if station.revision ~= revision or not model.Parent then return end
             local remaining = station.readyAt - Workspace:GetServerTimeNow()
-            if remaining > 0 then
-                task.delay(remaining, finishCooldown)
+            if remaining <= 0 then
+                station.reset()
                 return
             end
-            station.reset()
+            refresh()
+            local nextBoundary = remaining - math.ceil(remaining) + 1
+            task.delay(math.max(0.03, nextBoundary), tickCooldown)
         end
-        task.delay(Rules.COOLDOWN, finishCooldown)
+        task.delay(1, tickCooldown)
         return true
     end
 

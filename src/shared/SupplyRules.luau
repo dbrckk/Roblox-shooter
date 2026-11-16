@@ -14,6 +14,11 @@ function Rules.stationState(mode, phase, now, readyAt)
     return now >= readyAt and "READY" or "RECHARGING"
 end
 
+function Rules.rechargeSeconds(now, readyAt)
+    if not (finite(now) and finite(readyAt)) then return 0 end
+    return math.clamp(math.ceil(readyAt - now), 0, Rules.COOLDOWN)
+end
+
 function Rules.canUse(phase, health, maxHealth, distance, now, readyAt)
     if phase ~= "LIVE" then return false end
     if not (finite(health) and finite(maxHealth) and finite(distance)
