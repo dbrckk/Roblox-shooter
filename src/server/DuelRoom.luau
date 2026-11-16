@@ -101,11 +101,13 @@ local function reserve(first, second)
 end
 
 local function publishInvitations()
+    local now = os.clock()
     local invitations = {}
     for _, player in ipairs(order) do
         local entry = entries[player]
         local target = entry.target
-        if target and not invitations[target] and not pending[target] then
+        if target and player.Parent == Players and entry.expires > now
+            and not invitations[target] and not pending[target] then
             invitations[target] = entry.invitation
         end
     end
@@ -119,8 +121,8 @@ end
 
 function Room.request(player, enabled, target, invitation)
     if pending[player] then return end
-    if invitation ~= nil and (not enabled or target == nil or typeof(invitation) ~= "string") then return end
-    if not enabled then
+    if invitation ~= nil and (target == nil or typeof(invitation) ~= "string") then return end
+    if not enabled and invitation == nil then
         clearRequest(player)
         setState(player, "")
         return
@@ -134,7 +136,13 @@ function Room.request(player, enabled, target, invitation)
             if entry and entry.target == player and not pending[opponent]
                 and opponent.Parent == Players and os.clock() < entry.expires
                 and entry.invitation == invitation then
-                reserve(opponent, player)
+                if enabled then
+                    reserve(opponent, player)
+                else
+                    clearRequest(opponent)
+                    setState(opponent, "INVITE_DECLINED")
+                end
+                publishInvitations()
             end
             return
         elseif not opponent or opponent == player or pending[opponent] then

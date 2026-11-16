@@ -562,6 +562,7 @@ function MatchService.start()
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end
         if player.Parent ~= Players then return end
+        if invitation ~= nil and (DuelRoom.isDedicated or DuelRoom.isLocal) then return end
         if DuelRoom.isDedicated then
             if phase == "RESULTS" and duel and not duel.returnStarted and duelPlayersIntact()
                 and dedicatedPair(DuelRoom.players())
