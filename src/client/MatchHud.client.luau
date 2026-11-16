@@ -331,12 +331,13 @@ end
 
 local displayedInvitation
 local displayedInviterId
+local displayedInviteExpiry
 local SEARCH_STARTED_ATTRIBUTE = "IronYardDuelSearchStartedAt"
-local searchClockTask
+local duelClockTask
 local function duelLabel()
-    if searchClockTask then
-        task.cancel(searchClockTask)
-        searchClockTask = nil
+    if duelClockTask then
+        task.cancel(duelClockTask)
+        duelClockTask = nil
     end
 
     local phase = Workspace:GetAttribute("NeonMatchPhase")
@@ -344,27 +345,41 @@ local function duelLabel()
     local state = player:GetAttribute("IronYardDuelTravel")
     local ready = player:GetAttribute("IronYardDuelReady") == true
     local invitation = player:GetAttribute("IronYardDuelInvitation")
-    local incomingId = typeof(invitation) == "string" and tonumber(invitation:match("^(%d+):%d+$"))
-    local incoming = incomingId and Players:GetPlayerByUserId(incomingId)
     local canQueue = not dedicated
         and Workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" and phase ~= "RESULTS"
     local returnAvailable = dedicated and (phase == "WAITING" or phase == "COUNTDOWN")
     local shown = (canQueue or returnAvailable)
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
     local searching = canQueue and state == "SEARCHING" and ready
+    local now = shown and canQueue and Workspace:GetServerTimeNow() or 0
+    local incoming, incomingId, inviteExpiry, inviteSeconds
+    local nextRefresh = math.huge
+    local busy = state == "CONNECTING"
+    if shown and canQueue and not busy and type(invitation) == "string" then
+        local sender, expiryMillis = invitation:match("^(%d+):%d+:(%d+)$")
+        if sender then
+            incomingId = tonumber(sender)
+            inviteExpiry = tonumber(expiryMillis) / 1000
+            local remaining = inviteExpiry - now
+            if remaining > 0 then
+                incoming = Players:GetPlayerByUserId(incomingId)
+                if incoming then
+                    inviteSeconds = math.ceil(remaining)
+                    nextRefresh = remaining - inviteSeconds + 1
+                end
+            end
+        end
+    end
     local elapsedText
     local startedAt = player:GetAttribute(SEARCH_STARTED_ATTRIBUTE)
     if searching and shown and type(startedAt) == "number" then
-        local elapsed = math.max(0, Workspace:GetServerTimeNow() - startedAt)
+        local elapsed = math.max(0, now - startedAt)
         local seconds = math.floor(elapsed)
         if seconds >= 6000 then
             elapsedText = "99m+"
         else
             elapsedText = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
-            searchClockTask = task.delay(math.max(0.02, seconds + 1 - elapsed), function()
-                searchClockTask = nil
-                duelLabel()
-            end)
+            nextRefresh = math.min(nextRefresh, seconds + 1 - elapsed)
         end
     end
     duelToggle.Visible = shown
@@ -401,23 +416,33 @@ local function duelLabel()
             duelToggle.Text = "1v1 ✓"
         end
     end
-    if elapsedText then duelToggle.Text ..= "\n" .. elapsedText end
+    if elapsedText then
+        duelToggle.Text ..= "\n" .. elapsedText
+    elseif inviteSeconds then
+        duelToggle.Text ..= string.format("\n%ds", inviteSeconds)
+    end
     status.Text = elapsedText and ("1v1 SEARCH  ·  " .. elapsedText)
         or (states[state] or "1v1 DUEL")
     search.Text = ready and "CANCEL REQUEST" or "FIND OPPONENT"
-    local busy = state == "CONNECTING"
     search.Interactable = not busy
-    invite.Visible = incoming ~= nil and not busy
+    invite.Visible = incoming ~= nil
     decline.Visible = invite.Visible
-    invite.Text = incoming and ("ACCEPT  " .. incoming.DisplayName) or ""
+    invite.Text = incoming and string.format("%ds · ACCEPT %s", inviteSeconds, incoming.DisplayName) or ""
     displayedInvitation = invite.Visible and invitation or nil
     displayedInviterId = invite.Visible and incomingId or nil
+    displayedInviteExpiry = invite.Visible and inviteExpiry or nil
     local top = invite.Visible and 135 or 91
     roster.Visible = not busy
     roster.Position = UDim2.fromOffset(12, top)
     roster.Size = UDim2.new(1, -24, 1, -top - 8)
     emptyRoster.Position = roster.Position
     updateQuickCancel()
+    if nextRefresh < math.huge then
+        duelClockTask = task.delay(math.max(0.02, nextRefresh), function()
+            duelClockTask = nil
+            duelLabel()
+        end)
+    end
 end
 
 local function toggleDuel()
@@ -441,16 +466,17 @@ search.Activated:Connect(function()
     remotes.SetDuelReady:FireServer(player:GetAttribute("IronYardDuelReady") ~= true)
     if player:GetAttribute("IronYardDuelReady") ~= true then setMenu(false) end
 end)
-invite.Activated:Connect(function()
-    if displayedInvitation then
-        remotes.SetDuelReady:FireServer(true, displayedInviterId, displayedInvitation)
+local function replyToInvitation(accept)
+    if menu.Visible and displayedInvitation then
+        if Workspace:GetServerTimeNow() < displayedInviteExpiry then
+            remotes.SetDuelReady:FireServer(accept, displayedInviterId, displayedInvitation)
+        else
+            duelLabel()
+        end
     end
-end)
-decline.Activated:Connect(function()
-    if displayedInvitation then
-        remotes.SetDuelReady:FireServer(false, displayedInviterId, displayedInvitation)
-    end
-end)
+end
+invite.Activated:Connect(function() replyToInvitation(true) end)
+decline.Activated:Connect(function() replyToInvitation(false) end)
 UserInputService.InputBegan:Connect(function(input, used)
     if not used and input.KeyCode == Enum.KeyCode.V
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true then
