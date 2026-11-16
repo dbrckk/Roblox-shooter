@@ -30,7 +30,11 @@ jobs:
           gh api "$endpoint" | jq -e --arg sha "$RELEASE_SHA" \
             '.head_branch == "main" and .head_sha == $sha and .status == "queued"'
           gh api "$endpoint/jobs" | jq -e '.total_count == 0'
-          gh api -X POST "$endpoint/cancel"
+          if ! gh api -X POST "$endpoint/cancel"; then
+            test "$(gh api "$endpoint" --jq .status)" = queued
+            gh api "$endpoint/jobs" | jq -e '.total_count == 0'
+            gh api -X POST "$endpoint/force-cancel"
+          fi
           for attempt in {1..15}; do
             status="$(gh api "$endpoint" --jq '.status + "/" + (.conclusion // "")')"
             [[ "$status" == completed/cancelled ]] && break
