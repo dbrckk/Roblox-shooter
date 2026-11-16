@@ -2,6 +2,8 @@
 -- Core collision geometry is owned by MapService. These details cannot block
 -- raycasts, movement, or PathfindingService and are locally culled on mobile.
 local Lighting = game:GetService("Lighting")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CatwalkDeckPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CatwalkDeckPlan"))
 local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
 local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))
 local WarehouseEntranceArt = require(script.Parent:WaitForChild("WarehouseEntranceArt"))
@@ -400,19 +402,27 @@ local function catwalkSafety(parent)
         local cx = side * 118
         -- MapService's elevated catwalk occupies x=86..150 and z=-26..26,
         -- its top surface is y=13; all these pieces are visual only.
-        for _, z in ipairs({ -25.4, 25.4 }) do
-            for index = 0, 6 do
-                local x = cx - 30 + index * 10
-                prop(parent, "CATWALK / rail post " .. side .. ":" .. z .. ":" .. index,
-                    Vector3.new(0.35, 4.1, 0.35), CFrame.new(x, 15.0, z),
-                    COLOR.slate, Enum.Material.Metal, "Detail")
+        for _, edge in ipairs({ -1, 1 }) do
+            local z = edge * 25.4
+            for index, segment in ipairs(CatwalkDeckPlan.deckEdgeSegments(side, edge, 30.75)) do
+                local key = side .. ":" .. edge .. ":" .. index
+                local x = cx + segment.center
+                prop(parent, "CATWALK / safety rail " .. key,
+                    Vector3.new(segment.width, 0.33, 0.32), CFrame.new(x, 17.0, z),
+                    COLOR.orange, Enum.Material.Metal, "Detail")
+                prop(parent, "CATWALK / kick plate " .. key,
+                    Vector3.new(segment.width, 0.55, 0.17), CFrame.new(x, 13.3, z),
+                    COLOR.ink, Enum.Material.Metal, "Detail")
+
+                local postSpan = segment.width - 1.5
+                local intervals = math.ceil(postSpan / 10)
+                for post = 0, intervals do
+                    local postX = x + postSpan * (post / intervals - 0.5)
+                    prop(parent, "CATWALK / rail post " .. key .. ":" .. post,
+                        Vector3.new(0.35, 4.1, 0.35), CFrame.new(postX, 15.0, z),
+                        COLOR.slate, Enum.Material.Metal, "Detail")
+                end
             end
-            prop(parent, "CATWALK / safety rail " .. side .. ":" .. z,
-                Vector3.new(61.5, 0.33, 0.32), CFrame.new(cx, 17.0, z),
-                COLOR.orange, Enum.Material.Metal, "Detail")
-            prop(parent, "CATWALK / kick plate " .. side .. ":" .. z,
-                Vector3.new(61.5, 0.55, 0.17), CFrame.new(cx, 13.3, z),
-                COLOR.ink, Enum.Material.Metal, "Detail")
         end
         -- Deck drainage channels add large-scale texture to the platform
         -- without the expense of full PBR maps before Studio asset import.

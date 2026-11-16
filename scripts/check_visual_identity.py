@@ -300,15 +300,15 @@ def main():
         check(needle in native_props,
               "Native forklift PBR-fallback detail or physics safety missing: " + needle)
 
-    # Two full-size elevated decks and ten stair skins must follow the
-    # real gameplay colliders, not second coordinates or new player hitboxes.
+    # Deck, stair and ramp skins follow the gameplay colliders.
+    # Both visual edge treatments share the same ramp opening.
     catwalk_plan = source("src/shared/CatwalkDeckPlan.luau")
     catwalk_art = source("src/server/CatwalkDeckArt.luau")
     for needle in ('function Plan.forCollider(', 'function Plan.deckStrips()',
                    '"CATWALK / loading platform -1"',
                    '"CATWALK / loading platform 1"',
                    '"^CATWALK / access stair (%-?1):([1-5])$"',
-                   "math.huge"):
+                   'function Plan.ramp(side)', 'function Plan.deckEdgeSegments(', "math.huge"):
         check(needle in catwalk_plan,
               "Catwalk exact collider whitelist or art budget missing: " + needle)
     for needle in ('local CatwalkDeckArt = require(script.Parent:WaitForChild("CatwalkDeckArt"))',
@@ -322,7 +322,9 @@ def main():
                    'p:SetAttribute("NeonArtTier", tier)',
                    '"diamondplate deck "', '"deck end girder "',
                    '"deck orientation stencil "', '"stair diamondplate "',
-                   '"stair warning nose "', "decks ~= 2 or steps ~= 10 or landings ~= 2",
+                   '"stair warning nose "', "decks ~= 2 or steps ~= 10 or landings ~= 2 or ramps ~= 2",
+                   '"ramp edge paint "', '"ramp access marker "', '"deck ramp exit "',
+                   'Plan.deckEdgeSegments(plan.side, side, 31.35)',
                    '"turn arrow shaft "', '"stair access marker "', '"landing warning edge "'):
         check(needle in catwalk_art,
               "Catwalk native metal skins or physics contract missing: " + needle)
@@ -332,6 +334,12 @@ def main():
     for needle in ('CatwalkDeckPlan.landing(side)', '"CATWALK / access landing "',
                    'landing:SetAttribute("MantleTarget", true)'):
         check(needle in map_source, "Physical catwalk landing not wired: " + needle)
+
+    for needle in ('CatwalkDeckPlan.ramp(side)', '"CATWALK / access ramp "',
+                   'ramp.CFrame * CFrame.Angles(rampLayout.pitch, 0, 0)'):
+        check(needle in map_source, "Physical catwalk ramp not wired: " + needle)
+    check('CatwalkDeckPlan.deckEdgeSegments(side, edge, 30.75)' in art,
+          "Decorative catwalk rail must leave the ramp opening clear")
 
     # Production forklift visuals follow authoritative colliders, not a
     # second set of hardcoded coordinates; styles and art remain nonblocking.

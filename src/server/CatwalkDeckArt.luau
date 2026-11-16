@@ -1,4 +1,4 @@
--- IRON YARD / full-size authored industrial deck and stair surfacing.
+-- IRON YARD / industrial decking and access route surfacing.
 -- All locations use the actual MapService colliders, never a duplicated
 -- coordinate list. MapService owns all physical route geometry.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -80,10 +80,12 @@ local function surfaceDeck(folder, collider, plan)
             Vector3.new(0.19, 0.77, 51.6),
             origin * CFrame.new(side * 32.12, -0.83, 0),
             C.graphite, Enum.Material.Metal, "Core")
-        part(folder, "deck perimeter safety paint " .. plan.number .. ":" .. side,
-            Vector3.new(62.7, 0.025, 0.37),
-            origin * CFrame.new(0, halfH + 0.027, side * 24.75),
-            C.yellow, Enum.Material.SmoothPlastic, "Core")
+        for index, segment in ipairs(Plan.deckEdgeSegments(plan.side, side, 31.35)) do
+            part(folder, "deck perimeter safety paint " .. plan.number .. ":" .. side .. ":" .. index,
+                Vector3.new(segment.width, 0.025, 0.37),
+                origin * CFrame.new(segment.center, halfH + 0.027, side * 24.75),
+                C.yellow, Enum.Material.SmoothPlastic, "Core")
+        end
         part(folder, "deck lower beam " .. plan.number .. ":" .. side,
             Vector3.new(61, 0.24, 0.36),
             origin * CFrame.new(0, -1.57, side * 19),
@@ -98,6 +100,13 @@ local function surfaceDeck(folder, collider, plan)
             origin * CFrame.new(offsetX, -1.56, 0),
             C.graphite, Enum.Material.Metal, "Detail")
     end
+
+    local exit = part(folder, "deck ramp exit " .. plan.number,
+        Vector3.new(8, 0.035, 2.65),
+        origin * CFrame.new(Plan.ramp(plan.side).x - origin.Position.X, halfH + 0.049, 22.6)
+            * CFrame.Angles(0, math.pi, 0),
+        C.graphite, Enum.Material.SmoothPlastic, "Core")
+    dockLabel(exit, "YARD RAMP", Enum.NormalId.Top, 55)
 
     local plate = part(folder, "deck orientation stencil " .. plan.number,
         Vector3.new(17.5, 0.04, 3.8),
@@ -157,10 +166,37 @@ local function surfaceLanding(folder, collider, plan)
         C.yellow, Enum.Material.SmoothPlastic, "Core")
 end
 
+local function surfaceRamp(folder, collider, plan)
+    local size = collider.Size
+    local top = size.Y / 2
+    for _, side in ipairs({ -1, 1 }) do
+        part(folder, "ramp edge paint " .. plan.side .. ":" .. side,
+            Vector3.new(0.24, 0.02, size.Z - 0.55),
+            collider.CFrame * CFrame.new(side * (size.X / 2 - 0.24), top + 0.018, 0),
+            C.yellow, Enum.Material.SmoothPlastic, "Core")
+    end
+
+    local approach = collider.CFrame * CFrame.new(0, top + 0.025, size.Z / 2 - 5)
+    local marker = part(folder, "ramp access marker " .. plan.side,
+        Vector3.new(8, 0.03, 2.55), approach,
+        C.graphite, Enum.Material.SmoothPlastic, "Core")
+    dockLabel(marker, plan.side == -1 and "WEST CATWALK / 01" or "EAST CATWALK / 02",
+        Enum.NormalId.Top, 64)
+
+    for _, side in ipairs({ -1, 1 }) do
+        part(folder, "ramp ascent chevron " .. plan.side .. ":" .. side,
+            Vector3.new(1.62, 0.02, 0.22),
+            approach * CFrame.new(side * 0.56, 0, -2.05)
+                * CFrame.Angles(0, -side * math.rad(34), 0),
+            C.yellow, Enum.Material.SmoothPlastic, "Core")
+    end
+end
+
 function Art.decorate(decor, arena)
     local decks = 0
     local steps = 0
     local landings = 0
+    local ramps = 0
     for _, collider in ipairs(arena:GetChildren()) do
         if collider:IsA("BasePart") then
             local plan = Plan.forCollider(collider.Name,
@@ -172,6 +208,9 @@ function Art.decorate(decor, arena)
                 elseif plan.kind == "LANDING" then
                     surfaceLanding(decor, collider, plan)
                     landings += 1
+                elseif plan.kind == "RAMP" then
+                    surfaceRamp(decor, collider, plan)
+                    ramps += 1
                 else
                     surfaceStep(decor, collider, plan)
                     steps += 1
@@ -179,10 +218,10 @@ function Art.decorate(decor, arena)
             end
         end
     end
-    if decks ~= 2 or steps ~= 10 or landings ~= 2 then
+    if decks ~= 2 or steps ~= 10 or landings ~= 2 or ramps ~= 2 then
         warn("[IRON YARD] Catwalk visual inventory incomplete: "
             .. tostring(decks) .. " decks, " .. tostring(steps) .. " steps, "
-            .. tostring(landings) .. " landings")
+            .. tostring(landings) .. " landings, " .. tostring(ramps) .. " ramps")
     end
 end
 

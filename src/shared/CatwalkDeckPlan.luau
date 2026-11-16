@@ -1,7 +1,47 @@
 -- IRON YARD / physical platform-matched visual dressing plan.
--- Only recognizes the two real elevated decks and ten real access steps.
+-- Matches physical catwalk pieces and shares the ramp opening with arena art.
 -- This module is pure Luau, with no collision or Roblox object creation.
 local Plan = {}
+
+local deckCenterX = 118
+local deckHalfDepth = 26
+local deckTopY = 13
+local rampOffsetX = 16
+local rampWidth = 10
+local rampThickness = 0.8
+
+function Plan.ramp(side)
+    local topZ = deckHalfDepth - 0.15
+    local bottomZ = 57
+    local run = bottomZ - topZ
+    local pitch = math.atan(deckTopY / run)
+    -- The endpoints describe the top face. Offset the center down along
+    -- the ramp's local up axis so that face meets the deck and yard floor.
+    return {
+        x = side * (deckCenterX + rampOffsetX),
+        y = (deckTopY - math.cos(pitch) * rampThickness) / 2,
+        z = (topZ + bottomZ - math.sin(pitch) * rampThickness) / 2,
+        width = rampWidth,
+        thickness = rampThickness,
+        length = math.sqrt(run * run + deckTopY * deckTopY),
+        pitch = pitch,
+    }
+end
+
+function Plan.deckEdgeSegments(side, edge, halfWidth)
+    if edge < 0 then
+        return { { center = 0, width = halfWidth * 2 } }
+    end
+
+    local center = side * rampOffsetX
+    local halfGap = rampWidth / 2 + 0.45
+    local left = center - halfGap
+    local right = center + halfGap
+    return {
+        { center = (left - halfWidth) / 2, width = left + halfWidth },
+        { center = (right + halfWidth) / 2, width = halfWidth - right },
+    }
+end
 
 local function matches(value, expected)
     return type(value) == "number" and value == value
@@ -30,6 +70,14 @@ function Plan.forCollider(name, width, height, depth)
         if not matches(width, landing.width) or not matches(height, landing.height)
             or not matches(depth, landing.depth) then return nil end
         return { kind = "LANDING", side = tonumber(landingSide) }
+    end
+
+    local rampSide = tonumber(name:match("^CATWALK / access ramp (%-?1)$"))
+    if rampSide then
+        local ramp = Plan.ramp(rampSide)
+        if not matches(width, ramp.width) or not matches(height, ramp.thickness)
+            or not matches(depth, ramp.length) then return nil end
+        return { kind = "RAMP", side = rampSide }
     end
 
     local sideText, stepText = name:match("^CATWALK / access stair (%-?1):([1-5])$")

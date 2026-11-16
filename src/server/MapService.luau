@@ -110,6 +110,13 @@ local function highground(parent)
             Vector3.new(layout.x, layout.y, layout.z), P.cover, Enum.Material.Metal)
         landing:SetAttribute("MantleTarget", true)
         WorldPbr.apply(landing, "warehouse_steel")
+        local rampLayout = CatwalkDeckPlan.ramp(side)
+        local ramp = part(parent, "CATWALK / access ramp " .. side,
+            Vector3.new(rampLayout.width, rampLayout.thickness, rampLayout.length),
+            Vector3.new(rampLayout.x, rampLayout.y, rampLayout.z), P.cover, Enum.Material.Metal)
+        ramp.CFrame = ramp.CFrame * CFrame.Angles(rampLayout.pitch, 0, 0)
+        WorldPbr.apply(ramp, "warehouse_steel")
+
         climbWall(parent, "CATWALK / side bulkhead " .. side,
             Vector3.new(2.5, 16, 64), Vector3.new(side * 148, 8, -60), P.wall)
         marking(parent, "CATWALK / caution rail " .. side,
