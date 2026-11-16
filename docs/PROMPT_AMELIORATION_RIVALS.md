@@ -50,3 +50,5 @@ Corriger la première impression du 1v1. Le briefing FFA utilise le même bandea
 **Changements de manche.** Les confirmations de touche et de bouclier suivent la génération de combat du serveur. À la prochaine manche ou reprise du 1v1, le HUD efface les anciens marqueurs et coupe leur son. La CI couvre l’ordre variable des confirmations, des mises à jour de munitions et de la réplication de la génération.
 
 **Réglage sonore.** Le menu propose trois niveaux pour les sons de confirmation, de la coupure complète au volume standard. Les marqueurs et le texte restent visibles au niveau OFF. Vérifier le réglage au tactile et à la manette, ainsi que le niveau LOW pendant une rafale.
+
+**Réduction des mouvements.** Le réglage Roblox désactive l’inclinaison et l’élargissement du champ de vision liés aux déplacements, le flash de dégâts plein écran et la pulsation des marqueurs. La visée, la direction des dégâts, le texte et les sons de confirmation restent disponibles. Vérifier la bascule en partie sur Android et PC, en déplacement et en visée.

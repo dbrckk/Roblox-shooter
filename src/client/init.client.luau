@@ -1,3 +1,4 @@
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -1037,6 +1038,14 @@ local function updateCameraFeel(deltaTime)
 	if not camera then
 		return
 	end
+
+    if GuiService.ReducedMotionEnabled then
+        cameraRoll = 0
+        if not scoped and camera.FieldOfView ~= baseFieldOfView then
+            camera.FieldOfView = baseFieldOfView
+        end
+        return
+    end
 
 	local _, humanoid = getCharacterParts()
 	local sliding = os.clock() < localSlidingUntil

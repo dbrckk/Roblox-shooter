@@ -107,6 +107,11 @@ requires(hud, (
     "if not readoutText then return end",
     "self.hitToken == token",
 ), "Public HUD")
+
+hit_cue = hud.split("function HudController:showHitFeedback(message)", 1)[1]
+assert hit_cue.index("self.hitMarker.Visible = true") < hit_cue.index("if not GuiService.ReducedMotionEnabled then")
+assert hit_cue.index("if not GuiService.ReducedMotionEnabled then") < hit_cue.index("self.hitMarkerPulse:Play()")
+assert "\n    end\n\n    local volume = FeedbackPolicy.soundVolume" in hit_cue
 requires(vfx, (
     "function Profile.hitPriority(headshot, killed)",
     "function Profile.shouldDisplayHit(now, lastAt, lastPriority, priority, lowerPriorityHold)",
