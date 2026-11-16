@@ -15,6 +15,8 @@ Le HUD indique immédiatement l’envoi ou l’annulation d’une recherche. Pen
 
 Une invitation reste valable 30 secondes. Le bouton **ACCEPT** répond uniquement à l’invitation affichée. Si elle a expiré, a été annulée ou a été remplacée, cette réponse ne modifie pas la recherche du destinataire. Il peut accepter une nouvelle invitation dès qu’elle s’affiche.
 
+**ACCEPT** et **DECLINE** donnent un retour immédiat pendant l’attente du serveur. La réponse en cours est liée à l’invitation affichée. Un remplacement, une expiration ou un transfert libère les actions. Après trois secondes sans confirmation, le joueur peut répondre de nouveau si l’invitation est toujours valable.
+
 Si le destinataire quitte le serveur avant de répondre à une invitation encore valide, le menu de l’émetteur indique **INVITED PLAYER LEFT THE SERVER**. Il peut lancer une recherche ou inviter quelqu’un d’autre immédiatement.
 
 Si le destinataire commence un transfert vers un autre duel, l’invitation en attente est fermée dès le début du transfert. Le menu de l’émetteur indique **PLAYER JOINING ANOTHER DUEL**, et il peut lancer une nouvelle recherche ou invitation.
