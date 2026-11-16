@@ -1,7 +1,7 @@
 name: IRON YARD v75 inspection station engine QA
 on:
   push:
-    branches: [qa/inspection-v75-engine]
+    branches: [qa/inspection-v75-dedicated]
 permissions:
   contents: read
 jobs:
@@ -13,5 +13,5 @@ jobs:
       - uses: actions/checkout@v4
       - name: Exercise inspection station in Roblox engine (public place version 71)
         env:
-          ROBLOX_OPEN_CLOUD_API_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_API_KEY }}
+          ROBLOX_OPEN_CLOUD_QA_KEY: ${{ secrets.ROBLOX_OPEN_CLOUD_QA_KEY }}
         run: python3 tools/qa/run_inspection_station_v75.py

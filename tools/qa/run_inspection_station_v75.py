@@ -31,9 +31,9 @@ def request(path, key, payload=None):
 
 
 def main():
-    key = os.environ.get("ROBLOX_OPEN_CLOUD_API_KEY")
+    key = os.environ.get("ROBLOX_OPEN_CLOUD_QA_KEY", "").strip()
     if not key:
-        raise SystemExit("Roblox credential unavailable")
+        raise SystemExit("Configure the GitHub Actions secret ROBLOX_OPEN_CLOUD_QA_KEY for Luau execution on IRON YARD.")
     task = request(f"{VERSION_PATH}/luau-execution-session-tasks", key, {"script": SCRIPT.read_text()})
     path = task["path"].lstrip("/")
     if not path.startswith("cloud/"):
