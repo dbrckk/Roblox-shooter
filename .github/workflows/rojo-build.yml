@@ -95,6 +95,7 @@ jobs:
           ./luau scripts/test_freight_surface_plan.luau
           ./luau scripts/test_pallet_visual_plan.luau
           ./luau scripts/test_catwalk_deck_plan.luau
+          ./luau scripts/test_loading_deck_plan.luau
           ./luau scripts/test_forklift_visual_plan.luau
           ./luau scripts/test_cover_surface_plan.luau
           ./luau scripts/test_world_pbr_policy.luau

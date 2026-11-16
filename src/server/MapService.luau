@@ -3,7 +3,9 @@
 local Workspace = game:GetService("Workspace")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CatwalkDeckPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CatwalkDeckPlan"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local CatwalkDeckPlan = require(Shared:WaitForChild("CatwalkDeckPlan"))
+local LoadingDeckPlan = require(Shared:WaitForChild("LoadingDeckPlan"))
 local ArenaArt = require(script.Parent:WaitForChild("ArenaArt"))
 local IndustrialProps = require(script.Parent:WaitForChild("IndustrialProps"))
 local CoverArt = require(script.Parent:WaitForChild("CoverArt"))
@@ -64,6 +66,28 @@ local function container(parent, name, x, z, h, paint)
     return base
 end
 
+local function loadingDeck(parent)
+    local plan = LoadingDeckPlan
+    local deck = part(parent, plan.DECK_NAME, Vector3.new(plan.width, plan.height, plan.depth),
+        Vector3.new(plan.x, plan.top - plan.height / 2, plan.z), P.cover, Enum.Material.Metal)
+    deck:SetAttribute("MantleTarget", true)
+    WorldPbr.apply(deck, "warehouse_steel")
+
+    for _, side in ipairs({ -1, 1 }) do
+        local layout = plan.support(side)
+        local support = part(parent, "VAULT / deck support " .. side,
+            Vector3.new(layout.width, layout.height, layout.depth),
+            Vector3.new(layout.x, layout.y, layout.z), P.dark, Enum.Material.Metal)
+        WorldPbr.apply(support, "warehouse_steel")
+    end
+
+    local layout = plan.ramp()
+    local ramp = part(parent, plan.RAMP_NAME, Vector3.new(layout.width, layout.height, layout.length),
+        Vector3.new(layout.x, layout.y, layout.z), P.blue, Enum.Material.Metal)
+    ramp.CFrame = ramp.CFrame * CFrame.Angles(layout.pitch, 0, 0)
+    WorldPbr.apply(ramp, "warehouse_steel")
+end
+
 local function warehouse(parent)
     -- Three-path movement around a central processing bay.
     climbWall(parent, "WAREHOUSE / west wall", Vector3.new(3, 16, 72),
@@ -78,9 +102,7 @@ local function warehouse(parent)
         Vector3.new(-10, 2.5, 82), P.olive, Enum.Material.Metal)
     low:SetAttribute("MantleTarget", true)
     WorldPbr.apply(low, "warehouse_steel")
-    local ledge = part(parent, "VAULT / raised loading deck", Vector3.new(17, 3, 12),
-        Vector3.new(13, 7, 85), P.concrete, Enum.Material.Concrete)
-    ledge:SetAttribute("MantleTarget", true)
+    loadingDeck(parent)
 
     -- A pair of short combat covers, avoiding the spawn routes.
     for _, side in ipairs({ -1, 1 }) do

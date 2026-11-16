@@ -72,6 +72,15 @@ def main():
     check(station.index("model.Parent = decor") < station.index("cover.Transparency = 1"),
           "Original visible cover must remain until its replacement is ready")
 
+    for needle in ('transferDeck(decor, arena)', 'LoadingDeckPlan.DECK_NAME',
+                   'LoadingDeckPlan.RAMP_NAME', '"TRANSFER / ramp edge stripe "',
+                   '"06 / TRANSFER"'):
+        check(needle in art, "Transfer deck route art missing: " + needle)
+    for needle in ('loadingDeck(parent)', 'plan.DECK_NAME', 'plan.RAMP_NAME',
+                   'deck:SetAttribute("MantleTarget", true)', 'plan.support(side)',
+                   'ramp.CFrame * CFrame.Angles(layout.pitch, 0, 0)'):
+        check(needle in map_source, "Transfer deck collision wiring missing: " + needle)
+
     perimeter = source("src/server/PerimeterWallArt.luau")
     wall_plan = source("src/shared/PerimeterWallPlan.luau")
     for needle in ('local PerimeterWallArt = require(script.Parent:WaitForChild("PerimeterWallArt"))',
