@@ -289,7 +289,8 @@ def main():
                    'part.CanTouch = false', 'part.CastShadow = false',
                    'part:SetAttribute("NeonArtTier", "Core")',
                    '"YardSectorStamp"', 'label.Text = "SECTOR "',
-                   'Plan.transferRoutes()', '"TransferRouteStamp"', 'label.Text = route.label'):
+                   'Plan.transferRoutes()', '"TransferRouteStamp"', 'label.Text = route.label',
+                   'YARD_EXIT = Color3.fromRGB('):
         check(needle in zone_art, "Ground zone art must remain core and nonphysical: " + needle)
     for needle in ('function Plan.zones()', '"01"', '"02"', '"03"', '"04"',
                    'x = -52', 'x = 52', 'z = -112', 'z = 112'):
