@@ -93,16 +93,17 @@ local openMenus = {
 }
 local shownPrompts = {}
 local targetPrompt
-local function showHint(text, bearing)
+local function showHint(text, bearing, isRecharging)
     local directional = bearing ~= nil
     if pointer.Visible ~= directional then
         pointer.Visible = directional
         label.Position = UDim2.fromOffset(directional and 29 or 4, 0)
         label.Size = UDim2.new(1, directional and -33 or -8, 1, 0)
         label.TextXAlignment = directional and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center
-        label.TextColor3 = directional and mint or amber
     end
     if directional then pointer.Rotation = bearing end
+    local color = isRecharging and amber or mint
+    if label.TextColor3 ~= color then label.TextColor3 = color end
     if label.Text ~= text then label.Text = text end
     card.Visible = true
 end
@@ -135,14 +136,23 @@ local function update()
     local seconds = rechargeSeconds()
     if seconds > 0 then
         targetPrompt = nil
-        showHint(string.format("MEDICAL  /  NEXT IN %ds", seconds), nil)
+        showHint(string.format("MEDICAL  /  NEXT IN %ds", seconds), nil, true)
         return
     end
 
     local prompt, delta, distanceSquared = nearestReady(root.Position, targetPrompt)
     targetPrompt = prompt
-    if not prompt or next(shownPrompts) ~= nil or delta.X * delta.X + delta.Z * delta.Z < 1 then
+    if not prompt or next(shownPrompts) ~= nil then
         card.Visible = false
+        return
+    end
+    if delta.X * delta.X + delta.Z * delta.Z < 1 then
+        -- There is no stable compass heading directly above or below a station.
+        if math.abs(delta.Y) < 1 then
+            showHint("MEDICAL  /  NEARBY", nil)
+        else
+            showHint(delta.Y > 0 and "MEDICAL  /  ABOVE" or "MEDICAL  /  BELOW", nil)
+        end
         return
     end
     local right = camera.CFrame.RightVector
