@@ -11,6 +11,7 @@ local PAPER = Color3.fromRGB(248, 237, 211)
 local ROUTE_PAINT = {
     RAMP = AMBER,
     UNDERPASS = Color3.fromRGB(150, 216, 224),
+    YARD_EXIT = Color3.fromRGB(177, 227, 174),
 }
 
 local function paint(folder, name, frame, size, color)
