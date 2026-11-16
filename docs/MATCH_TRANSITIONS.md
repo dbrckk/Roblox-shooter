@@ -11,6 +11,8 @@ Le menu **1v1** (touche **V** sur PC) propose une recherche dans le serveur FFA 
 
 Une invitation reste valable 30 secondes. Le bouton **ACCEPT** répond uniquement à l’invitation affichée. Si elle a expiré, a été annulée ou a été remplacée, cette réponse ne modifie pas la recherche du destinataire. Il peut accepter une nouvelle invitation dès qu’elle s’affiche.
 
+Si le destinataire quitte le serveur avant de répondre à une invitation encore valide, le menu de l’émetteur indique **INVITED PLAYER LEFT THE SERVER**. Il peut lancer une recherche ou inviter quelqu’un d’autre immédiatement.
+
 **DECLINE** retire l’invitation affichée et indique immédiatement le refus à l’émetteur. La recherche en cours du destinataire continue. S’il reste d’autres invitations, la suivante s’affiche dans le même menu.
 
 Après un refus, l’émetteur attend 30 secondes avant de pouvoir réinviter la même personne dans le même serveur FFA. La liste affiche le temps restant sur le bouton de cette personne et le réactive à l’échéance. L’émetteur peut chercher un 1v1 ou inviter quelqu’un d’autre pendant ce délai. Le destinataire peut lui-même lancer une invitation s’il change d’avis.
