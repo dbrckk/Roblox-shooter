@@ -195,6 +195,7 @@ local states = {
     UNAVAILABLE = "PLAYER UNAVAILABLE",
     INVITE_EXPIRED = "INVITATION EXPIRED",
     INVITE_DECLINED = "INVITATION DECLINED",
+    INVITE_COOLDOWN = "REINVITE BLOCKED · TRY AGAIN LATER",
 }
 
 local function setMenu(visible)
@@ -244,7 +245,7 @@ local function duelLabel()
         duelToggle.Text = state == "RETURNING" and "RETURNING…" or "BACK TO FFA"
     elseif state == "CONNECTING" then
         duelToggle.Text = "CONNECTING…"
-    elseif state == "FAILED" then
+    elseif state == "FAILED" or state == "INVITE_COOLDOWN" then
         duelToggle.Text = "1v1 · RETRY"
     elseif incoming then
         duelToggle.Text = "1v1 · INVITE"
@@ -260,7 +261,7 @@ local function duelLabel()
             duelToggle.Text = state == "RETURNING" and "…" or "FFA"
         elseif state == "CONNECTING" then
             duelToggle.Text = "…"
-        elseif incoming or state == "FAILED" or state == "INVITE_DECLINED" then
+        elseif incoming or state == "FAILED" or state == "INVITE_DECLINED" or state == "INVITE_COOLDOWN" then
             duelToggle.Text = "1v1 !"
         elseif ready then
             duelToggle.Text = "1v1 ✓"

@@ -13,6 +13,8 @@ Une invitation reste valable 30 secondes. Le bouton **ACCEPT** répond uniquemen
 
 **DECLINE** retire l’invitation affichée et indique immédiatement le refus à l’émetteur. La recherche en cours du destinataire continue. S’il reste d’autres invitations, la suivante s’affiche dans le même menu.
 
+Après un refus, l’émetteur attend 30 secondes avant de pouvoir réinviter la même personne dans le même serveur FFA. Il peut chercher un 1v1 ou inviter une autre personne pendant ce délai. Le destinataire peut lui-même lancer une invitation s’il change d’avis.
+
 Le serveur source enregistre les deux identités dans MemoryStore avant le transfert. Le serveur réservé vérifie son roster avant de démarrer le compte à rebours. L’armement et les dégâts suivent les personnages des combattants admis. Le retour en FFA est automatique après les résultats, sauf si les deux combattants choisissent **REMATCH**. **BACK TO FFA** permet de revenir plus tôt ou de réessayer un retour échoué. Si un seul joueur arrive, l’attente est bornée et le retour est proposé. Roblox Studio conserve le duel local pour vérifier les transitions sans téléportation.
 
 Une fois un retour en FFA engagé, la salle réservée ferme la revanche, même si le transfert échoue. Après un échec ou un délai dépassé, **BACK TO FFA** redevient disponible. La relance reste individuelle et n’est pas déclenchée en boucle par le serveur.
