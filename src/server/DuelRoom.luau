@@ -38,7 +38,10 @@ local function clearRequest(player)
     entries[player] = nil
     local index = table.find(order, player)
     if index then table.remove(order, index) end
-    if player.Parent == Players then player:SetAttribute("IronYardDuelReady", false) end
+    if player.Parent == Players then
+        player:SetAttribute("IronYardDuelSearchStartedAt", nil)
+        player:SetAttribute("IronYardDuelReady", false)
+    end
 end
 
 local function finishTransfer(player, transfer, state)
@@ -204,6 +207,9 @@ function Room.request(player, enabled, target, invitation)
         invitationSequence += 1
         entry.invitation = string.format("%d:%d", player.UserId, invitationSequence)
         entry.expires = os.clock() + INVITE_TIMEOUT
+        player:SetAttribute("IronYardDuelSearchStartedAt", nil)
+    elseif not entries[player] or entries[player].target then
+        player:SetAttribute("IronYardDuelSearchStartedAt", Workspace:GetServerTimeNow())
     end
     entries[player] = entry
     player:SetAttribute("IronYardDuelReady", true)
