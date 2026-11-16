@@ -3,6 +3,7 @@
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Plan = require(Shared:WaitForChild("CoverSurfacePlan"))
 local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
+local WarehousePowerArt = require(script.Parent:WaitForChild("WarehousePowerArt"))
 local CoverArt = {}
 
 local PALETTES = {
@@ -107,7 +108,14 @@ function CoverArt.build(arena)
         if item:IsA("BasePart") then
             local size = item.Size
             local plan = Plan.forCollider(item.Name, size.X, size.Y, size.Z)
-            if plan then dress(folder, item, plan) end
+            if plan then
+                local powerSide = tonumber(item.Name:match("^WAREHOUSE / cover (%-?1)$"))
+                if powerSide then
+                    WarehousePowerArt.build(folder, item, powerSide)
+                elseif item.Transparency < 1 then
+                    dress(folder, item, plan)
+                end
+            end
         end
     end
 end

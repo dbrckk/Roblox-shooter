@@ -255,8 +255,9 @@ function MapService.start()
     Lighting.ShadowSoftness = 0.28
     Workspace:SetAttribute("ArenaTheme", "IRON_YARD_DAYLIGHT")
     buildArena(folder)
-    CoverArt.build(folder)
+    -- Scene-specific models claim their cover before the generic skins run.
     ArenaArt.build(folder)
+    CoverArt.build(folder)
     IndustrialProps.build(folder)
     ArenaArt.applyLighting()
 end
