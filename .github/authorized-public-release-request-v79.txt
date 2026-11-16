@@ -1,0 +1,7 @@
+IRON YARD v79 — single public update, 16 November 2026.
+
+Deploy PR #124 (347759506b20d78fd1111e92c1a69061e1869ff8) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Mark the return from the transfer underpass to the yard through the existing east lane. The addition is floor paint, with static geometry checks and the Rojo build green.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
