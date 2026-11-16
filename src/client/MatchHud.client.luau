@@ -132,10 +132,17 @@ end
 
 local duelToggle = duelButton(gui, "DuelOneVsOne", "1v1",
     UDim2.fromOffset(100, 38), UDim2.fromOffset(10, 136))
+local quickCancel = duelButton(gui, "CancelDuelSearch", "CANCEL",
+    UDim2.fromOffset(100, 28), UDim2.fromOffset(10, 178))
+quickCancel.Visible = false
 if UserInputService.TouchEnabled then
     local rect = TouchLayout.MENU_BUTTONS.Duel
     duelToggle.Size = UDim2.fromOffset(rect.w, rect.h)
     duelToggle.Position = UDim2.fromOffset(rect.x, rect.y)
+    local cancelRect = TouchLayout.MENU_BUTTONS.CancelDuelSearch
+    quickCancel.Size = UDim2.fromOffset(cancelRect.w, cancelRect.h)
+    quickCancel.Position = UDim2.fromOffset(cancelRect.x, cancelRect.y)
+    quickCancel.TextSize = 10
 end
 local menu = Instance.new("Frame")
 menu.Name = "DuelLobby"
@@ -219,6 +226,13 @@ local reinviteDeadlines = {}
 local inviteRows = {}
 local countdownTask
 
+local function updateQuickCancel()
+    quickCancel.Visible = duelToggle.Visible and not menu.Visible
+        and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
+        and player:GetAttribute("IronYardDuelTravel") == "SEARCHING"
+        and player:GetAttribute("IronYardDuelReady") == true
+end
+
 local function setMenu(visible)
     if menu.Visible == visible then return end
     menu.Visible = visible
@@ -228,6 +242,7 @@ local function setMenu(visible)
     end
     gui.DisplayOrder = visible and 45 or 20
     playerGui:SetAttribute("IronYardDuelMenuOpen", visible)
+    updateQuickCancel()
 end
 
 local function refreshInviteRows()
@@ -341,6 +356,8 @@ local function duelLabel()
         duelToggle.Text = "1v1 · RETRY"
     elseif incoming then
         duelToggle.Text = "1v1 · INVITE"
+    elseif state == "SEARCHING" and ready then
+        duelToggle.Text = "1v1 · SEARCHING"
     elseif state == "INVITE_DECLINED" then
         duelToggle.Text = "1v1 · DECLINED"
     elseif ready then
@@ -355,6 +372,8 @@ local function duelLabel()
             duelToggle.Text = "…"
         elseif incoming or state == "FAILED" or state == "INVITE_DECLINED" or state == "INVITE_COOLDOWN" then
             duelToggle.Text = "1v1 !"
+        elseif state == "SEARCHING" and ready then
+            duelToggle.Text = "1v1\nSEARCH"
         elseif ready then
             duelToggle.Text = "1v1 ✓"
         end
@@ -373,6 +392,7 @@ local function duelLabel()
     roster.Position = UDim2.fromOffset(12, top)
     roster.Size = UDim2.new(1, -24, 1, -top - 8)
     emptyRoster.Position = roster.Position
+    updateQuickCancel()
 end
 
 local function toggleDuel()
@@ -387,6 +407,10 @@ local function toggleDuel()
 end
 
 duelToggle.Activated:Connect(toggleDuel)
+quickCancel.Activated:Connect(function()
+    updateQuickCancel()
+    if quickCancel.Visible then remotes.SetDuelReady:FireServer(false) end
+end)
 close.Activated:Connect(function() setMenu(false) end)
 search.Activated:Connect(function()
     remotes.SetDuelReady:FireServer(player:GetAttribute("IronYardDuelReady") ~= true)
@@ -415,6 +439,7 @@ player:GetAttributeChangedSignal(REINVITE_ATTRIBUTE):Connect(readReinviteDeadlin
 readReinviteDeadlines()
 playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
     if playerGui:GetAttribute("IronYardSettingsOpen") then setMenu(false) end
+    updateQuickCancel()
 end)
 local travelConnections = {}
 local function watchRosterPlayer(other)
