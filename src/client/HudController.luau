@@ -912,6 +912,19 @@ local function showDamageReadout(self, content, color, duration)
     end)
 end
 
+function HudController:resetCombatFeedback()
+    self.lastConfirmedHudHitAt = -math.huge
+    self.lastConfirmedHudHitPriority = 0
+    self.hitToken += 1
+    self.damageReadoutToken += 1
+    self.eliminationToken += 1
+    self.hitMarkerPulse:Cancel()
+    self.hitConfirmSound:Stop()
+    self.hitMarker.Visible = false
+    self.damageReadout.Visible = false
+    self.eliminationConfirmation.Visible = false
+end
+
 function HudController:showProtectedFeedback()
     -- Avoid replacing a recently confirmed elimination with a weaker shield
     -- indicator from another pellet or a lagged hit notification.

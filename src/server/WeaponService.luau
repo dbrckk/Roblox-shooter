@@ -154,6 +154,7 @@ end
 
 local function sendFeedback(player, message)
     if remotes then
+        message.epoch = weaponRoundEpoch
         remotes.WeaponFeedback:FireClient(player, message)
     end
 end
@@ -768,6 +769,7 @@ function WeaponService.resetRound()
         state.aimCharacter = nil
         state.aimWeaponId = nil
         state.nextGlobalFireAt = 0
+        state.nextProtectedNoticeAt = nil
         if player.Parent then sendAmmo(player, state.equippedWeaponId) end
     end
 end

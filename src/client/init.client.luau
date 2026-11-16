@@ -35,6 +35,7 @@ local nextLocalGlobalFireAt = 0
 local ammoByWeapon = {}
 local latestAmmoEpoch = 0
 local observedFireEpoch = 0
+local feedbackEpoch = 0
 local touchWeaponButtons = {}
 local releaseTouchFire = nil
 local updateTouchActions = nil
@@ -1262,19 +1263,27 @@ UserInputService.JumpRequest:Connect(function()
 	requestJumpMovement()
 end)
 
-remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
-	if typeof(message) ~= "table" then
-		return
-	end
+local function advanceFeedbackEpoch(epoch)
+    if epoch <= feedbackEpoch then return end
+    feedbackEpoch = epoch
+    hud:resetCombatFeedback()
+end
 
-	if message.kind == "Hit" then
-        hud:showHitFeedback(message)
-        if typeof(message.hitPosition) == "Vector3" then
-            visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)
+remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
+    if typeof(message) ~= "table" then return end
+
+    if message.kind == "Hit" or message.kind == "Protected" then
+        if not FireEpochPolicy.acceptFeedback(message.epoch,
+            workspace:GetAttribute("IronYardFireEpoch"), feedbackEpoch) then return end
+        advanceFeedbackEpoch(message.epoch)
+        if message.kind == "Hit" then
+            hud:showHitFeedback(message)
+            if typeof(message.hitPosition) == "Vector3" then
+                visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)
+            end
+        else
+            hud:showProtectedFeedback()
         end
-    elseif message.kind == "Protected" then
-        -- Confirmed collision with an active spawn shield; not a missed shot.
-        hud:showProtectedFeedback()
     elseif message.kind == "Ammo" and typeof(message.weaponId) == "string"
         and typeof(message.capacity) == "number" and typeof(message.loaded) == "number" then
         -- Replication of attributes and reliable remotes can interleave.
@@ -1283,6 +1292,7 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
         if not FireEpochPolicy.acceptAmmo(message.epoch,
             workspace:GetAttribute("IronYardFireEpoch"), latestAmmoEpoch) then return end
         latestAmmoEpoch = message.epoch
+        advanceFeedbackEpoch(message.epoch)
         ammoByWeapon[message.weaponId] = {
             loaded = message.loaded,
             capacity = message.capacity,
@@ -1446,6 +1456,7 @@ workspace:GetAttributeChangedSignal("IronYardFireEpoch"):Connect(function()
     local epoch = workspace:GetAttribute("IronYardFireEpoch")
     if not FireEpochPolicy.valid(epoch) or epoch <= observedFireEpoch then return end
     observedFireEpoch = epoch
+    advanceFeedbackEpoch(epoch)
     if releaseTouchFire then releaseTouchFire() end
     lastLocalFire = {}
     nextLocalGlobalFireAt = 0
