@@ -2,6 +2,7 @@
 -- reserved server of this same place. Only the server-side roster admits
 -- players at the destination. Transfer data only correlates failure events.
 local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
 local TeleportService = game:GetService("TeleportService")
 local MemoryStoreService = game:GetService("MemoryStoreService")
 local HttpService = game:GetService("HttpService")
@@ -17,6 +18,8 @@ local ROSTER_TTL = 120
 local TRAVEL_TIMEOUT = 40
 local INVITE_TIMEOUT = 30
 local entries, order, pending, admitted = {}, {}, {}, {}
+local leaving = {}
+local closing = false
 local expected
 local started = false
 local firstArrival
@@ -166,16 +169,25 @@ function Room.waitExpired()
     return firstArrival ~= nil and os.clock() - firstArrival >= TRAVEL_TIMEOUT
 end
 
-function Room.returnToFfa(player)
+function Room.returnToFfa(player, retryRequested)
     if not Room.isDedicated or admitted[player.UserId] ~= player
         or player.Parent ~= Players or pending[player] then return end
+    if leaving[player] and not retryRequested then return end
+    -- A room that starts sending players back cannot start a new duel.
+    -- Failed transfers can be retried explicitly without reopening it.
+    leaving[player] = true
+    if not closing then
+        closing = true
+        Workspace:SetAttribute("IronYardDuelExitStarted", true)
+    end
+    player:SetAttribute("IronYardDuelReady", false)
     local group = { player }
     local transfer = beginTransfer(group, "RETURNING")
     task.spawn(teleport, group, transfer)
 end
 
-function Room.isReturning(player)
-    return pending[player] ~= nil
+function Room.isClosing()
+    return closing
 end
 
 local function admit(player)
@@ -207,6 +219,7 @@ function Room.start()
     Players.PlayerRemoving:Connect(function(player)
         clearRequest(player)
         pending[player] = nil
+        leaving[player] = nil
         if admitted[player.UserId] == player then admitted[player.UserId] = nil end
     end)
     TeleportService.TeleportInitFailed:Connect(function(player, _, _, placeId, options)

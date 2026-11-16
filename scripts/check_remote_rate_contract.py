@@ -99,7 +99,7 @@ in_handler(match, "remotes.ReturnToFfa.OnServerEvent:Connect(function(player)",
            '\n    Workspace:SetAttribute("IronYardDedicatedDuel"', (
                'RemoteGuard.allow(player, "ReturnToFfa")',
                'DuelRoom.isDedicated',
-               'DuelRoom.returnToFfa(player)',
+               'DuelRoom.returnToFfa(player, true)',
            ))
 assert 'RemoteGuard.allow(player, "Diagnostics")' in diagnostics
 assert "if not authorized(player)" in diagnostics

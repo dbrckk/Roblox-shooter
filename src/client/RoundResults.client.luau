@@ -269,12 +269,14 @@ local function render()
     local dedicated = isDuel and Workspace:GetAttribute("IronYardDedicatedDuel") == true
     local travel = player:GetAttribute("IronYardDuelTravel")
     local hasOpponent = dedicated and participants == 2 and #Players:GetPlayers() == 2
+    local closing = dedicated and Workspace:GetAttribute("IronYardDuelExitStarted") == true
     leaderboard[3].Visible = not dedicated
     rematch.Visible = dedicated and myStanding ~= nil
-    rematch.Interactable = hasOpponent and myStanding ~= nil and seconds > 0 and travel ~= "RETURNING"
+    rematch.Interactable = hasOpponent and myStanding ~= nil and seconds > 0
+        and not closing and travel ~= "RETURNING"
     local ready = player:GetAttribute("IronYardDuelReady") == true
     local readyCount = Workspace:GetAttribute("IronYardDuelReadyCount") or 0
-    rematch.Text = not hasOpponent and "OPPONENT LEFT"
+    rematch.Text = closing and "REMATCH CLOSED" or not hasOpponent and "OPPONENT LEFT"
         or string.format(ready and "CANCEL  ·  %d/2" or "REMATCH  ·  %d/2", readyCount)
     back.Visible = dedicated and myStanding ~= nil
     back.Interactable = travel ~= "RETURNING"
@@ -290,7 +292,7 @@ local function render()
             countdown.Text = "RETURN FAILED  /  TAP BACK TO FFA TO RETRY"
         elseif travel == "RETURNING" or seconds <= 0 then
             countdown.Text = "CONNECTING…"
-        elseif readyCount == 2 then
+        elseif readyCount == 2 and not closing then
             countdown.Text = string.format("REMATCH IN %ds", seconds)
         else
             countdown.Text = string.format("BACK TO FFA IN %ds", seconds)
@@ -320,7 +322,7 @@ for _, attr in ipairs({
     "NeonMatchPhase", "NeonMatchWinner", "NeonMatchRound",
     "NeonMatchTimeLeft", "IronYardWinnerUserId", "IronYardStandings",
     "IronYardFinalStandings", "IronYardDedicatedDuel", "IronYardMatchMode",
-    "IronYardDuelReadyCount",
+    "IronYardDuelReadyCount", "IronYardDuelExitStarted",
 }) do
     table.insert(attributeConnections,
         Workspace:GetAttributeChangedSignal(attr):Connect(render))

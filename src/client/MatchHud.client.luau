@@ -230,6 +230,7 @@ local function duelLabel()
     local shown = (canQueue or returnAvailable)
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
     duelToggle.Visible = shown
+    duelToggle.Interactable = state ~= "RETURNING"
     if not shown or returnAvailable then setMenu(false) end
 
     if returnAvailable then
@@ -269,7 +270,7 @@ local function duelLabel()
 end
 
 local function toggleDuel()
-    if not duelToggle.Visible then return end
+    if not duelToggle.Visible or not duelToggle.Interactable then return end
     if Workspace:GetAttribute("IronYardDedicatedDuel") then
         remotes.ReturnToFfa:FireServer()
         return
@@ -364,10 +365,13 @@ local function update()
         end
     elseif phase == "WAITING" then
         headerText = "IRON YARD  |  FREIGHT TERMINAL"
-        detailText = Workspace:GetAttribute("IronYardDedicatedDuel")
-            and (player:GetAttribute("IronYardDuelTravel") == "FAILED"
-                and "RETURN FAILED · TRY BACK TO FFA" or "WAITING FOR OPPONENT")
-            or "WAITING FOR OPERATORS"
+        if Workspace:GetAttribute("IronYardDedicatedDuel") then
+            local travel = player:GetAttribute("IronYardDuelTravel")
+            detailText = travel == "FAILED" and "RETURN FAILED · TRY BACK TO FFA"
+                or (travel == "RETURNING" and states.RETURNING or "WAITING FOR OPPONENT")
+        else
+            detailText = "WAITING FOR OPERATORS"
+        end
     elseif phase == "COUNTDOWN" then
         headerText = string.format("ROUND %d  |  STARTING", count + 1)
         local localDuel = Workspace:GetAttribute("IronYardDuelLocal")
