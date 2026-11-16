@@ -1,16 +1,11 @@
-name: Clear the stalled IRON YARD v87 run
+name: Retry the exact stalled IRON YARD v87 run
 
 on:
   push:
     branches: [ops/retry-v87-publication]
 
 permissions:
-  actions: read
-
-# Only this branch and repository run the cancellation probe. It cannot publish.
-concurrency:
-  group: iron-yard-public-release
-  cancel-in-progress: true
+  actions: write
 
 jobs:
   verify:
@@ -18,11 +13,12 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
-      - name: Report the original release and its jobs
+      - name: Rerun the original execution only if it is still queued without jobs
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           endpoint="repos/$GITHUB_REPOSITORY/actions/runs/43874520197"
-          gh api "$endpoint" --jq '{id, head_sha, status, conclusion}'
-          gh api "$endpoint/jobs?filter=all" --jq '{total_count, jobs: [.jobs[] | {id, name, status, conclusion}]}'
+          gh api "$endpoint" | jq -e '.head_sha == "4033b06ec4019040ecbe7d60201953678e91fec7" and .head_branch == "main" and .status == "queued" and .run_attempt == 1'
+          gh api "$endpoint/jobs?filter=all" | jq -e '.total_count == 0'
+          gh api -X POST "$endpoint/rerun"
