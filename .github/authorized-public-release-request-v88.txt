@@ -1,0 +1,7 @@
+IRON YARD v88 — single public update, 16 November 2026.
+
+Deploy the game source verified at d568da7e68786507be6e3e8130a0f2ce76e64d6c to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Includes clearer 1v1 matchmaking and invitation states, safer reserved-room arrival and return, a bounded teleport retry, and clearer medical station guidance across elevations. The previous public Roblox place version was 83.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
