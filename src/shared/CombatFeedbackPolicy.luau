@@ -2,6 +2,19 @@
 -- Both sender and local HUD use the same finite, bounded readout rules.
 local Feedback = {}
 
+local MARKERS = {
+    { offset = 9, length = 9, thickness = 2, tint = { 247, 244, 235 },
+        duration = 0.16, pitch = 0.94, volume = 0.11 },
+    { offset = 10, length = 11, thickness = 2, tint = { 255, 227, 154 },
+        duration = 0.22, pitch = 1.27, volume = 0.16 },
+    { offset = 11, length = 12, thickness = 3, tint = { 247, 189, 105 },
+        duration = 0.35, pitch = 0.76, volume = 0.22 },
+}
+
+function Feedback.markerStyle(priority)
+    return MARKERS[priority]
+end
+
 local function finite(n)
     return type(n) == "number" and n == n
         and n > -math.huge and n < math.huge
