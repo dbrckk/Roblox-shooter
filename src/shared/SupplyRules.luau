@@ -42,4 +42,13 @@ function Rules.healedHealth(health, maxHealth)
     local result = math.min(maxHealth, math.max(0, health) + Rules.HEAL_AMOUNT)
     return result, result - math.clamp(health, 0, maxHealth)
 end
+function Rules.formatHealAmount(amount)
+    if not finite(amount) or amount <= 0 then return nil end
+    -- Keep fractional health legible without printing a long floating-point tail.
+    if amount < 0.05 then return "+<0.1 HP" end
+    local rounded = string.format("%.1f", math.min(amount, Rules.HEAL_AMOUNT))
+    local displayed = rounded:gsub("%.0$", "")
+    return "+" .. displayed .. " HP"
+end
+
 return Rules

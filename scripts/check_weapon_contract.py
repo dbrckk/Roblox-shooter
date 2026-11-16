@@ -485,6 +485,7 @@ def main():
     duel_supply = source("src/server/SupplyService.luau")
     supply_rules = source("src/shared/SupplyRules.luau")
     medical_prompt = source("src/client/MedicalPrompt.client.luau")
+    medical_feedback = source("src/client/MedicalFeedback.client.luau")
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
         "function Duel.sameParticipants(players, first, second)",
@@ -572,13 +573,18 @@ def main():
     ):
         has(duel_supply, token, "Medical prompt and authoritative admission are synchronized")
     for token in (
-        'local visible = serverReady(prompt) and injured',
-        'Rules.needsHeal(humanoid.Health, humanoid.MaxHealth)',
+        'local visible = serverReady(prompt) and actionText ~= nil',
+        'Rules.needsHeal(health, maxHealth)',
+        'Rules.healedHealth(health, maxHealth)',
+        'Rules.formatHealAmount(amount)',
+        'prompt.ActionText = actionText',
         'GetAttributeChangedSignal(Rules.PROMPT_READY_ATTRIBUTE)',
         'GetPropertyChangedSignal("Enabled")',
         'player.CharacterRemoving:Connect',
     ):
         has(medical_prompt, token, "Only the local player’s injured character sees a ready prompt")
+    has(medical_feedback, 'Rules.formatHealAmount(msg.amount)',
+        "Healing confirmation uses the server amount with the same formatting")
     has(supply_rules, 'if mode == "DUEL" then return "DUEL_CLOSED" end',
         "Medical is closed throughout a duel")
     has(match, 'if winningPlayer and winningPlayer.Parent == Players',
