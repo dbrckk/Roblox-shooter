@@ -98,3 +98,12 @@ stations[4].readyAt = math.huge
 assert(R.nextOpening(stations, 119) == 0)
 assert(R.nextOpening({}, 119) == 0 and R.nextOpening(stations, 0 / 0) == 0)
 print("IRON YARD aggregate medical countdown: OK")
+
+assert(R.keepGuideTarget(50^2, 50^2), "Exact ties keep the current station")
+assert(R.keepGuideTarget(58^2, 50^2), "Keep targets within eight studs of the closest")
+assert(not R.keepGuideTarget(58.01^2, 50^2), "A clearly closer alternative wins")
+assert(R.keepGuideTarget(8^2, 0) and not R.keepGuideTarget(9^2, 0))
+assert(not R.keepGuideTarget(nil, 20^2), "An unavailable current station cannot retain focus")
+assert(not R.keepGuideTarget(20^2, math.huge))
+assert(not R.keepGuideTarget(-1, 20^2))
+print("IRON YARD medical guide switching margin: OK")

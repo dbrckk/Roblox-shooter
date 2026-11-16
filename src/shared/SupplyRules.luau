@@ -3,6 +3,7 @@ local Rules = {}
 Rules.HEAL_AMOUNT = 40
 Rules.COOLDOWN = 24
 Rules.SERVER_RANGE = 12
+Rules.GUIDE_SWITCH_MARGIN = 8
 Rules.STATIONS_FOLDER = "IronYardMedicalStations"
 Rules.NEXT_OPENING_ATTRIBUTE = "IronYardMedicalNextOpeningAt"
 Rules.PROMPT_TAG = "IronYardMedicalPrompt"
@@ -43,6 +44,15 @@ end
 function Rules.shouldGuide(mode, phase, health, maxHealth)
     return mode == "FFA" and phase == "LIVE"
         and Rules.needsHeal(health, maxHealth) and health / maxHealth <= 0.40
+end
+
+function Rules.keepGuideTarget(currentDistanceSquared, nearestDistanceSquared)
+    if not (finite(currentDistanceSquared) and finite(nearestDistanceSquared))
+        or currentDistanceSquared < 0 or nearestDistanceSquared < 0 then
+        return false
+    end
+    local switchLimit = math.sqrt(nearestDistanceSquared) + Rules.GUIDE_SWITCH_MARGIN
+    return currentDistanceSquared <= switchLimit * switchLimit
 end
 
 function Rules.guideBearing(dx, dz, rightX, rightZ)

@@ -594,6 +594,8 @@ def main():
         'RunService.Heartbeat:Connect',
         'if elapsed < 0.2 then return end',
         'folder:GetAttribute(Rules.NEXT_OPENING_ATTRIBUTE)',
+        'Rules.keepGuideTarget(previousSquared, distanceSquared)',
+        'nearestReady(root.Position, targetPrompt)',
         'Rules.rechargeSeconds(Workspace:GetServerTimeNow(), deadline)',
     ):
         has(medical_guide, token, "Medical bearing uses replicated readiness and bounded client updates")
