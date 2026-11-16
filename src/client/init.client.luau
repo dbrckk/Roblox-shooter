@@ -103,6 +103,7 @@ local function applyCameraFov()
 end
 
 local function applyMenuMouseState(isOpen)
+    if GuiService.MenuIsOpen then return end
     local needsPointer = isOpen
         or playerGui:GetAttribute("IronYardDuelMenuOpen") == true
         or (workspace:GetAttribute("IronYardDedicatedDuel")
@@ -144,6 +145,11 @@ local function enforceFirstPerson()
 	applyMenuMouseState(hud and hud:isSettingsOpen() or false)
 	applyMouseSensitivity()
 	applyCameraFov()
+end
+
+local function combatInputBlocked()
+    return GuiService.MenuIsOpen or hud:isSettingsOpen()
+        or playerGui:GetAttribute("IronYardDuelMenuOpen") == true
 end
 
 local function getCharacterParts()
@@ -853,7 +859,7 @@ local function requestReload()
 end
 
 local function fireWeapon(weaponId)
-    if playerGui:GetAttribute("IronYardDuelMenuOpen") then return end
+    if combatInputBlocked() then return end
 	local config = WeaponConfig.get(weaponId)
 	if not config then
 		return
@@ -956,7 +962,7 @@ end
 
 local function applyAirControl(deltaTime)
 	local _, humanoid, root = getCharacterParts()
-	if not humanoid or not root or isGrounded(humanoid) or localWallRunning or hud:isSettingsOpen() then
+	if not humanoid or not root or isGrounded(humanoid) or localWallRunning then
 		return
 	end
 
@@ -1092,9 +1098,11 @@ local touchFireHeld = false
 local gamepadAimHeld = false
 local gamepadSprintHeld = false
 local gamepadJumpHeld = false
+local keyboardJumpHeld = false
 local primaryFireTaskActive = false
 
 local function beginHeldFire(gamepad, touch)
+    if combatInputBlocked() then return end
     local previouslyHeld = mouseFireHeld or gamepadFireHeld or touchFireHeld
     if touch then
         if touchFireHeld then return end
@@ -1116,7 +1124,8 @@ local function beginHeldFire(gamepad, touch)
             -- per cooldown. Keep the single task alive during a semi-auto
             -- weapon swap, so re-equipping the AR resumes held fire.
             task.wait(AutomaticFireCadence.waitSeconds(weapon))
-            if (mouseFireHeld or gamepadFireHeld or touchFireHeld) and not hud:isSettingsOpen()
+            if (mouseFireHeld or gamepadFireHeld or touchFireHeld)
+                and not combatInputBlocked()
                 and AutomaticFireCadence.isAutomatic(WeaponConfig.get(currentWeaponId)) then
                 fireWeapon(currentWeaponId)
             end
@@ -1142,6 +1151,7 @@ end
 clearHeldCombatInput = function()
     if releaseTouchFire then releaseTouchFire() end
     mouseFireHeld = false
+    keyboardJumpHeld = false
     releaseControllerInputs()
     setScoped(false)
     setSprinting(false)
@@ -1149,6 +1159,14 @@ end
 
 UserInputService.WindowFocusReleased:Connect(clearHeldCombatInput)
 UserInputService.GamepadDisconnected:Connect(releaseControllerInputs)
+GuiService.MenuOpened:Connect(function()
+    clearHeldCombatInput()
+    if updateTouchVisibility then updateTouchVisibility() end
+end)
+GuiService.MenuClosed:Connect(function()
+    applyMenuMouseState(hud:isSettingsOpen())
+    if updateTouchVisibility then updateTouchVisibility() end
+end)
 
 local function onGamepadPressed(input, gameProcessed)
     if not GamepadCombatPolicy.isGamepad(input.UserInputType.Name) then
@@ -1158,14 +1176,14 @@ local function onGamepadPressed(input, gameProcessed)
     if action == "JUMP" then
         -- Core Roblox jump may mark ButtonA as processed; keep its held
         -- state for aerial boost but never override native jumping.
-        gamepadJumpHeld = not hud:isSettingsOpen() and not playerGui:GetAttribute("IronYardDuelMenuOpen")
+        gamepadJumpHeld = not combatInputBlocked()
     end
-    if gameProcessed then return true end
+    if gameProcessed or GuiService.MenuIsOpen then return true end
     if action == "SETTINGS" then
         hud:toggleSettings()
         return true
     end
-    if hud:isSettingsOpen() or playerGui:GetAttribute("IronYardDuelMenuOpen") then return true end
+    if combatInputBlocked() then return true end
     if action == "FIRE" then
         beginHeldFire(true)
     elseif action == "AIM" then
@@ -1196,18 +1214,18 @@ end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if onGamepadPressed(input, gameProcessed) then return end
-	if gameProcessed then
-		return
-	end
+    if input.KeyCode == Enum.KeyCode.Space then
+        -- Roblox can consume its own jump input before a boost hold begins.
+        keyboardJumpHeld = not combatInputBlocked() and UserInputService:GetFocusedTextBox() == nil
+    end
+    if gameProcessed or GuiService.MenuIsOpen then return end
 
 	if input.KeyCode == Enum.KeyCode.M then
 		hud:toggleSettings()
 		return
 	end
 
-	if hud:isSettingsOpen() or playerGui:GetAttribute("IronYardDuelMenuOpen") then
-		return
-	end
+    if combatInputBlocked() then return end
 
 	if input.UserInputType == Enum.UserInputType.MouseButton1 then
         beginHeldFire(false)
@@ -1258,6 +1276,7 @@ UserInputService.InputEnded:Connect(function(input)
     elseif input.UserInputType == Enum.UserInputType.MouseButton2 then
 		setScoped(false)
 	elseif input.KeyCode == Enum.KeyCode.Space then
+        keyboardJumpHeld = false
 		stopBoosting()
 	elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
 		setSprinting(false)
@@ -1265,11 +1284,7 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 UserInputService.JumpRequest:Connect(function()
-	if hud:isSettingsOpen() or playerGui:GetAttribute("IronYardDuelMenuOpen") then
-		return
-	end
-
-	requestJumpMovement()
+    if not combatInputBlocked() then requestJumpMovement() end
 end)
 
 local function advanceFeedbackEpoch(epoch)
@@ -1426,9 +1441,7 @@ remotes.MovementState.OnClientEvent:Connect(function(message)
 	end
 end)
 
-player.CharacterRemoving:Connect(function()
-    if releaseTouchFire then releaseTouchFire() end
-end)
+player.CharacterRemoving:Connect(clearHeldCombatInput)
 
 player.CharacterAdded:Connect(function(character)
     task.defer(function()
@@ -1511,11 +1524,12 @@ RunService:BindToRenderStep("IronYardClientCameraFeel",
 		applyMenuMouseState(true)
 	end
 
+    local blocked = combatInputBlocked()
 	showLocalBody()
-	tryStartWallRun()
+    if not blocked then tryStartWallRun() end
 	updateLocalWallRun()
 	applyBoostThrust(deltaTime)
-	applyAirControl(deltaTime)
+    if not blocked then applyAirControl(deltaTime) end
 	applyFallGravity(deltaTime)
     if applyTouchDrag then applyTouchDrag() end
 	updateCameraFeel(deltaTime)
@@ -1536,8 +1550,7 @@ RunService:BindToRenderStep("IronYardClientCameraFeel",
 			localBoostFuel + MovementConfig.boostFuelRegenPerSecond * deltaTime
 		)
 		hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)
-	elseif (UserInputService:IsKeyDown(Enum.KeyCode.Space) or gamepadJumpHeld)
-        and not localWallRunning and not hud:isSettingsOpen() then
+	elseif (keyboardJumpHeld or gamepadJumpHeld) and not localWallRunning and not blocked then
 		startBoosting()
 	end
 end)
@@ -1652,9 +1665,7 @@ if UserInputService.TouchEnabled then
 
     updateTouchVisibility = function()
         local phase = workspace:GetAttribute("NeonMatchPhase")
-        local playable = not hud:isSettingsOpen()
-            and playerGui:GetAttribute("IronYardDuelMenuOpen") ~= true
-            and (phase == "LIVE" or phase == "COUNTDOWN")
+        local playable = not combatInputBlocked() and (phase == "LIVE" or phase == "COUNTDOWN")
         local controllerActive = GamepadCombatPolicy.isGamepad(
             UserInputService:GetLastInputType().Name)
         local enabled = playable and not controllerActive and layoutReady
