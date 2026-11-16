@@ -3,6 +3,8 @@ local Rules = {}
 Rules.HEAL_AMOUNT = 40
 Rules.COOLDOWN = 24
 Rules.SERVER_RANGE = 12
+Rules.STATIONS_FOLDER = "IronYardMedicalStations"
+Rules.NEXT_OPENING_ATTRIBUTE = "IronYardMedicalNextOpeningAt"
 Rules.PROMPT_TAG = "IronYardMedicalPrompt"
 Rules.PROMPT_READY_ATTRIBUTE = "IronYardMedicalPromptReady"
 local function finite(n)
@@ -19,6 +21,18 @@ end
 function Rules.rechargeSeconds(now, readyAt)
     if not (finite(now) and finite(readyAt)) then return 0 end
     return math.clamp(math.ceil(readyAt - now), 0, Rules.COOLDOWN)
+end
+
+-- A positive deadline is published only when every station is recharging.
+function Rules.nextOpening(stations, now)
+    if #stations == 0 or not finite(now) then return 0 end
+    local earliest = math.huge
+    for _, station in ipairs(stations) do
+        local deadline = station.readyAt
+        if not finite(deadline) or deadline <= now then return 0 end
+        earliest = math.min(earliest, deadline)
+    end
+    return earliest
 end
 
 function Rules.needsHeal(health, maxHealth)

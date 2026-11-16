@@ -1,4 +1,4 @@
--- One directional hint to a known medical station. No network requests.
+-- One medical hint at low health. No network requests.
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -17,11 +17,12 @@ gui.DisplayOrder = 16
 gui.Parent = playerGui
 
 local mint = Color3.fromRGB(184, 234, 199)
+local amber = Color3.fromRGB(242, 190, 92)
 local card = Instance.new("Frame")
 card.Name = "NearbyMedical"
 card.AnchorPoint = Vector2.new(0.5, 0)
 card.Position = UDim2.new(0.5, 0, 0, 94)
-card.Size = UDim2.fromOffset(146, 28)
+card.Size = UDim2.fromOffset(154, 28)
 card.BackgroundColor3 = Color3.fromRGB(31, 49, 45)
 card.BackgroundTransparency = 0.14
 card.BorderSizePixel = 0
@@ -37,6 +38,7 @@ pointer.AnchorPoint = Vector2.new(0.5, 0.5)
 pointer.Position = UDim2.fromOffset(16, 14)
 pointer.Size = UDim2.fromOffset(16, 16)
 pointer.BackgroundTransparency = 1
+pointer.Visible = true
 pointer.Parent = card
 for _, side in ipairs({ -1, 1 }) do
     local wing = Instance.new("Frame")
@@ -83,6 +85,26 @@ local openMenus = {
     "IronYardDuelMenuOpen",
 }
 local shownPrompts = {}
+local function showHint(text, bearing)
+    local directional = bearing ~= nil
+    if pointer.Visible ~= directional then
+        pointer.Visible = directional
+        label.Position = UDim2.fromOffset(directional and 29 or 4, 0)
+        label.Size = UDim2.new(1, directional and -33 or -8, 1, 0)
+        label.TextXAlignment = directional and Enum.TextXAlignment.Left or Enum.TextXAlignment.Center
+        label.TextColor3 = directional and mint or amber
+    end
+    if directional then pointer.Rotation = bearing end
+    if label.Text ~= text then label.Text = text end
+    card.Visible = true
+end
+
+local function rechargeSeconds()
+    local folder = Workspace:FindFirstChild(Rules.STATIONS_FOLDER)
+    local deadline = folder and folder:GetAttribute(Rules.NEXT_OPENING_ATTRIBUTE)
+    return Rules.rechargeSeconds(Workspace:GetServerTimeNow(), deadline)
+end
+
 local function update()
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -101,16 +123,21 @@ local function update()
         end
     end
 
+    local seconds = rechargeSeconds()
+    if seconds > 0 then
+        showHint(string.format("MEDICAL  /  NEXT IN %ds", seconds), nil)
+        return
+    end
+
     local prompt, delta, distanceSquared = nearestReady(root.Position)
     if not prompt or shownPrompts[prompt] or delta.X * delta.X + delta.Z * delta.Z < 1 then
         card.Visible = false
         return
     end
     local right = camera.CFrame.RightVector
-    pointer.Rotation = Rules.guideBearing(delta.X, delta.Z, right.X, right.Z)
+    local bearing = Rules.guideBearing(delta.X, delta.Z, right.X, right.Z)
     local text = string.format("MEDICAL  /  %d st", math.floor(math.sqrt(distanceSquared) + 0.5))
-    if label.Text ~= text then label.Text = text end
-    card.Visible = true
+    showHint(text, bearing)
 end
 
 local connections = {

@@ -62,6 +62,13 @@ local function block(parent, name, size, cf, color, material)
     return p
 end
 
+local function publishNextOpening(folder, now)
+    local deadline = Rules.nextOpening(stations, now)
+    if folder:GetAttribute(Rules.NEXT_OPENING_ATTRIBUTE) ~= deadline then
+        folder:SetAttribute(Rules.NEXT_OPENING_ATTRIBUTE, deadline)
+    end
+end
+
 local function create(parent, index, x, z)
     local model = Instance.new("Model")
     model.Name = "MEDICAL STATION / " .. index
@@ -153,6 +160,7 @@ local function create(parent, index, x, z)
     station.reset = function()
         station.revision += 1
         station.readyAt = 0
+        publishNextOpening(parent, Workspace:GetServerTimeNow())
         refresh()
     end
     station.reset()
@@ -178,6 +186,7 @@ local function create(parent, index, x, z)
         station.readyAt = now + Rules.COOLDOWN
         station.revision += 1
         local revision = station.revision
+        publishNextOpening(parent, now)
         refresh()
         humanoid.Health = health
         audio:Play()
@@ -305,7 +314,8 @@ function Service.start()
     if started then return end
     started = true
     local folder = Instance.new("Folder")
-    folder.Name = "IronYardMedicalStations"
+    folder.Name = Rules.STATIONS_FOLDER
+    publishNextOpening(folder, Workspace:GetServerTimeNow())
     folder.Parent = Workspace
     for i, position in ipairs({
         Vector2.new(-48, -126), Vector2.new(48, -126),
