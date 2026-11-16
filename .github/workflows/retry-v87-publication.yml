@@ -1,4 +1,4 @@
-name: Recover the queued IRON YARD v87 publication
+name: Probe the IRON YARD publication queue
 
 on:
   push:
@@ -8,13 +8,18 @@ permissions:
   actions: write
   contents: read
 
+# Use the production queue without cancelling any active publication.
+concurrency:
+  group: iron-yard-public-release
+  cancel-in-progress: false
+
 jobs:
   recover:
     if: github.repository == 'dbrckk/Roblox-shooter'
-    runs-on: ubuntu-latest
-    timeout-minutes: 4
+    runs-on: ubuntu-24.04
+    timeout-minutes: 3
     steps:
-      - name: Replace the stalled run if it has never started a job
+      - name: Dispatch again only after confirmed cancellation before any job began
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -25,32 +30,19 @@ jobs:
           set -euo pipefail
           repo="repos/$GITHUB_REPOSITORY"
           endpoint="$repo/actions/runs/$STALLED_RUN"
-          live="$(gh api "$repo/git/ref/heads/main" --jq .object.sha)"
-          test "$live" = "$RELEASE_SHA"
-          gh api "$endpoint" | jq -e --arg sha "$RELEASE_SHA" \
-            '.head_branch == "main" and .head_sha == $sha and .status == "queued"'
-          gh api "$endpoint/jobs" | jq -e '.total_count == 0'
-          if ! gh api -X POST "$endpoint/cancel"; then
-            test "$(gh api "$endpoint" --jq .status)" = queued
-            gh api "$endpoint/jobs" | jq -e '.total_count == 0'
-            gh api -X POST "$endpoint/force-cancel"
+          run="$(gh api "$endpoint")"
+          if ! jq -e --arg sha "$RELEASE_SHA" \
+            '.head_branch == "main" and .head_sha == $sha and .status == "completed" and .conclusion == "cancelled"' \
+            <<< "$run"; then
+            echo "No dispatch: the original run has not been confirmed cancelled."
+            exit 0
           fi
-          for attempt in {1..15}; do
-            status="$(gh api "$endpoint" --jq '.status + "/" + (.conclusion // "")')"
-            [[ "$status" == completed/cancelled ]] && break
-            if [[ "$attempt" == 5 && "$status" == queued/ ]]; then
-              gh api "$endpoint/jobs" | jq -e '.total_count == 0'
-              gh api -X POST "$endpoint/force-cancel"
-            fi
-            sleep 4
-          done
-          test "$status" = completed/cancelled
-          gh api "$endpoint/jobs" | jq -e '.total_count == 0'
+          gh api "$endpoint/jobs?filter=all" | jq -e '.total_count == 0'
           test "$(gh api "$repo/git/ref/heads/main" --jq .object.sha)" = "$RELEASE_SHA"
-          gh api -X GET "$repo/actions/workflows/$PUBLISH_WORKFLOW/runs" \
-            -f head_sha="$RELEASE_SHA" -f branch=main -f per_page=50 \
-            --jq '[.workflow_runs[] | select(.status != "completed" or .conclusion == "success")] | length' \
-            | grep -qx 0
+          no_other_release="$(gh api -X GET "$repo/actions/workflows/$PUBLISH_WORKFLOW/runs" \
+            -f head_sha="$RELEASE_SHA" -f branch=main -f per_page=100 \
+            --jq '[.workflow_runs[] | select(.status != "completed" or .conclusion == "success")] | length')"
+          test "$no_other_release" = 0
           gh workflow run "$PUBLISH_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref main \
             --field check_only=false --field confirmation="PUBLISH IRON YARD PUBLIC"
-          echo "Requeued original v87 commit $RELEASE_SHA through its public release workflow."
+          echo "The cancelled run never had a job. Redispatched v87 at $RELEASE_SHA."
