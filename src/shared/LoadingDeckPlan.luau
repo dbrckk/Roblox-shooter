@@ -40,4 +40,14 @@ function Plan.ramp()
     }
 end
 
+function Plan.descentMarker(deckDepth, rampWidth)
+    local edge = deckDepth / 2
+    return {
+        labelZ = edge - 3.25,
+        labelWidth = rampWidth - 0.65,
+        labelDepth = 2.05,
+        arrowZ = edge - 1.1,
+    }
+end
+
 return Plan

@@ -27,4 +27,12 @@ assert(right.x - left.x - (left.width + right.width) / 2 >= 12,
 -- A 4.2-stud character envelope fits along the offset approach into the
 -- underpass without entering the adjacent ramp or left support.
 assert(ramp.x - ramp.width / 2 - (left.x + left.width / 2) > 4.2)
+local descent = Plan.descentMarker(Plan.depth, ramp.width)
+local labelFront = descent.labelZ + descent.labelDepth / 2
+assert(descent.labelWidth > 6 and descent.labelWidth < ramp.width)
+assert(math.abs(ramp.x - Plan.x) + descent.labelWidth / 2 < Plan.width / 2)
+assert(descent.labelZ - descent.labelDepth / 2 > -Plan.depth / 2)
+assert(labelFront < descent.arrowZ - 0.65, "The downhill chevron stays clear of the text")
+assert(descent.arrowZ + 0.65 < midZ - run - Plan.z and Plan.depth / 2 - descent.arrowZ < 1.5,
+    "Keep the arrow on the deck at the ramp mouth")
 print("IRON YARD transfer deck, ramp and underpass: OK")
