@@ -27,6 +27,8 @@ Le premier joueur admis déclenche une attente de 40 secondes, affichée dans le
 
 Si un combattant quitte le serveur FFA pendant la préparation du transfert, le joueur restant voit **OPPONENT LEFT BEFORE TRANSFER** et peut relancer la recherche immédiatement.
 
+Après un échec signalé par Roblox lors de l’envoi vers le duel ou du retour en FFA, chaque joueur encore présent bénéficie d’un réessai automatique. Pour l’aller, le réessai utilise la salle réservée initiale. Si le réessai échoue, le HUD permet de relancer la recherche en FFA ou de réessayer le retour depuis la salle réservée.
+
 **Validation publiée à faire**
 
 1. Avec trois joueurs dans une FFA, lancer deux recherches. Vérifier que les deux volontaires se retrouvent seuls en duel et que le troisième poursuit sa manche.
