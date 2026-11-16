@@ -1,0 +1,7 @@
+IRON YARD v74 — single public update, 16 November 2026.
+
+Deploy PR #119 (d78f6ff7dac26c2dd312dd04fa81ccf0f5cf6993) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This release adds a second approach to each catwalk with a walkable ramp, guardrail openings and in-world directional markings. Static geometry checks passed on both ramps and the twelve existing duel pads. Movement and Android readability remain to be checked in a Roblox client.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
