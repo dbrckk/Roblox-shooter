@@ -49,3 +49,9 @@ assert(R.rechargeSeconds(deadline, deadline) == 0 and R.rechargeSeconds(125, dea
 assert(R.rechargeSeconds(50, deadline) == R.COOLDOWN)
 assert(R.rechargeSeconds(0 / 0, deadline) == 0 and R.rechargeSeconds(100, math.huge) == 0)
 print("IRON YARD medical countdown boundaries: OK")
+
+assert(R.needsHeal(99.9, 100) and R.needsHeal(100, 120))
+assert(not R.needsHeal(100, 100) and not R.needsHeal(120, 100))
+assert(not R.needsHeal(0, 100) and not R.needsHeal(0 / 0, 100))
+assert(not R.needsHeal(25, math.huge))
+print("IRON YARD player medical prompt eligibility: OK")
