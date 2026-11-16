@@ -187,6 +187,21 @@ list.Padding = UDim.new(0, 5)
 list.SortOrder = Enum.SortOrder.Name
 list.Parent = roster
 
+local emptyRoster = Instance.new("TextLabel")
+emptyRoster.Name = "NoInviteTargets"
+emptyRoster.Size = UDim2.new(1, -24, 0, 34)
+emptyRoster.Position = UDim2.fromOffset(12, 91)
+emptyRoster.BackgroundTransparency = 1
+emptyRoster.Font = Enum.Font.GothamMedium
+emptyRoster.TextSize = 13
+emptyRoster.TextWrapped = true
+emptyRoster.TextXAlignment = Enum.TextXAlignment.Left
+emptyRoster.TextYAlignment = Enum.TextYAlignment.Top
+emptyRoster.TextColor3 = Color3.fromRGB(190, 203, 198)
+emptyRoster.Text = "No players available to invite in this server."
+emptyRoster.Visible = false
+emptyRoster.Parent = menu
+
 local states = {
     SEARCHING = "LOOKING FOR A 1v1",
     INVITED = "WAITING FOR INVITE RESPONSE",
@@ -221,6 +236,7 @@ local function refreshInviteRows()
         countdownTask = nil
     end
     if not menu.Visible then return end
+    emptyRoster.Visible = next(inviteRows) == nil
 
     local now = Workspace:GetServerTimeNow()
     local nextRefresh = math.huge
@@ -356,6 +372,7 @@ local function duelLabel()
     roster.Visible = not busy
     roster.Position = UDim2.fromOffset(12, top)
     roster.Size = UDim2.new(1, -24, 1, -top - 8)
+    emptyRoster.Position = roster.Position
 end
 
 local function toggleDuel()
