@@ -9,6 +9,8 @@
 
 Le menu **1v1** (touche **V** sur PC) propose une recherche dans le serveur FFA courant et une invitation ciblée à un joueur de ce serveur. Une invitation exige l’accord des deux. La FFA continue pour le reste du serveur. Les deux combattants rejoignent une instance réservée de la place publique existante, sans création d’une autre expérience.
 
+À la manette, une pression sur le stick droit (**R3**) ouvre ou ferme le menu 1v1. La croix directionnelle permet de choisir une action et **A** valide. Le menu sélectionne l’invitation entrante si elle est visible, sinon la recherche. Si l’action sélectionnée disparaît ou devient indisponible, la sélection revient à la recherche. Après le duel, les résultats sélectionnent **REMATCH** si disponible ou **BACK TO FFA**. Dans une salle réservée en attente ou pendant le compte à rebours, **R3** permet de retourner en FFA.
+
 Une invitation reste valable 30 secondes. Le bouton **ACCEPT** répond uniquement à l’invitation affichée. Si elle a expiré, a été annulée ou a été remplacée, cette réponse ne modifie pas la recherche du destinataire. Il peut accepter une nouvelle invitation dès qu’elle s’affiche.
 
 Si le destinataire quitte le serveur avant de répondre à une invitation encore valide, le menu de l’émetteur indique **INVITED PLAYER LEFT THE SERVER**. Il peut lancer une recherche ou inviter quelqu’un d’autre immédiatement.

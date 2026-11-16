@@ -2,21 +2,25 @@
 -- Every score, personal medal XP and winning identity comes from the server.
 -- All frames are client-only and disappear outside RESULTS.
 local Players = game:GetService("Players")
+local GuiService = game:GetService("GuiService")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local BuildInfo = require(Shared:WaitForChild("BuildInfo"))
 local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
+local GamepadCombatPolicy = require(Shared:WaitForChild("GamepadCombatPolicy"))
 local remotes = require(Shared:WaitForChild("PrecisionNet")).getRemotes(false)
 
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local gui = Instance.new("ScreenGui")
 gui.Name = "IronYardRoundResults"
 gui.DisplayOrder = 30
 gui.IgnoreGuiInset = false
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local root = Instance.new("Frame")
 root.Name = "ResultsCard"
@@ -27,6 +31,11 @@ root.BackgroundColor3 = Color3.fromRGB(30, 37, 37)
 root.BackgroundTransparency = 0.05
 root.BorderSizePixel = 0
 root.Visible = false
+root.SelectionGroup = true
+root.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+root.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+root.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+root.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
 root.Parent = gui
 
 local scale = Instance.new("UIScale")
@@ -133,10 +142,33 @@ end
 local rematch = resultAction("Rematch", "REMATCH", 44)
 local back = resultAction("BackToFFA", "BACK TO FFA", 226)
 back.Modal = true
+
+local function syncResultSelection()
+    local selected = GuiService.SelectedObject
+    local ownsSelection = selected == rematch or selected == back
+    rematch.Selectable = root.Visible and rematch.Visible and rematch.Interactable
+    back.Selectable = root.Visible and back.Visible and back.Interactable
+    if playerGui:GetAttribute("IronYardSettingsOpen") == true or GuiService.MenuIsOpen
+        or not GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name) then
+        if ownsSelection then GuiService.SelectedObject = nil end
+        return
+    end
+    if ownsSelection and selected.Selectable then return end
+    if rematch.Selectable then
+        GuiService.SelectedObject = rematch
+    elseif back.Selectable then
+        GuiService.SelectedObject = back
+    elseif ownsSelection then
+        GuiService.SelectedObject = nil
+    end
+end
+
 rematch.Activated:Connect(function()
+    if not root.Visible or not rematch.Visible or not rematch.Interactable then return end
     remotes.SetDuelReady:FireServer(player:GetAttribute("IronYardDuelReady") ~= true)
 end)
 back.Activated:Connect(function()
+    if not root.Visible or not back.Visible or not back.Interactable then return end
     remotes.ReturnToFfa:FireServer()
 end)
 
@@ -183,6 +215,7 @@ local function render()
         back.Visible = false
         rematch.Visible = false
         root.Visible = false
+        syncResultSelection()
         return
     end
     local snapshot = finalSnapshot()
@@ -299,6 +332,7 @@ local function render()
         end
     end
     root.Visible = true
+    syncResultSelection()
 end
 
 local cameraConnection
@@ -318,6 +352,10 @@ local cameraChangedConnection =
 reconnectCamera()
 
 local attributeConnections = {}
+table.insert(attributeConnections, UserInputService.LastInputTypeChanged:Connect(syncResultSelection))
+table.insert(attributeConnections, playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(syncResultSelection))
+table.insert(attributeConnections, GuiService.MenuOpened:Connect(syncResultSelection))
+table.insert(attributeConnections, GuiService.MenuClosed:Connect(syncResultSelection))
 for _, attr in ipairs({
     "NeonMatchPhase", "NeonMatchWinner", "NeonMatchRound",
     "NeonMatchTimeLeft", "IronYardWinnerUserId", "IronYardStandings",

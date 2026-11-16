@@ -1148,7 +1148,7 @@ local function onGamepadPressed(input, gameProcessed)
     if action == "JUMP" then
         -- Core Roblox jump may mark ButtonA as processed; keep its held
         -- state for aerial boost but never override native jumping.
-        gamepadJumpHeld = not hud:isSettingsOpen()
+        gamepadJumpHeld = not hud:isSettingsOpen() and not playerGui:GetAttribute("IronYardDuelMenuOpen")
     end
     if gameProcessed then return true end
     if action == "SETTINGS" then
