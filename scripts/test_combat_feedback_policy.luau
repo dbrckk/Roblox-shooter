@@ -28,6 +28,9 @@ for _, style in ipairs({ body, head, elimination }) do
     local innerEdge = style.offset - (style.length + style.thickness) / (2 * math.sqrt(2)) - 1
     assert(innerEdge >= 3.9, "Outlined strokes leave the center and ADS dot visible")
     assert(style.volume <= 0.22 and style.pitch > 0)
+    eq(Feedback.soundVolume(style, 1), 0, "Mute only the confirmation sound")
+    eq(Feedback.soundVolume(style, 2), style.volume * 0.5, "Low keeps the relative mix")
+    eq(Feedback.soundVolume(style, 3), style.volume, "Standard retains the original mix")
 end
 assert(body.duration < head.duration and head.duration < elimination.duration)
 assert(body.pitch ~= head.pitch and body.pitch ~= elimination.pitch and head.pitch ~= elimination.pitch)

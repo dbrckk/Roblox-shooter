@@ -15,6 +15,12 @@ function Feedback.markerStyle(priority)
     return MARKERS[priority]
 end
 
+function Feedback.soundVolume(style, level)
+    if level == 1 then return 0 end
+    if level == 2 then return style.volume * 0.5 end
+    return style.volume
+end
+
 local function finite(n)
     return type(n) == "number" and n == n
         and n > -math.huge and n < math.huge

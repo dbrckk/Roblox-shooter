@@ -48,3 +48,5 @@ Corriger la première impression du 1v1. Le briefing FFA utilise le même bandea
 **Confirmation des tirs.** Les touches, tirs à la tête et éliminations ont des marqueurs à centre ouvert, différenciés par leur forme et leur signal sonore. Une confirmation prioritaire reste visible pendant sa durée minimale, même sous un tir soutenu. Les marqueurs et le son sont réutilisés par le HUD. Vérifier leur lisibilité en visée et le niveau sonore sur Android et PC, en tir isolé et en rafale.
 
 **Changements de manche.** Les confirmations de touche et de bouclier suivent la génération de combat du serveur. À la prochaine manche ou reprise du 1v1, le HUD efface les anciens marqueurs et coupe leur son. La CI couvre l’ordre variable des confirmations, des mises à jour de munitions et de la réplication de la génération.
+
+**Réglage sonore.** Le menu propose trois niveaux pour les sons de confirmation, de la coupure complète au volume standard. Les marqueurs et le texte restent visibles au niveau OFF. Vérifier le réglage au tactile et à la manette, ainsi que le niveau LOW pendant une rafale.

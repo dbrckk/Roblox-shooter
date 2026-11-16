@@ -1,3 +1,4 @@
+local GuiService = game:GetService("GuiService")
 local StarterGui = game:GetService("StarterGui")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -9,6 +10,7 @@ local FeedbackPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 local BoostMeterPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BoostMeterPolicy"))
 local CombatReadoutPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatReadoutPolicy"))
 local CrosshairFeedback = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CrosshairFeedbackPolicy"))
+local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
 
 local HudController = {}
 HudController.__index = HudController
@@ -18,6 +20,7 @@ local DEFAULT_SENSITIVITY = 1
 local GRAPHICS_PRESETS = { "ECO", "BALANCED", "QUALITY" }
 local GRAPHICS_LABELS = { "ECO", "BAL", "HIGH" }
 local TOUCH_SIZE_LABELS = { "SMALL", "MED", "LARGE" }
+local HIT_SOUND_LABELS = { "OFF", "LOW", "STD" }
 local MARKER_QUADRANTS = {
     { -1, -1, 45 }, { 1, -1, -45 }, { -1, 1, -45 }, { 1, 1, 45 },
 }
@@ -91,6 +94,7 @@ function HudController.new(player, gui, WeaponConfig, options)
     self.lastConfirmedHudHitAt = -math.huge
     self.lastConfirmedHudHitPriority = 0
     self.damageReadoutToken = 0
+    self.hitSoundLevel = #HIT_SOUND_LABELS
 	self.settingsOpen = false
 	self.baseFov = self.options.baseFov or DEFAULT_FOV
 	self.mouseSensitivity = self.options.mouseSensitivity or DEFAULT_SENSITIVITY
@@ -566,6 +570,11 @@ function HudController:_buildSettingsMenu()
 	panel.Visible = false
 	panel.ZIndex = 10
 	panel.Parent = settingsGui
+    panel.SelectionGroup = true
+    panel.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+    panel.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+    panel.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+    panel.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
 	makeCorner(panel, 6)
 	makeStroke(panel, Color3.fromRGB(90, 102, 126), 0.15, 1)
 	self.settingsPanel = panel
@@ -574,10 +583,11 @@ function HudController:_buildSettingsMenu()
 	title.Font = Enum.Font.GothamBold
 	title.ZIndex = 11
 
-	local closeButton = makeButton(panel, "Close", "X", UDim2.new(1, -48, 0, 18), UDim2.fromOffset(28, 28))
+	local closeButton = makeButton(panel, "Close", "X", UDim2.new(1, -56, 0, 12), UDim2.fromOffset(42, 42))
 	closeButton.ZIndex = 11
+    self.settingsFocus = closeButton
 
-	self.fovValueLabel = self:_makeStepper(panel, "FOV", UDim2.fromOffset(22, touch and 60 or 74), 60, 100, 5, function()
+	self.fovValueLabel = self:_makeStepper(panel, "FOV", UDim2.fromOffset(22, touch and 58 or 67), 60, 100, 5, function()
 		return tostring(self.baseFov)
 	end, function(delta)
 		self.baseFov = clampSetting(self.baseFov + delta, 60, 100)
@@ -589,7 +599,7 @@ function HudController:_buildSettingsMenu()
 
     if touch then
         self.touchSizeValueLabel = self:_makeStepper(panel, "BUTTON SIZE",
-            UDim2.fromOffset(22, 111), 1, #TouchLayout.PRESETS, 1, function()
+            UDim2.fromOffset(22, 102), 1, #TouchLayout.PRESETS, 1, function()
                 return TOUCH_SIZE_LABELS[self.touchSizeIndex]
             end, function(delta)
                 self.touchSizeIndex = math.clamp(self.touchSizeIndex + delta,
@@ -600,7 +610,7 @@ function HudController:_buildSettingsMenu()
             end)
         self.fireAimIndex = 2
         self.fireAimValueLabel = self:_makeStepper(panel, "FIRE DRAG",
-            UDim2.fromOffset(22, 162), 1, 3, 1, function()
+            UDim2.fromOffset(22, 146), 1, 3, 1, function()
                 return FIRE_AIM_LABELS[self.fireAimIndex]
             end, function(delta)
                 self.fireAimIndex = math.clamp(self.fireAimIndex + delta, 1, 3)
@@ -608,7 +618,7 @@ function HudController:_buildSettingsMenu()
                 self:_refreshSettingsText()
             end)
     else
-	self.sensitivityValueLabel = self:_makeStepper(panel, "MOUSE SENS", UDim2.fromOffset(22, 132), 0.3, 2.5, 0.1, function()
+	self.sensitivityValueLabel = self:_makeStepper(panel, "MOUSE SENS", UDim2.fromOffset(22, 115), 0.3, 2.5, 0.1, function()
 		return string.format("%.1f", self.mouseSensitivity)
 	end, function(delta)
 		self.mouseSensitivity = clampSetting(math.floor((self.mouseSensitivity + delta) * 10 + 0.5) / 10, 0.3, 2.5)
@@ -620,7 +630,7 @@ function HudController:_buildSettingsMenu()
     end
 
     self.graphicsValueLabel = self:_makeStepper(panel, "GRAPHICS",
-        UDim2.fromOffset(22, touch and 213 or 192), 1, 3, 1, function()
+        UDim2.fromOffset(22, touch and 190 or 163), 1, 3, 1, function()
             return GRAPHICS_LABELS[self.graphicsIndex]
         end, function(delta)
             self.graphicsIndex = math.clamp(self.graphicsIndex + delta, 1, #GRAPHICS_PRESETS)
@@ -628,9 +638,18 @@ function HudController:_buildSettingsMenu()
             self:_refreshSettingsText()
         end)
 
+    self.hitSoundValueLabel = self:_makeStepper(panel, "HIT SOUND",
+        UDim2.fromOffset(22, touch and 234 or 211), 1, #HIT_SOUND_LABELS, 1, function()
+            return HIT_SOUND_LABELS[self.hitSoundLevel]
+        end, function(delta)
+            self.hitSoundLevel = math.clamp(self.hitSoundLevel + delta, 1, #HIT_SOUND_LABELS)
+            if self.hitSoundLevel == 1 then self.hitConfirmSound:Stop() end
+            self:_refreshSettingsText()
+        end)
+
     local hint = makeText(panel, "Hint",
         touch and "Drag on FIRE to aim while shooting" or "Press M to close",
-        UDim2.fromOffset(22, touch and 263 or 253), UDim2.fromOffset(260, 22), 12)
+        UDim2.fromOffset(22, touch and 275 or 257), UDim2.fromOffset(260, 16), 12)
 	hint.TextColor3 = Color3.fromRGB(162, 173, 190)
 	hint.ZIndex = 11
 
@@ -642,6 +661,12 @@ function HudController:_buildSettingsMenu()
 		self:setSettingsOpen(false)
 	end)
 
+    local function syncSelection()
+        self:_syncSettingsSelection()
+    end
+    UserInputService.LastInputTypeChanged:Connect(syncSelection)
+    GuiService.MenuOpened:Connect(syncSelection)
+    GuiService.MenuClosed:Connect(syncSelection)
 	self:_refreshSettingsText()
 end
 
@@ -658,9 +683,9 @@ function HudController:_makeStepper(parent, labelText, position, minValue, maxVa
 	label.Font = Enum.Font.GothamBold
 	label.ZIndex = 12
 
-	local minus = makeButton(row, "Minus", "-", UDim2.fromOffset(144, 0), UDim2.fromOffset(36, 36))
+	local minus = makeButton(row, "Minus", "-", UDim2.fromOffset(144, 0), UDim2.fromOffset(42, 42))
 	local value = makeText(row, "Value", getText(), UDim2.fromOffset(190, 3), UDim2.fromOffset(54, 30), 14)
-	local plus = makeButton(row, "Plus", "+", UDim2.fromOffset(258, 0), UDim2.fromOffset(36, 36))
+	local plus = makeButton(row, "Plus", "+", UDim2.fromOffset(254, 0), UDim2.fromOffset(42, 42))
 	minus.ZIndex = 12
 	value.ZIndex = 12
 	value.TextXAlignment = Enum.TextXAlignment.Center
@@ -693,6 +718,9 @@ function HudController:_refreshSettingsText()
     end
     if self.touchSizeValueLabel then
         self.touchSizeValueLabel.Text = TOUCH_SIZE_LABELS[self.touchSizeIndex]
+    end
+    if self.hitSoundValueLabel then
+        self.hitSoundValueLabel.Text = HIT_SOUND_LABELS[self.hitSoundLevel]
     end
 end
 
@@ -812,6 +840,17 @@ function HudController:setBoostFuel(ratio)
     self.boostTween:Play()
 end
 
+function HudController:_syncSettingsSelection()
+    local selected = GuiService.SelectedObject
+    local ownsSelection = selected and selected:IsDescendantOf(self.settingsPanel)
+    if self.settingsOpen and not GuiService.MenuIsOpen
+        and GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name) then
+        if not ownsSelection then GuiService.SelectedObject = self.settingsFocus end
+    elseif ownsSelection then
+        GuiService.SelectedObject = nil
+    end
+end
+
 function HudController:setSettingsOpen(open)
 	self.settingsOpen = open
 	self.settingsPanel.Visible = open
@@ -822,6 +861,7 @@ function HudController:setSettingsOpen(open)
         self.gui.DisplayOrder = open and 50 or self.defaultDisplayOrder
     end
     self.player:WaitForChild("PlayerGui"):SetAttribute("IronYardSettingsOpen", open)
+    self:_syncSettingsSelection()
 
 	if self.options.onSettingsOpenChanged then
 		self.options.onSettingsOpenChanged(open)
@@ -973,11 +1013,14 @@ function HudController:showHitFeedback(message)
     self.hitMarker.Visible = true
     self.hitMarkerPulse:Play()
 
-    local sound = self.hitConfirmSound
-    sound.Volume = style.volume
-    sound.PlaybackSpeed = style.pitch
-    sound:Stop()
-    sound:Play()
+    local volume = FeedbackPolicy.soundVolume(style, self.hitSoundLevel)
+    if volume > 0 then
+        local sound = self.hitConfirmSound
+        sound.Volume = volume
+        sound.PlaybackSpeed = style.pitch
+        sound:Stop()
+        sound:Play()
+    end
     showDamageReadout(self, readoutText, color, killed and 0.78 or 0.48)
 
     if killed then
