@@ -235,6 +235,9 @@ local REINVITE_ATTRIBUTE = "IronYardDuelReinviteDeadlines"
 local reinviteDeadlines = {}
 local inviteRows = {}
 local countdownTask
+local REQUEST_CONFIRMATION_SECONDS = 3
+local readyRequest
+local requestPending = false
 
 local function gamepadActive()
     return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
@@ -248,11 +251,13 @@ local function syncMenuSelection(preferInvite)
         return
     end
     if ownsSelection and selected.Visible and selected.Interactable and selected.Selectable then return end
-    GuiService.SelectedObject = preferInvite and invite.Visible and invite or search
+    GuiService.SelectedObject = preferInvite and invite.Visible and invite.Interactable and invite
+        or (search.Interactable and search or close)
 end
 
 local function updateQuickCancel()
     quickCancel.Visible = duelToggle.Visible and not menu.Visible
+        and not requestPending
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
         and player:GetAttribute("IronYardDuelTravel") == "SEARCHING"
         and player:GetAttribute("IronYardDuelReady") == true
@@ -289,9 +294,10 @@ local function refreshInviteRows()
         local text = blocked and string.format("WAIT %ds  ·  %s", seconds, row.name)
             or ("INVITE  " .. row.name)
         if row.button.Text ~= text then row.button.Text = text end
-        row.button.Interactable = not blocked
-        row.button.Selectable = not blocked
-        row.button.AutoButtonColor = not blocked
+        local available = not blocked and not requestPending
+        row.button.Interactable = available
+        row.button.Selectable = available
+        row.button.AutoButtonColor = available
         if blocked then
             nextRefresh = math.min(nextRefresh, remaining - seconds + 1)
         end
@@ -343,8 +349,9 @@ local function syncInviteRow(other)
     local row = { button = button, name = other.DisplayName, player = other }
     inviteRows[other.UserId] = row
     button.Activated:Connect(function()
-        if not menu.Visible or inviteRows[other.UserId] ~= row or not button.Interactable
+        if not menu.Visible or requestPending or inviteRows[other.UserId] ~= row or not button.Interactable
             or not canInvite(other) then return end
+        readyRequest = nil
         remotes.SetDuelReady:FireServer(true, other.UserId)
         setMenu(false)
     end)
@@ -382,10 +389,23 @@ local function duelLabel()
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
     local searching = canQueue and state == "SEARCHING" and ready
     local invited = canQueue and state == "INVITED" and ready
-    local now = shown and canQueue and Workspace:GetServerTimeNow() or 0
+    local now = (shown and canQueue or readyRequest ~= nil) and Workspace:GetServerTimeNow() or 0
     local incoming, incomingId, inviteExpiry, inviteSeconds
     local nextRefresh = math.huge
     local busy = state == "CONNECTING"
+    local wasPending = requestPending
+    requestPending = false
+    if readyRequest then
+        if ready == readyRequest.enabled or busy or dedicated or Workspace:GetAttribute("IronYardMatchMode") == "DUEL"
+            or now >= readyRequest.deadline + REQUEST_CONFIRMATION_SECONDS then
+            readyRequest = nil
+        elseif now < readyRequest.deadline then
+            requestPending = true
+            nextRefresh = readyRequest.deadline - now
+        else
+            nextRefresh = readyRequest.deadline + REQUEST_CONFIRMATION_SECONDS - now
+        end
+    end
     if shown and canQueue and not busy and type(invitation) == "string" then
         local sender, expiryMillis = invitation:match("^(%d+):%d+:(%d+)$")
         if sender then
@@ -396,7 +416,7 @@ local function duelLabel()
                 incoming = Players:GetPlayerByUserId(incomingId)
                 if incoming then
                     inviteSeconds = math.ceil(remaining)
-                    nextRefresh = remaining - inviteSeconds + 1
+                    nextRefresh = math.min(nextRefresh, remaining - inviteSeconds + 1)
                 end
             end
         end
@@ -475,21 +495,34 @@ local function duelLabel()
             duelToggle.Text = "R3\n1v1"
         end
     end
-    if elapsedText then
+    if requestPending then
+        duelToggle.Text = UserInputService.TouchEnabled and "1v1\n…"
+            or (readyRequest.enabled and "1v1 · SENDING" or "1v1 · CANCELLING")
+    elseif readyRequest then
+        duelToggle.Text = UserInputService.TouchEnabled and "1v1 !" or "1v1 · RETRY"
+    elseif elapsedText then
         duelToggle.Text ..= "\n" .. elapsedText
     elseif inviteSeconds then
         duelToggle.Text ..= string.format("\n%ds", inviteSeconds)
     elseif outgoingSeconds then
         duelToggle.Text ..= string.format("\n%ds", outgoingSeconds)
     end
-    status.Text = outgoingSeconds and string.format("%ds LEFT  ·  %s", outgoingSeconds,
+    local currentStatus = outgoingSeconds and string.format("%ds LEFT  ·  %s", outgoingSeconds,
         outgoingRecipient and outgoingRecipient.DisplayName or "INVITE SENT")
         or (elapsedText and ("1v1 SEARCH  ·  " .. elapsedText))
         or (states[state] or "1v1 DUEL")
-    search.Text = ready and "CANCEL REQUEST" or "FIND OPPONENT"
-    search.Interactable = not busy
+    status.Text = requestPending and "WAITING FOR SERVER"
+        or (readyRequest and "NO CONFIRMATION · TRY AGAIN" or currentStatus)
+    search.Text = requestPending and (readyRequest.enabled and "SENDING REQUEST…" or "CANCELLING…")
+        or (ready and "CANCEL REQUEST" or "FIND OPPONENT")
+    search.Interactable = not busy and not requestPending
+    search.Selectable = search.Interactable
     invite.Visible = incoming ~= nil
     decline.Visible = invite.Visible
+    invite.Interactable = not requestPending
+    decline.Interactable = invite.Interactable
+    invite.Selectable = invite.Interactable and invite.Visible
+    decline.Selectable = decline.Interactable and decline.Visible
     invite.Text = incoming and string.format("%ds · ACCEPT %s", inviteSeconds, incoming.DisplayName) or ""
     displayedInvitation = invite.Visible and invitation or nil
     displayedInviterId = invite.Visible and incomingId or nil
@@ -500,6 +533,7 @@ local function duelLabel()
     roster.Size = UDim2.new(1, -24, 1, -top - 8)
     emptyRoster.Position = roster.Position
     updateQuickCancel()
+    if wasPending ~= requestPending then refreshInviteRows() end
     syncMenuSelection(false)
     if nextRefresh < math.huge then
         duelClockTask = task.delay(math.max(0.02, nextRefresh), function()
@@ -507,6 +541,13 @@ local function duelLabel()
             duelLabel()
         end)
     end
+end
+
+local function sendReadyRequest(enabled)
+    if requestPending then return end
+    readyRequest = { enabled = enabled, deadline = Workspace:GetServerTimeNow() + REQUEST_CONFIRMATION_SECONDS }
+    duelLabel()
+    remotes.SetDuelReady:FireServer(enabled)
 end
 
 local function toggleDuel()
@@ -523,18 +564,19 @@ end
 duelToggle.Activated:Connect(toggleDuel)
 quickCancel.Activated:Connect(function()
     updateQuickCancel()
-    if quickCancel.Visible then remotes.SetDuelReady:FireServer(false) end
+    if quickCancel.Visible then sendReadyRequest(false) end
 end)
 close.Activated:Connect(function() setMenu(false) end)
 search.Activated:Connect(function()
     if not menu.Visible or not search.Interactable then return end
     local start = player:GetAttribute("IronYardDuelReady") ~= true
-    remotes.SetDuelReady:FireServer(start)
+    sendReadyRequest(start)
     if start then setMenu(false) end
 end)
 local function replyToInvitation(accept)
-    if menu.Visible and displayedInvitation then
+    if menu.Visible and not requestPending and displayedInvitation then
         if Workspace:GetServerTimeNow() < displayedInviteExpiry then
+            readyRequest = nil
             remotes.SetDuelReady:FireServer(accept, displayedInviterId, displayedInvitation)
         else
             duelLabel()
