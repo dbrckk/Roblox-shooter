@@ -1,4 +1,4 @@
--- IRON YARD / four lightweight floor identity marks for navigation.
+-- IRON YARD / painted floor signage for the yard and transfer deck.
 -- Never alter movement floor material, server raycasts, collision or AI.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Plan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("YardWayfindingPlan"))
@@ -8,15 +8,18 @@ local STEEL = Color3.fromRGB(48, 59, 62)
 local AMBER = Color3.fromRGB(232, 185, 90)
 local PAPER = Color3.fromRGB(248, 237, 211)
 
-local function stamp(folder, info)
-    -- Top surface of MapService's physical 356-stud floor is exactly y=0.
+local ROUTE_PAINT = {
+    RAMP = AMBER,
+    UNDERPASS = Color3.fromRGB(150, 216, 224),
+}
+
+local function paint(folder, name, frame, size, color)
     local part = Instance.new("Part")
-    part.Name = "YARD / SECTOR " .. info.id .. " / lane stamp"
-    part.Size = Vector3.new(24, 0.016, 7)
-    part.CFrame = CFrame.new(info.x, 0.018, info.z)
+    part.Name = name
+    part.Size = size
+    part.CFrame = frame
     part.Material = Enum.Material.SmoothPlastic
-    part.Color = STEEL
-    part.Transparency = 0.07
+    part.Color = color
     part.Anchored = true
     part.CanCollide = false
     part.CanQuery = false
@@ -24,10 +27,15 @@ local function stamp(folder, info)
     part.CastShadow = false
     part.TopSurface = Enum.SurfaceType.Smooth
     part.BottomSurface = Enum.SurfaceType.Smooth
-    -- These are intentionally Core so the sector name is still readable
-    -- on ECO mobile; only four geometry parts are used in the whole yard.
     part:SetAttribute("NeonArtTier", "Core")
     part.Parent = folder
+    return part
+end
+
+local function stamp(folder, info)
+    local part = paint(folder, "YARD / SECTOR " .. info.id .. " / lane stamp",
+        CFrame.new(info.x, 0.018, info.z), Vector3.new(24, 0.016, 7), STEEL)
+    part.Transparency = 0.07
 
     local surface = Instance.new("SurfaceGui")
     surface.Name = "YardSectorStamp"
@@ -60,9 +68,46 @@ local function stamp(folder, info)
     label.Parent = backing
 end
 
+local function transferRoute(folder, route)
+    local prefix = "TRANSFER / " .. route.id
+    local color = ROUTE_PAINT[route.id]
+    local base = paint(folder, prefix .. " / floor label", CFrame.new(route.x, 0.057, route.z),
+        Vector3.new(9.2, 0.024, 3.8), STEEL)
+    local surface = Instance.new("SurfaceGui")
+    surface.Name = "TransferRouteStamp"
+    surface.Face = Enum.NormalId.Top
+    surface.CanvasSize = Vector2.new(460, 190)
+    surface.LightInfluence = 0.32
+    surface.MaxDistance = 76
+    surface.Parent = base
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(0.92, 0.9)
+    label.Position = UDim2.fromScale(0.04, 0.05)
+    label.BackgroundTransparency = 1
+    label.Font = Enum.Font.GothamBold
+    label.Text = route.label
+    label.TextColor3 = color
+    label.TextScaled = true
+    label.Parent = surface
+
+    for index, arrow in ipairs(route.arrows) do
+        local frame = CFrame.new(arrow.x, 0.061, arrow.z) * CFrame.Angles(0, arrow.yaw, 0)
+        for _, side in ipairs({ -1, 1 }) do
+            paint(folder, prefix .. " / chevron " .. index .. ":" .. side,
+                frame * CFrame.new(side * 0.52, 0, 0)
+                    * CFrame.Angles(0, side * math.rad(37), 0),
+                Vector3.new(1.68, 0.025, 0.25), color)
+        end
+    end
+end
+
 function Art.decorate(folder)
     for _, info in ipairs(Plan.zones()) do
         stamp(folder, info)
+    end
+    for _, route in ipairs(Plan.transferRoutes()) do
+        transferRoute(folder, route)
     end
 end
 
