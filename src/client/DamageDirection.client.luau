@@ -3,7 +3,11 @@
 -- Purely cosmetic: does not affect hit registration, aiming or movement.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
-local TweenService = game:GetService("TweenService")
+local GuiService = game:GetService("GuiService")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Direction = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DamageDirectionPolicy"))
+local RENDER_BINDING = "IronYardDamageDirection"
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
@@ -31,57 +35,79 @@ for side = -1, 1, 2 do
     local wing = Instance.new("Frame")
     wing.Name = side == -1 and "ArrowLeft" or "ArrowRight"
     wing.Size = UDim2.fromOffset(5, 20)
-    wing.Position = UDim2.fromOffset(17 + side * 6, 8)
+    wing.Position = UDim2.fromOffset(17 + side * 6, 10)
     wing.AnchorPoint = Vector2.new(0.5, 0.5)
-    wing.Rotation = side == -1 and -36 or 36
-    wing.BackgroundColor3 = Color3.fromRGB(247, 131, 84)
-    wing.BackgroundTransparency = 0.08
+    wing.Rotation = side == -1 and 38 or -38
+    wing.BackgroundColor3 = Color3.fromRGB(255, 148, 99)
+    wing.BackgroundTransparency = 0
     wing.BorderSizePixel = 0
     wing.Parent = pointer
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 2)
     corner.Parent = wing
-    table.insert(wings, wing)
+    local outline = Instance.new("UIStroke")
+    outline.Color = Color3.fromRGB(30, 23, 22)
+    outline.Thickness = 1.5
+    outline.Parent = wing
+    table.insert(wings, {fill = wing, outline = outline})
 end
 
-local activeTweens = {}
-local revision = 0
-local function showDamage(source)
-    if typeof(source) ~= "Vector3" then return end
-    local camera = Workspace.CurrentCamera
-    if not camera then return end
-    local offset = source - camera.CFrame.Position
-    local flat = Vector3.new(offset.X, 0, offset.Z)
-    if flat.Magnitude < 0.5 then return end
+local hitSource
+local startedAt = 0
 
-    local relative = camera.CFrame:VectorToObjectSpace(flat.Unit)
-    local x, y = relative.X, relative.Z
-    local magnitude = math.sqrt(x * x + y * y)
-    if magnitude < 0.01 then return end
-    x, y = x / magnitude, y / magnitude
+local function clearIndicator()
+    if hitSource then RunService:UnbindFromRenderStep(RENDER_BINDING) end
+    hitSource = nil
+    pointer.Visible = false
+end
+
+local function updateIndicator()
+    local elapsed = os.clock() - startedAt
+    if elapsed >= Direction.DURATION then
+        clearIndicator()
+        return
+    end
+
+    local camera = Workspace.CurrentCamera
+    if not camera then
+        pointer.Visible = false
+        return
+    end
+    local cf = camera.CFrame
+    local offset = hitSource - cf.Position
+    local look, right = cf.LookVector, cf.RightVector
+    local x, y = Direction.project(offset.X, offset.Z, look.X, look.Z, right.X, right.Z)
+    if x == nil then
+        pointer.Visible = false
+        return
+    end
 
     local viewport = camera.ViewportSize
     local radius = math.clamp(math.min(viewport.X, viewport.Y) * 0.17, 52, 96)
-    pointer.Position = UDim2.new(0.5, math.floor(x * radius), 0.5, math.floor(y * radius))
-    pointer.Rotation = math.deg(math.atan2(x, -y))
-    pointer.Visible = true
+    local position = UDim2.new(0.5, math.round(x * radius), 0.5, math.round(y * radius))
+    local rotation = math.round(math.deg(math.atan2(x, -y)))
+    if pointer.Position ~= position then pointer.Position = position end
+    if pointer.Rotation ~= rotation then pointer.Rotation = rotation end
 
-    revision += 1
-    local thisRevision = revision
-    for _, tween in ipairs(activeTweens) do tween:Cancel() end
-    table.clear(activeTweens)
+    local alpha = Direction.transparency(elapsed, GuiService.ReducedMotionEnabled)
     for _, wing in ipairs(wings) do
-        wing.BackgroundTransparency = 0.08
-        local tween = TweenService:Create(wing, TweenInfo.new(0.72,
-            Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-            BackgroundTransparency = 1,
-        })
-        table.insert(activeTweens, tween)
-        tween:Play()
+        if wing.fill.BackgroundTransparency ~= alpha then
+            wing.fill.BackgroundTransparency = alpha
+            wing.outline.Transparency = alpha
+        end
     end
-    task.delay(0.76, function()
-        if revision == thisRevision and pointer.Parent then pointer.Visible = false end
-    end)
+    pointer.Visible = true
+end
+
+local function showDamage(source)
+    if typeof(source) ~= "Vector3" or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    local wasActive = hitSource ~= nil
+    hitSource = source
+    startedAt = os.clock()
+    if not wasActive then
+        RunService:BindToRenderStep(RENDER_BINDING, Enum.RenderPriority.Camera.Value + 3, updateIndicator)
+    end
+    updateIndicator()
 end
 
 local hitConnection = nil
@@ -93,12 +119,7 @@ local function releaseCharacter()
         hitConnection = nil
     end
     boundCharacter = nil
-    -- A deferred fade from the previous life must never hide a fresh
-    -- damage indicator or keep animating a removed character's direction.
-    revision += 1
-    for _, tween in ipairs(activeTweens) do tween:Cancel() end
-    table.clear(activeTweens)
-    pointer.Visible = false
+    clearIndicator()
 end
 
 local function bindCharacter(character)
@@ -118,9 +139,14 @@ local removingConnection = player.CharacterRemoving:Connect(function(character)
 end)
 if player.Character then bindCharacter(player.Character) end
 
+local phaseConnection = Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
+    if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then clearIndicator() end
+end)
+
 script.Destroying:Connect(function()
     addedConnection:Disconnect()
     removingConnection:Disconnect()
+    phaseConnection:Disconnect()
     releaseCharacter()
     gui:Destroy()
 end)
