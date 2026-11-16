@@ -102,6 +102,8 @@ requires(hud, (
     "self.hitMarkerPulse:Play()",
     "hitSound.Parent = SoundService",
     "self.hitConfirmSound = hitSound",
+    "FeedbackPolicy.soundVolume(style, self.hitSoundLevel)",
+    "if volume > 0 then",
     "if not readoutText then return end",
     "self.hitToken == token",
 ), "Public HUD")

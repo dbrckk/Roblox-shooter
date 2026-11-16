@@ -44,6 +44,12 @@ for needle in (
     'SetAttribute("IronYardSettingsOpen", open)',
     'settingsGui.ScreenInsets = Enum.ScreenInsets.CoreUISafeInsets',
     'self.fireAimValueLabel = self:_makeStepper(panel, "FIRE DRAG"',
+    'self.hitSoundValueLabel = self:_makeStepper(panel, "HIT SOUND"',
+    'self.hitSoundValueLabel.Text = HIT_SOUND_LABELS[self.hitSoundLevel]',
+    'if self.hitSoundLevel == 1 then self.hitConfirmSound:Stop() end',
+    'panel.SelectionGroup = true',
+    'GuiService.MenuClosed:Connect(syncSelection)',
+    'GuiService.SelectedObject = self.settingsFocus',
 ):
     assert needle in controller, f"Mobile settings wiring missing: {needle}"
 
