@@ -3,8 +3,9 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local remotes = require(ReplicatedStorage:WaitForChild("Shared")
-    :WaitForChild("PrecisionNet")).getRemotes(false)
+local shared = ReplicatedStorage:WaitForChild("Shared")
+local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(false)
+local Rules = require(shared:WaitForChild("SupplyRules"))
 local gui = Instance.new("ScreenGui")
 gui.Name = "IronYardHealingFeedback"
 gui.DisplayOrder = 24
@@ -39,11 +40,12 @@ Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
 end)
 remotes.WeaponFeedback.OnClientEvent:Connect(function(msg)
     if typeof(msg) ~= "table" or msg.kind ~= "MedicalHeal"
-        or typeof(msg.amount) ~= "number"
         or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    local amountText = Rules.formatHealAmount(msg.amount)
+    if not amountText then return end
     token += 1
     local current = token
-    card.Text = "FIELD MEDICAL  /  +" .. math.clamp(math.floor(msg.amount + 0.5), 1, 40) .. " HP"
+    card.Text = "FIELD MEDICAL  /  " .. amountText
     card.TextTransparency = 0
     card.BackgroundTransparency = 0.12
     card.Visible = true

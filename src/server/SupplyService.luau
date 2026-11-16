@@ -94,7 +94,7 @@ local function create(parent, index, x, z)
 
     local prompt = Instance.new("ProximityPrompt")
     prompt.Name = "Heal"
-    prompt.ActionText = "RECOVER +" .. Rules.HEAL_AMOUNT .. " HP"
+    prompt.ActionText = "RECOVER " .. Rules.formatHealAmount(Rules.HEAL_AMOUNT)
     prompt.ObjectText = "FIELD MEDICAL"
     prompt.HoldDuration = 0.4
     prompt.KeyboardKeyCode = Enum.KeyCode.E

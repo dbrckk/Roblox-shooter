@@ -23,18 +23,28 @@ local function serverReady(prompt)
     return prompt:GetAttribute(Rules.PROMPT_READY_ATTRIBUTE) == true
 end
 
-local function refreshPrompt(prompt)
-    local injured = humanoid ~= nil and humanoid.Parent == character
-        and Rules.needsHeal(humanoid.Health, humanoid.MaxHealth)
-    local visible = serverReady(prompt) and injured
+local function refreshPrompt(prompt, actionText)
+    local visible = serverReady(prompt) and actionText ~= nil
+    if visible and prompt.ActionText ~= actionText then
+        prompt.ActionText = actionText
+    end
     if prompt.Enabled ~= visible then
         prompt.Enabled = visible
     end
 end
 
+local function recoverActionText()
+    if not humanoid or humanoid.Parent ~= character then return nil end
+    local health, maxHealth = humanoid.Health, humanoid.MaxHealth
+    if not Rules.needsHeal(health, maxHealth) then return nil end
+    local _, amount = Rules.healedHealth(health, maxHealth)
+    return "RECOVER " .. Rules.formatHealAmount(amount)
+end
+
 local function refreshPrompts()
+    local actionText = recoverActionText()
     for prompt in pairs(watchedPrompts) do
-        refreshPrompt(prompt)
+        refreshPrompt(prompt, actionText)
     end
 end
 
@@ -44,13 +54,16 @@ local function unwatch(prompt)
     disconnectAll(signals)
     watchedPrompts[prompt] = nil
     -- Restore the server's presentation if this script or its tag is removed.
-    if prompt.Parent then prompt.Enabled = serverReady(prompt) end
+    if prompt.Parent then
+        prompt.ActionText = "RECOVER " .. Rules.formatHealAmount(Rules.HEAL_AMOUNT)
+        prompt.Enabled = serverReady(prompt)
+    end
 end
 
 local function watch(prompt)
     if not prompt:IsA("ProximityPrompt") or watchedPrompts[prompt] then return end
     local function refresh()
-        if watchedPrompts[prompt] then refreshPrompt(prompt) end
+        if watchedPrompts[prompt] then refreshPrompt(prompt, recoverActionText()) end
     end
     watchedPrompts[prompt] = {
         prompt:GetAttributeChangedSignal(Rules.PROMPT_READY_ATTRIBUTE):Connect(refresh),
