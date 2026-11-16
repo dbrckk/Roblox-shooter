@@ -1,0 +1,7 @@
+IRON YARD v83 — single public update, 16 November 2026.
+
+Deploy PR #128 (ac681f7ff6e5aa0136bc921e56bd54951417d637) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Show a native medical interaction only to injured local players when the station is ready. Continue to display the station status to everyone. Luau, Rojo and client lifecycle simulation passed.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
