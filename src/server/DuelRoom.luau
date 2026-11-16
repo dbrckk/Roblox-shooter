@@ -40,6 +40,7 @@ local function clearRequest(player)
     if index then table.remove(order, index) end
     if player.Parent == Players then
         player:SetAttribute("IronYardDuelSearchStartedAt", nil)
+        player:SetAttribute("IronYardDuelOutgoingInviteExpiresAt", nil)
         player:SetAttribute("IronYardDuelReady", false)
     end
 end
@@ -201,19 +202,25 @@ function Room.request(player, enabled, target, invitation)
             return
         end
     end
-    if not entries[player] then table.insert(order, player) end
+    local previous = entries[player]
+    local now = Workspace:GetServerTimeNow()
+    if opponent and previous and previous.target == opponent and now < previous.expires then
+        return
+    end
+    if not previous then table.insert(order, player) end
     local entry = { target = opponent }
     if opponent then
         invitationSequence += 1
-        local expiryMillis = math.floor((Workspace:GetServerTimeNow() + INVITE_TIMEOUT) * 1000)
+        local expiryMillis = math.floor((now + INVITE_TIMEOUT) * 1000)
         entry.expires = expiryMillis / 1000
         -- Publish the identity and deadline together so the HUD never mixes two invitations.
         entry.invitation = string.format("%d:%d:%.0f", player.UserId, invitationSequence, expiryMillis)
         player:SetAttribute("IronYardDuelSearchStartedAt", nil)
-    elseif not entries[player] or entries[player].target then
-        player:SetAttribute("IronYardDuelSearchStartedAt", Workspace:GetServerTimeNow())
+    elseif not previous or previous.target then
+        player:SetAttribute("IronYardDuelSearchStartedAt", now)
     end
     entries[player] = entry
+    player:SetAttribute("IronYardDuelOutgoingInviteExpiresAt", entry.expires)
     player:SetAttribute("IronYardDuelReady", true)
     setState(player, opponent and "INVITED" or "SEARCHING")
 end

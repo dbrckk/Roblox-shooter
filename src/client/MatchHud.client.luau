@@ -333,6 +333,7 @@ local displayedInvitation
 local displayedInviterId
 local displayedInviteExpiry
 local SEARCH_STARTED_ATTRIBUTE = "IronYardDuelSearchStartedAt"
+local OUTGOING_INVITE_ATTRIBUTE = "IronYardDuelOutgoingInviteExpiresAt"
 local duelClockTask
 local function duelLabel()
     if duelClockTask then
@@ -351,6 +352,7 @@ local function duelLabel()
     local shown = (canQueue or returnAvailable)
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
     local searching = canQueue and state == "SEARCHING" and ready
+    local invited = canQueue and state == "INVITED" and ready
     local now = shown and canQueue and Workspace:GetServerTimeNow() or 0
     local incoming, incomingId, inviteExpiry, inviteSeconds
     local nextRefresh = math.huge
@@ -382,6 +384,15 @@ local function duelLabel()
             nextRefresh = math.min(nextRefresh, seconds + 1 - elapsed)
         end
     end
+    local outgoingSeconds
+    local outgoingExpiry = player:GetAttribute(OUTGOING_INVITE_ATTRIBUTE)
+    if invited and shown and type(outgoingExpiry) == "number" then
+        local remaining = outgoingExpiry - now
+        if remaining > 0 then
+            outgoingSeconds = math.ceil(remaining)
+            nextRefresh = math.min(nextRefresh, remaining - outgoingSeconds + 1)
+        end
+    end
     duelToggle.Visible = shown
     duelToggle.Interactable = state ~= "RETURNING"
     if not shown or returnAvailable or state == "CONNECTING" then setMenu(false) end
@@ -396,6 +407,8 @@ local function duelLabel()
         duelToggle.Text = "1v1 · INVITE"
     elseif searching then
         duelToggle.Text = "1v1 · SEARCHING"
+    elseif invited then
+        duelToggle.Text = "1v1 · SENT"
     elseif state == "INVITE_DECLINED" then
         duelToggle.Text = "1v1 · DECLINED"
     elseif ready then
@@ -412,6 +425,8 @@ local function duelLabel()
             duelToggle.Text = "1v1 !"
         elseif searching then
             duelToggle.Text = elapsedText and "1v1" or "1v1\nSEARCH"
+        elseif invited and outgoingSeconds then
+            duelToggle.Text = "SENT"
         elseif ready then
             duelToggle.Text = "1v1 ✓"
         end
@@ -420,8 +435,11 @@ local function duelLabel()
         duelToggle.Text ..= "\n" .. elapsedText
     elseif inviteSeconds then
         duelToggle.Text ..= string.format("\n%ds", inviteSeconds)
+    elseif outgoingSeconds then
+        duelToggle.Text ..= string.format("\n%ds", outgoingSeconds)
     end
-    status.Text = elapsedText and ("1v1 SEARCH  ·  " .. elapsedText)
+    status.Text = outgoingSeconds and string.format("INVITE SENT  ·  %ds LEFT", outgoingSeconds)
+        or (elapsedText and ("1v1 SEARCH  ·  " .. elapsedText))
         or (states[state] or "1v1 DUEL")
     search.Text = ready and "CANCEL REQUEST" or "FIND OPPONENT"
     search.Interactable = not busy
@@ -485,6 +503,7 @@ UserInputService.InputBegan:Connect(function(input, used)
 end)
 for _, name in ipairs({
     "IronYardDuelReady", "IronYardDuelTravel", "IronYardDuelInvitation", SEARCH_STARTED_ATTRIBUTE,
+    OUTGOING_INVITE_ATTRIBUTE,
 }) do
     player:GetAttributeChangedSignal(name):Connect(duelLabel)
 end
