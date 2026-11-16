@@ -578,10 +578,11 @@ function MatchService.start()
             DuelRoom.request(player, enabled, target, invitation)
         end
     end)
-    remotes.ReturnToFfa.OnServerEvent:Connect(function(player)
+    remotes.ReturnToFfa.OnServerEvent:Connect(function(player, requestedPhase, requestedRound)
         if not RemoteGuard.allow(player, "ReturnToFfa") then return end
-        if DuelRoom.isDedicated and (phase == "WAITING" or phase == "RESULTS"
-            or (phase == "COUNTDOWN" and not duel)) then
+        -- A return sent from an older screen must not cancel a newer duel.
+        if DuelRoom.isDedicated and requestedPhase == phase and requestedRound == round
+            and (phase == "WAITING" or phase == "RESULTS" or (phase == "COUNTDOWN" and not duel)) then
             DuelRoom.returnToFfa(player, true)
         end
     end)

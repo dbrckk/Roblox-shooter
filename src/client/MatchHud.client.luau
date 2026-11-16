@@ -371,6 +371,7 @@ local displayedInviteExpiry
 local SEARCH_STARTED_ATTRIBUTE = "IronYardDuelSearchStartedAt"
 local OUTGOING_INVITE_ATTRIBUTE = "IronYardDuelOutgoingInvite"
 local duelClockTask
+local returnPhase, returnRound
 local function duelLabel()
     if duelClockTask then
         task.cancel(duelClockTask)
@@ -385,6 +386,8 @@ local function duelLabel()
     local canQueue = not dedicated
         and Workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" and phase ~= "RESULTS"
     local returnAvailable = dedicated and (phase == "WAITING" or phase == "COUNTDOWN")
+    returnPhase = returnAvailable and phase or nil
+    returnRound = returnAvailable and Workspace:GetAttribute("NeonMatchRound") or nil
     local shown = (canQueue or returnAvailable)
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
     local searching = canQueue and state == "SEARCHING" and ready
@@ -575,7 +578,9 @@ end
 local function toggleDuel()
     if not duelToggle.Visible or not duelToggle.Interactable or GuiService.MenuIsOpen then return end
     if Workspace:GetAttribute("IronYardDedicatedDuel") then
-        remotes.ReturnToFfa:FireServer()
+        if returnPhase and returnRound then
+            remotes.ReturnToFfa:FireServer(returnPhase, returnRound)
+        end
         return
     end
     local opening = not menu.Visible
