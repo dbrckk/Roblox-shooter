@@ -26,6 +26,7 @@ local started = false
 local arrivalDeadline
 local pairArrived = false
 local rosterStore
+local invitationSequence = 0
 
 local function setState(player, state)
     if player.Parent == Players then player:SetAttribute("IronYardDuelTravel", state) end
@@ -99,21 +100,13 @@ local function reserve(first, second)
     end)
 end
 
-local function updateInvitations()
-    local now = os.clock()
-    for index = #order, 1, -1 do
-        local player = order[index]
-        local entry = entries[player]
-        if entry.target and (entry.target.Parent ~= Players or now >= entry.expires) then
-            clearRequest(player)
-            setState(player, "INVITE_EXPIRED")
-        end
-    end
+local function publishInvitations()
     local invitations = {}
     for _, player in ipairs(order) do
-        local target = entries[player].target
+        local entry = entries[player]
+        local target = entry.target
         if target and not invitations[target] and not pending[target] then
-            invitations[target] = player.UserId
+            invitations[target] = entry.invitation
         end
     end
     for _, player in ipairs(Players:GetPlayers()) do
@@ -124,8 +117,9 @@ local function updateInvitations()
     end
 end
 
-function Room.request(player, enabled, target)
+function Room.request(player, enabled, target, invitation)
     if pending[player] then return end
+    if invitation ~= nil and (not enabled or target == nil or typeof(invitation) ~= "string") then return end
     if not enabled then
         clearRequest(player)
         setState(player, "")
@@ -135,24 +129,47 @@ function Room.request(player, enabled, target)
     if target ~= nil then
         if typeof(target) ~= "number" or target <= 0 or target >= 2^53 or target % 1 ~= 0 then return end
         opponent = Players:GetPlayerByUserId(target)
-        if not opponent or opponent == player or pending[opponent] then
+        if invitation ~= nil then
+            local entry = opponent and entries[opponent]
+            if entry and entry.target == player and not pending[opponent]
+                and opponent.Parent == Players and os.clock() < entry.expires
+                and entry.invitation == invitation then
+                reserve(opponent, player)
+            end
+            return
+        elseif not opponent or opponent == player or pending[opponent] then
             clearRequest(player)
             setState(player, "UNAVAILABLE")
             return
         end
     end
     if not entries[player] then table.insert(order, player) end
-    entries[player] = { target = opponent, expires = os.clock() + INVITE_TIMEOUT }
+    local entry = { target = opponent }
+    if opponent then
+        invitationSequence += 1
+        entry.invitation = string.format("%d:%d", player.UserId, invitationSequence)
+        entry.expires = os.clock() + INVITE_TIMEOUT
+    end
+    entries[player] = entry
     player:SetAttribute("IronYardDuelReady", true)
     setState(player, opponent and "INVITED" or "SEARCHING")
 end
 
 function Room.match()
-    updateInvitations()
+    local now = os.clock()
+    for index = #order, 1, -1 do
+        local player = order[index]
+        local entry = entries[player]
+        if entry.target and (entry.target.Parent ~= Players or now >= entry.expires) then
+            clearRequest(player)
+            setState(player, "INVITE_EXPIRED")
+        end
+    end
     local first, second = Queue.pair(entries, order, function(player)
         return player.Parent == Players and not pending[player]
     end)
     if first then reserve(first, second) end
+    publishInvitations()
 end
 
 function Room.players()
