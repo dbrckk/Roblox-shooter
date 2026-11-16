@@ -121,20 +121,39 @@ local function publishInvitations()
     end
 end
 
-local function delayReinvite(senderId, recipientId)
+local function publishReinviteDeadlines(sender)
+    local recipients = reinviteAfter[sender.UserId]
+    local deadlines
+    if recipients then
+        deadlines = {}
+        for recipientId, deadline in pairs(recipients) do
+            deadlines[tostring(recipientId)] = deadline
+        end
+    end
+    sender:SetAttribute("IronYardDuelReinviteDeadlines", deadlines and HttpService:JSONEncode(deadlines) or nil)
+    if not recipients and sender:GetAttribute("IronYardDuelTravel") == "INVITE_COOLDOWN" then
+        setState(sender, "")
+    end
+end
+
+local function delayReinvite(sender, recipientId)
+    local senderId = sender.UserId
     local recipients = reinviteAfter[senderId]
     if not recipients then
         recipients = {}
         reinviteAfter[senderId] = recipients
     end
-    local expires = os.clock() + REINVITE_DELAY
+    local expires = Workspace:GetServerTimeNow() + REINVITE_DELAY
     recipients[recipientId] = expires
+    publishReinviteDeadlines(sender)
     task.delay(REINVITE_DELAY, function()
         if recipients[recipientId] ~= expires then return end
         recipients[recipientId] = nil
         if next(recipients) == nil then
             reinviteAfter[senderId] = nil
         end
+        local currentSender = Players:GetPlayerByUserId(senderId)
+        if currentSender then publishReinviteDeadlines(currentSender) end
     end)
 end
 
@@ -158,7 +177,7 @@ function Room.request(player, enabled, target, invitation)
                 if enabled then
                     reserve(opponent, player)
                 else
-                    delayReinvite(opponent.UserId, player.UserId)
+                    delayReinvite(opponent, player.UserId)
                     clearRequest(opponent)
                     setState(opponent, "INVITE_DECLINED")
                 end
@@ -168,7 +187,7 @@ function Room.request(player, enabled, target, invitation)
         end
         local recipients = reinviteAfter[player.UserId]
         local expires = recipients and recipients[target]
-        if expires and os.clock() < expires then
+        if expires and Workspace:GetServerTimeNow() < expires then
             -- A blocked invitation leaves an existing search or request intact.
             if not entries[player] then setState(player, "INVITE_COOLDOWN") end
             return
@@ -285,6 +304,10 @@ function Room.start()
     if Room.isDedicated then
         Players.PlayerAdded:Connect(admit)
         for _, player in ipairs(Players:GetPlayers()) do task.spawn(admit, player) end
+    else
+        Players.PlayerAdded:Connect(function(player)
+            if reinviteAfter[player.UserId] then publishReinviteDeadlines(player) end
+        end)
     end
     Players.PlayerRemoving:Connect(function(player)
         clearRequest(player)
