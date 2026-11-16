@@ -1,4 +1,5 @@
 local StarterGui = game:GetService("StarterGui")
+local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,6 +18,9 @@ local DEFAULT_SENSITIVITY = 1
 local GRAPHICS_PRESETS = { "ECO", "BALANCED", "QUALITY" }
 local GRAPHICS_LABELS = { "ECO", "BAL", "HIGH" }
 local TOUCH_SIZE_LABELS = { "SMALL", "MED", "LARGE" }
+local MARKER_QUADRANTS = {
+    { -1, -1, 45 }, { 1, -1, -45 }, { -1, 1, -45 }, { 1, 1, 45 },
+}
 
 local function makeCorner(parent, radius)
 	local corner = Instance.new("UICorner")
@@ -170,24 +174,53 @@ function HudController:_buildCrosshair()
     makeStroke(adsDot, Color3.fromRGB(30, 34, 32), 0.08, 1)
     self.adsDot = adsDot
 
-	local hitMarker = Instance.new("TextLabel")
-	hitMarker.Name = "HitMarker"
-	hitMarker.AnchorPoint = Vector2.new(0.5, 0.5)
-	hitMarker.BackgroundTransparency = 1
-	hitMarker.Font = Enum.Font.GothamBold
-	hitMarker.Position = UDim2.fromScale(0.5, 0.5)
-	hitMarker.Size = UDim2.fromOffset(90, 50)
-	hitMarker.Text = "x"
-	hitMarker.TextColor3 = Color3.fromRGB(255, 255, 255)
-    local touchHitMarker = UserInputService.TouchEnabled
-	hitMarker.TextScaled = not touchHitMarker
-    hitMarker.TextSize = 31
-    hitMarker.TextStrokeColor3 = Color3.fromRGB(25, 28, 27)
-    hitMarker.TextStrokeTransparency = touchHitMarker and 0.25 or 1
-	hitMarker.TextTransparency = 1
-	hitMarker.Visible = false
-	hitMarker.Parent = self.gui
-	self.hitMarker = hitMarker
+    local hitMarker = Instance.new("Frame")
+    hitMarker.Name = "HitMarker"
+    hitMarker.AnchorPoint = Vector2.new(0.5, 0.5)
+    hitMarker.Position = UDim2.fromScale(0.5, 0.5)
+    hitMarker.Size = UDim2.fromOffset(56, 56)
+    hitMarker.BackgroundTransparency = 1
+    hitMarker.Visible = false
+    hitMarker.Parent = self.gui
+    self.hitMarker = hitMarker
+
+    local scale = Instance.new("UIScale")
+    scale.Parent = hitMarker
+    self.hitMarkerScale = scale
+    self.hitMarkerPulse = TweenService:Create(scale,
+        TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Scale = 1 })
+
+    local function markerLine(name, x, y, length, thickness, rotation)
+        local line = Instance.new("Frame")
+        line.Name = name
+        line.AnchorPoint = Vector2.new(0.5, 0.5)
+        line.Position = UDim2.new(0.5, x, 0.5, y)
+        line.Size = UDim2.fromOffset(length, thickness)
+        line.Rotation = rotation
+        line.BorderSizePixel = 0
+        line.ZIndex = 4
+        line.Parent = hitMarker
+        makeStroke(line, Color3.fromRGB(24, 28, 27), 0.15, 1)
+        return line
+    end
+
+    self.hitArms, self.eliminationArms = {}, {}
+    for index, direction in ipairs(MARKER_QUADRANTS) do
+        local x, y, rotation = table.unpack(direction)
+        self.hitArms[index] = markerLine("HitArm", 8 * x, 8 * y, 9, 2, rotation)
+        self.eliminationArms[index] = markerLine("EliminationArm", 18 * x, 18 * y, 5, 2, rotation)
+    end
+    self.headshotChevron = {
+        markerLine("HeadshotChevron", -3, -21, 7, 2, -35),
+        markerLine("HeadshotChevron", 3, -21, 7, 2, 35),
+    }
+
+    local hitSound = Instance.new("Sound")
+    hitSound.Name = "IronYardHitConfirm"
+    hitSound.SoundId = "rbxasset://sounds/electronicpingshort.wav"
+    hitSound.Parent = SoundService
+    self.gui.Destroying:Connect(function() hitSound:Destroy() end)
+    self.hitConfirmSound = hitSound
 
     -- A subtitle beneath the crosshair never obscures the target.
     local elimination = Instance.new("TextLabel")
@@ -209,7 +242,7 @@ function HudController:_buildCrosshair()
     self.eliminationToken = 0
 
     -- Single reused label: confirmed health loss or spawn shield only.
-    -- No per-shot BillboardGui, sounds, debris, or UI object allocation.
+    -- No per-shot BillboardGui, debris, or UI object allocation.
     local readout = Instance.new("TextLabel")
     readout.Name = "DamageReadout"
     readout.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -882,7 +915,10 @@ end
 function HudController:showProtectedFeedback()
     -- Avoid replacing a recently confirmed elimination with a weaker shield
     -- indicator from another pellet or a lagged hit notification.
-    if os.clock() - self.lastConfirmedHudHitAt < 0.24 then return end
+    local recent = FeedbackPolicy.markerStyle(self.lastConfirmedHudHitPriority)
+    if os.clock() - self.lastConfirmedHudHitAt < math.max(0.24, recent and recent.duration or 0) then
+        return
+    end
     showDamageReadout(self, FeedbackPolicy.readout("Protected"),
         Color3.fromRGB(172, 208, 226), 0.48)
 end
@@ -890,36 +926,46 @@ end
 function HudController:showHitFeedback(message)
     local killed = message.killed == true
     local headshot = message.headshot == true
+    local readoutText = FeedbackPolicy.readout("Hit", message.damage, headshot)
+    if not readoutText then return end
     local priority = CombatVfxProfile.hitPriority(headshot, killed)
+    local previous = FeedbackPolicy.markerStyle(self.lastConfirmedHudHitPriority)
     local now = os.clock()
     if not CombatVfxProfile.shouldDisplayHit(now,
-        self.lastConfirmedHudHitAt, self.lastConfirmedHudHitPriority, priority) then
+        self.lastConfirmedHudHitAt, self.lastConfirmedHudHitPriority, priority,
+        previous and previous.duration) then
         return
     end
     self.lastConfirmedHudHitAt = now
     self.lastConfirmedHudHitPriority = priority
     self.hitToken += 1
     local token = self.hitToken
-    local color = killed and Color3.fromRGB(247, 189, 105)
-        or (headshot and Color3.fromRGB(255, 226, 153)
-            or Color3.fromRGB(255, 255, 255))
-
-    -- Only actual server-confirmed hits emit the X and damage text.
-    self.hitMarker.Text = "×"
-    self.hitMarker.TextColor3 = color
-    self.hitMarker.TextTransparency = 0
+    local style = FeedbackPolicy.markerStyle(priority)
+    local color = Color3.fromRGB(table.unpack(style.tint))
+    for index, direction in ipairs(MARKER_QUADRANTS) do
+        local arm = self.hitArms[index]
+        arm.Position = UDim2.new(0.5, direction[1] * style.offset, 0.5, direction[2] * style.offset)
+        arm.Size = UDim2.fromOffset(style.length, style.thickness)
+        arm.BackgroundColor3 = color
+        local endMark = self.eliminationArms[index]
+        endMark.BackgroundColor3 = color
+        endMark.Visible = killed
+    end
+    for _, mark in ipairs(self.headshotChevron) do
+        mark.BackgroundColor3 = color
+        mark.Visible = headshot
+    end
+    self.hitMarkerPulse:Cancel()
+    self.hitMarkerScale.Scale = 1.09
     self.hitMarker.Visible = true
-    self.hitMarker.Size = UDim2.fromOffset(
-        killed and 100 or (headshot and 100 or 82),
-        killed and 60 or (headshot and 60 or 46))
-    if UserInputService.TouchEnabled then
-        self.hitMarker.TextSize = killed and 35 or (headshot and 31 or 27)
-    end
+    self.hitMarkerPulse:Play()
 
-    local readoutText = FeedbackPolicy.readout("Hit", message.damage, headshot)
-    if readoutText then
-        showDamageReadout(self, readoutText, color, killed and 0.78 or 0.48)
-    end
+    local sound = self.hitConfirmSound
+    sound.Volume = style.volume
+    sound.PlaybackSpeed = style.pitch
+    sound:Stop()
+    sound:Play()
+    showDamageReadout(self, readoutText, color, killed and 0.78 or 0.48)
 
     if killed then
         self.eliminationToken += 1
@@ -937,9 +983,8 @@ function HudController:showHitFeedback(message)
         end)
     end
 
-    task.delay(killed and 0.35 or 0.16, function()
+    task.delay(style.duration, function()
         if self.hitToken == token then
-            self.hitMarker.TextTransparency = 1
             self.hitMarker.Visible = false
         end
     end)

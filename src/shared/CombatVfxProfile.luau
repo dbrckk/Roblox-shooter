@@ -127,12 +127,14 @@ function Profile.hitPriority(headshot, killed)
 end
 
 -- A real shotgun kill must override a body-hit glint from the same volley.
-function Profile.shouldDisplayHit(now, lastAt, lastPriority, priority)
+function Profile.shouldDisplayHit(now, lastAt, lastPriority, priority, lowerPriorityHold)
     if type(now) ~= "number" or now ~= now or math.abs(now) == math.huge
         or type(lastAt) ~= "number" or lastAt ~= lastAt
         or type(priority) ~= "number" or priority < 1 then return false end
     if now < lastAt then return false end
-    return now - lastAt >= 0.11 or priority > (lastPriority or 0)
+    lastPriority = lastPriority or 0
+    local interval = priority < lastPriority and (lowerPriorityHold or 0.11) or 0.11
+    return now - lastAt >= interval or priority > lastPriority
 end
 
 function Profile.pelletVisualCount(preset, touch, distance)

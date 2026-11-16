@@ -25,6 +25,7 @@ def requires(src, needles, label):
 requires(policy, (
     "function Feedback.actualDamage(before, after)",
     "function Feedback.readout(kind, damage, headshot)",
+    "function Feedback.markerStyle(priority)",
     "if kind == \"Protected\" then return \"SPAWN SHIELD\" end",
     'if kind ~= "Hit" or not finite(damage) or damage <= 0 then return nil end',
 ), "Pure feedback")
@@ -68,11 +69,19 @@ requires(hud, (
     "CombatVfxProfile.shouldDisplayHit(now,",
     "self.lastConfirmedHudHitPriority = priority",
     "self.damageReadoutToken == token",
-    'self.hitMarker.Text = "×"',
+    'markerLine("HitArm"',
+    'markerLine("EliminationArm"',
+    'markerLine("HeadshotChevron"',
+    "previous and previous.duration",
+    "self.hitMarkerPulse:Play()",
+    "hitSound.Parent = SoundService",
+    "self.hitConfirmSound = hitSound",
+    "if not readoutText then return end",
+    "self.hitToken == token",
 ), "Public HUD")
 requires(vfx, (
     "function Profile.hitPriority(headshot, killed)",
-    "function Profile.shouldDisplayHit(now, lastAt, lastPriority, priority)",
+    "function Profile.shouldDisplayHit(now, lastAt, lastPriority, priority, lowerPriorityHold)",
 ), "Kill-first short-lived hit priority")
 requires(remote_budget, (
     'local Vfx = require("./CombatVfxProfile")',

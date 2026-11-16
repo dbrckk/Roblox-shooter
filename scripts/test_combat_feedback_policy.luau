@@ -1,4 +1,5 @@
 local Feedback = require("../src/shared/CombatFeedbackPolicy")
+local Vfx = require("../src/shared/CombatVfxProfile")
 
 local function eq(actual, expected, label)
     assert(actual == expected, label .. ": " .. tostring(actual))
@@ -21,4 +22,18 @@ eq(Feedback.readout("Miss", 24, true), nil, "No misleading miss readout")
 eq(Feedback.readout("Hit", -3, false), nil, "No negative damage text")
 eq(Feedback.readout("Hit", math.huge, false), nil, "No infinite text")
 eq(Feedback.readout("Hit", 999999, false), "9999 DMG", "Bound UI numbers")
+
+local body, head, elimination = Feedback.markerStyle(1), Feedback.markerStyle(2), Feedback.markerStyle(3)
+for _, style in ipairs({ body, head, elimination }) do
+    local innerEdge = style.offset - (style.length + style.thickness) / (2 * math.sqrt(2)) - 1
+    assert(innerEdge >= 3.9, "Outlined strokes leave the center and ADS dot visible")
+    assert(style.volume <= 0.22 and style.pitch > 0)
+end
+assert(body.duration < head.duration and head.duration < elimination.duration)
+assert(body.pitch ~= head.pitch and body.pitch ~= elimination.pitch and head.pitch ~= elimination.pitch)
+assert(Vfx.shouldDisplayHit(10.05, 10, 1, 3, body.duration))
+assert(not Vfx.shouldDisplayHit(10.15, 10, 3, 2, elimination.duration))
+assert(Vfx.shouldDisplayHit(10.36, 10, 3, 1, elimination.duration))
+assert(not Vfx.shouldDisplayHit(10.15, 10, 2, 1, head.duration))
+assert(Vfx.shouldDisplayHit(10.15, 10, 2, 2, head.duration))
 print("IRON YARD real-HP combat feedback, shield recognition and readouts: OK")
