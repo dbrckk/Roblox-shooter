@@ -1,0 +1,7 @@
+IRON YARD v81 — single public update, 16 November 2026.
+
+Deploy PR #126 (d1f5575237e96b80b61a264cf8dad97c45823665) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Update the four field medical models. Tie signs and prompts to match phase and cooldown, and share authoritative line of sight between human and bot healing. Rojo, Luau tests and the local service simulation passed.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
