@@ -483,6 +483,7 @@ def main():
     duel_spawn = source("src/server/SpawnService.luau")
     duel_spawn_plan = source("src/shared/DuelSpawnPlan.luau")
     duel_supply = source("src/server/SupplyService.luau")
+    supply_rules = source("src/shared/SupplyRules.luau")
     for token in (
         "function Duel.canStart(players, readyA, readyB)",
         "function Duel.sameParticipants(players, first, second)",
@@ -560,11 +561,15 @@ def main():
     ):
         has(duel_spawn_plan, token, "Validated opposing spawn pad policy")
     for token in (
-        'prompt.Enabled = ready and not duelActive',
-        'if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then return false end',
-        'Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(function()',
+        'prompt.Enabled = state == "READY"',
+        'stationState(now, station.readyAt) ~= "READY"',
+        'Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(refresh)',
+        'Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(refresh)',
+        'or not hasClearAccess(character, root, station)',
     ):
-        has(duel_supply, token, "Fair-play medical disable in duel")
+        has(duel_supply, token, "Medical prompt and authoritative admission are synchronized")
+    has(supply_rules, 'if mode == "DUEL" then return "DUEL_CLOSED" end',
+        "Medical is closed throughout a duel")
     has(match, 'if winningPlayer and winningPlayer.Parent == Players',
         "Only present combatants can receive duel victories")
     for token in (
