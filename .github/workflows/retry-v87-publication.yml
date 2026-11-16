@@ -1,0 +1,52 @@
+name: Recover the queued IRON YARD v87 publication
+
+on:
+  push:
+    branches: [ops/retry-v87-publication]
+
+permissions:
+  actions: write
+  contents: read
+
+jobs:
+  recover:
+    if: github.repository == 'dbrckk/Roblox-shooter'
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - name: Replace the stalled run if it has never started a job
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: 4033b06ec4019040ecbe7d60201953678e91fec7
+          STALLED_RUN: '43874520197'
+          PUBLISH_WORKFLOW: publish-roblox-public.yml
+        run: |
+          set -euo pipefail
+          repo="repos/$GITHUB_REPOSITORY"
+          endpoint="$repo/actions/runs/$STALLED_RUN"
+          live="$(gh api "$repo/git/ref/heads/main" --jq .object.sha)"
+          test "$live" = "$RELEASE_SHA"
+          gh api "$endpoint" | jq -e --arg sha "$RELEASE_SHA" \
+            '.head_branch == "main" and .head_sha == $sha and .status == "queued"'
+          gh api "$endpoint/jobs" | jq -e '.total_count == 0'
+          gh api -X POST "$endpoint/cancel"
+          for attempt in {1..15}; do
+            status="$(gh api "$endpoint" --jq '.status + "/" + (.conclusion // "")')"
+            [[ "$status" == completed/cancelled ]] && break
+            if [[ "$attempt" == 5 && "$status" == queued/ ]]; then
+              gh api "$endpoint/jobs" | jq -e '.total_count == 0'
+              gh api -X POST "$endpoint/force-cancel"
+            fi
+            sleep 4
+          done
+          test "$status" = completed/cancelled
+          gh api "$endpoint/jobs" | jq -e '.total_count == 0'
+          test "$(gh api "$repo/git/ref/heads/main" --jq .object.sha)" = "$RELEASE_SHA"
+          gh api -X GET "$repo/actions/workflows/$PUBLISH_WORKFLOW/runs" \
+            -f head_sha="$RELEASE_SHA" -f branch=main -f per_page=50 \
+            --jq '[.workflow_runs[] | select(.status != "completed" or .conclusion == "success")] | length' \
+            | grep -qx 0
+          gh workflow run "$PUBLISH_WORKFLOW" --repo "$GITHUB_REPOSITORY" --ref main \
+            --field check_only=false --field confirmation="PUBLISH IRON YARD PUBLIC"
+          echo "Requeued original v87 commit $RELEASE_SHA through its public release workflow."
