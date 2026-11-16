@@ -1,0 +1,7 @@
+IRON YARD v77 — single public update, 16 November 2026.
+
+Deploy PR #122 (7b5d5b0d7a160900c0dc548e2a227c7140c15e9a) to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+The original raised central deck gains a walkable ramp from the yard and an open lower route between grounded supports. All twelve duel pads remain at their original coordinates. Static geometry checks, Luau compilation and Rojo CI passed. Roblox client movement remains to be checked.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
