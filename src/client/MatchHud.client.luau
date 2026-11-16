@@ -367,8 +367,14 @@ local function update()
         headerText = "IRON YARD  |  FREIGHT TERMINAL"
         if Workspace:GetAttribute("IronYardDedicatedDuel") then
             local travel = player:GetAttribute("IronYardDuelTravel")
-            detailText = travel == "FAILED" and "RETURN FAILED · TRY BACK TO FFA"
-                or (travel == "RETURNING" and states.RETURNING or "WAITING FOR OPPONENT")
+            if travel == "FAILED" then
+                detailText = "RETURN FAILED · TRY BACK TO FFA"
+            elseif travel == "RETURNING" then
+                detailText = states.RETURNING
+            else
+                detailText = seconds > 0 and string.format("WAITING FOR OPPONENT  /  %ds", seconds)
+                    or "WAITING FOR OPPONENT"
+            end
         else
             detailText = "WAITING FOR OPERATORS"
         end
