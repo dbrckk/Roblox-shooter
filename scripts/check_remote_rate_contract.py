@@ -95,10 +95,10 @@ in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(function(player, e
                'typeof(enabled) ~= "boolean"',
                'player:SetAttribute("IronYardDuelReady", enabled)',
            ))
-in_handler(match, "remotes.ReturnToFfa.OnServerEvent:Connect(function(player)",
+in_handler(match, "remotes.ReturnToFfa.OnServerEvent:Connect(function(player, requestedPhase, requestedRound)",
            '\n    Workspace:SetAttribute("IronYardDedicatedDuel"', (
                'RemoteGuard.allow(player, "ReturnToFfa")',
-               'DuelRoom.isDedicated',
+               'DuelRoom.isDedicated and requestedPhase == phase and requestedRound == round',
                'DuelRoom.returnToFfa(player, true)',
            ))
 assert 'RemoteGuard.allow(player, "Diagnostics")' in diagnostics

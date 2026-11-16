@@ -142,6 +142,7 @@ end
 local rematch = resultAction("Rematch", "REMATCH", 44)
 local back = resultAction("BackToFFA", "BACK TO FFA", 226)
 back.Modal = true
+local displayedResultsRound
 
 local function syncResultSelection()
     local selected = GuiService.SelectedObject
@@ -169,7 +170,7 @@ rematch.Activated:Connect(function()
 end)
 back.Activated:Connect(function()
     if not root.Visible or not back.Visible or not back.Interactable then return end
-    remotes.ReturnToFfa:FireServer()
+    remotes.ReturnToFfa:FireServer("RESULTS", displayedResultsRound)
 end)
 
 local function safeCount(attr)
@@ -212,6 +213,7 @@ end
 
 local function render()
     if Workspace:GetAttribute("NeonMatchPhase") ~= "RESULTS" then
+        displayedResultsRound = nil
         back.Visible = false
         rematch.Visible = false
         root.Visible = false
@@ -226,6 +228,7 @@ local function render()
         or Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
     local round = snapshot and snapshot.round
         or Workspace:GetAttribute("NeonMatchRound") or 0
+    displayedResultsRound = round
     local isDuel = snapshot and snapshot.mode == "DUEL"
         or Workspace:GetAttribute("IronYardMatchMode") == "DUEL"
     local seconds = Workspace:GetAttribute("NeonMatchTimeLeft") or 0
