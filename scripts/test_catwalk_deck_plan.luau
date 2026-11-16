@@ -46,7 +46,6 @@ for _, sample in ipairs({
 end
 assert(Plan.forCollider(nil, 64, 3, 52) == nil,
     "Unknown collider names fail closed")
-print("IRON YARD two fully cladded decks, ten physical access steps: OK")
 
 for _, side in ipairs({ -1, 1 }) do
     local landing = Plan.landing(side)
@@ -61,3 +60,39 @@ for _, side in ipairs({ -1, 1 }) do
         "Turn remains aligned with the final tread")
 end
 assert(Plan.forCollider("CATWALK / access landing 1", 6, 1.5, 5) == nil)
+
+local west = Plan.ramp(-1)
+local east = Plan.ramp(1)
+assert(west.x == -east.x and west.y == east.y and west.z == east.z
+    and west.pitch == east.pitch and west.length == east.length,
+    "Both sides get equivalent climbs")
+
+for _, side in ipairs({ -1, 1 }) do
+    local ramp = Plan.ramp(side)
+    local name = "CATWALK / access ramp " .. side
+    local collider = Plan.forCollider(name, ramp.width, ramp.thickness, ramp.length)
+    assert(collider and collider.kind == "RAMP" and collider.side == side)
+    assert(Plan.forCollider(name, ramp.width, ramp.thickness, ramp.length + 1) == nil)
+    assert(ramp.pitch > 0 and ramp.pitch < math.rad(25), "Moderate climb")
+    local sin, cos = math.sin(ramp.pitch), math.cos(ramp.pitch)
+    local midY = ramp.y + cos * ramp.thickness / 2
+    local midZ = ramp.z + sin * ramp.thickness / 2
+    local highY, lowY = midY + sin * ramp.length / 2, midY - sin * ramp.length / 2
+    local highZ, lowZ = midZ - cos * ramp.length / 2, midZ + cos * ramp.length / 2
+    assert(math.abs(highY - 13) < 0.001 and math.abs(lowY) < 0.001,
+        "The top face meets the deck and the ground without a step")
+    assert(highZ < 26 and highZ > 25.5 and math.abs(lowZ - 57) < 0.001,
+        "The deck end overlaps while the base reaches the outer yard")
+    local offset = ramp.x - side * 118
+    for _, limit in ipairs({ 30.75, 31.35 }) do
+        local original = Plan.deckEdgeSegments(side, -1, limit)
+        assert(#original == 1 and original[1].width == 2 * limit,
+            "The edge opposite the ramp has a continuous warning")
+        local segments = Plan.deckEdgeSegments(side, 1, limit)
+        assert(#segments == 2)
+        assert(segments[1].center + segments[1].width / 2 < offset - ramp.width / 2
+            and segments[2].center - segments[2].width / 2 > offset + ramp.width / 2,
+            "Rails and safety paint leave the entire ramp entrance open")
+    end
+end
+print("IRON YARD two decks, ten steps, two landings and two symmetric access ramps: OK")
