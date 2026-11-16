@@ -65,16 +65,36 @@ local function controllerActive()
     return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
 end
 local playedIntro = false
-local hintToken = 0
+local hintScheduled = false
+local phaseToken = 0
+local observedPhase, observedMode
+local activeFades = {}
+
+local function matchMode()
+    if Workspace:GetAttribute("IronYardDedicatedDuel") == true then return "DUEL" end
+    return Workspace:GetAttribute("IronYardMatchMode")
+end
+
+local function menuOpen()
+    return playerGui:GetAttribute("IronYardSettingsOpen") == true
+        or playerGui:GetAttribute("IronYardDuelMenuOpen") == true
+end
 
 local function setCardVisible(visible)
     panel.Visible = visible
     playerGui:SetAttribute("IronYardBriefingOpen", visible)
 end
 
-local function display(a, b, timeout)
-    if playerGui:GetAttribute("IronYardSettingsOpen") == true then return end
+local function clearCard()
     token += 1
+    for _, fade in ipairs(activeFades) do fade:Cancel() end
+    table.clear(activeFades)
+    setCardVisible(false)
+end
+
+local function display(a, b, timeout)
+    if matchMode() ~= "FFA" or menuOpen() then return end
+    clearCard()
     local current = token
     title.Text = a
     subtitle.Text = b
@@ -88,11 +108,13 @@ local function display(a, b, timeout)
             local fade = TweenService:Create(panel, TweenInfo.new(0.35), {BackgroundTransparency = 1})
             local fade1 = TweenService:Create(title, TweenInfo.new(0.35), {TextTransparency = 1})
             local fade2 = TweenService:Create(subtitle, TweenInfo.new(0.35), {TextTransparency = 1})
-            fade:Play()
-            fade1:Play()
-            fade2:Play()
+            activeFades = { fade, fade1, fade2 }
+            for _, tween in ipairs(activeFades) do tween:Play() end
             fade.Completed:Wait()
-            if token == current then setCardVisible(false) end
+            if token == current then
+                table.clear(activeFades)
+                setCardVisible(false)
+            end
         end)
     end
 end
@@ -100,19 +122,19 @@ end
 -- One short, non-blocking follow-up after the first actual shot.
 -- The client increments the attribute only when a live FireWeapon is sent.
 local function firstShotHint()
-    if not playedIntro or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    if not playedIntro or matchMode() ~= "FFA" or menuOpen() or hintScheduled
+        or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     if (playerGui:GetAttribute("IronYardFirstShots") or 0) < 1 then return end
-    hintToken += 1
-    if hintToken > 1 then return end
+    hintScheduled = true
     local stats = player:FindFirstChild("leaderstats")
     local kills = stats and stats:FindFirstChild("Eliminations")
     local text = Guide.hint(UserInputService.TouchEnabled, 1,
         kills and kills.Value or 0, controllerActive())
     if text then
+        local current = phaseToken
         -- Let the objective card finish; this cue never blocks input.
         task.delay(8.5, function()
-            if Workspace:GetAttribute("NeonMatchPhase") == "LIVE"
-                and hintToken == 1 then
+            if current == phaseToken and Workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
                 display("STAY ALIVE   /   TAKE COVER", text, 5)
             end
         end)
@@ -121,39 +143,40 @@ end
 
 local function onPhaseChanged()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
+    local mode = matchMode()
+    if phase == observedPhase and mode == observedMode then return end
+    observedPhase, observedMode = phase, mode
+    phaseToken += 1
+    clearCard()
+    if mode ~= "FFA" then return end
     if phase == "COUNTDOWN" then
         display("IRON YARD   /   PREPARE TO DEPLOY",
             controllerActive() and "RT FIRE • LT AIM • A JUMP"
                 or (UserInputService.TouchEnabled and "MOVE • AIM • TAP FIRE"
                     or "SPRINT • SLIDE • USE COVER"))
-    elseif phase == "LIVE" then
-        if not playedIntro then
-            playedIntro = true
-            display("MISSION   /   FREE FOR ALL",
-                Guide.objective(Workspace:GetAttribute("NeonMatchScoreLimit")), 8)
-            task.delay(8.5, function()
-                if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE"
-                    or hintToken > 0 then return end
-                local hint = Guide.hint(UserInputService.TouchEnabled, 0, 0,
-                    controllerActive())
-                if hint then display("FIRST ENGAGEMENT   /   CONTROLS", hint, 5) end
-            end)
-        else
-            token += 1
-            setCardVisible(false)
-        end
-    else
-        token += 1
-        setCardVisible(false)
+    elseif Guide.shouldPrompt(phase, playedIntro) and not menuOpen() then
+        playedIntro = true
+        display("MISSION   /   FREE FOR ALL",
+            Guide.objective(Workspace:GetAttribute("NeonMatchScoreLimit")), 8)
+        local current = phaseToken
+        task.delay(8.5, function()
+            if current ~= phaseToken or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE"
+                or hintScheduled then return end
+            local hint = Guide.hint(UserInputService.TouchEnabled, 0, 0,
+                controllerActive())
+            if hint then display("FIRST ENGAGEMENT   /   CONTROLS", hint, 5) end
+        end)
     end
 end
 
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(onPhaseChanged)
+Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(onPhaseChanged)
+Workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(onPhaseChanged)
 playerGui:GetAttributeChangedSignal("IronYardFirstShots"):Connect(firstShotHint)
 playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
-    if playerGui:GetAttribute("IronYardSettingsOpen") == true then
-        token += 1
-        setCardVisible(false)
-    end
+    if menuOpen() then clearCard() end
+end)
+playerGui:GetAttributeChangedSignal("IronYardDuelMenuOpen"):Connect(function()
+    if menuOpen() then clearCard() end
 end)
 onPhaseChanged()
