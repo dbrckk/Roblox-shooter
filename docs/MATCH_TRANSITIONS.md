@@ -9,6 +9,8 @@
 
 Le menu **1v1** (touche **V** sur PC) propose une recherche dans le serveur FFA courant et une invitation ciblée à un joueur de ce serveur. Une invitation exige l’accord des deux. La FFA continue pour le reste du serveur. Les deux combattants rejoignent une instance réservée de la place publique existante, sans création d’une autre expérience.
 
+Une invitation reste valable 30 secondes. Le bouton **ACCEPT** répond uniquement à l’invitation affichée. Si elle a expiré, a été annulée ou a été remplacée, cette réponse ne modifie pas la recherche du destinataire. Il peut accepter une nouvelle invitation dès qu’elle s’affiche.
+
 Le serveur source enregistre les deux identités dans MemoryStore avant le transfert. Le serveur réservé vérifie son roster avant de démarrer le compte à rebours. L’armement et les dégâts suivent les personnages des combattants admis. Le retour en FFA est automatique après les résultats, sauf si les deux combattants choisissent **REMATCH**. **BACK TO FFA** permet de revenir plus tôt ou de réessayer un retour échoué. Si un seul joueur arrive, l’attente est bornée et le retour est proposé. Roblox Studio conserve le duel local pour vérifier les transitions sans téléportation.
 
 Une fois un retour en FFA engagé, la salle réservée ferme la revanche, même si le transfert échoue. Après un échec ou un délai dépassé, **BACK TO FFA** redevient disponible. La relance reste individuelle et n’est pas déclenchée en boucle par le serveur.

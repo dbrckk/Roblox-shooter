@@ -558,7 +558,7 @@ function MatchService.start()
     DuelCombatState.clear()
     DuelRoom.start()
     local remotes = PrecisionNet.getRemotes(true)
-    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target)
+    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end
         if player.Parent ~= Players then return end
@@ -573,7 +573,7 @@ function MatchService.start()
                 (duel ~= nil and phase ~= "RESULTS")) then return end
             player:SetAttribute("IronYardDuelReady", enabled)
         else
-            DuelRoom.request(player, enabled, target)
+            DuelRoom.request(player, enabled, target, invitation)
         end
     end)
     remotes.ReturnToFfa.OnServerEvent:Connect(function(player)

@@ -217,12 +217,15 @@ local function updateRoster()
     end
 end
 
+local displayedInvitation
+local displayedInviterId
 local function duelLabel()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local dedicated = Workspace:GetAttribute("IronYardDedicatedDuel") == true
     local state = player:GetAttribute("IronYardDuelTravel")
     local ready = player:GetAttribute("IronYardDuelReady") == true
-    local incomingId = player:GetAttribute("IronYardDuelInvitation")
+    local invitation = player:GetAttribute("IronYardDuelInvitation")
+    local incomingId = typeof(invitation) == "string" and tonumber(invitation:match("^(%d+):%d+$"))
     local incoming = incomingId and Players:GetPlayerByUserId(incomingId)
     local canQueue = not dedicated
         and Workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" and phase ~= "RESULTS"
@@ -231,7 +234,7 @@ local function duelLabel()
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
     duelToggle.Visible = shown
     duelToggle.Interactable = state ~= "RETURNING"
-    if not shown or returnAvailable then setMenu(false) end
+    if not shown or returnAvailable or state == "CONNECTING" then setMenu(false) end
 
     if returnAvailable then
         duelToggle.Text = state == "RETURNING" and "RETURNING…" or "BACK TO FFA"
@@ -263,6 +266,8 @@ local function duelLabel()
     search.Interactable = not busy
     invite.Visible = incoming ~= nil and not busy
     invite.Text = incoming and ("ACCEPT  " .. incoming.DisplayName) or ""
+    displayedInvitation = invite.Visible and invitation or nil
+    displayedInviterId = invite.Visible and incomingId or nil
     local top = invite.Visible and 135 or 91
     roster.Visible = not busy
     roster.Position = UDim2.fromOffset(12, top)
@@ -287,10 +292,8 @@ search.Activated:Connect(function()
     if player:GetAttribute("IronYardDuelReady") ~= true then setMenu(false) end
 end)
 invite.Activated:Connect(function()
-    local incomingId = player:GetAttribute("IronYardDuelInvitation")
-    if incomingId then
-        remotes.SetDuelReady:FireServer(true, incomingId)
-        setMenu(false)
+    if displayedInvitation then
+        remotes.SetDuelReady:FireServer(true, displayedInviterId, displayedInvitation)
     end
 end)
 UserInputService.InputBegan:Connect(function(input, used)
