@@ -396,7 +396,13 @@ local function duelLabel()
     local wasPending = requestPending
     requestPending = false
     if readyRequest then
-        if ready == readyRequest.enabled or busy or dedicated or Workspace:GetAttribute("IronYardMatchMode") == "DUEL"
+        local resolved
+        if readyRequest.invitation then
+            resolved = invitation ~= readyRequest.invitation or now >= readyRequest.inviteExpiry
+        else
+            resolved = ready == readyRequest.enabled
+        end
+        if resolved or busy or dedicated or Workspace:GetAttribute("IronYardMatchMode") == "DUEL"
             or now >= readyRequest.deadline + REQUEST_CONFIRMATION_SECONDS then
             readyRequest = nil
         elseif now < readyRequest.deadline then
@@ -404,6 +410,9 @@ local function duelLabel()
             nextRefresh = readyRequest.deadline - now
         else
             nextRefresh = readyRequest.deadline + REQUEST_CONFIRMATION_SECONDS - now
+        end
+        if readyRequest and readyRequest.inviteExpiry then
+            nextRefresh = math.min(nextRefresh, readyRequest.inviteExpiry - now)
         end
     end
     if shown and canQueue and not busy and type(invitation) == "string" then
@@ -496,8 +505,9 @@ local function duelLabel()
         end
     end
     if requestPending then
-        duelToggle.Text = UserInputService.TouchEnabled and "1v1\n…"
-            or (readyRequest.enabled and "1v1 · SENDING" or "1v1 · CANCELLING")
+        local action = readyRequest.invitation and (readyRequest.enabled and "ACCEPTING" or "DECLINING")
+            or (readyRequest.enabled and "SENDING" or "CANCELLING")
+        duelToggle.Text = UserInputService.TouchEnabled and "1v1\n…" or ("1v1 · " .. action)
     elseif readyRequest then
         duelToggle.Text = UserInputService.TouchEnabled and "1v1 !" or "1v1 · RETRY"
     elseif elapsedText then
@@ -513,7 +523,8 @@ local function duelLabel()
         or (states[state] or "1v1 DUEL")
     status.Text = requestPending and "WAITING FOR SERVER"
         or (readyRequest and "NO CONFIRMATION · TRY AGAIN" or currentStatus)
-    search.Text = requestPending and (readyRequest.enabled and "SENDING REQUEST…" or "CANCELLING…")
+    local replying = requestPending and readyRequest.invitation ~= nil
+    search.Text = requestPending and not replying and (readyRequest.enabled and "SENDING REQUEST…" or "CANCELLING…")
         or (ready and "CANCEL REQUEST" or "FIND OPPONENT")
     search.Interactable = not busy and not requestPending
     search.Selectable = search.Interactable
@@ -523,7 +534,9 @@ local function duelLabel()
     decline.Interactable = invite.Interactable
     invite.Selectable = invite.Interactable and invite.Visible
     decline.Selectable = decline.Interactable and decline.Visible
-    invite.Text = incoming and string.format("%ds · ACCEPT %s", inviteSeconds, incoming.DisplayName) or ""
+    invite.Text = replying and readyRequest.enabled and "ACCEPTING…"
+        or (incoming and string.format("%ds · ACCEPT %s", inviteSeconds, incoming.DisplayName) or "")
+    decline.Text = replying and not readyRequest.enabled and "DECLINING…" or "DECLINE"
     displayedInvitation = invite.Visible and invitation or nil
     displayedInviterId = invite.Visible and incomingId or nil
     displayedInviteExpiry = invite.Visible and inviteExpiry or nil
@@ -543,11 +556,20 @@ local function duelLabel()
     end
 end
 
-local function sendReadyRequest(enabled)
+local function sendReadyRequest(enabled, inviterId, invitation, inviteExpiry)
     if requestPending then return end
-    readyRequest = { enabled = enabled, deadline = Workspace:GetServerTimeNow() + REQUEST_CONFIRMATION_SECONDS }
+    readyRequest = {
+        enabled = enabled,
+        invitation = invitation,
+        inviteExpiry = inviteExpiry,
+        deadline = Workspace:GetServerTimeNow() + REQUEST_CONFIRMATION_SECONDS,
+    }
     duelLabel()
-    remotes.SetDuelReady:FireServer(enabled)
+    if invitation then
+        remotes.SetDuelReady:FireServer(enabled, inviterId, invitation)
+    else
+        remotes.SetDuelReady:FireServer(enabled)
+    end
 end
 
 local function toggleDuel()
@@ -576,8 +598,7 @@ end)
 local function replyToInvitation(accept)
     if menu.Visible and not requestPending and displayedInvitation then
         if Workspace:GetServerTimeNow() < displayedInviteExpiry then
-            readyRequest = nil
-            remotes.SetDuelReady:FireServer(accept, displayedInviterId, displayedInvitation)
+            sendReadyRequest(accept, displayedInviterId, displayedInvitation, displayedInviteExpiry)
         else
             duelLabel()
         end
