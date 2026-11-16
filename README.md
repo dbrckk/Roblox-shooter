@@ -2,6 +2,7 @@
 
 ## Pilotage du projet — feuille de route en vigueur
 
+- **[Prompt d’amélioration — niveau de qualité RIVALS](docs/PROMPT_AMELIORATION_RIVALS.md)** : référence pour choisir et vérifier les prochains lots d’IRON YARD, de la première partie aux modes compétitifs.
 - **[Audit Android et critères de validation](docs/AUDIT_ANDROID_VISUAL_2026-11-13.md)** : défauts de HUD, d'étiquettes et de chargement PBR traités depuis v60 ; **[silhouettes VANGUARD corrigées en v61](docs/VANGUARD_MOBILE_CORE_VISIBILITY_2026-11-13.md)** et **[toit PBR + diagnostic des trois familles en v62](docs/WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md)**. Mesures de rendu réel et FPS toujours ouvertes.
 - **[Correction production v66 — nettoyage garanti des bots morts](docs/BOT_DEATH_CLEANUP_PRODUCTION_2026-11-14.md)** : conservation des quatre emplacements IA après des erreurs d'animation, délai normal de 2,5 secondes et garde contre les callbacks obsolètes.
 - **[Correction production v63 — réapparitions physiquement sûres](docs/PRODUCTION_SAFE_SPAWNS_2026-11-13.md)** : 49 positions de secours évaluées si les 12 pads et le centre sont bloqués ; refus des téléports dangereux, tests FFA/duel CI intégrés.
@@ -12,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-**État vérifié le 16 novembre 2026** — **v86 publiée sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD)**. Roblox a confirmé la **version de place 82**, source `91574ddf83d86cc2f94dc2130c39309326ec82c1`. Lorsque les quatre bornes médicales sont en recharge, le HUD des joueurs à 40 % de PV ou moins indique le délai avant la prochaine ouverture. Le compte à rebours suit une échéance serveur et le repère directionnel revient dès qu’une borne ouverte est connue du client. Les simulations client et serveur, la compilation et le build passent. Le rendu Android en partie reste à confirmer. [Publication v86](https://github.com/dbrckk/Roblox-shooter/actions/runs/43873721751) · [Prochaine ouverture médicale](https://github.com/dbrckk/Roblox-shooter/pull/131) · [Repère médical](https://github.com/dbrckk/Roblox-shooter/pull/130)
+**État vérifié le 16 novembre 2026** — Roblox a confirmé la **version de place 84** sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `47c8b9766bf57377c913c761a0acce405a6d7ece`. Elle améliore les invitations et l’attente en 1v1, ajoute un réessai automatique après un échec de téléportation et clarifie le guidage vers les stations de soin entre les étages. Le transfert réel avec deux clients et les mesures Android restent à vérifier. [Publication de la version 84](https://github.com/dbrckk/Roblox-shooter/actions/runs/43909225044)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 

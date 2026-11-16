@@ -1,0 +1,34 @@
+# Prompt de travail — Amener IRON YARD au niveau de qualité de RIVALS
+
+Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le jeu existant à chaque « go » ou « continue ». Prends RIVALS, le FPS de Nosniy Games, comme référence pour la clarté du parcours, la réactivité du combat et l’envie de rejouer. La présentation officielle décrit des duels de 1v1 à 5v5 au premier à cinq, des récompenses à débloquer et une prise en charge de plusieurs appareils. Garde l’identité du terminal de fret, les mécaniques propres à IRON YARD et des assets originaux ou sous licence vérifiée. [RIVALS sur Roblox](https://www.roblox.com/games/17625359962/RIVALS)
+
+## Partir de la version qui fonctionne
+
+1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
+2. Utilise la version publique 84 (16 novembre 2026) comme point de départ documenté. Elle inclut le FFA, le 1v1 entre joueurs du même lobby dans une instance réservée, les invitations, la revanche, le retour en FFA, cinq armes et la progression persistante. La CI et les simulations couvrent plusieurs transitions. Le transfert de bout en bout et la fluidité sur appareils réels demandent encore une mesure. [Publication Roblox](https://github.com/dbrckk/Roblox-shooter/actions/runs/43909225044) · [Transitions 1v1](MATCH_TRANSITIONS.md)
+3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. Appuie-toi sur la feuille de route active pour les détails techniques et la séquence des lots. [Feuille de route V3](ROADMAP_V3_SANS_TEST_ANDROID.md)
+
+## Ordre des chantiers et critères de livraison
+
+| Chantier | Travail attendu | Preuve demandée |
+| --- | --- | --- |
+| P0 · Première partie | Un nouveau joueur comprend le mode courant, trouve le 1v1 depuis le FFA et peut chercher, annuler ou répondre à une invitation tout en comprenant la raison d’un échec. Présente les commandes adaptées au clavier, au tactile ou à la manette. | Exécuter le parcours depuis une session neuve. Vérifier les phases, le changement de mode, les commandes visibles et l’absence de chevauchement sur petit écran. Cible de conception : deux actions au plus pour lancer la recherche depuis le HUD, délai de matchmaking mesuré à part. |
+| P0 · Intégrité du 1v1 | Consolider le parcours de bout en bout : choix, transfert, attente de l’adversaire, premier à cinq, forfait, revanche et retour. Garder l’autorité serveur sur le score, les dégâts, les récompenses et les transitions. | Vérifier avec deux clients et un troisième joueur restant en FFA. Couvrir arrivée tardive, départ en préparation, départ en manche, retour échoué, reconnexion et progression. |
+| P1 · Sensations de combat | Affiner une arme ou une interaction à la fois. Travailler la cohérence du réticule, du recul, du son, des impacts et du rechargement. Garder les silhouettes lisibles et limiter les effets qui couvrent la cible. | Comparer la même séquence avant/après à plusieurs distances, en mouvement et derrière une couverture. Distinguer tir local, hit confirmé par le serveur, et temps réel de confirmation. |
+| P1 · Arène et mobile | Renforcer les repères du terminal, la lisibilité des angles et des voies, les spawns et l’éclairage. Conserver des commandes utilisables sur petit écran et une qualité graphique adaptée au téléphone de référence. | Captures Android/PC aux mêmes positions. Comparer P95/P99 du temps d’image, pics de latence et coût des effets sur la même scène. Publier les mesures avec l’appareil, le profil graphique et le nombre de joueurs. |
+| P2 · Progression et rejouabilité | Rendre le prochain objectif visible, puis ajouter une récompense cosmétique obtenue en jouant. Étendre le contenu seulement quand les parcours existants sont fiables. Les choix compétitifs doivent rester accessibles par le jeu. | Vérifier attribution unique, sauvegarde, reconnexion et échec temporaire de stockage. Expliquer où le joueur voit la récompense et comment il l’équipe. |
+| P3 · Variété compétitive | Étudier une deuxième arène et le 2v2 après validation du 1v1. Estimer l’impact sur le temps d’attente avant d’ajouter des files, du classé ou de plus grandes équipes. | Prouver la qualité des spawns, l’équilibre des routes, le remplissage des parties et le retour au lobby dans chaque format. |
+
+## Exécuter et rendre compte
+
+- Reproduis le problème et note le comportement de départ. Modifie le parcours réel et réutilise son architecture. Réserve le nouveau contenu aux changements utilisables, avec les assets et leurs preuves de chargement quand le chantier en dépend.
+- Vérifie chaque scénario corrigé, les régressions proches, les contrats existants, la compilation Luau et le build Rojo. Vérifie les états réseau, les réponses en retard, le spam et la reconnexion quand ils concernent le lot.
+- Utilise la CI pour la logique et l’intégration. Pour le rendu, la latence, la sensation de tir, la téléportation et la persistance, distingue explicitement simulation, essai Studio et vérification Roblox en conditions réelles. Garde les objectifs chiffrés comme objectifs tant qu’ils ne sont pas mesurés.
+- Termine par le résultat visible pour le joueur, la preuve avant/après, les fichiers et la PR, puis les vérifications qui restent. Une fusion sur `main` prépare une version. Une demande distincte de mise à jour déclenche le circuit de publication publique existant avec CI du commit exact.
+- Ajoute une courte entrée de suivi à un changement de priorité ou à la clôture d’un chantier. Au prochain « continue », reprends la première vérification ou amélioration utile qui manque.
+
+## Première application
+
+Corriger la première impression du 1v1. Le briefing FFA utilise le même bandeau que le score et peut brièvement afficher un objectif FFA en plein duel, tandis que le bouton 1v1 disparaît pendant le briefing du lobby. Garder l’accès au 1v1 visible pendant les conseils FFA, suspendre les conseils quand le menu 1v1 est ouvert et préserver le score et la préparation en duel. Vérifier aussi que les conseils différés d’une ancienne manche ne réapparaissent pas dans le duel suivant.
+
+**Suivi du lot.** Les simulations Luau vérifient l’accès au menu pendant le briefing, le passage FFA → duel dans la même phase, le démarrage d’un duel réservé, les conseils retardés et la priorité de la manette sur le tactile. Les 148 vérifications existantes et le build Rojo passent. La prochaine vérification prioritaire est une session neuve sur Android, suivie d’un 1v1 à deux clients depuis le lobby jusqu’à la revanche ou au retour en FFA.

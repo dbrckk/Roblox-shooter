@@ -353,7 +353,7 @@ local function duelLabel()
         and Workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" and phase ~= "RESULTS"
     local returnAvailable = dedicated and (phase == "WAITING" or phase == "COUNTDOWN")
     local shown = (canQueue or returnAvailable)
-        and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
+        and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
     local searching = canQueue and state == "SEARCHING" and ready
     local invited = canQueue and state == "INVITED" and ready
     local now = shown and canQueue and Workspace:GetServerTimeNow() or 0
@@ -524,8 +524,7 @@ end
 player:GetAttributeChangedSignal(REINVITE_ATTRIBUTE):Connect(readReinviteDeadlines)
 readReinviteDeadlines()
 playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
-    if playerGui:GetAttribute("IronYardSettingsOpen") then setMenu(false) end
-    updateQuickCancel()
+    duelLabel()
 end)
 local travelConnections = {}
 local function watchRosterPlayer(other)
