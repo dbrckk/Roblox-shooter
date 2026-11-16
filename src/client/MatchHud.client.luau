@@ -256,26 +256,44 @@ local function readReinviteDeadlines()
     refreshInviteRows()
 end
 
+local function removeInviteRow(other)
+    local row = inviteRows[other.UserId]
+    if not row or row.player ~= other then return false end
+    inviteRows[other.UserId] = nil
+    row.button:Destroy()
+    return true
+end
+
+local function canInvite(other)
+    local travel = other:GetAttribute("IronYardDuelTravel")
+    return other.Parent == Players and other ~= player and not Workspace:GetAttribute("IronYardDuelLocal")
+        and travel ~= "CONNECTING" and travel ~= "RETURNING"
+end
+
+local function syncInviteRow(other)
+    if not canInvite(other) then return removeInviteRow(other) end
+    local previous = inviteRows[other.UserId]
+    if previous then
+        if previous.player == other then return false end
+        removeInviteRow(previous.player)
+    end
+
+    local button = duelButton(roster, other.Name, "INVITE  " .. other.DisplayName,
+        UDim2.new(1, -7, 0, 36), UDim2.fromOffset(0, 0))
+    local row = { button = button, name = other.DisplayName, player = other }
+    inviteRows[other.UserId] = row
+    button.Activated:Connect(function()
+        if not menu.Visible or inviteRows[other.UserId] ~= row or not button.Interactable
+            or not canInvite(other) then return end
+        remotes.SetDuelReady:FireServer(true, other.UserId)
+        setMenu(false)
+    end)
+    return true
+end
+
 local function updateRoster()
-    table.clear(inviteRows)
-    for _, child in ipairs(roster:GetChildren()) do
-        if child:IsA("TextButton") then child:Destroy() end
-    end
-    if Workspace:GetAttribute("IronYardDuelLocal") then
-        refreshInviteRows()
-        return
-    end
     for _, other in ipairs(Players:GetPlayers()) do
-        if other ~= player and other:GetAttribute("IronYardDuelTravel") ~= "CONNECTING" then
-            local button = duelButton(roster, other.Name, "INVITE  " .. other.DisplayName,
-                UDim2.new(1, -7, 0, 36), UDim2.fromOffset(0, 0))
-            inviteRows[other.UserId] = { button = button, name = other.DisplayName }
-            button.Activated:Connect(function()
-                if not button.Interactable then return end
-                remotes.SetDuelReady:FireServer(true, other.UserId)
-                setMenu(false)
-            end)
-        end
+        syncInviteRow(other)
     end
     refreshInviteRows()
 end
@@ -381,14 +399,30 @@ readReinviteDeadlines()
 playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
     if playerGui:GetAttribute("IronYardSettingsOpen") then setMenu(false) end
 end)
-local function rosterChanged()
-    task.defer(function()
-        if menu.Visible then updateRoster() end
-        duelLabel()
+local travelConnections = {}
+local function watchRosterPlayer(other)
+    if other == player or travelConnections[other] then return end
+    travelConnections[other] = other:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(function()
+        if travelConnections[other] and menu.Visible and syncInviteRow(other) then
+            refreshInviteRows()
+        end
     end)
+    if menu.Visible and syncInviteRow(other) then refreshInviteRows() end
+    task.defer(duelLabel)
 end
-Players.PlayerAdded:Connect(rosterChanged)
-Players.PlayerRemoving:Connect(rosterChanged)
+Players.PlayerAdded:Connect(watchRosterPlayer)
+Players.PlayerRemoving:Connect(function(other)
+    local connection = travelConnections[other]
+    if not connection then return end
+    travelConnections[other] = nil
+    connection:Disconnect()
+    if removeInviteRow(other) then refreshInviteRows() end
+    task.defer(duelLabel)
+end)
+for _, other in ipairs(Players:GetPlayers()) do watchRosterPlayer(other) end
+Workspace:GetAttributeChangedSignal("IronYardDuelLocal"):Connect(function()
+    if menu.Visible then updateRoster() end
+end)
 
 local eliminations = nil
 local statsConnection = nil
