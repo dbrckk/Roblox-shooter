@@ -136,7 +136,7 @@ def main():
         client.index("UserInputService.InputBegan:Connect(function(input, gameProcessed)")
     ), "Only one automatic-fire task shared by mouse, gamepad and touch"
     assert client.index("if onGamepadPressed(input, gameProcessed) then return end") < (
-        client.index("if gameProcessed then", client.index(
+        client.index("if gameProcessed or GuiService.MenuIsOpen then", client.index(
             "UserInputService.InputBegan:Connect(function(input, gameProcessed)")
         )
     ), "Gamepad dispatch must precede keyboard event processing"
