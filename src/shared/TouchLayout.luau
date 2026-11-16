@@ -11,6 +11,7 @@ Layout.MIN_HEIGHT = 210
 Layout.MENU_BUTTONS = {
     Settings = { x = 8, y = 90, w = 44, h = 42 },
     Duel = { x = 8, y = 138, w = 44, h = 42 },
+    CancelDuelSearch = { x = 8, y = 182, w = 44, h = 28 },
 }
 Layout.NAMES = {
     "AssaultRifle", "Pistol", "Shotgun", "Sniper", "Knife",
@@ -79,13 +80,15 @@ end
 -- Also reserve a reachable settings button outside the firing cluster.
 -- Per-frame runtime cost is zero: this function runs only on resize/preset changes.
 function Layout.check(width, height, buttons)
-    for _, menu in pairs(Layout.MENU_BUTTONS) do
+    for menuName, menu in pairs(Layout.MENU_BUTTONS) do
         if menu.x < 0 or menu.y < 88 or menu.x + menu.w > width or menu.y + menu.h > height then
             return false, "Mobile menu button outside safe viewport"
         end
-    end
-    if intersects(Layout.MENU_BUTTONS.Settings, Layout.MENU_BUTTONS.Duel) then
-        return false, "Mobile menu buttons overlap"
+        for otherName, other in pairs(Layout.MENU_BUTTONS) do
+            if menuName < otherName and intersects(menu, other) then
+                return false, "Mobile menu buttons overlap"
+            end
+        end
     end
     for _, name in ipairs(Layout.NAMES) do
         local r = buttons[name]
