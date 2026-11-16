@@ -59,6 +59,19 @@ def main():
     check("p.CanCollide = false" in art and "p.CanQuery = false" in art,
           "Decorative art must not change collision or raycasts")
 
+    station = source("src/server/InspectionStationArt.luau")
+    check(art.count("InspectionStationArt.decorate(decor, arena)") == 1,
+          "Render the native inspection station once in the arena")
+    for needle in ('"VAULT / packing station", Vector3.new(14, 5, 9)',
+                   "Vector3.new(-10, 2.5, 82)", 'low:SetAttribute("MantleTarget", true)'):
+        check(needle in map_source, "Inspection station cover footprint changed: " + needle)
+    for needle in ('part.CanCollide = false', 'part.CanQuery = false', 'part.CanTouch = false',
+                   'Enum.ModelStreamingMode.Persistent', 'cover.CFrame', 'build = front',
+                   'build = rear', 'build = flank', 'cover.Transparency = 1'):
+        check(needle in station, "Inspection station appearance or physics missing: " + needle)
+    check(station.index("model.Parent = decor") < station.index("cover.Transparency = 1"),
+          "Original visible cover must remain until its replacement is ready")
+
     perimeter = source("src/server/PerimeterWallArt.luau")
     wall_plan = source("src/shared/PerimeterWallPlan.luau")
     for needle in ('local PerimeterWallArt = require(script.Parent:WaitForChild("PerimeterWallArt"))',
