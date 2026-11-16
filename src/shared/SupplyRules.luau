@@ -26,6 +26,17 @@ function Rules.needsHeal(health, maxHealth)
         and maxHealth > 0 and health > 0 and health < maxHealth
 end
 
+function Rules.shouldGuide(mode, phase, health, maxHealth)
+    return mode == "FFA" and phase == "LIVE"
+        and Rules.needsHeal(health, maxHealth) and health / maxHealth <= 0.40
+end
+
+function Rules.guideBearing(dx, dz, rightX, rightZ)
+    local right = dx * rightX + dz * rightZ
+    local forward = dx * rightZ - dz * rightX
+    return math.deg(math.atan2(right, forward))
+end
+
 function Rules.canUse(phase, health, maxHealth, distance, now, readyAt)
     if phase ~= "LIVE" then return false end
     if not (finite(distance) and finite(now) and finite(readyAt)) then return false end
