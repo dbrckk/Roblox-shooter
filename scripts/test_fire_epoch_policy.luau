@@ -20,12 +20,20 @@ assert(not P.acceptAmmo(1, 2, 1), "Replicated round is already newer")
 assert(not P.acceptAmmo(1, 1, 2), "Newest server ammo reply takes precedence")
 assert(not P.acceptAmmo(0, 1, nil))
 assert(P.acceptAmmo(3, nil, nil))
--- Once a new duel bout begins, no earlier bout's shot OR Ammo can be used.
+-- A fresh cue can arrive before the new epoch attribute or Ammo snapshot.
+assert(P.acceptFeedback(2, 1, 1))
+assert(P.acceptFeedback(2, 2, 2))
+assert(not P.acceptFeedback(1, 2, 1), "The newer replicated epoch supersedes a delayed cue")
+assert(not P.acceptFeedback(1, 1, 2), "New Ammo or a fresh cue supersedes a delayed cue")
+assert(not P.acceptFeedback(0, 0, 0), "Lobby Ammo cannot authorize a combat cue")
+assert(not P.acceptFeedback(nil, 1, 1) and not P.acceptFeedback("2", 1, 1))
+-- Once a new duel bout begins, ignore all combat messages from earlier bouts.
 local current = 1
 for bout = 1, 24 do
     current += 1
     assert(P.matches(current, current))
     assert(not P.matches(current - 1, current))
     assert(not P.acceptAmmo(current - 1, current, current - 1))
+    assert(not P.acceptFeedback(current - 1, current, current - 1))
 end
 print("IRON YARD round-bound combat epochs / stale ammo reply policy: OK")

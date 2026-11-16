@@ -44,6 +44,7 @@ requires(server, (
     "sendProtected(player, weaponId)",
     "FeedbackPolicy.actualDamage(healthBefore, targetHumanoid.Health)",
     "FeedbackPolicy.actualDamage(oldHealth, humanoid.Health)",
+    "message.epoch = weaponRoundEpoch",
     "remotes.WeaponFeedback:FireClient(player, message)",
     "humanoid:TakeDamage(damage)",
     "targetHumanoid:TakeDamage(damage)",
@@ -58,6 +59,31 @@ requires(client, (
     "hud:showProtectedFeedback()",
     "visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)",
 ), "Client reception")
+
+feedback_handler = client.split("remotes.WeaponFeedback.OnClientEvent:Connect", 1)[1].split(
+    "remotes.WeaponFx.OnClientEvent:Connect", 1
+)[0]
+combat = feedback_handler.split('elseif message.kind == "Ammo"', 1)[0]
+guard = combat.index("FireEpochPolicy.acceptFeedback(message.epoch,")
+for effect in ("hud:showHitFeedback", "visuals:drawConfirmedHit", "hud:showProtectedFeedback"):
+    assert guard < combat.index(effect), "Old combat packets must be rejected before any cue"
+assert feedback_handler.count("advanceFeedbackEpoch(message.epoch)") == 2
+assert "advanceFeedbackEpoch(epoch)" in client.split(
+    'workspace:GetAttributeChangedSignal("IronYardFireEpoch"):Connect(function()', 1
+)[1].split("end)", 1)[0]
+reset = hud.split("function HudController:resetCombatFeedback()", 1)[1].split(
+    "function HudController:showProtectedFeedback()", 1
+)[0]
+requires(reset, (
+    "self.hitToken += 1",
+    "self.damageReadoutToken += 1",
+    "self.eliminationToken += 1",
+    "self.hitMarker.Visible = false",
+    "self.damageReadout.Visible = false",
+    "self.eliminationConfirmation.Visible = false",
+    "self.hitConfirmSound:Stop()",
+), "Round transition clears and invalidates HUD cues")
+
 requires(hud, (
     'local FeedbackPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatFeedbackPolicy"))',
     'local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))',

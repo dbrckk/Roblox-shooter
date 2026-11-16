@@ -28,4 +28,10 @@ function Policy.acceptAmmo(received, worldEpoch, latestAmmoEpoch)
     return received >= minimum
 end
 
+-- Combat confirmations can lead attribute replication, but only a
+-- live epoch may produce a hit or shield cue.
+function Policy.acceptFeedback(received, worldEpoch, latestFeedbackEpoch)
+    return Policy.acceptAmmo(received, worldEpoch, latestFeedbackEpoch) and received > 0
+end
+
 return Policy

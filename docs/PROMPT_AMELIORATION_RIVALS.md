@@ -46,3 +46,5 @@ Corriger la première impression du 1v1. Le briefing FFA utilise le même bandea
 **Retour en FFA après les résultats.** Le serveur vérifie la phase et la série affichées au moment de la demande. La simulation utilise le bouton des résultats et le vrai serveur de match pour couvrir un retour qui arrive pendant la revanche, un retour issu de la série précédente et un retour accepté depuis les résultats courants.
 
 **Confirmation des tirs.** Les touches, tirs à la tête et éliminations ont des marqueurs à centre ouvert, différenciés par leur forme et leur signal sonore. Une confirmation prioritaire reste visible pendant sa durée minimale, même sous un tir soutenu. Les marqueurs et le son sont réutilisés par le HUD. Vérifier leur lisibilité en visée et le niveau sonore sur Android et PC, en tir isolé et en rafale.
+
+**Changements de manche.** Les confirmations de touche et de bouclier suivent la génération de combat du serveur. À la prochaine manche ou reprise du 1v1, le HUD efface les anciens marqueurs et coupe leur son. La CI couvre l’ordre variable des confirmations, des mises à jour de munitions et de la réplication de la génération.
