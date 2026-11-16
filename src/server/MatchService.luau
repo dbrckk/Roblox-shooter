@@ -64,8 +64,7 @@ local function readyPlayers()
 end
 
 local function dedicatedPair(players)
-    return #players == 2
-        and not DuelRoom.isReturning(players[1]) and not DuelRoom.isReturning(players[2])
+    return #players == 2 and not DuelRoom.isClosing()
 end
 
 local function duelParticipants()
@@ -453,11 +452,9 @@ local function tick()
     end
     if phase == "WAITING" then
         if DuelRoom.isDedicated and not dedicatedPair(players) then
-            if DuelRoom.waitExpired() then
+            if DuelRoom.isClosing() or DuelRoom.waitExpired() then
                 for _, waitingPlayer in ipairs(players) do
-                    if waitingPlayer:GetAttribute("IronYardDuelTravel") == nil then
-                        DuelRoom.returnToFfa(waitingPlayer)
-                    end
+                    DuelRoom.returnToFfa(waitingPlayer)
                 end
             end
             return
@@ -559,7 +556,7 @@ function MatchService.start()
         if player.Parent ~= Players then return end
         if DuelRoom.isDedicated then
             if phase == "RESULTS" and duel and not duel.returnStarted and duelPlayersIntact()
-                and not DuelRoom.isReturning(duel.aPlayer) and not DuelRoom.isReturning(duel.bPlayer)
+                and dedicatedPair(DuelRoom.players())
                 and (duel.aPlayer == player or duel.bPlayer == player) then
                 player:SetAttribute("IronYardDuelReady", enabled)
             end
@@ -575,8 +572,7 @@ function MatchService.start()
         if not RemoteGuard.allow(player, "ReturnToFfa") then return end
         if DuelRoom.isDedicated and (phase == "WAITING" or phase == "RESULTS"
             or (phase == "COUNTDOWN" and not duel)) then
-            player:SetAttribute("IronYardDuelReady", false)
-            DuelRoom.returnToFfa(player)
+            DuelRoom.returnToFfa(player, true)
         end
     end)
     Workspace:SetAttribute("IronYardDedicatedDuel", DuelRoom.isDedicated)
