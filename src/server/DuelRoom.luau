@@ -106,7 +106,7 @@ local function reserve(first, second)
 end
 
 local function publishInvitations()
-    local now = os.clock()
+    local now = Workspace:GetServerTimeNow()
     local invitations = {}
     for _, player in ipairs(order) do
         local entry = entries[player]
@@ -175,7 +175,7 @@ function Room.request(player, enabled, target, invitation)
         if invitation ~= nil then
             local entry = opponent and entries[opponent]
             if entry and entry.target == player and not pending[opponent]
-                and opponent.Parent == Players and os.clock() < entry.expires
+                and opponent.Parent == Players and Workspace:GetServerTimeNow() < entry.expires
                 and entry.invitation == invitation then
                 if enabled then
                     reserve(opponent, player)
@@ -205,8 +205,10 @@ function Room.request(player, enabled, target, invitation)
     local entry = { target = opponent }
     if opponent then
         invitationSequence += 1
-        entry.invitation = string.format("%d:%d", player.UserId, invitationSequence)
-        entry.expires = os.clock() + INVITE_TIMEOUT
+        local expiryMillis = math.floor((Workspace:GetServerTimeNow() + INVITE_TIMEOUT) * 1000)
+        entry.expires = expiryMillis / 1000
+        -- Publish the identity and deadline together so the HUD never mixes two invitations.
+        entry.invitation = string.format("%d:%d:%.0f", player.UserId, invitationSequence, expiryMillis)
         player:SetAttribute("IronYardDuelSearchStartedAt", nil)
     elseif not entries[player] or entries[player].target then
         player:SetAttribute("IronYardDuelSearchStartedAt", Workspace:GetServerTimeNow())
@@ -217,7 +219,7 @@ function Room.request(player, enabled, target, invitation)
 end
 
 function Room.match()
-    local now = os.clock()
+    local now = Workspace:GetServerTimeNow()
     for index = #order, 1, -1 do
         local player = order[index]
         local entry = entries[player]
