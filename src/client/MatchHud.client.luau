@@ -1,5 +1,6 @@
 -- IRON YARD - competitive match scoreboard.
 local Players = game:GetService("Players")
+local GuiService = game:GetService("GuiService")
 local HttpService = game:GetService("HttpService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -10,6 +11,7 @@ local DuelReadout = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("DuelReadout"))
 local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TouchLayout"))
 local DuelSpawnPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelSpawnPlan"))
+local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "NeonStrikeMatchHud"
@@ -152,6 +154,11 @@ menu.Size = UDim2.new(0.84, 0, 0.79, 0)
 menu.BackgroundColor3 = Color3.fromRGB(27, 35, 35)
 menu.BorderSizePixel = 0
 menu.Visible = false
+menu.SelectionGroup = true
+menu.SelectionBehaviorUp = Enum.SelectionBehavior.Stop
+menu.SelectionBehaviorDown = Enum.SelectionBehavior.Stop
+menu.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
+menu.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
 menu.Parent = gui
 local menuLimit = Instance.new("UISizeConstraint")
 menuLimit.MaxSize = Vector2.new(360, 310)
@@ -229,6 +236,21 @@ local reinviteDeadlines = {}
 local inviteRows = {}
 local countdownTask
 
+local function gamepadActive()
+    return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
+end
+
+local function syncMenuSelection(preferInvite)
+    local selected = GuiService.SelectedObject
+    local ownsSelection = selected and selected:IsDescendantOf(menu)
+    if not menu.Visible or GuiService.MenuIsOpen or not gamepadActive() then
+        if ownsSelection then GuiService.SelectedObject = nil end
+        return
+    end
+    if ownsSelection and selected.Visible and selected.Interactable and selected.Selectable then return end
+    GuiService.SelectedObject = preferInvite and invite.Visible and invite or search
+end
+
 local function updateQuickCancel()
     quickCancel.Visible = duelToggle.Visible and not menu.Visible
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
@@ -246,6 +268,7 @@ local function setMenu(visible)
     gui.DisplayOrder = visible and 45 or 20
     playerGui:SetAttribute("IronYardDuelMenuOpen", visible)
     updateQuickCancel()
+    syncMenuSelection(visible)
 end
 
 local function refreshInviteRows()
@@ -267,11 +290,13 @@ local function refreshInviteRows()
             or ("INVITE  " .. row.name)
         if row.button.Text ~= text then row.button.Text = text end
         row.button.Interactable = not blocked
+        row.button.Selectable = not blocked
         row.button.AutoButtonColor = not blocked
         if blocked then
             nextRefresh = math.min(nextRefresh, remaining - seconds + 1)
         end
     end
+    syncMenuSelection(false)
     if nextRefresh < math.huge then
         countdownTask = task.delay(math.max(0.02, nextRefresh), function()
             countdownTask = nil
@@ -294,6 +319,7 @@ local function removeInviteRow(other)
     local row = inviteRows[other.UserId]
     if not row or row.player ~= other then return false end
     inviteRows[other.UserId] = nil
+    if GuiService.SelectedObject == row.button then GuiService.SelectedObject = nil end
     row.button:Destroy()
     return true
 end
@@ -401,12 +427,15 @@ local function duelLabel()
         end
     end
     local opponentLeft = state == "INVITE_TARGET_LEFT" or state == "DUEL_PARTNER_LEFT"
+    local controller = gamepadActive()
     duelToggle.Visible = shown
-    duelToggle.Interactable = state ~= "RETURNING"
+    duelToggle.Interactable = state ~= "RETURNING" and not busy
+    close.Text = controller and "R3" or "×"
     if not shown or returnAvailable or state == "CONNECTING" then setMenu(false) end
 
     if returnAvailable then
-        duelToggle.Text = state == "RETURNING" and "RETURNING…" or "BACK TO FFA"
+        duelToggle.Text = state == "RETURNING" and "RETURNING…"
+            or (controller and "R3 · FFA" or "BACK TO FFA")
     elseif state == "CONNECTING" then
         duelToggle.Text = "CONNECTING…"
     elseif state == "FAILED" or state == "INVITE_COOLDOWN" then
@@ -426,11 +455,11 @@ local function duelLabel()
     elseif ready then
         duelToggle.Text = "1v1 · WAITING"
     else
-        duelToggle.Text = UserInputService.TouchEnabled and "1v1" or "V  ·  1v1"
+        duelToggle.Text = controller and "R3 · 1v1" or (UserInputService.TouchEnabled and "1v1" or "V  ·  1v1")
     end
     if UserInputService.TouchEnabled then
         if returnAvailable then
-            duelToggle.Text = state == "RETURNING" and "…" or "FFA"
+            duelToggle.Text = state == "RETURNING" and "…" or (controller and "R3\nFFA" or "FFA")
         elseif state == "CONNECTING" then
             duelToggle.Text = "…"
         elseif incoming or state == "FAILED" or state == "INVITE_DECLINED"
@@ -442,6 +471,8 @@ local function duelLabel()
             duelToggle.Text = "SENT"
         elseif ready then
             duelToggle.Text = "1v1 ✓"
+        elseif controller then
+            duelToggle.Text = "R3\n1v1"
         end
     end
     if elapsedText then
@@ -469,6 +500,7 @@ local function duelLabel()
     roster.Size = UDim2.new(1, -24, 1, -top - 8)
     emptyRoster.Position = roster.Position
     updateQuickCancel()
+    syncMenuSelection(false)
     if nextRefresh < math.huge then
         duelClockTask = task.delay(math.max(0.02, nextRefresh), function()
             duelClockTask = nil
@@ -478,7 +510,7 @@ local function duelLabel()
 end
 
 local function toggleDuel()
-    if not duelToggle.Visible or not duelToggle.Interactable then return end
+    if not duelToggle.Visible or not duelToggle.Interactable or GuiService.MenuIsOpen then return end
     if Workspace:GetAttribute("IronYardDedicatedDuel") then
         remotes.ReturnToFfa:FireServer()
         return
@@ -495,8 +527,10 @@ quickCancel.Activated:Connect(function()
 end)
 close.Activated:Connect(function() setMenu(false) end)
 search.Activated:Connect(function()
-    remotes.SetDuelReady:FireServer(player:GetAttribute("IronYardDuelReady") ~= true)
-    if player:GetAttribute("IronYardDuelReady") ~= true then setMenu(false) end
+    if not menu.Visible or not search.Interactable then return end
+    local start = player:GetAttribute("IronYardDuelReady") ~= true
+    remotes.SetDuelReady:FireServer(start)
+    if start then setMenu(false) end
 end)
 local function replyToInvitation(accept)
     if menu.Visible and displayedInvitation then
@@ -510,11 +544,15 @@ end
 invite.Activated:Connect(function() replyToInvitation(true) end)
 decline.Activated:Connect(function() replyToInvitation(false) end)
 UserInputService.InputBegan:Connect(function(input, used)
-    if not used and input.KeyCode == Enum.KeyCode.V
-        and playerGui:GetAttribute("IronYardSettingsOpen") ~= true then
+    if used or playerGui:GetAttribute("IronYardSettingsOpen") == true then return end
+    if input.KeyCode == Enum.KeyCode.V or (input.KeyCode == Enum.KeyCode.ButtonR3
+        and GamepadCombatPolicy.isGamepad(input.UserInputType.Name)) then
         toggleDuel()
     end
 end)
+UserInputService.LastInputTypeChanged:Connect(duelLabel)
+GuiService.MenuOpened:Connect(function() syncMenuSelection(false) end)
+GuiService.MenuClosed:Connect(function() syncMenuSelection(true) end)
 for _, name in ipairs({
     "IronYardDuelReady", "IronYardDuelTravel", "IronYardDuelInvitation", SEARCH_STARTED_ATTRIBUTE,
     OUTGOING_INVITE_ATTRIBUTE,
