@@ -217,6 +217,7 @@ local states = {
     FAILED = "CONNECTION FAILED · TRY AGAIN",
     UNAVAILABLE = "PLAYER UNAVAILABLE",
     INVITE_EXPIRED = "INVITATION EXPIRED",
+    INVITE_TARGET_LEFT = "INVITED PLAYER LEFT THE SERVER",
     INVITE_DECLINED = "INVITATION DECLINED",
     INVITE_COOLDOWN = "REINVITE BLOCKED · TRY AGAIN LATER",
 }
@@ -415,6 +416,8 @@ local function duelLabel()
         duelToggle.Text = "1v1 · SENT"
     elseif state == "INVITE_DECLINED" then
         duelToggle.Text = "1v1 · DECLINED"
+    elseif state == "INVITE_TARGET_LEFT" then
+        duelToggle.Text = "1v1 · LEFT"
     elseif ready then
         duelToggle.Text = "1v1 · WAITING"
     else
@@ -425,7 +428,8 @@ local function duelLabel()
             duelToggle.Text = state == "RETURNING" and "…" or "FFA"
         elseif state == "CONNECTING" then
             duelToggle.Text = "…"
-        elseif incoming or state == "FAILED" or state == "INVITE_DECLINED" or state == "INVITE_COOLDOWN" then
+        elseif incoming or state == "FAILED" or state == "INVITE_DECLINED"
+            or state == "INVITE_COOLDOWN" or state == "INVITE_TARGET_LEFT" then
             duelToggle.Text = "1v1 !"
         elseif searching then
             duelToggle.Text = elapsedText and "1v1" or "1v1\nSEARCH"

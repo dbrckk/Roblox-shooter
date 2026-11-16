@@ -227,16 +227,22 @@ function Room.request(player, enabled, target, invitation)
     setState(player, opponent and "INVITED" or "SEARCHING")
 end
 
-function Room.match()
-    local now = Workspace:GetServerTimeNow()
+local function clearClosedInvitations(now, departingPlayer)
     for index = #order, 1, -1 do
         local player = order[index]
         local entry = entries[player]
-        if entry.target and (entry.target.Parent ~= Players or now >= entry.expires) then
-            clearRequest(player)
-            setState(player, "INVITE_EXPIRED")
-        end
+        local target = entry.target
+        if not target then continue end
+
+        local expired = now >= entry.expires
+        if not expired and target ~= departingPlayer and target.Parent == Players then continue end
+        clearRequest(player)
+        setState(player, expired and "INVITE_EXPIRED" or "INVITE_TARGET_LEFT")
     end
+end
+
+function Room.match()
+    clearClosedInvitations(Workspace:GetServerTimeNow())
     local first, second = Queue.pair(entries, order, function(player)
         return player.Parent == Players and not pending[player]
     end)
@@ -330,6 +336,10 @@ function Room.start()
         clearRequest(player)
         pending[player] = nil
         leaving[player] = nil
+        if not Room.isDedicated then
+            clearClosedInvitations(Workspace:GetServerTimeNow(), player)
+            publishInvitations()
+        end
         if admitted[player.UserId] == player then
             admitted[player.UserId] = nil
             pairArrived = false
