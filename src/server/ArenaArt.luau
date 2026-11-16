@@ -3,7 +3,9 @@
 -- raycasts, movement, or PathfindingService and are locally culled on mobile.
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local CatwalkDeckPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CatwalkDeckPlan"))
+local Shared = ReplicatedStorage:WaitForChild("Shared")
+local CatwalkDeckPlan = require(Shared:WaitForChild("CatwalkDeckPlan"))
+local LoadingDeckPlan = require(Shared:WaitForChild("LoadingDeckPlan"))
 local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
 local WarehouseCladding = require(script.Parent:WaitForChild("WarehouseCladding"))
 local WarehouseEntranceArt = require(script.Parent:WaitForChild("WarehouseEntranceArt"))
@@ -569,6 +571,58 @@ local function groundWear(parent)
     end
 end
 
+local function transferDeck(decor, arena)
+    local deck = arena:FindFirstChild(LoadingDeckPlan.DECK_NAME)
+    local ramp = arena:FindFirstChild(LoadingDeckPlan.RAMP_NAME)
+    if not deck or not ramp then return end
+
+    local origin = deck.CFrame
+    local top = deck.Size.Y / 2
+    for index = -1, 1 do
+        prop(decor, "TRANSFER / anti-slip deck plate " .. index,
+            Vector3.new(5.44, 0.025, 11.66), origin * CFrame.new(index * 5.55, top + 0.008, 0),
+            index == 0 and COLOR.steel or COLOR.slate, Enum.Material.DiamondPlate, "Core")
+    end
+
+    for _, face in ipairs({ -1, 1 }) do
+        local edge = face * deck.Size.Z / 2
+        local frame = origin * CFrame.new(0, -0.22, edge + face * 0.048)
+            * CFrame.Angles(0, face > 0 and math.pi or 0, 0)
+        prop(decor, "TRANSFER / steel fascia " .. face, Vector3.new(16.8, 1.84, 0.1),
+            frame, COLOR.ink, Enum.Material.Metal, "Core")
+        local stencilled = prop(decor, "TRANSFER / bay designation " .. face, Vector3.new(6.6, 1.22, 0.05),
+            frame * CFrame.new(face * 3.8, 0.05, -0.083), COLOR.steel, Enum.Material.Metal, "Core")
+        local gui = Instance.new("SurfaceGui")
+        gui.Face = Enum.NormalId.Front
+        gui.CanvasSize = Vector2.new(520, 95)
+        gui.LightInfluence = 0.35
+        gui.MaxDistance = 75
+        gui.Parent = stencilled
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.fromScale(1, 1)
+        label.BackgroundTransparency = 1
+        label.Font = Enum.Font.GothamBold
+        label.Text = "06 / TRANSFER"
+        label.TextScaled = true
+        label.TextColor3 = COLOR.paper
+        label.Parent = gui
+    end
+
+    local rampTop = ramp.Size.Y / 2
+    local rampEdge = ramp.Size.X / 2 - 0.22
+    for _, side in ipairs({ -1, 1 }) do
+        prop(decor, "TRANSFER / ramp edge stripe " .. side,
+            Vector3.new(0.18, 0.024, ramp.Size.Z - 0.5),
+            ramp.CFrame * CFrame.new(side * rampEdge, rampTop + 0.018, 0),
+            COLOR.orange, Enum.Material.SmoothPlastic, "Core")
+    end
+    for _, offset in ipairs({ -0.31, 0, 0.31 }) do
+        prop(decor, "TRANSFER / ramp tread seam",
+            Vector3.new(6.2, 0.018, 0.10), ramp.CFrame * CFrame.new(0, rampTop + 0.012, ramp.Size.Z * offset),
+            COLOR.slate, Enum.Material.Metal, "Detail")
+    end
+end
+
 function ArenaArt.build(arena)
     -- Internal folder identifier retained for the existing client LOD script.
     local previous = arena:FindFirstChild("NeonStrikeDecor")
@@ -600,6 +654,7 @@ function ArenaArt.build(arena)
     WarehouseCladding.decorate(decor, arena)
     WarehouseEntranceArt.decorate(decor, arena)
     InspectionStationArt.decorate(decor, arena)
+    transferDeck(decor, arena)
     warehouseRoof(decor)
     CatwalkDeckArt.decorate(decor, arena)
     catwalkSafety(decor)
