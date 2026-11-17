@@ -91,7 +91,10 @@ local services = {
 local game = {PrivateServerId = "", PrivateServerOwnerId = 0, PlaceId = 99}
 function game:GetService(name) return assert(services[name]) end
 local Instance = {new = function()
-    return {SetTeleportData = function(self, value) self.payload = value end}
+    return {
+        SetTeleportData = function(self, value) self.payload = value end,
+        GetTeleportData = function(self) return self.payload end,
+    }
 end}
 local function connectPlayer(id)
     local p = {UserId = id, DisplayName = "Player " .. id, Parent = Players}
@@ -158,6 +161,7 @@ end
 Room.start()
 local sender, senderReplica = connectPlayer(1)
 local recipient, recipientReplica = connectPlayer(2)
+local waitingPlayer, waitingReplica = connectPlayer(3)
 local a = newHud(sender, senderReplica)
 local b = newHud(recipient, recipientReplica)
 
@@ -220,9 +224,9 @@ assert(transfers[1].group[1] == sender and transfers[1].group[2] == recipient)
 assert(transfers[1].options.ReservedServerAccessCode == "room-1")
 assert(#rosters[1] == 2 and rosters[1][1] == sender.UserId and rosters[1][2] == recipient.UserId)
 assert(not b.invite.Visible and recipientReplica:GetAttribute("IronYardDuelTravel") == "CONNECTING")
+assert(waitingPlayer:GetAttribute("IronYardDuelTravel") == nil, "The third player must remain in FFA")
 
 -- The HUD exit sends the phase and series it displays, including series zero.
-local waitingPlayer, waitingReplica = connectPlayer(3)
 local waiting = newHud(waitingPlayer, waitingReplica)
 Workspace:SetAttribute("IronYardDedicatedDuel", true)
 Workspace:SetAttribute("NeonMatchPhase", "WAITING")
@@ -258,8 +262,14 @@ local function resultsClient(serverPlayer, player, displayedResultsRound)
     local back = {Activated = signal(), Visible = true, Interactable = true}
     local rematch = {Activated = signal(), Visible = true, Interactable = true}
     local root = {Visible = true}
-    local function delayed(remote)
+    local votesSent = 0
+    local dropVote = false
+    local function delayed(remote, isVote)
         return {FireServer = function(_, ...)
+            if isVote then
+                votesSent += 1
+                if dropVote then return end
+            end
             local args = table.pack(...)
             task.delay(1.25, function()
                 remote.OnServerEvent:fire(serverPlayer, table.unpack(args, 1, args.n))
@@ -268,12 +278,17 @@ local function resultsClient(serverPlayer, player, displayedResultsRound)
     end
     local remotes = {
         ReturnToFfa = delayed(remotes.ReturnToFfa),
-        SetDuelReady = delayed(remotes.SetDuelReady),
+        SetDuelReady = delayed(remotes.SetDuelReady, true),
     }
 """
 
 DEDICATED_CHECKS = r"""
-    return {back = back, rematch = rematch}
+    serverPlayer.render = render
+    return {
+        back = back, rematch = rematch,
+        votesSent = function() return votesSent end,
+        dropVote = function(enabled) dropVote = enabled end,
+    }
 end
 
 local function reachPhase(target)
@@ -292,10 +307,15 @@ local round = Workspace:GetAttribute("NeonMatchRound")
 assert(round == 1 and not Room.isClosing())
 local oldResults = resultsClient(first, firstReplica, round)
 oldResults.rematch.Activated:fire()
+oldResults.rematch.Activated:fire()
+assert(oldResults.votesSent() == 1, "Repeated presses sent the same rematch vote")
+assert(oldResults.rematch.Text == "VOTING…" and oldResults.rematch.Interactable,
+    "A pending vote should give immediate feedback and retain gamepad selection")
 resultsClient(second, secondReplica, round).rematch.Activated:fire()
 advance(1.7)
 assert(first:GetAttribute("IronYardDuelReady") and second:GetAttribute("IronYardDuelReady"),
     "Both current results buttons must register a vote")
+assert(oldResults.rematch.Text == "CANCEL  ·  2/2", "The HUD must reflect acknowledged consent")
 
 -- The request was made from the results screen, but arrives after the
 -- scheduler has started the agreed rematch countdown.
@@ -323,20 +343,47 @@ assert(first:GetAttribute("IronYardDuelReady") == false, "A vote from the previo
 remotes.SetDuelReady.OnServerEvent:fire(first, true)
 assert(first:GetAttribute("IronYardDuelReady") == false, "A vote without a results round was counted")
 currentResults.rematch.Activated:fire()
-advance(1.7)
+advance(1.8)
 assert(first:GetAttribute("IronYardDuelReady") == true, "A vote for the current series was rejected")
 oldResults.rematch.Activated:fire()
 advance(1.26)
 assert(first:GetAttribute("IronYardDuelReady") == true, "A cancellation from the previous series changed the vote")
 currentResults.rematch.Activated:fire()
-advance(1.26)
+assert(currentResults.rematch.Text == "CANCELLING…")
+advance(1.7)
 assert(first:GetAttribute("IronYardDuelReady") == false, "A cancellation for the current series was rejected")
+currentResults.dropVote(true)
+currentResults.rematch.Activated:fire()
+advance(2.9)
+assert(currentResults.rematch.Text == "VOTING…")
+advance(0.11)
+assert(currentResults.rematch.Text == "REMATCH  ·  0/2", "A missing confirmation must restore the vote action")
+currentResults.dropVote(false)
+currentResults.rematch.Activated:fire()
+advance(1.26)
+assert(first:GetAttribute("IronYardDuelReady") == true, "The retry must use the same current series")
 
 -- A response from the current results still closes the reserved room.
 currentResults.back.Activated:fire()
 advance(1.26)
 assert(Room.isClosing() and #transfers == 1 and transfers[1].group[1] == first)
-print("Duel network regression: only the current results round can change rematch votes or initiate exit.")
+
+-- Each explicit return gets one automatic retry. A late duplicate failure
+-- from its first attempt must neither fail the retry nor start another.
+local initial = transfers[1].options
+Teleport.TeleportInitFailed:fire(first, nil, nil, game.PlaceId, initial)
+advance(1.6)
+assert(#transfers == 3 and transfers[2].group[1] == second and transfers[3].group[1] == first,
+    "The other player should return when results expire and the first player should retry")
+local retry = transfers[3].options
+Teleport.TeleportInitFailed:fire(first, nil, nil, game.PlaceId, initial)
+assert(first:GetAttribute("IronYardDuelTravel") == "RETURNING", "An expired attempt interrupted the retry")
+Teleport.TeleportInitFailed:fire(first, nil, nil, game.PlaceId, retry)
+assert(first:GetAttribute("IronYardDuelTravel") == "FAILED")
+currentResults.back.Activated:fire()
+advance(1.26)
+assert(#transfers == 4 and transfers[4].group[1] == first, "Back to FFA must retry a failed transfer")
+print("Duel network regression: round-scoped votes, delayed confirmations and return retries passed.")
 """
 
 
@@ -360,6 +407,12 @@ def run(luau):
     )
     lobby = SERVER_FIXTURE + queue + room + HUD_FIXTURE + "\n".join(hud_sections) + CHECKS
     results = (ROOT / "src/client/RoundResults.client.luau").read_text()
+    rematch_state = results[results.index("local rematchRequest"):results.index("local function syncResultSelection")]
+    results_render = """
+    render = function()
+        renderRematch(true, false, true, Workspace:GetAttribute("IronYardDuelReadyCount") or 0)
+    end
+    """
     results_actions = results[results.index("rematch.Activated:Connect"):results.index("local function safeCount")]
     dedicated = (
         SERVER_FIXTURE + queue
@@ -368,7 +421,7 @@ def run(luau):
         + module("MatchLobbyPolicy", "src/shared/MatchLobbyPolicy.luau")
         + module("RoundStandings", "src/server/RoundStandings.luau")
         + DEDICATED_FIXTURE + module("MatchService", "src/server/MatchService.luau")
-        + RESULTS_FIXTURE + results_actions + DEDICATED_CHECKS
+        + RESULTS_FIXTURE + rematch_state + results_render + results_actions + DEDICATED_CHECKS
     )
     with TemporaryDirectory() as directory:
         for name, program in (("lobby", lobby), ("dedicated", dedicated)):

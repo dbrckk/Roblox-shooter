@@ -143,6 +143,21 @@ local rematch = resultAction("Rematch", "REMATCH", 44)
 local back = resultAction("BackToFFA", "BACK TO FFA", 226)
 back.Modal = true
 local displayedResultsRound
+local rematchRequest
+local render
+local REMATCH_CONFIRMATION_SECONDS = 3
+
+local function renderRematch(canVote, closing, hasOpponent, readyCount)
+    local ready = player:GetAttribute("IronYardDuelReady") == true
+    if rematchRequest and (not canVote or rematchRequest.round ~= displayedResultsRound
+        or rematchRequest.enabled == ready) then
+        rematchRequest = nil
+    end
+    rematch.Interactable = canVote
+    rematch.Text = closing and "REMATCH CLOSED" or not hasOpponent and "OPPONENT LEFT"
+        or rematchRequest and (rematchRequest.enabled and "VOTING…" or "CANCELLING…")
+        or string.format(ready and "CANCEL  ·  %d/2" or "REMATCH  ·  %d/2", readyCount)
+end
 
 local function syncResultSelection()
     local selected = GuiService.SelectedObject
@@ -165,9 +180,21 @@ local function syncResultSelection()
 end
 
 rematch.Activated:Connect(function()
-    if not root.Visible or not rematch.Visible or not rematch.Interactable then return end
-    remotes.SetDuelReady:FireServer(
-        player:GetAttribute("IronYardDuelReady") ~= true, nil, nil, displayedResultsRound)
+    if not root.Visible or not rematch.Visible or not rematch.Interactable or rematchRequest then return end
+    local request = {
+        enabled = player:GetAttribute("IronYardDuelReady") ~= true,
+        round = displayedResultsRound,
+    }
+    -- Keep the button selectable while handling repeated activations here.
+    -- A second gamepad press must not switch focus to Back to FFA.
+    rematchRequest = request
+    task.delay(REMATCH_CONFIRMATION_SECONDS, function()
+        if rematchRequest ~= request then return end
+        rematchRequest = nil
+        render()
+    end)
+    render()
+    remotes.SetDuelReady:FireServer(request.enabled, nil, nil, request.round)
 end)
 back.Activated:Connect(function()
     if not root.Visible or not back.Visible or not back.Interactable then return end
@@ -212,9 +239,10 @@ local function updateLayout()
     scale.Scale = math.clamp(math.min(viewport.X / 470, viewport.Y / 370), 0.54, 1)
 end
 
-local function render()
+render = function()
     if Workspace:GetAttribute("NeonMatchPhase") ~= "RESULTS" then
         displayedResultsRound = nil
+        rematchRequest = nil
         back.Visible = false
         rematch.Visible = false
         root.Visible = false
@@ -309,12 +337,10 @@ local function render()
     local closing = dedicated and Workspace:GetAttribute("IronYardDuelExitStarted") == true
     leaderboard[3].Visible = not dedicated
     rematch.Visible = dedicated and myStanding ~= nil
-    rematch.Interactable = hasOpponent and myStanding ~= nil and seconds > 0
+    local canVote = hasOpponent and rematch.Visible and seconds > 0
         and not closing and travel ~= "RETURNING"
-    local ready = player:GetAttribute("IronYardDuelReady") == true
     local readyCount = Workspace:GetAttribute("IronYardDuelReadyCount") or 0
-    rematch.Text = closing and "REMATCH CLOSED" or not hasOpponent and "OPPONENT LEFT"
-        or string.format(ready and "CANCEL  ·  %d/2" or "REMATCH  ·  %d/2", readyCount)
+    renderRematch(canVote, closing, hasOpponent, readyCount)
     back.Visible = dedicated and myStanding ~= nil
     back.Interactable = travel ~= "RETURNING"
     back.Text = travel == "RETURNING" and "RETURNING…" or "BACK TO FFA"
