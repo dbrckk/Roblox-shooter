@@ -1,0 +1,7 @@
+IRON YARD v92 — single public update, 17 November 2026.
+
+Deploy the game source verified at e828fc172c9167467643c3f3b0851457139413d8 to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This update scopes rematch votes and cancellations to the series shown on the results screen. It also includes the adjustable hit confirmation audio, Roblox reduced-motion support, combat input cleanup when Roblox menus open, and a directional damage indicator that follows camera rotation. Roblox confirmed the previous public place version was 87.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
