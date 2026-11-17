@@ -254,20 +254,26 @@ local function require(name) return assert(modules[name], name) end
 """
 
 RESULTS_FIXTURE = r"""
-local function resultsClient(player, displayedResultsRound)
+local function resultsClient(serverPlayer, player, displayedResultsRound)
     local back = {Activated = signal(), Visible = true, Interactable = true}
+    local rematch = {Activated = signal(), Visible = true, Interactable = true}
     local root = {Visible = true}
-    local server = remotes
-    local remotes = {ReturnToFfa = {FireServer = function(_, ...)
-        local args = table.pack(...)
-        task.delay(1.25, function()
-            server.ReturnToFfa.OnServerEvent:fire(player, table.unpack(args, 1, args.n))
-        end)
-    end}}
+    local function delayed(remote)
+        return {FireServer = function(_, ...)
+            local args = table.pack(...)
+            task.delay(1.25, function()
+                remote.OnServerEvent:fire(serverPlayer, table.unpack(args, 1, args.n))
+            end)
+        end}
+    end
+    local remotes = {
+        ReturnToFfa = delayed(remotes.ReturnToFfa),
+        SetDuelReady = delayed(remotes.SetDuelReady),
+    }
 """
 
 DEDICATED_CHECKS = r"""
-    return back
+    return {back = back, rematch = rematch}
 end
 
 local function reachPhase(target)
@@ -278,22 +284,26 @@ local function reachPhase(target)
     error("Reserved room never reached " .. target)
 end
 
-local first = connectPlayer(1)
-local second = connectPlayer(2)
+local first, firstReplica = connectPlayer(1)
+local second, secondReplica = connectPlayer(2)
 MatchService.start()
 reachPhase("RESULTS")
 local round = Workspace:GetAttribute("NeonMatchRound")
 assert(round == 1 and not Room.isClosing())
-remotes.SetDuelReady.OnServerEvent:fire(first, true)
-remotes.SetDuelReady.OnServerEvent:fire(second, true)
+local oldResults = resultsClient(first, firstReplica, round)
+oldResults.rematch.Activated:fire()
+resultsClient(second, secondReplica, round).rematch.Activated:fire()
+advance(1.7)
+assert(first:GetAttribute("IronYardDuelReady") and second:GetAttribute("IronYardDuelReady"),
+    "Both current results buttons must register a vote")
 
 -- The request was made from the results screen, but arrives after the
 -- scheduler has started the agreed rematch countdown.
-local oldResults = resultsClient(first, round)
-advance(11.1)
+advance(9.4)
 assert(Workspace:GetAttribute("NeonMatchPhase") == "RESULTS")
 assert(Workspace:GetAttribute("NeonMatchTimeLeft") == 1)
-oldResults.Activated:fire()
+oldResults.back.Activated:fire()
+oldResults.rematch.Activated:fire()
 advance(1.26)
 assert(Workspace:GetAttribute("NeonMatchPhase") == "COUNTDOWN")
 assert(not Room.isClosing() and #transfers == 0, "An old results action cancelled the rematch")
@@ -303,15 +313,30 @@ assert(not Room.isClosing() and #transfers == 0, "An old results action cancelle
 reachPhase("RESULTS")
 local nextRound = Workspace:GetAttribute("NeonMatchRound")
 assert(nextRound == round + 1)
-oldResults.Activated:fire()
+local currentResults = resultsClient(first, firstReplica, nextRound)
+oldResults.back.Activated:fire()
+oldResults.rematch.Activated:fire()
 advance(1.26)
 assert(not Room.isClosing() and #transfers == 0, "An old round action closed the current results")
+assert(first:GetAttribute("IronYardDuelReady") == false, "A vote from the previous series was counted")
+
+remotes.SetDuelReady.OnServerEvent:fire(first, true)
+assert(first:GetAttribute("IronYardDuelReady") == false, "A vote without a results round was counted")
+currentResults.rematch.Activated:fire()
+advance(1.7)
+assert(first:GetAttribute("IronYardDuelReady") == true, "A vote for the current series was rejected")
+oldResults.rematch.Activated:fire()
+advance(1.26)
+assert(first:GetAttribute("IronYardDuelReady") == true, "A cancellation from the previous series changed the vote")
+currentResults.rematch.Activated:fire()
+advance(1.26)
+assert(first:GetAttribute("IronYardDuelReady") == false, "A cancellation for the current series was rejected")
 
 -- A response from the current results still closes the reserved room.
-resultsClient(first, nextRound).Activated:fire()
+currentResults.back.Activated:fire()
 advance(1.26)
 assert(Room.isClosing() and #transfers == 1 and transfers[1].group[1] == first)
-print("Duel network regression: rematch ignores a stale return and still offers a fresh exit.")
+print("Duel network regression: only the current results round can change rematch votes or initiate exit.")
 """
 
 
@@ -335,7 +360,7 @@ def run(luau):
     )
     lobby = SERVER_FIXTURE + queue + room + HUD_FIXTURE + "\n".join(hud_sections) + CHECKS
     results = (ROOT / "src/client/RoundResults.client.luau").read_text()
-    results_action = results[results.index("back.Activated:Connect"):results.index("local function safeCount")]
+    results_actions = results[results.index("rematch.Activated:Connect"):results.index("local function safeCount")]
     dedicated = (
         SERVER_FIXTURE + queue
         + '\ngame.PrivateServerId = "reserved"\nrosters.reserved = {1, 2}\n' + room
@@ -343,7 +368,7 @@ def run(luau):
         + module("MatchLobbyPolicy", "src/shared/MatchLobbyPolicy.luau")
         + module("RoundStandings", "src/server/RoundStandings.luau")
         + DEDICATED_FIXTURE + module("MatchService", "src/server/MatchService.luau")
-        + RESULTS_FIXTURE + results_action + DEDICATED_CHECKS
+        + RESULTS_FIXTURE + results_actions + DEDICATED_CHECKS
     )
     with TemporaryDirectory() as directory:
         for name, program in (("lobby", lobby), ("dedicated", dedicated)):

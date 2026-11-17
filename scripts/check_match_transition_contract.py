@@ -219,6 +219,8 @@ def main():
         "elseif DuelRoom.isLocal then", 1)[0]
     require('phase == "RESULTS" and os.clock() < deadline' in dedicated_vote,
             "The dedicated rematch vote must close at the server deadline before the next tick")
+    require("requestedRound == round" in dedicated_vote,
+            "The dedicated rematch vote must match the results round that prompted it")
     require('transition("WAITING", 0)' in server,
             "The empty-roster reset must publish WAITING")
     require('elseif phase == "RESULTS" and remaining <= 0 then' in server,

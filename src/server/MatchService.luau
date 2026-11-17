@@ -558,14 +558,15 @@ function MatchService.start()
     DuelCombatState.clear()
     DuelRoom.start()
     local remotes = PrecisionNet.getRemotes(true)
-    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation)
+    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation, requestedRound)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end
         if player.Parent ~= Players then return end
         if invitation ~= nil and (DuelRoom.isDedicated or DuelRoom.isLocal) then return end
         if DuelRoom.isDedicated then
+            -- A delayed vote or cancellation belongs to the results that sent it.
             if phase == "RESULTS" and os.clock() < deadline
-                and duel and not duel.returnStarted and duelPlayersIntact()
+                and requestedRound == round and duel and not duel.returnStarted and duelPlayersIntact()
                 and dedicatedPair(DuelRoom.players())
                 and (duel.aPlayer == player or duel.bPlayer == player) then
                 player:SetAttribute("IronYardDuelReady", enabled)
