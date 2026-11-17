@@ -581,9 +581,13 @@ function MatchService.start()
     end)
     remotes.ReturnToFfa.OnServerEvent:Connect(function(player, requestedPhase, requestedRound)
         if not RemoteGuard.allow(player, "ReturnToFfa") then return end
-        -- A return sent from an older screen must not cancel a newer duel.
-        if DuelRoom.isDedicated and requestedPhase == phase and requestedRound == round
-            and (phase == "WAITING" or phase == "RESULTS" or (phase == "COUNTDOWN" and not duel)) then
+        if not DuelRoom.isDedicated or requestedRound ~= round then return end
+        -- Opponent arrival can advance the lobby while the button press is in flight.
+        -- Results are a separate decision and cannot close the next countdown.
+        local fromLobby = requestedPhase == "WAITING" or requestedPhase == "COUNTDOWN"
+        local inLobby = not duel and (phase == "WAITING" or phase == "COUNTDOWN")
+        local fromCurrentResults = requestedPhase == "RESULTS" and phase == "RESULTS"
+        if (fromLobby and inLobby) or fromCurrentResults then
             DuelRoom.returnToFfa(player, true)
         end
     end)

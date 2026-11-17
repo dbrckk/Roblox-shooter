@@ -119,7 +119,7 @@ end
 """
 
 HUD_FIXTURE = r"""
-local function newHud(serverPlayer, player)
+local function newHud(serverPlayer, player, deliverReturn)
     local upstream = 0.4
     local sent, returns = {}, {}
     local function activeControl()
@@ -136,7 +136,13 @@ local function newHud(serverPlayer, player)
     local GamepadCombatPolicy = {isGamepad = function(name) return name == "Gamepad1" end}
     local playerGui = {SetAttribute = function() end, GetAttribute = function() end}
     local remotes = {ReturnToFfa = {FireServer = function(_, ...)
-        table.insert(returns, {...})
+        local args = table.pack(...)
+        table.insert(returns, args)
+        if deliverReturn then
+            task.delay(upstream, function()
+                deliverReturn(serverPlayer, table.unpack(args, 1, args.n))
+            end)
+        end
     end}}
     remotes.SetDuelReady = {FireServer = function(_, ...)
         local args = table.pack(...)
@@ -148,7 +154,7 @@ local function newHud(serverPlayer, player)
     local function updateRoster() end
 """
 
-CHECKS = r"""
+HUD_ENTRY_POINT = r"""
     serverPlayer.render = duelLabel
     duelLabel()
     return {
@@ -157,7 +163,9 @@ CHECKS = r"""
         delay = function(seconds) upstream = seconds end,
     }
 end
+"""
 
+CHECKS = r"""
 Room.start()
 local sender, senderReplica = connectPlayer(1)
 local recipient, recipientReplica = connectPlayer(2)
@@ -257,6 +265,34 @@ local script = {Parent = services.ReplicatedStorage}
 local function require(name) return assert(modules[name], name) end
 """
 
+WAITING_EXIT_CHECKS = r"""
+local first, replica = connectPlayer(1)
+MatchService.start()
+advance(0.21)
+assert(Workspace:GetAttribute("NeonMatchPhase") == "WAITING")
+assert(Workspace:GetAttribute("NeonMatchRound") == 0)
+
+local hud = newHud(first, replica, function(...)
+    remotes.ReturnToFfa.OnServerEvent:fire(...)
+end)
+hud.delay(1)
+hud.open()
+assert(#hud.returns == 1 and hud.returns[1][1] == "WAITING" and hud.returns[1][2] == 0)
+local second = connectPlayer(2)
+advance(0.4)
+assert(Workspace:GetAttribute("NeonMatchPhase") == "COUNTDOWN" and #transfers == 0)
+remotes.ReturnToFfa.OnServerEvent:fire(first, "WAITING", -1)
+assert(not Room.isClosing(), "A return from a different round closed the countdown")
+advance(0.61)
+assert(Room.isClosing() and #transfers == 1 and transfers[1].group[1] == first,
+    "The return pressed in WAITING was lost when the opponent arrived")
+advance(0.25)
+assert(#transfers == 2 and transfers[2].group[1] == second,
+    "Both participants must be offered a return when the countdown closes")
+assert(Workspace:GetAttribute("NeonMatchPhase") == "WAITING")
+print("Duel arrival regression: a return in flight still applies across the lobby countdown.")
+"""
+
 RESULTS_FIXTURE = r"""
 local function resultsClient(serverPlayer, player, displayedResultsRound)
     local back = {Activated = signal(), Visible = true, Interactable = true}
@@ -327,6 +363,10 @@ oldResults.rematch.Activated:fire()
 advance(1.26)
 assert(Workspace:GetAttribute("NeonMatchPhase") == "COUNTDOWN")
 assert(not Room.isClosing() and #transfers == 0, "An old results action cancelled the rematch")
+
+reachPhase("DUEL_BREAK")
+remotes.ReturnToFfa.OnServerEvent:fire(first, "COUNTDOWN", Workspace:GetAttribute("NeonMatchRound"))
+assert(not Room.isClosing() and #transfers == 0, "An exit from a lobby screen interrupted an active series")
 
 -- A delayed return from the previous series is also ignored on the
 -- next results screen, even though that screen has the same phase.
@@ -405,7 +445,8 @@ def run(luau):
         hud[hud.index("local states = {"):hud.index("local function refreshInviteRows()")],
         hud[hud.index("local displayedInvitation"):hud.index("UserInputService.InputBegan:Connect")],
     )
-    lobby = SERVER_FIXTURE + queue + room + HUD_FIXTURE + "\n".join(hud_sections) + CHECKS
+    lobby_client = HUD_FIXTURE + "\n".join(hud_sections) + HUD_ENTRY_POINT
+    lobby = SERVER_FIXTURE + queue + room + lobby_client + CHECKS
     results = (ROOT / "src/client/RoundResults.client.luau").read_text()
     rematch_state = results[results.index("local rematchRequest"):results.index("local function syncResultSelection")]
     results_render = """
@@ -414,17 +455,18 @@ def run(luau):
     end
     """
     results_actions = results[results.index("rematch.Activated:Connect"):results.index("local function safeCount")]
-    dedicated = (
+    dedicated_server = (
         SERVER_FIXTURE + queue
         + '\ngame.PrivateServerId = "reserved"\nrosters.reserved = {1, 2}\n' + room
         + module("DuelRules", "src/shared/DuelRules.luau")
         + module("MatchLobbyPolicy", "src/shared/MatchLobbyPolicy.luau")
         + module("RoundStandings", "src/server/RoundStandings.luau")
         + DEDICATED_FIXTURE + module("MatchService", "src/server/MatchService.luau")
-        + RESULTS_FIXTURE + rematch_state + results_render + results_actions + DEDICATED_CHECKS
     )
+    dedicated = dedicated_server + RESULTS_FIXTURE + rematch_state + results_render + results_actions + DEDICATED_CHECKS
+    waiting_exit = dedicated_server + lobby_client + WAITING_EXIT_CHECKS
     with TemporaryDirectory() as directory:
-        for name, program in (("lobby", lobby), ("dedicated", dedicated)):
+        for name, program in (("lobby", lobby), ("dedicated", dedicated), ("waiting-exit", waiting_exit)):
             fixture = Path(directory) / f"duel-network-{name}.luau"
             fixture.write_text(program)
             subprocess.run([str(Path(luau).resolve()), str(fixture)], check=True)

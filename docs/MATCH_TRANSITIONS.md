@@ -29,7 +29,7 @@ Le serveur source enregistre les deux identités dans MemoryStore avant le trans
 
 Une fois un retour en FFA engagé, la salle réservée ferme la revanche, même si le transfert échoue. Après un échec ou un délai dépassé, **BACK TO FFA** redevient disponible. La relance reste individuelle et n’est pas déclenchée en boucle par le serveur.
 
-Une demande de retour est liée à la phase et au numéro de série affichés. Si le serveur a déjà lancé le compte à rebours de la revanche, une demande envoyée depuis les anciens résultats ne l’interrompt pas. Le joueur peut toujours demander le retour depuis le compte à rebours affiché.
+Une demande de retour est liée au numéro de série affiché. Pendant l’attente de l’adversaire et le compte à rebours, le même bouton reste valable si le serveur passe d’un de ces écrans à l’autre avant de recevoir la demande. Une demande envoyée depuis les résultats est valable pendant ces mêmes résultats. Une série déjà engagée se poursuit si une demande partie du lobby arrive en retard.
 
 Le premier joueur admis déclenche une attente de 40 secondes, affichée dans le HUD. Si le second est admis avant l’échéance, le duel peut commencer et les revanches conservent leur fonctionnement. Si l’échéance est atteinte, les joueurs admis repartent en FFA, même si le second arrive avant la prochaine mise à jour du serveur.
 

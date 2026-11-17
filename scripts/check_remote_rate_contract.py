@@ -98,7 +98,8 @@ in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(",
 in_handler(match, "remotes.ReturnToFfa.OnServerEvent:Connect(function(player, requestedPhase, requestedRound)",
            '\n    Workspace:SetAttribute("IronYardDedicatedDuel"', (
                'RemoteGuard.allow(player, "ReturnToFfa")',
-               'DuelRoom.isDedicated and requestedPhase == phase and requestedRound == round',
+               'not DuelRoom.isDedicated or requestedRound ~= round',
+               'if (fromLobby and inLobby) or fromCurrentResults then',
                'DuelRoom.returnToFfa(player, true)',
            ))
 assert 'RemoteGuard.allow(player, "Diagnostics")' in diagnostics
