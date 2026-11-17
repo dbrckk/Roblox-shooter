@@ -89,8 +89,8 @@ in_handler(weapon, "local function onSetAiming(player, enabled)",
                'typeof(enabled) ~= "boolean"',
            ))
 match = read("src/server/MatchService.luau")
-in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation)",
-           "\n    Workspace:SetAttribute(\"IronYardMatchMode\"", (
+in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(",
+           "\n    remotes.ReturnToFfa.OnServerEvent:Connect(", (
                'RemoteGuard.allow(player, "SetDuelReady")',
                'typeof(enabled) ~= "boolean"',
                'player:SetAttribute("IronYardDuelReady", enabled)',
@@ -107,7 +107,6 @@ for key in ("EquipWeapon", "ReloadWeapon", "FireWeapon", "SetSprinting",
             "MovementAction", "PerformanceDiagnostics", "SetAiming", "SetDuelReady", "ReturnToFfa"):
     assert key + ' = "RemoteEvent"' in net, f"Unbound server remote: {key}"
 assert "remotes.SetAiming.OnServerEvent:Connect(onSetAiming)" in weapon
-assert "remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation)" in match
 assert "remotes.EquipWeapon.OnServerEvent:Connect(onEquipWeapon)" in weapon
 assert "remotes.ReloadWeapon.OnServerEvent:Connect(reloadWeapon)" in weapon
 assert "remotes.FireWeapon.OnServerEvent:Connect(onFireWeapon)" in weapon

@@ -56,3 +56,5 @@ Corriger la première impression du 1v1. Le briefing FFA utilise le même bandea
 **Entrées de combat et menu Roblox.** À l’ouverture du menu, les commandes maintenues sont relâchées et les commandes tactiles sont masquées. Après fermeture, tirer ou reprendre le boost demande une nouvelle pression. La CI simule les événements du menu, la perte de focus, le clavier et la manette.
 
 **Direction des dégâts.** Le chevron contouré suit l’origine du dernier impact pendant que la caméra tourne. Son angle reste calculé à l’horizontale, y compris en visée haute ou basse. Le mode de mouvement réduit conserve un chevron fixe en opacité jusqu’à sa disparition. Vérifier sa lisibilité sur fond clair et sombre dans l’arène.
+
+**Votes de revanche.** Le serveur accepte un vote ou son annulation uniquement depuis les résultats de la série en cours. La simulation rejoue les actions des deux joueurs et vérifie qu’un ancien écran ne peut ni compter un vote ni annuler un choix de la nouvelle série.

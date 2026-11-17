@@ -166,7 +166,8 @@ end
 
 rematch.Activated:Connect(function()
     if not root.Visible or not rematch.Visible or not rematch.Interactable then return end
-    remotes.SetDuelReady:FireServer(player:GetAttribute("IronYardDuelReady") ~= true)
+    remotes.SetDuelReady:FireServer(
+        player:GetAttribute("IronYardDuelReady") ~= true, nil, nil, displayedResultsRound)
 end)
 back.Activated:Connect(function()
     if not root.Visible or not back.Visible or not back.Interactable then return end

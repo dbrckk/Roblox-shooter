@@ -504,7 +504,7 @@ def main():
     ):
         has(network, token, "Duel ready event")
     for token in (
-        'remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation)',
+        'remotes.SetDuelReady.OnServerEvent:Connect(',
         'RemoteGuard.allow(player, "SetDuelReady")',
         'local function startDuelSeries(players)',
         'local function startDuelBout()',
