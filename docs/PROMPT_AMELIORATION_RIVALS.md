@@ -56,7 +56,7 @@ Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients R
 
 **Captures PERF publiées en version 101.** Le panneau propriétaire enregistre des captures de 240 images distinctes par profil et pour la dernière bascule. Le panneau se masque pendant la collecte pour éviter ses recalculs dans les échantillons. [Publication de la version 101](https://github.com/dbrckk/Roblox-shooter/actions/runs/44293393361) · [Protocole Android](WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md#comparer-les-temps-dimage-sur-android)
 
-**Avancement du lot 5.** La carrière et les résultats affichent la prochaine finition et les XP restants. Les tests comparent les quatre paliers au calcul du rang côté serveur et couvrent l’arrivée des XP avant le rang. La reconnexion à un serveur Roblox réel reste à tester. [Progression persistante](PROGRESSION_PERSISTENCE.md#prochain-déblocage-cosmétique)
+**Lot 5 publié en version 102.** La carrière et les résultats affichent la prochaine finition et les XP restants. Les tests comparent les quatre paliers au calcul du rang côté serveur et couvrent l’arrivée des XP avant le rang. La reconnexion simulée retrouve la finition de rang 3 et le palier suivant après sauvegarde et réessai. La reconnexion à un serveur Roblox réel reste à tester. [Publication de la version 102](https://github.com/dbrckk/Roblox-shooter/actions/runs/44294376128) · [Progression persistante](PROGRESSION_PERSISTENCE.md#prochain-déblocage-cosmétique)
 
 ## Première application
 
