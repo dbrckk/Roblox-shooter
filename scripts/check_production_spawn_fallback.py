@@ -42,7 +42,7 @@ for needle in (
 ):
     assert needle in bots, f"Bot reconcile must tolerate saturated map: {needle}"
 assert "CFrame.new(SpawnService.selectSafeSpawn(bot.model))" not in bots
-duel = spawn.split("function SpawnService.placeDuelPair(a, b, bout)", 1)[1].split(
+duel = spawn.split("function SpawnService.placeDuelPair(a, b, bout, arena)", 1)[1].split(
     "\nfunction SpawnService.placePlayers()", 1
 )[0]
 assert "chooseEmergencyPad" not in duel

@@ -17,7 +17,7 @@ assert "aPlayer.Character == expectedA and bPlayer.Character == expectedB" in pl
 assert "scripts/test_duel_spawn_plan.luau" in workflow
 assert "scripts/check_duel_spawn_contract.py" in workflow
 
-duel = spawn.split("function SpawnService.placeDuelPair(a, b, bout)", 1)[1].split(
+duel = spawn.split("function SpawnService.placeDuelPair(a, b, bout, arena)", 1)[1].split(
     "\nfunction SpawnService.placePlayers()", 1)[0]
 for needle in (
     "a.Parent ~= Players or b.Parent ~= Players",
@@ -25,7 +25,7 @@ for needle in (
     "bChar:IsDescendantOf(Workspace)",
     "aRoot, aHumanoid = combatReady(aChar)",
     "bRoot, bHumanoid = combatReady(bChar)",
-    "DuelSpawnPlan.select(clear, bout)",
+    "DuelSpawnPlan.select(clear, bout, arena)",
     "not clearAt(first, aChar, bChar)",
     "not clearAt(second, aChar, bChar)",
     "DuelSpawnPlan.canCommit(a, b, aChar, bChar,",
@@ -53,5 +53,9 @@ assert duel.index('applyPlacement(bChar, bRoot, bHumanoid, second, first)') < du
 assert 'bChar:SetAttribute("IronYardDuelPad", secondIndex)' in duel
 hud = (root / "src/client/MatchHud.client.luau").read_text(encoding="utf-8")
 assert 'GetAttributeChangedSignal("IronYardDuelPad"):Connect(update)' in hud
-assert 'DuelSpawnPlan.padLabel(pad) or "PREPARE"' in hud
+assert 'DuelSpawnPlan.padLabel(pad, duelArena) or "PREPARE"' in hud
 assert 'DuelIntro' not in hud, "Keep the center clear during preparation"
+
+assert "ipairs(DuelSpawnPlan.SortingBay.pads)" in spawn
+assert "local pads = arena == DuelSpawnPlan.SORTING and sortingCandidates or candidates" in duel
+assert 'Workspace:GetAttribute("IronYardDuelArena")' in hud

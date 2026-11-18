@@ -21,6 +21,11 @@ for index, pad in ipairs(DuelSpawnPlan.PADS) do
     candidates[index] = Vector3.new(pad.x, 3.4, pad.z)
 end
 
+local sortingCandidates = {}
+for index, pad in ipairs(DuelSpawnPlan.SortingBay.pads) do
+    sortingCandidates[index] = Vector3.new(DuelSpawnPlan.SortingBay.originX + pad.x, 3.4, pad.z)
+end
+
 local function livePositions(excludeCharacter)
     local positions, ignoredCharacters = {}, {}
     if excludeCharacter then table.insert(ignoredCharacters, excludeCharacter) end
@@ -242,7 +247,7 @@ local function watchPlayer(player)
     end
 end
 
-function SpawnService.placeDuelPair(a, b, bout)
+function SpawnService.placeDuelPair(a, b, bout, arena)
     if not a or not b or a == b or a.Parent ~= Players or b.Parent ~= Players
         then return false end
     local aChar, bChar = a.Character, b.Character
@@ -263,13 +268,14 @@ function SpawnService.placeDuelPair(a, b, bout)
     -- Verify BOTH opposite pads and both original living characters before
     -- committing ANY teleport. The general FFA spawn fallback is deliberately
     -- not used here: it can silently break duel fairness on pad rechecks.
+    local pads = arena == DuelSpawnPlan.SORTING and sortingCandidates or candidates
     local clear = {}
-    for i, position in ipairs(candidates) do
+    for i, position in ipairs(pads) do
         clear[i] = clearAt(position, aChar, bChar)
     end
-    local firstIndex, secondIndex = DuelSpawnPlan.select(clear, bout)
+    local firstIndex, secondIndex = DuelSpawnPlan.select(clear, bout, arena)
     if not firstIndex then return false end
-    local first, second = candidates[firstIndex], candidates[secondIndex]
+    local first, second = pads[firstIndex], pads[secondIndex]
     if not clearAt(first, aChar, bChar)
         or not clearAt(second, aChar, bChar) then return false end
     if a.Parent ~= Players or b.Parent ~= Players

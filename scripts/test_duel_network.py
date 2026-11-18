@@ -259,7 +259,10 @@ DEDICATED_FIXTURE = r"""
 local remotes = {SetDuelReady = {OnServerEvent = signal()}, ReturnToFfa = {OnServerEvent = signal()},
     SetPracticeRange = {OnServerEvent = signal()}}
 local function noop() end
+local preparedArenas = {}
 local modules = {
+    DuelSpawnPlan = DuelSpawnPlan,
+    MapService = {prepareDuelArena = function(arena) table.insert(preparedArenas, arena) end},
     DuelRoom = Room, DuelRules = DuelRules, MatchLobbyPolicy = MatchLobbyPolicy, RoundStandings = RoundStandings,
     BotService = {reconcileNow = noop, resetRound = noop, getScores = function() return {} end},
     SpawnService = {}, WeaponService = {}, MovementService = {},
@@ -384,6 +387,9 @@ MatchService.start()
 reachPhase("RESULTS")
 local round = Workspace:GetAttribute("NeonMatchRound")
 assert(round == 1 and not Room.isClosing())
+local firstArena = DuelSpawnPlan.nextArena(nil, game.JobId)
+assert(Workspace:GetAttribute("IronYardDuelArena") == firstArena)
+assert(#preparedArenas == 1 and preparedArenas[1] == firstArena)
 remotes.SetPracticeRange.OnServerEvent:fire(first, true, 0)
 assert(not PracticeMode.active(first) and first:GetAttribute("IronYardPracticeNotice") == "FFA ONLY")
 local oldResults = resultsClient(first, firstReplica, round)
@@ -418,6 +424,9 @@ assert(not Room.isClosing() and #transfers == 0, "An exit from a lobby screen in
 reachPhase("RESULTS")
 local nextRound = Workspace:GetAttribute("NeonMatchRound")
 assert(nextRound == round + 1)
+local secondArena = DuelSpawnPlan.nextArena(firstArena, game.JobId)
+assert(secondArena ~= firstArena and Workspace:GetAttribute("IronYardDuelArena") == secondArena)
+assert(#preparedArenas == 2 and preparedArenas[2] == secondArena)
 local currentResults = resultsClient(first, firstReplica, nextRound)
 oldResults.back.Activated:fire()
 oldResults.rematch.Activated:fire()
@@ -468,7 +477,8 @@ assert(first:GetAttribute("IronYardDuelTravel") == "FAILED")
 currentResults.back.Activated:fire()
 advance(1.26)
 assert(#transfers == 4 and transfers[4].group[1] == first, "Back to FFA must retry a failed transfer")
-print("Duel network regression: round-scoped votes, delayed confirmations and return retries passed.")
+print("Duel network regression: " .. firstArena .. " -> " .. secondArena
+    .. ", round-scoped votes, delayed confirmations and return retries passed.")
 """
 
 
@@ -506,6 +516,7 @@ def run(luau):
         SERVER_FIXTURE + mode + queue
         + '\ngame.PrivateServerId = "reserved"\nrosters.reserved = {1, 2}\n' + room
         + module("DuelRules", "src/shared/DuelRules.luau")
+        + module("DuelSpawnPlan", "src/shared/DuelSpawnPlan.luau")
         + module("MatchLobbyPolicy", "src/shared/MatchLobbyPolicy.luau")
         + module("RoundStandings", "src/server/RoundStandings.luau")
         + DEDICATED_FIXTURE + module("MatchService", "src/server/MatchService.luau")
@@ -514,7 +525,12 @@ def run(luau):
     dedicated_with_hud = dedicated_server + lobby_client
     fixtures = {
         "lobby": lobby,
-        "dedicated": dedicated,
+        "dedicated-sorting-first": dedicated,
+        "dedicated-yard-first": dedicated.replace(
+            'game.PrivateServerId = "reserved"',
+            'game.PrivateServerId = "reserved"\ngame.JobId = "0000"',
+            1,
+        ),
         "waiting-exit": dedicated_with_hud + WAITING_EXIT_CHECKS,
         "roster-recovery": dedicated_with_hud + ROSTER_RECOVERY_CHECKS,
     }

@@ -678,6 +678,8 @@ local function update()
     local matchMode = Workspace:GetAttribute("IronYardMatchMode") or "FFA"
     local readyCount = Workspace:GetAttribute("IronYardDuelReadyCount") or 0
     local duelBout = Workspace:GetAttribute("IronYardDuelBout") or 0
+    local duelArena = Workspace:GetAttribute("IronYardDuelArena")
+    local arenaTitle = DuelSpawnPlan.arenaLabel(duelArena)
     local duelScoreA = Workspace:GetAttribute("IronYardDuelScoreA") or 0
     local duelScoreB = Workspace:GetAttribute("IronYardDuelScoreB") or 0
     local duelAId = Workspace:GetAttribute("IronYardDuelPlayerA")
@@ -698,14 +700,14 @@ local function update()
         local score = myWins and string.format("YOU %d : %d RIVAL", myWins, rivalWins)
             or string.format("A %d : %d B", duelScoreA, duelScoreB)
         if phase == "LIVE" then
-            headerText = string.format("DUEL %d  |  %s", duelBout, clock)
+            headerText = string.format("%s  |  %d · %s", arenaTitle, duelBout, clock)
             detailText = "FIRST TO 5   /   " .. score
         elseif phase == "DUEL_PREP" then
-            headerText = string.format("DUEL %d  /  %ds   ·   %s",
-                duelBout + 1, math.clamp(seconds, 1, 3), score)
+            headerText = string.format("%s  /  %ds   ·   %s",
+                arenaTitle, math.clamp(seconds, 1, 3), score)
             local character = player.Character
             local pad = character and character:GetAttribute("IronYardDuelPad")
-            detailText = DuelSpawnPlan.padLabel(pad) or "PREPARE"
+            detailText = DuelSpawnPlan.padLabel(pad, duelArena) or "PREPARE"
         elseif phase == "DUEL_BREAK" then
             headerText = string.format("%s  |  NEXT IN %ds",
                 boutLabel or "DUEL", seconds)
@@ -792,7 +794,7 @@ for _, name in ipairs({
     "NeonMatchWinner", "NeonMatchScoreLimit", "NeonBotCount",
     "IronYardMatchMode", "IronYardDuelReadyCount", "IronYardDedicatedDuel", "IronYardDuelLocal",
     "IronYardDuelBout", "IronYardDuelScoreA", "IronYardDuelScoreB",
-    "IronYardDuelPlayerA", "IronYardDuelPlayerB", "IronYardDuelLastResult",
+    "IronYardDuelPlayerA", "IronYardDuelPlayerB", "IronYardDuelLastResult", "IronYardDuelArena",
 }) do
     Workspace:GetAttributeChangedSignal(name):Connect(function()
         update()
