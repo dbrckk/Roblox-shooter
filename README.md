@@ -13,9 +13,9 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 106** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `3185062b727eeed7f604b2113e804cc1fcc62c61`. Les traces et sons d’impact suivent le même contact serveur. Le réticule réagit dès l’image suivante et le recul incline moins l’arme au tactile. Le stand **SET → PRACTICE RANGE** permet d’essayer les cinq armes. [Publication de la version 106](https://github.com/dbrckk/Roblox-shooter/actions/runs/44328691246)
+Roblox a confirmé la **version de place 107** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `2fe3143a00041fbed0ef3f7c5a2fa86cff70c64c`. **Sorting Bay** rejoint la rotation 1v1. Chaque série se déroule sur la même arène, les joueurs échangent leurs côtés entre les manches et la revanche change d’arène. [Publication de la version 107](https://github.com/dbrckk/Roblox-shooter/actions/runs/44330963097)
 
-Le prochain lot ajoute une deuxième arène de 1v1 dans le terminal de fret. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 106](https://github.com/dbrckk/Roblox-shooter/actions/runs/44328575363)
+Le prochain lot ajoute des objectifs de session avec des récompenses cosmétiques. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 107](https://github.com/dbrckk/Roblox-shooter/actions/runs/44330859178)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
