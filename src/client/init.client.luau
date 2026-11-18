@@ -827,7 +827,8 @@ local function equipWeapon(weaponId)
 	hud:setWeapon(weaponId)
     local ammunition = ammoByWeapon[weaponId]
     if ammunition then
-        hud:setAmmo(weaponId, ammunition.loaded, ammunition.capacity, ammunition.reloading)
+        hud:setAmmo(weaponId, ammunition.loaded, ammunition.capacity,
+            ammunition.reloading, ammunition.reloadEndsAt)
     end
 	visuals:setWeapon(weaponId)
     if ammunition then
@@ -1321,8 +1322,10 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
             loaded = message.loaded,
             capacity = message.capacity,
             reloading = message.reloading == true,
+            reloadEndsAt = message.reloadEndsAt,
         }
-        hud:setAmmo(message.weaponId, message.loaded, message.capacity, message.reloading == true)
+        hud:setAmmo(message.weaponId, message.loaded, message.capacity,
+            message.reloading == true, message.reloadEndsAt)
         -- A valid server Ammo update, not an unconfirmed request, ends ADS.
         if WeaponAimReloadPolicy.releaseOnConfirmedReload(currentWeaponId,
             message.weaponId, message.reloading, scoped) then
@@ -1540,6 +1543,7 @@ RunService:BindToRenderStep("IronYardClientCameraFeel",
     local moveAmount = movementHumanoid and movementHumanoid.Health > 0
         and movementHumanoid.MoveDirection.Magnitude or 0
     hud:updateCrosshair(deltaTime, moveAmount, sprinting)
+    hud:updateReloadProgress()
 
 	local _, humanoid = getCharacterParts()
 	if isGrounded(humanoid) then
