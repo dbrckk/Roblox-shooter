@@ -907,6 +907,7 @@ local function fireWeapon(weaponId)
     end
 	visuals:kick(weaponId)
     hud:registerPredictedShot(weaponId)
+    movementAudio:duckForShot(weaponId, now)
 	visuals:playFireSound(weaponId, ray.Origin, true)
 
 
@@ -1048,9 +1049,10 @@ local function updateCameraFeel(deltaTime)
     local _, humanoid, root = getCharacterParts()
     local followingPlayer = camera and humanoid and root and humanoid.Health > 0
         and camera.CameraType == Enum.CameraType.Custom and camera.CameraSubject == humanoid
-    local slideRemaining = math.max(0, localSlidingUntil - os.clock())
+    local now = os.clock()
+    local slideRemaining = math.max(0, localSlidingUntil - now)
     local sliding = slideRemaining > 0
-    movementAudio:update(followingPlayer and humanoid or nil, root, slideRemaining, deltaTime)
+    movementAudio:update(followingPlayer and humanoid or nil, root, slideRemaining, deltaTime, now)
     local motionHumanoid = followingPlayer and not GuiService.ReducedMotionEnabled and humanoid or nil
     if cameraMotion.humanoid ~= motionHumanoid then
         cameraMotion.humanoid = motionHumanoid
