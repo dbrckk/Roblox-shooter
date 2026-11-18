@@ -1360,9 +1360,19 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         local direction = message.direction
         if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 220
             and direction.Magnitude > 0.01 and fullLength > 0.1 then
-            -- Prediction already shows the shooter's central tracer and mark.
-            -- A server confirmation must not double that visual/audio.
+            -- Prediction shows the central tracer and mark. The surface
+            -- sound uses the server contact so it follows the actual shot.
             local ownShot = message.shooterUserId == player.UserId
+            if ownShot and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
+                if typeof(message.impactNormal) == "Vector3" then
+                    visuals:playImpactSound(message.origin + direction.Unit * fullLength, message.impactMaterial)
+                elseif typeof(message.pelletImpacts) == "table" then
+                    local contact = message.pelletImpacts[1]
+                    if typeof(contact) == "table" then
+                        visuals:playImpactSound(contact.position, contact.material)
+                    end
+                end
+            end
             -- One shared rate admission for all effects of a REMOTE player
             -- shot. Never gate local prediction or its shotgun confirmation.
             local remoteAccepted = not ownShot and RemoteCombatFxBudget.allow(

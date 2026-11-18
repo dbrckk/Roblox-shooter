@@ -38,6 +38,9 @@ WeaponVisuals.__index = WeaponVisuals
 local MATERIAL_METAL = Enum.Material.Metal
 local MATERIAL_SMOOTH = Enum.Material.SmoothPlastic
 local MATERIAL_NEON = Enum.Material.Neon
+local IMPACT_AUDIO_DISTANCE = 90
+local IMPACT_AUDIO_COOLDOWN = 0.095
+local IMPACT_AUDIO_VOICES = 4
 
 local function rgb(channels)
     return Color3.fromRGB(channels[1], channels[2], channels[3])
@@ -136,6 +139,9 @@ function WeaponVisuals.new(WeaponConfig)
 	self.sway = Vector2.new(0, 0)
 	self.random = Random.new()
     self.impactMarks = {}
+    self.impactSoundVoices = {}
+    self.lastImpactSoundAt = -math.huge
+    self.impactSoundIndex = 0
     -- Once all pooled marks expire, stop the 8 Hz full-pool scan entirely.
     -- New confirmed impacts reactivate the scanner without a new task.
     self.hasActiveImpactMarks = false
@@ -1789,6 +1795,39 @@ function WeaponVisuals:_playSoundLayer(parent, layer, mix)
         eq.HighGain = mix.highGain or 0
         eq.Parent = sound
     end
+    sound:Play()
+end
+
+-- Confirmed world contacts use a small, local pool of positional sounds.
+function WeaponVisuals:playImpactSound(position, materialName)
+    local camera = workspace.CurrentCamera
+    if not camera or typeof(position) ~= "Vector3" or type(materialName) ~= "string" then return end
+    if (camera.CFrame.Position - position).Magnitude >= IMPACT_AUDIO_DISTANCE then return end
+    local now = os.clock()
+    if now - self.lastImpactSoundAt < IMPACT_AUDIO_COOLDOWN then return end
+    self.lastImpactSoundAt = now
+
+    local index = self.impactSoundIndex % IMPACT_AUDIO_VOICES + 1
+    self.impactSoundIndex = index
+    local sound = self.impactSoundVoices[index]
+    if not sound then
+        local emitter = Instance.new("Attachment")
+        emitter.Name = "IronYardSurfaceImpact"
+        emitter.Parent = workspace.Terrain
+        sound = Instance.new("Sound")
+        sound.Name = "SurfaceContact"
+        sound.RollOffMode = Enum.RollOffMode.Linear
+        sound.RollOffMinDistance = 8
+        sound.RollOffMaxDistance = IMPACT_AUDIO_DISTANCE
+        sound.Parent = emitter
+        self.impactSoundVoices[index] = sound
+    end
+    local profile = CombatVfxProfile.surface(materialName).impactSound
+    sound:Stop()
+    if sound.SoundId ~= profile.soundId then sound.SoundId = profile.soundId end
+    sound.Parent.WorldPosition = position
+    sound.Volume = profile.volume
+    sound.PlaybackSpeed = profile.playbackSpeed + self.random:NextNumber(-0.04, 0.04)
     sound:Play()
 end
 
