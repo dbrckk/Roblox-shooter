@@ -80,7 +80,8 @@ for needle in (
 for needle in (
     'panel.Position = UDim2.new(0.5, 0, 0, 8)',
     'playerGui:GetAttribute("IronYardSettingsOpen") == true',
-    'playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(',
+    'playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(updateGuide)',
+    'GuiService.MenuOpened:Connect(updateGuide)',
     'setCardVisible(false)',
 ):
     assert needle in briefing, f"Briefing obstructs mobile controls: {needle}"

@@ -48,6 +48,8 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 
 Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients Roblox, poursuivre avec l’amélioration du briefing et conserver le scénario 1v1 comme vérification en partie.
 
+**Avancement du lot 2.** Le briefing FFA guide le premier tir, le rechargement et l’accès au 1v1. L’indication suit le clavier, le tactile ou la manette, et le rechargement accepté par le serveur retire le conseil correspondant. Les simulations couvrent les actions anticipées, le changement de périphérique, les menus et le passage en duel. Vérifier ensuite l’enchaînement en jeu sur petit écran.
+
 ## Première application
 
 Corriger la première impression du 1v1. Le briefing FFA utilise le même bandeau que le score et peut brièvement afficher un objectif FFA en plein duel, tandis que le bouton 1v1 disparaît pendant le briefing du lobby. Garder l’accès au 1v1 visible pendant les conseils FFA, suspendre les conseils quand le menu 1v1 est ouvert et préserver le score et la préparation en duel. Vérifier aussi que les conseils différés d’une ancienne manche ne réapparaissent pas dans le duel suivant.
