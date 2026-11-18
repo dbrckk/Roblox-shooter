@@ -52,8 +52,12 @@ local MOTION = {
     STONE = { gravity = 0.68, spin = 0.95, flicker = 0 },
 }
 
+function Profile.surfaceKind(materialName)
+    return MATERIALS[materialName] or "STONE"
+end
+
 function Profile.fragmentMotion(materialName)
-    return MOTION[MATERIALS[materialName] or "STONE"]
+    return MOTION[Profile.surfaceKind(materialName)]
 end
 
 local ECO = { maxDistance = 70, cooldown = 0.16, fragments = 1,
@@ -68,7 +72,7 @@ local DESKTOP_QUALITY = { maxDistance = 195, cooldown = 0.045, fragments = 4,
     marks = 36, markSeconds = 8, muzzleFins = 2, muzzleLight = true }
 
 function Profile.surface(materialName)
-    return SURFACES[MATERIALS[materialName] or "STONE"]
+    return SURFACES[Profile.surfaceKind(materialName)]
 end
 
 -- Surface-aware bullet scar footprints, static and reused across all shots.

@@ -23,6 +23,7 @@ local FirstPersonBodyCache = require(shared:WaitForChild("FirstPersonBodyCache")
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
 local HudController = require(script:WaitForChild("HudController"))
 local WeaponVisuals = require(script:WaitForChild("WeaponVisuals"))
+local MovementAudio = require(script:WaitForChild("MovementAudio"))
 
 local remotes = PrecisionNet.getRemotes(false)
 local currentWeaponId = "AssaultRifle"
@@ -148,6 +149,7 @@ hud = HudController.new(player, gui, WeaponConfig, {
 })
 
 local visuals = WeaponVisuals.new(WeaponConfig)
+local movementAudio = MovementAudio.new()
 
 local function enforceFirstPerson()
 	player.CameraMinZoomDistance = 0.5
@@ -1046,6 +1048,8 @@ local function updateCameraFeel(deltaTime)
     local _, humanoid, root = getCharacterParts()
     local followingPlayer = camera and humanoid and root and humanoid.Health > 0
         and camera.CameraType == Enum.CameraType.Custom and camera.CameraSubject == humanoid
+    local sliding = os.clock() < localSlidingUntil
+    movementAudio:update(followingPlayer and humanoid or nil, root, sliding, deltaTime)
     local motionHumanoid = followingPlayer and not GuiService.ReducedMotionEnabled and humanoid or nil
     if cameraMotion.humanoid ~= motionHumanoid then
         cameraMotion.humanoid = motionHumanoid
@@ -1065,7 +1069,6 @@ local function updateCameraFeel(deltaTime)
         return
     end
 
-	local sliding = os.clock() < localSlidingUntil
     local grounded = isGrounded(humanoid)
     local animationDt = math.min(deltaTime, 0.05)
     local stanceTarget = STANDING_CAMERA_OFFSET

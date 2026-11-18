@@ -128,7 +128,7 @@ camera_feel = client.split("local function updateCameraFeel(deltaTime)", 1)[1].s
 )[0]
 assert "followingPlayer and not GuiService.ReducedMotionEnabled" in camera_feel
 reduced_camera, standard_camera = camera_feel.split(
-    "\tlocal sliding = os.clock() < localSlidingUntil", 1
+    "local grounded = isGrounded(humanoid)", 1
 )
 for needle in ("cameraRoll = 0", "cameraMotion.descentSpeed = 0",
                "if not motionHumanoid then", "humanoid.CameraOffset = STANDING_CAMERA_OFFSET",
