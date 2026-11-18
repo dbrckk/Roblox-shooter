@@ -1,5 +1,6 @@
 -- Short positional contacts from streamed opponent rigs, budgeted per listener.
 local Players = game:GetService("Players")
+local DuelReadout = require(game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("DuelReadout"))
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
@@ -146,14 +147,14 @@ RunService.Heartbeat:Connect(function()
     local character = player.Character
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local duel = workspace:GetAttribute("IronYardMatchMode") == "DUEL"
-    local a = duel and workspace:GetAttribute("IronYardDuelPlayerA")
-    local b = duel and workspace:GetAttribute("IronYardDuelPlayerB")
+    local side = duel and DuelReadout.sideIn(workspace, player.UserId)
+    local fireEpoch = workspace:GetAttribute("IronYardFireEpoch")
     local listening = workspace:GetAttribute("NeonMatchPhase") == "LIVE"
         and humanoid and humanoid.Health > 0 and camera
         and camera.CameraType == Enum.CameraType.Custom and camera.CameraSubject == humanoid
-        and (not duel or player.UserId == a or player.UserId == b)
+        and (not duel or side and character:GetAttribute("IronYardLiveDuelEpoch") == fireEpoch)
     local listener = listening and humanoid or nil
-    local epoch = workspace:GetAttribute("IronYardFireEpoch")
+    local epoch = fireEpoch
     if listener ~= lastHumanoid or epoch ~= lastEpoch then
         reset()
         lastHumanoid, lastEpoch = listener, epoch
@@ -170,7 +171,9 @@ RunService.Heartbeat:Connect(function()
         local rig = participant.Character
         if rig then
             table.insert(exclude, rig)
-            if participant ~= player and (not duel or participant.UserId == a or participant.UserId == b) then
+            local opponentSide = duel and DuelReadout.sideIn(workspace, participant.UserId)
+            if participant ~= player and (not duel or opponentSide and opponentSide ~= side
+                and rig:GetAttribute("IronYardLiveDuelEpoch") == fireEpoch) then
                 sample(rig, eye, range, now, elapsed)
             end
         end

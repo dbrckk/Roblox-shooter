@@ -176,4 +176,11 @@ for i=1,20000 do
     end
 end
 assert(D.prepState(entries, currentA, true, currentB, true) == "READY")
+local maximum = {100, 100, 200, 100}
+assert(D.teamBoutWinner({90, 100, 0, 0}, maximum, false) == nil)
+assert(D.teamBoutWinner({10, 0, 0, 0}, maximum, false) == "A")
+assert(D.teamBoutWinner({0, 0, 0, 0}, maximum, false) == "DRAW")
+assert(D.teamBoutWinner({5, 100, 1, 0}, maximum, true) == "A")
+assert(D.teamBoutWinner({0, 45, 100, 0}, maximum, true) == "A")
+assert(D.teamBoutWinner({0, 50, 100, 0}, maximum, true) == "DRAW")
 print("IRON YARD duel rules: first-to-five, 20000 respawns, interrupted prep and participant isolation OK")

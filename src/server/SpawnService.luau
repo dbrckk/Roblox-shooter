@@ -54,11 +54,9 @@ local function livePositions(excludeCharacter)
     return positions, ignoredCharacters
 end
 
-local function clearAt(position, character, otherCharacter)
+local function emptyPad(position, ignored)
     local overlap = OverlapParams.new()
     overlap.FilterType = Enum.RaycastFilterType.Exclude
-    local ignored = { character }
-    if otherCharacter then table.insert(ignored, otherCharacter) end
     overlap.FilterDescendantsInstances = ignored
     overlap.RespectCanCollide = true
     overlap.MaxParts = 1
@@ -68,6 +66,10 @@ local function clearAt(position, character, otherCharacter)
         Vector3.new(4.2, 5.3, 4.2),
         overlap
     ) == 0
+end
+
+local function clearAt(position, character, otherCharacter)
+    return emptyPad(position, {character, otherCharacter})
 end
 
 local function safestPosition(character)
@@ -295,6 +297,40 @@ function SpawnService.placeDuelPair(a, b, bout, arena)
     applyPlacement(bChar, bRoot, bHumanoid, second, first)
     aChar:SetAttribute("IronYardDuelPad", firstIndex)
     bChar:SetAttribute("IronYardDuelPad", secondIndex)
+    return true
+end
+
+function SpawnService.placeDuelTeams(players, bout, arena)
+    local characters, roots, humanoids = {}, {}, {}
+    for index, player in ipairs(players) do
+        local character = player.Character
+        if player.Parent ~= Players or not character or not character:IsDescendantOf(Workspace)
+            or table.find(characters, character) then return false end
+        local root = character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not root or root.Anchored or not humanoid or humanoid.Health <= 0 then return false end
+        characters[index], roots[index], humanoids[index] = character, root, humanoid
+    end
+    if #characters ~= 4 then return false end
+
+    local pads = arena == DuelSpawnPlan.SORTING and sortingCandidates or candidates
+    local clear = {}
+    for index, position in ipairs(pads) do clear[index] = emptyPad(position, characters) end
+    local layout = DuelSpawnPlan.selectTeams(clear, bout, arena)
+    if not layout then return false end
+
+    -- No yielding API between validation and the four placements.
+    for index, player in ipairs(players) do
+        if player.Parent ~= Players or player.Character ~= characters[index]
+            or roots[index].Parent ~= characters[index] or roots[index].Anchored
+            or humanoids[index].Parent ~= characters[index] or humanoids[index].Health <= 0
+            or not emptyPad(pads[layout[index]], characters) then return false end
+    end
+    for index, character in ipairs(characters) do
+        local across = index % 2 == 1 and index + 1 or index - 1
+        applyPlacement(character, roots[index], humanoids[index], pads[layout[index]], pads[layout[across]])
+        character:SetAttribute("IronYardDuelPad", layout[index])
+    end
     return true
 end
 

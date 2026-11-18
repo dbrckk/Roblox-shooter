@@ -15,7 +15,7 @@
 
 Roblox a confirmé la **version de place 108** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `ad1641ce609d5af511cf0c9f4f3617029e452373`. Le FFA propose trois objectifs quotidiens. Le premier cycle complet débloque **Shift Lead** dans **SET → COLLECTION**. Les objectifs et la finition ont une sauvegarde distincte de la carrière. [Publication de la version 108](https://github.com/dbrckk/Roblox-shooter/actions/runs/44336884158)
 
-Le prochain chantier porte sur les groupes et les duels 2v2. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 108](https://github.com/dbrckk/Roblox-shooter/actions/runs/44336784075)
+Le prochain build ajoute **DUELS → 2v2**. Deux binômes du même lobby jouent au premier à cinq, avec revanche à quatre et retour au FFA. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 108](https://github.com/dbrckk/Roblox-shooter/actions/runs/44336784075)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 

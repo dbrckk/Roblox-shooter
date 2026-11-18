@@ -53,11 +53,11 @@ Après un échec signalé par Roblox lors de l’envoi vers le duel ou du retour
 | `WAITING` | aucun match publié | démarrage serveur, roster vidé | `COUNTDOWN` dès qu'un joueur est présent |
 | `COUNTDOWN` | 6 s avant `startRound` | `WAITING`, fin de `RESULTS` | `LIVE` (FFA), `DUEL_PREP` ou `DUEL_BREAK` (duel) |
 | `LIVE` | manche jouable | fin de `COUNTDOWN`, fin de `DUEL_PREP` | `RESULTS` (FFA ou série close), `DUEL_BREAK`, `DUEL_PREP` (duel local accepté en cours de FFA) |
-| `DUEL_PREP` | 3 s, deux racines ancrées | `startDuelBout` réussi | `LIVE` si la préparation est `READY`, `DUEL_BREAK` si interrompue, `RESULTS` si les participants changent |
+| `DUEL_PREP` | 3 s, racines des combattants ancrées | `startDuelBout` réussi | `LIVE` si la préparation est `READY`, `DUEL_BREAK` si interrompue, `RESULTS` si les participants changent |
 | `DUEL_BREAK` | 7 s entre deux manches de duel (2 s au premier échec, 1 s en réessai) | fin de manche, préparation interrompue, échec de placement | `DUEL_PREP`, `DUEL_BREAK` (réessai borné), `RESULTS` (récupération expirée) |
 | `RESULTS` | 12 s, tableau final figé | fin de manche FFA, fin de série, abandon, lobby modifié | `COUNTDOWN` uniquement |
 
-`mode` ne prend que `FFA` ou `DUEL`. `DUEL_PREP` et `DUEL_BREAK` n'existent qu'en mode `DUEL`. La fin de `RESULTS` efface la série avant de repartir sur un compte à rebours. Dans une instance réservée, ce compte à rebours exige le consentement des deux combattants.
+`mode` ne prend que `FFA` ou `DUEL`. `DUEL_PREP` et `DUEL_BREAK` n'existent qu'en mode `DUEL`. La fin de `RESULTS` efface la série avant de repartir sur un compte à rebours. Dans une instance réservée, ce compte à rebours exige le consentement de tous les combattants d’origine.
 
 ## 2. Événements réellement possibles
 
@@ -67,7 +67,7 @@ Aucun événement client ne pilote directement une phase. `SetDuelReady` enregis
 |---|---|---|
 | `RosterEmptied` | `Players.PlayerRemoving` | `WAITING`, duel et podium effacés (`MatchLobbyPolicy`) |
 | `DuelRequested` | `SetDuelReady × 2`, deux demandes compatibles | Transfert des deux joueurs vers une instance réservée, ou duel local dans Studio |
-| `StartDeadline` | fin de `COUNTDOWN` | `startRound` : duel si la paire attendue est présente en instance réservée, sinon FFA en instance publique |
+| `StartDeadline` | fin de `COUNTDOWN` | `startRound` : duel si toute la liste attendue est présente en instance réservée, sinon FFA en instance publique |
 | `BoutDecided` | santé serveur d'une manche | point, `DRAW`, ou fin de série |
 | `PrepDeadline` | 3 s écoulées | `LIVE` si `DuelRules.prepState == READY` |
 | `PrepInterrupted` | personnage mort/remplacé, racine désancrée | `DUEL_BREAK` sans crédit |
@@ -77,6 +77,12 @@ Aucun événement client ne pilote directement une phase. `SetDuelReady` enregis
 | `ScoreLimit` | 15 éliminations FFA | résultats |
 | `ParticipantsChanged` | départ, remplacement ou arrivée d'un tiers en test local | `RESULTS` (forfait ou annulation) |
 | `ResultsDeadline` | 12 s écoulées | `COUNTDOWN` en FFA ou sur accord de revanche. En instance réservée sans accord, retour à la FFA publique |
+
+### Duel 2v2
+
+Deux binômes formés par invitation dans le même lobby partagent une liste serveur. Les positions impaires sont l’équipe A, les positions paires l’équipe B. La salle attend les quatre arrivées. Au terme du délai d’arrivée, elle renvoie les joueurs au FFA.
+
+Une manche s’arrête quand une équipe est éliminée. Si le temps expire, l’équipe qui a le plus de survivants gagne. En cas d’égalité, le serveur compare la santé restante en proportion du maximum de chaque opérateur. Les tirs alliés sont bloqués et le joueur éliminé suit son coéquipier survivant. La série se joue au premier à cinq. Un départ donne le forfait à l’équipe encore complète, sans XP de victoire. Si les deux équipes sont incomplètes, la série est annulée. Les quatre joueurs d’origine doivent voter pour rejouer. Le serveur consigne le temps d’attente des deux binômes à chaque appariement.
 
 ## 3. Matrice des transitions légales
 

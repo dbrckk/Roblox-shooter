@@ -29,7 +29,7 @@ local closing = false
 local expected
 local started = false
 local arrivalDeadline
-local pairArrived = false
+local rosterArrived = false
 local rosterStore
 local invitationSequence = 0
 
@@ -45,6 +45,28 @@ local function clearRequest(player)
         player:SetAttribute("IronYardDuelSearchStartedAt", nil)
         player:SetAttribute("IronYardDuelOutgoingInvite", nil)
         player:SetAttribute("IronYardDuelReady", false)
+    end
+end
+
+local function leaveTeam(player, state)
+    local entry = entries[player]
+    local teammate = entry and entry.teammate
+    clearRequest(player)
+    if teammate and entries[teammate] and entries[teammate].teammate == player then
+        clearRequest(teammate)
+        setState(teammate, state)
+    end
+end
+
+local function queueTeam(first, second, now)
+    for _, player in ipairs({first, second}) do clearRequest(player) end
+    for _, player in ipairs({first, second}) do
+        local teammate = player == first and second or first
+        entries[player] = { teammate = teammate, captain = first, startedAt = now }
+        table.insert(order, player)
+        player:SetAttribute("IronYardDuelSearchStartedAt", now)
+        player:SetAttribute("IronYardDuelReady", true)
+        setState(player, "TEAM_SEARCHING")
     end
 end
 
@@ -115,7 +137,7 @@ local function clearClosedInvitations(now, departingPlayer)
             state = "INVITE_EXPIRED"
         elseif target == departingPlayer or target.Parent ~= Players then
             state = "INVITE_TARGET_LEFT"
-        elseif pending[target] or PracticeMode.active(target) then
+        elseif pending[target] or PracticeMode.active(target) or (entries[target] and entries[target].teammate) then
             state = "INVITE_TARGET_BUSY"
         else
             continue
@@ -144,23 +166,30 @@ local function publishInvitations()
     end
 end
 
-local function reserve(first, second)
-    clearRequest(first)
-    clearRequest(second)
-    local group = { first, second }
+local function reserve(group)
+    local ids = {}
+    for index, player in ipairs(group) do
+        ids[index] = player.UserId
+        clearRequest(player)
+    end
     local transfer = beginTransfer(group, "CONNECTING")
     clearClosedInvitations(Workspace:GetServerTimeNow())
     publishInvitations()
+    local function groupIntact()
+        for _, player in ipairs(group) do
+            if pending[player] ~= transfer or player.Parent ~= Players then return false end
+        end
+        return true
+    end
     task.spawn(function()
         local ok, code = pcall(function()
             local reservedCode, serverId = TeleportService:ReserveServerAsync(game.PlaceId)
-            if pending[first] ~= transfer or pending[second] ~= transfer then return nil end
-            local saved = rosterStore:SetAsync(serverId, { first.UserId, second.UserId }, ROSTER_TTL)
+            if not groupIntact() then return nil end
+            local saved = rosterStore:SetAsync(serverId, ids, ROSTER_TTL)
             if saved ~= true then return nil end
             return reservedCode
         end)
-        if not ok or not code or pending[first] ~= transfer or pending[second] ~= transfer
-            or first.Parent ~= Players or second.Parent ~= Players then
+        if not ok or not code or not groupIntact() then
             for _, player in ipairs(group) do finishTransfer(player, transfer, "FAILED") end
             return
         end
@@ -205,14 +234,16 @@ local function delayReinvite(sender, recipientId)
     end)
 end
 
-function Room.request(player, enabled, target, invitation)
-    if pending[player] then return end
+function Room.request(player, enabled, target, invitation, teamInvite)
+    if pending[player] or player.Parent ~= Players or PracticeMode.active(player) then return end
+    if teamInvite ~= nil and (teamInvite ~= true or not enabled or target == nil or invitation ~= nil) then return end
     if invitation ~= nil and (target == nil or typeof(invitation) ~= "string") then return end
     if not enabled and invitation == nil then
-        clearRequest(player)
+        leaveTeam(player, "TEAM_CANCELLED")
         setState(player, "")
         return
     end
+    if entries[player] and entries[player].teammate then return end
     local opponent
     if target ~= nil then
         if typeof(target) ~= "number" or target <= 0 or target >= 2^53 or target % 1 ~= 0 then return end
@@ -221,9 +252,15 @@ function Room.request(player, enabled, target, invitation)
             local entry = opponent and entries[opponent]
             if entry and entry.target == player and not pending[opponent]
                 and opponent.Parent == Players and Workspace:GetServerTimeNow() < entry.expires
-                and entry.invitation == invitation then
+                and not PracticeMode.active(opponent) and entry.invitation == invitation then
                 if enabled then
-                    reserve(opponent, player)
+                    if entry.teamInvite then
+                        queueTeam(opponent, player, Workspace:GetServerTimeNow())
+                        clearClosedInvitations(Workspace:GetServerTimeNow())
+                        publishInvitations()
+                    else
+                        reserve({opponent, player})
+                    end
                 else
                     delayReinvite(opponent, player.UserId)
                     clearRequest(opponent)
@@ -240,7 +277,8 @@ function Room.request(player, enabled, target, invitation)
             if not entries[player] then setState(player, "INVITE_COOLDOWN") end
             return
         end
-        if not opponent or opponent == player or pending[opponent] or PracticeMode.active(opponent) then
+        if not opponent or opponent == player or pending[opponent] or PracticeMode.active(opponent)
+            or (entries[opponent] and entries[opponent].teammate) then
             clearRequest(player)
             setState(player, "UNAVAILABLE")
             return
@@ -248,11 +286,11 @@ function Room.request(player, enabled, target, invitation)
     end
     local previous = entries[player]
     local now = Workspace:GetServerTimeNow()
-    if opponent and previous and previous.target == opponent and now < previous.expires then
+    if opponent and previous and previous.target == opponent and previous.teamInvite == teamInvite and now < previous.expires then
         return
     end
     if not previous then table.insert(order, player) end
-    local entry = { target = opponent }
+    local entry = { target = opponent, teamInvite = teamInvite }
     local outgoingInvite
     if opponent then
         invitationSequence += 1
@@ -261,6 +299,10 @@ function Room.request(player, enabled, target, invitation)
         -- Publish the identity and deadline together so the HUD never mixes two invitations.
         entry.invitation = string.format("%d:%d:%.0f", player.UserId, invitationSequence, expiryMillis)
         outgoingInvite = string.format("%d:%.0f", opponent.UserId, expiryMillis)
+        if teamInvite then
+            entry.invitation ..= ":2"
+            outgoingInvite ..= ":2"
+        end
         player:SetAttribute("IronYardDuelSearchStartedAt", nil)
     elseif not previous or previous.target then
         player:SetAttribute("IronYardDuelSearchStartedAt", now)
@@ -273,14 +315,28 @@ end
 
 function Room.match()
     clearClosedInvitations(Workspace:GetServerTimeNow())
-    local first, second = Queue.pair(entries, order, function(player)
+    local function available(player)
         return player.Parent == Players and not pending[player] and not PracticeMode.active(player)
-    end)
-    if first then
-        reserve(first, second)
-    else
-        publishInvitations()
     end
+    local first, second = Queue.pair(entries, order, available)
+    if first then reserve({first, second}) end
+
+    local a
+    for _, player in ipairs(order) do
+        local entry = entries[player]
+        if entry.captain == player and available(player) and available(entry.teammate) then
+            if a then
+                local now = Workspace:GetServerTimeNow()
+                print(string.format("[IRON YARD] 2v2 matched; team queue seconds %.1f / %.1f",
+                    now - entries[a].startedAt, now - entry.startedAt))
+                -- The roster alternates teams A, B, A, B through every rematch.
+                reserve({a, player, entries[a].teammate, entry.teammate})
+                break
+            end
+            a = player
+        end
+    end
+    publishInvitations()
 end
 
 function Room.players()
@@ -303,8 +359,12 @@ function Room.combatantCount()
     return count
 end
 
+function Room.requiredPlayers()
+    return expected and #expected or 2
+end
+
 function Room.arrivalSecondsLeft()
-    if pairArrived or not arrivalDeadline then return nil end
+    if rosterArrived or not arrivalDeadline then return nil end
     return math.max(0, math.ceil(arrivalDeadline - os.clock()))
 end
 
@@ -330,13 +390,23 @@ function Room.isClosing()
     return closing
 end
 
+local function validRoster(roster)
+    if type(roster) ~= "table" or (#roster ~= 2 and #roster ~= 4) then return false end
+    local seen = {}
+    for index = 1, #roster do
+        local id = roster[index]
+        if type(id) ~= "number" or not (id > 0 and id < 2^53 and id % 1 == 0)
+            or seen[id] then return false end
+        seen[id] = true
+    end
+    return true
+end
+
 local function admit(player)
     local expires = os.clock() + 12
     while player.Parent == Players and not expected and os.clock() < expires do
         local ok, roster = pcall(rosterStore.GetAsync, rosterStore, game.PrivateServerId)
-        if ok and type(roster) == "table" and #roster == 2
-            and type(roster[1]) == "number" and type(roster[2]) == "number"
-            and roster[1] ~= roster[2] then expected = roster end
+        if not expected and ok and validRoster(roster) then expected = roster end
         if not expected then task.wait(1) end
     end
     if player.Parent ~= Players then return end
@@ -347,16 +417,14 @@ local function admit(player)
         return
     end
     if not table.find(expected, player.UserId) then
-        player:Kick("Unable to verify this 1v1 room. Rejoin IRON YARD to play FFA.")
+        player:Kick("Unable to verify this duel room. Rejoin IRON YARD to play FFA.")
         return
     end
     admitted[player.UserId] = player
     local now = os.clock()
     arrivalDeadline = arrivalDeadline or now + ARRIVAL_TIMEOUT
-    local first, second = admitted[expected[1]], admitted[expected[2]]
-    if now < arrivalDeadline and first and first.Parent == Players
-        and second and second.Parent == Players then
-        pairArrived = true
+    if now < arrivalDeadline and Room.combatantCount() == #expected then
+        rosterArrived = true
     end
 end
 
@@ -373,7 +441,7 @@ function Room.start()
         end)
     end
     Players.PlayerRemoving:Connect(function(player)
-        clearRequest(player)
+        leaveTeam(player, "TEAM_PARTNER_LEFT")
         local transfer = pending[player]
         pending[player] = nil
         leaving[player] = nil
@@ -390,7 +458,7 @@ function Room.start()
         end
         if admitted[player.UserId] == player then
             admitted[player.UserId] = nil
-            pairArrived = false
+            rosterArrived = false
         end
     end)
     TeleportService.TeleportInitFailed:Connect(function(player, _, _, placeId, options)

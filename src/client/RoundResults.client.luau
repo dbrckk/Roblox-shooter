@@ -155,16 +155,16 @@ local rematchRequest
 local render
 local REMATCH_CONFIRMATION_SECONDS = 3
 
-local function renderRematch(canVote, closing, hasOpponent, readyCount)
+local function renderRematch(canVote, closing, hasOpponent, readyCount, required)
     local ready = player:GetAttribute("IronYardDuelReady") == true
     if rematchRequest and (not canVote or rematchRequest.round ~= displayedResultsRound
         or rematchRequest.enabled == ready) then
         rematchRequest = nil
     end
     rematch.Interactable = canVote
-    rematch.Text = closing and "REMATCH CLOSED" or not hasOpponent and "OPPONENT LEFT"
+    rematch.Text = closing and "REMATCH CLOSED" or not hasOpponent and (required == 4 and "PLAYER LEFT" or "OPPONENT LEFT")
         or rematchRequest and (rematchRequest.enabled and "VOTING…" or "CANCELLING…")
-        or string.format(ready and "CANCEL  ·  %d/2" or "REMATCH  ·  %d/2", readyCount)
+        or string.format(ready and "CANCEL  ·  %d/%d" or "REMATCH  ·  %d/%d", readyCount, required or 2)
 end
 
 local function syncResultSelection()
@@ -260,7 +260,18 @@ render = function()
     local snapshot = finalSnapshot()
     local owner = snapshot and snapshot.winnerUserId
         or Workspace:GetAttribute("IronYardWinnerUserId") or 0
-    local isWinner = owner ~= 0 and owner == player.UserId
+    local teamIndex, teamCaptain
+    local teams = snapshot and snapshot.teams
+    if teams then
+        for index, members in ipairs(teams) do
+            if table.find(members, player.UserId) then
+                teamIndex, teamCaptain = index, members[1]
+                break
+            end
+        end
+    end
+    local isWinner = teams and teamIndex ~= nil and snapshot.winnerTeam == teamIndex
+        or not teams and owner ~= 0 and owner == player.UserId
     local winner = snapshot and snapshot.winner
         or Workspace:GetAttribute("NeonMatchWinner") or "DRAW"
     local round = snapshot and snapshot.round
@@ -292,15 +303,16 @@ render = function()
     local participants = snapshot and #snapshot.standings or 0
     if snapshot then
         for _, entry in ipairs(snapshot.standings) do
-            if not entry.bot and entry.userId == player.UserId then
+            if not entry.bot and entry.userId == (teamCaptain or player.UserId) then
                 myStanding = entry
                 break
             end
         end
     end
     if myStanding then
-        personalLabel.Text = isDuel
-            and string.format("YOU  /  #%d OF %d   ·   %d ROUNDS WON",
+        personalLabel.Text = teamIndex
+            and string.format("YOUR TEAM  /  %d ROUNDS WON", myStanding.eliminations or 0)
+            or isDuel and string.format("YOU  /  #%d OF %d   ·   %d ROUNDS WON",
                 myStanding.rank or 0, participants,
                 myStanding.eliminations or 0)
             or string.format(
@@ -350,7 +362,7 @@ render = function()
             local placement = math.max(1, math.floor(tonumber(row.rank) or i))
             leaderboard[i].Text = string.format("%d     %s     ·     %d %s",
                 placement, name, score, isDuel and "ROUNDS" or "ELIMS")
-            leaderboard[i].TextColor3 = not row.bot and row.userId == player.UserId
+            leaderboard[i].TextColor3 = not row.bot and row.userId == (teamCaptain or player.UserId)
                 and green or (i == 1 and amber or muted)
         else
             leaderboard[i].Text = string.format("%d     ---", i)
@@ -359,14 +371,15 @@ render = function()
     end
     local dedicated = isDuel and Workspace:GetAttribute("IronYardDedicatedDuel") == true
     local travel = player:GetAttribute("IronYardDuelTravel")
-    local hasOpponent = dedicated and participants == 2 and #Players:GetPlayers() == 2
+    local required = Workspace:GetAttribute("IronYardDuelSize") == 4 and 4 or 2
+    local hasOpponent = dedicated and participants == 2 and #Players:GetPlayers() == required
     local closing = dedicated and Workspace:GetAttribute("IronYardDuelExitStarted") == true
     leaderboard[3].Visible = not dedicated
     rematch.Visible = dedicated and myStanding ~= nil
     local canVote = hasOpponent and rematch.Visible and seconds > 0
         and not closing and travel ~= "RETURNING"
     local readyCount = Workspace:GetAttribute("IronYardDuelReadyCount") or 0
-    renderRematch(canVote, closing, hasOpponent, readyCount)
+    renderRematch(canVote, closing, hasOpponent, readyCount, required)
     back.Visible = dedicated and myStanding ~= nil
     back.Interactable = travel ~= "RETURNING"
     back.Text = travel == "RETURNING" and "RETURNING…" or "BACK TO FFA"
@@ -381,7 +394,7 @@ render = function()
             countdown.Text = "RETURN FAILED  /  TAP BACK TO FFA TO RETRY"
         elseif travel == "RETURNING" or seconds <= 0 then
             countdown.Text = "CONNECTING…"
-        elseif readyCount == 2 and not closing then
+        elseif readyCount == required and not closing then
             countdown.Text = string.format("REMATCH IN %ds", seconds)
         else
             countdown.Text = string.format("BACK TO FFA IN %ds", seconds)
@@ -416,7 +429,7 @@ for _, attr in ipairs({
     "NeonMatchPhase", "NeonMatchWinner", "NeonMatchRound",
     "NeonMatchTimeLeft", "IronYardWinnerUserId", "IronYardStandings",
     "IronYardFinalStandings", "IronYardDedicatedDuel", "IronYardMatchMode",
-    "IronYardDuelReadyCount", "IronYardDuelExitStarted",
+    "IronYardDuelReadyCount", "IronYardDuelExitStarted", "IronYardDuelSize",
 }) do
     table.insert(attributeConnections,
         Workspace:GetAttributeChangedSignal(attr):Connect(render))

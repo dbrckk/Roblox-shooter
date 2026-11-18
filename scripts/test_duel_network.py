@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 SERVER_FIXTURE = r"""
 local now = 1000
+local warn = print
 local tasks = {}
 local os = {clock = function() return now end}
 local task = {}
@@ -85,7 +86,10 @@ local services = {
             end,
         }
     end},
-    HttpService = {JSONEncode = function() return "{}" end, GenerateGUID = function()
+    HttpService = {JSONEncode = function(_, value)
+        if value.mode == "DUEL" then Workspace.lastDuelResult = value end
+        return "{}"
+    end, GenerateGUID = function()
         attempts += 1
         return tostring(attempts)
     end},
@@ -133,6 +137,7 @@ local function newHud(serverPlayer, player, deliverReturn)
     local menu, gui = {Visible = false}, {}
     local search, invite, decline = activeControl(), activeControl(), activeControl()
     local close, duelToggle, quickCancel = activeControl(), activeControl(), activeControl()
+    local formatSwitch = activeControl()
     local status, roster, emptyRoster = {}, {}, {}
     local GuiService = {}
     local UDim2 = {new = function() end, fromOffset = function() end}
@@ -152,7 +157,7 @@ local function newHud(serverPlayer, player, deliverReturn)
     remotes.SetDuelReady = {FireServer = function(_, ...)
         local args = table.pack(...)
         table.insert(sent, args)
-        local deliver = function() Room.request(serverPlayer, table.unpack(args, 1, args.n)) end
+        local deliver = function() Room.request(serverPlayer, args[1], args[2], args[3], args[5]) end
         task.delay(upstream, deliver)
     end}
     local function refreshInviteRows() end
@@ -163,7 +168,7 @@ HUD_ENTRY_POINT = r"""
     serverPlayer.render = duelLabel
     duelLabel()
     return {
-        open = toggleDuel, search = search, invite = invite, decline = decline, status = status,
+        open = toggleDuel, search = search, invite = invite, decline = decline, status = status, format = formatSwitch,
         sent = sent, returns = returns, render = duelLabel,
         delay = function(seconds) upstream = seconds end,
     }
@@ -255,6 +260,51 @@ print("Duel lobby network regression: slow confirmation, stale invite, shared re
 """
 
 
+TEAM_LOBBY_CHECKS = r"""
+Room.start()
+local a, ar = connectPlayer(1)
+local b, br = connectPlayer(2)
+local c, cr = connectPlayer(3)
+local d = connectPlayer(4)
+local menu = newHud(c, cr)
+
+Room.request(a, true, c.UserId, nil, true)
+Room.match()
+advance(0.41)
+menu.open()
+assert(menu.invite.Visible and string.find(menu.invite.Text, "TEAM UP WITH", 1, true))
+local token = c:GetAttribute("IronYardDuelInvitation")
+assert(token and token:sub(-2) == ":2")
+Room.request(d, true, a.UserId, token)
+assert(not a:GetAttribute("IronYardDuelSearchStartedAt") and #transfers == 0)
+menu.invite.Activated:fire()
+advance(0.81)
+assert(a:GetAttribute("IronYardDuelTravel") == "TEAM_SEARCHING")
+assert(c:GetAttribute("IronYardDuelTravel") == "TEAM_SEARCHING")
+
+Room.request(b, true)
+Room.match()
+assert(#transfers == 0, "A 2v2 team cannot fill the solo 1v1 queue")
+Room.request(c, false)
+assert(a:GetAttribute("IronYardDuelTravel") == "TEAM_CANCELLED")
+assert(not a:GetAttribute("IronYardDuelReady") and not c:GetAttribute("IronYardDuelReady"))
+Room.request(a, true, c.UserId, nil, true)
+Room.match()
+Room.request(c, true, a.UserId, token)
+assert(a:GetAttribute("IronYardDuelTravel") == "INVITED", "Stale team invitation reused")
+Room.request(c, true, a.UserId, c:GetAttribute("IronYardDuelInvitation"))
+Room.request(b, true, d.UserId, nil, true)
+Room.match()
+Room.request(d, true, b.UserId, d:GetAttribute("IronYardDuelInvitation"))
+Room.match()
+assert(#transfers == 1 and #transfers[1].group == 4)
+assert(transfers[1].group[1] == a and transfers[1].group[2] == b
+    and transfers[1].group[3] == c and transfers[1].group[4] == d)
+assert(table.concat(rosters[1], ",") == "1,2,3,4", "Authoritative team order changed")
+print("2v2 lobby: explicit invitation, cancellation, stale token, queue separation and exact reserved roster passed.")
+"""
+
+
 DEDICATED_FIXTURE = r"""
 local remotes = {SetDuelReady = {OnServerEvent = signal()}, ReturnToFfa = {OnServerEvent = signal()},
     SetPracticeRange = {OnServerEvent = signal()}}
@@ -267,7 +317,7 @@ local modules = {
     BotService = {reconcileNow = noop, resetRound = noop, getScores = function() return {} end},
     SpawnService = {}, WeaponService = {}, MovementService = {},
     PracticeMode = PracticeMode, PracticeRange = {},
-    DuelCombatState = {clear = noop}, CombatAwards = {resetRound = noop}, SupplyService = {resetRound = noop},
+    DuelCombatState = DuelCombatState, CombatAwards = {resetRound = noop}, SupplyService = {resetRound = noop},
     RemoteGuard = {allow = function() return true end},
     PrecisionNet = {getRemotes = function() return remotes end},
 }
@@ -482,6 +532,111 @@ print("Duel network regression: " .. firstArena .. " -> " .. secondArena
 """
 
 
+TEAM_MATCH_CHECKS = r"""
+local function reachPhase(target)
+    for _ = 1, 240 do
+        if Workspace:GetAttribute("NeonMatchPhase") == target then return end
+        advance(0.2)
+    end
+    error("Team room never reached " .. target)
+end
+
+Vector3 = {zero = {}}
+local function spawnCharacter(player)
+    local humanoid = {Health = 100, MaxHealth = 100}
+    local root = {Anchored = false, Parent = true}
+    local character = {attributes = {}}
+    function character:FindFirstChildOfClass() return humanoid end
+    function character:FindFirstChild() return root end
+    function character:SetAttribute(name, value) self.attributes[name] = value end
+    function root:IsDescendantOf(parent) return parent == character end
+    player.Character = character
+    return humanoid, root
+end
+
+local a, b, c = connectPlayer(1), connectPlayer(2), connectPlayer(3)
+local victories = {}
+local placements = 0
+modules.SpawnService.placeDuelTeams = function(roster, bout, arena)
+    assert(roster[1] == a and roster[2] == b and roster[3] == c and roster[4].UserId == 4)
+    assert(bout >= 1 and arena)
+    placements += 1
+    return true
+end
+modules.SpawnService.clearProtection = noop
+modules.MovementService.resetDuelMovement = noop
+modules.WeaponService.resetRound = function()
+    Workspace:SetAttribute("IronYardFireEpoch", (Workspace:GetAttribute("IronYardFireEpoch") or 0) + 1)
+end
+modules.CombatAwards.recordVictory = function(player) table.insert(victories, player) end
+MatchService.start()
+advance(7)
+assert(Workspace:GetAttribute("NeonMatchPhase") == "WAITING" and placements == 0)
+assert(Workspace:GetAttribute("IronYardDuelSize") == 4)
+local d = connectPlayer(4)
+local intruder = connectPlayer(5)
+assert(intruder.kickReason and Room.combatantCount() == 4)
+for _, operator in ipairs({a,b,c,d}) do spawnCharacter(operator) end
+
+reachPhase("DUEL_PREP")
+local _, oldRoot = c.Character:FindFirstChildOfClass(), c.Character:FindFirstChild()
+assert(oldRoot.Anchored)
+spawnCharacter(c)
+advance(0.21)
+assert(Workspace:GetAttribute("NeonMatchPhase") == "DUEL_BREAK" and not oldRoot.Anchored,
+    "Replacing one rig must release the other preparation anchors")
+reachPhase("LIVE")
+assert(Workspace:GetAttribute("IronYardDuelBout") == 1, "Interrupted prep consumed a live bout")
+assert(Workspace:GetAttribute("IronYardDuelPlayerA2") == c.UserId)
+assert(Workspace:GetAttribute("IronYardDuelPlayerB2") == d.UserId)
+assert(DuelCombatState.canDamage(c, d, d.Character, "LIVE", "DUEL", 4))
+assert(not DuelCombatState.canDamage(c, a, a.Character, "LIVE", "DUEL", 4))
+assert(not DuelCombatState.canFire(intruder, "LIVE", "DUEL", 4))
+local originalD = d.Character
+spawnCharacter(d)
+assert(d.Character ~= originalD and not DuelCombatState.canFire(d, "LIVE", "DUEL", 4))
+advance(0.21)
+assert(Workspace:GetAttribute("NeonMatchPhase") == "LIVE", "A single teammate death ended the bout")
+b.Character:FindFirstChildOfClass().Health = 0
+reachPhase("DUEL_BREAK")
+assert(Workspace:GetAttribute("IronYardDuelScoreA") == 1)
+spawnCharacter(b)
+for bout = 2, 5 do
+    reachPhase("LIVE")
+    assert(Workspace:GetAttribute("IronYardDuelBout") == bout)
+    b.Character:FindFirstChildOfClass().Health = 0
+    d.Character:FindFirstChildOfClass().Health = 0
+    reachPhase(bout < 5 and "DUEL_BREAK" or "RESULTS")
+    spawnCharacter(b)
+    spawnCharacter(d)
+end
+local firstResult = Workspace.lastDuelResult
+assert(firstResult.winner == "TEAM A" and firstResult.winnerTeam == 1)
+assert(table.concat(firstResult.teams[1], ",") == "1,3")
+assert(#victories == 2 and victories[1] == a and victories[2] == c)
+local round = Workspace:GetAttribute("NeonMatchRound")
+for _, operator in ipairs({a,b,c,d}) do
+    remotes.SetDuelReady.OnServerEvent:fire(operator, true, nil, nil, round - 1)
+    assert(not operator:GetAttribute("IronYardDuelReady"))
+    remotes.SetDuelReady.OnServerEvent:fire(operator, true, nil, nil, round)
+    assert(operator:GetAttribute("IronYardDuelReady"))
+end
+reachPhase("COUNTDOWN")
+reachPhase("LIVE")
+assert(Workspace:GetAttribute("IronYardDuelPlayerA2") == c.UserId, "Rematch split the original team")
+c.Parent = nil
+Players.PlayerRemoving:fire(c)
+reachPhase("RESULTS")
+local forfeit = Workspace.lastDuelResult
+assert(forfeit.reason == "FORFEIT" and forfeit.winnerTeam == 2)
+assert(#victories == 2, "Forfeit was credited as a completed victory")
+advance(12.1)
+assert(#transfers == 3 and Room.isClosing(), "Every remaining player must receive the FFA transfer")
+for _, transfer in ipairs(transfers) do assert(not transfer.options.ReservedServerAccessCode) end
+print("2v2 match: admission, prep retry, friendly-fire, no second life, victory, rematch and forfeit passed.")
+"""
+
+
 def module(name, path, replacements=None):
     source = (ROOT / path).read_text()
     for original, replacement in (replacements or {}).items():
@@ -516,6 +671,7 @@ def run(luau):
         SERVER_FIXTURE + mode + queue
         + '\ngame.PrivateServerId = "reserved"\nrosters.reserved = {1, 2}\n' + room
         + module("DuelRules", "src/shared/DuelRules.luau")
+        + module("DuelCombatState", "src/server/DuelCombatState.luau")
         + module("DuelSpawnPlan", "src/shared/DuelSpawnPlan.luau")
         + module("MatchLobbyPolicy", "src/shared/MatchLobbyPolicy.luau")
         + module("RoundStandings", "src/server/RoundStandings.luau")
@@ -525,6 +681,9 @@ def run(luau):
     dedicated_with_hud = dedicated_server + lobby_client
     fixtures = {
         "lobby": lobby,
+        "team-lobby": SERVER_FIXTURE + mode + queue + room + lobby_client + TEAM_LOBBY_CHECKS,
+        "team-match": dedicated_server.replace("rosters.reserved = {1, 2}", "rosters.reserved = {1, 2, 3, 4}")
+        + TEAM_MATCH_CHECKS,
         "dedicated-sorting-first": dedicated,
         "dedicated-yard-first": dedicated.replace(
             'game.PrivateServerId = "reserved"',

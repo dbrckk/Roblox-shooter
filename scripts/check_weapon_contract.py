@@ -532,19 +532,20 @@ def main():
         'local a,b,n,complete,winner,finishReason=DuelRules.advance(',
         'endDuel(finishReason, winner)',
         'local function endDuel(reason, winningSide)',
-        'DuelRules.boutWinner(ah,am,bh,bm,remaining<=0)',
+        'DuelRules.boutWinner(health[1], maximum[1], health[2], maximum[2], expired)',
+        'DuelRules.teamBoutWinner(health, maximum, expired)',
+        'SpawnService.placeDuelTeams(players, duel.bouts + 1, duel.arena)',
         'BotService.reconcileNow()',
-        'SpawnService.placeDuelPair(a, b, duel.bouts + 1, duel.arena)',
+        'SpawnService.placeDuelPair(players[1], players[2], duel.bouts + 1, duel.arena)',
         'WeaponService.resetRound()',
         'Workspace:SetAttribute("IronYardMatchMode", mode)',
         'transition("DUEL_BREAK", DUEL_BREAK_SECONDS)',
         'DuelRules.recoveryExpired(duel and duel.waitSince, os.clock())',
         'endDuel("SPAWN_TIMEOUT", nil)',
-        'players[1]:SetAttribute("IronYardDuelReady", false)',
-        'players[2]:SetAttribute("IronYardDuelReady", false)',
+        'for _, player in ipairs(players) do player:SetAttribute("IronYardDuelReady", false) end',
         'duel.waitSince = nil',
         'duel.waitSince = duel.waitSince or os.clock()',
-        'DuelRules.sameParticipants(DuelRoom.players(), a, b)',
+        'DuelRules.sameParticipants(players, a, b)',
         'aPlayer=players[1], bPlayer=players[2]',
         'duel.waitSince = os.clock()',
         'local function releaseDuelPrep()',
@@ -552,15 +553,11 @@ def main():
         'elseif phase == "DUEL_PREP" then',
         'if duelPrepState() ~= "READY" then',
         'transition("DUEL_PREP", DuelRules.PREP_SECONDS)',
-        'SpawnService.clearProtection(a.Character)',
-        'SpawnService.clearProtection(b.Character)',
-        'duel.liveCharacterA = a.Character',
-        'duel.liveCharacterB = b.Character',
-        'DuelRules.healthForBout(expectedCharacter, c,',
-        'local ah,am=health(a, duel.liveCharacterA)',
-        'local bh,bm=health(b, duel.liveCharacterB)',
-        'MovementService.resetDuelMovement(a)',
-        'MovementService.resetDuelMovement(b)',
+        'SpawnService.clearProtection(character)',
+        'duel.liveCharacters[index] = character',
+        'DuelRules.healthForBout(',
+        'duel.liveCharacters[index], character,',
+        'MovementService.resetDuelMovement(players[index])',
     ):
         has(match, token, "Duel lifecycle without FFA regression")
     has(duel_spawn, 'if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',
@@ -621,13 +618,13 @@ def main():
         "Healing confirmation uses the server amount with the same formatting")
     has(supply_rules, 'if mode == "DUEL" then return "DUEL_CLOSED" end',
         "Medical is closed throughout a duel")
-    has(match, 'if winningPlayer and winningPlayer.Parent == Players',
+    has(match, 'if winningPlayer.Parent == Players then CombatAwards.recordVictory(winningPlayer) end',
         "Only present combatants can receive duel victories")
     for token in (
         "local side = DuelRules.forfeitSide(players, a, b)",
         'endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)',
         'local forfeitChampion = reason == "FORFEIT"',
-        "RoundStandings.build(duelRows(), round, forfeitChampion)",
+        "RoundStandings.build(rows, round, forfeitChampion)",
         'snapshot.winnerUserId = winningSide == "A" and duel.aId',
     ):
         has(match, token, "Survivor-only duel forfeit and consistent podium")
@@ -671,13 +668,13 @@ def main():
         has(server, token, "All duel hit paths bound to original rigs")
     for token in (
         "local function validId(id)",
-        "function Gate.begin(a, b)",
+        "function Gate.begin(a, b, aPartner, bPartner)",
         "function Gate.clear()",
         "function Gate.canFire(player, phase, mode, playerCount)",
         "function Gate.canDamage(attacker, target, model, phase, mode, playerCount)",
     ):
         has(duel_gate, token, "Per-bout real Character gate")
-    for token in ("DuelCombatState.begin(a, b)", "DuelCombatState.clear()"):
+    for token in ("DuelCombatState.begin(table.unpack(players))", "DuelCombatState.clear()"):
         has(match, token, "Lifecycle opens and closes combat ownership")
     for token in (
         'function Readout.scores(userId, aId, bId, aWins, bWins)',
@@ -695,7 +692,7 @@ def main():
     ):
         has(bot, token, "Immediate bot removal in duel")
     for token in (
-        'DuelReadout.scores(player.UserId,',
+        'DuelReadout.scores(scoreReaderId,',
         'DuelReadout.boutLabel(lastDuelResult,',
         '"IronYardDuelLastResult"',
         'remotes.SetDuelReady:FireServer',
