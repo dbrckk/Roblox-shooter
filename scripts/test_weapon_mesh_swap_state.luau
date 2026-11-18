@@ -6,6 +6,7 @@ local state = {
     model = "PROCEDURAL",
     equipStartedAt = 50,
     fireStartedAt = 49,
+    shotTiltScale = 0.76,
     recoil = 0.02,
     reloadActive = false,
     reloadStartedAt = 42,

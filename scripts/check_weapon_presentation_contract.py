@@ -30,7 +30,7 @@ for needle in (
     assert needle in feel, f"Pure weapon feel missing: {needle}"
 
 for needle in (
-    "function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponId)",
+    "function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponId, followUp)",
     "if localShot then", "activeVoices >= maxVoices",
     "distance > maxDistance", "layers = far and 1 or 2",
     "REACH[weaponId] or 1",
@@ -59,9 +59,9 @@ for needle in (
     'role == WeaponPartMotionRole.SHOTGUN_PUMP',
     'role == WeaponPartMotionRole.SNIPER_BOLT',
     'role == WeaponPartMotionRole.PISTOL_SLIDE',
-    "function WeaponVisuals:playFireSound(weaponId, origin, localShot)",
+    "function WeaponVisuals:playFireSound(weaponId, origin, localShot, followUp)",
     "WeaponAudio.select(",
-    "UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId)",
+    "UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId, followUp)",
     "self.remoteSoundEmitters = {}",
     "table.insert(self.remoteSoundEmitters, emitter)",
     "WeaponAudio.pruneEndedEmitters(self.remoteSoundEmitters)",
@@ -422,7 +422,7 @@ for needle in (
 
 swap_state = get("src/shared/WeaponMeshSwapState.luau")
 for needle in (
-    '"equipStartedAt", "fireStartedAt", "recoil"',
+    '"equipStartedAt", "fireStartedAt", "shotTiltScale", "recoil"',
     '"reloadActive", "reloadStartedAt", "reloadBlend"',
     '"aimBlend", "stepPhase", "stepBlend", "sway"',
     '"lastCameraPosition"',
@@ -687,7 +687,7 @@ for needle in (
     "CartridgeEjection.arc(t, slot.arcHeight)",
     "local pending = self.pendingCartridge",
     "self.pendingCartridge = nil -- cancel unplayed pump/bolt on weapon swap",
-    "function WeaponVisuals:kick(weaponId)",
+    "function WeaponVisuals:kick(weaponId, followUp)",
     "CartridgeEjection.plan(weaponId,",
     "self:_ejectCartridge(pending.plan)",
     "CFrame.new(plan.origin[1], plan.origin[2], plan.origin[3])",
@@ -772,7 +772,7 @@ assert "if camera and not scoped then" not in client, (
     "Camera replacement must also restore scoped magnification")
 assert "if not camera then\n\t\treturn\n\tend\n\n\tlocal config" not in client, (
     "Missing camera must not prevent scope state cleanup")
-assert "visuals:playFireSound(weaponId, ray.Origin, true)" in client, (
+assert "visuals:playFireSound(weaponId, ray.Origin, true, followUp)" in client, (
     "Locally predicted shot must never be culled as a remote shot"
 )
 assert "visuals:playFireSound(message.weaponId, message.origin)" in client, (
@@ -800,15 +800,15 @@ for needle in (
 assert 'scopeRing.Size = UDim2.fromOffset(310, 310)' not in hud
 assert 'RenderStepped:Connect' not in hud, "Sniper UI must not add a frame loop"
 for needle in (
-    "function Policy.kick(weaponId, previous)",
+    "function Policy.kick(weaponId, previous, followUp)",
     "function Policy.recover(previous, dt)",
     "function Policy.radius(weaponId, moveAmount, sprinting, kick)",
-    "function Policy.shouldDraw(now, previousAt, previousRadius, radius)",
+    "function Policy.shouldDraw(now, previousAt, previousRadius, radius, freshRifleShot)",
 ):
     assert needle in crosshair, f"Cosmetic crosshair policy missing: {needle}"
 for needle in (
     'WaitForChild("CrosshairFeedbackPolicy")',
-    'function HudController:registerPredictedShot(weaponId)',
+    'function HudController:registerPredictedShot(weaponId, followUp)',
     'function HudController:updateCrosshair(dt, moving, running)',
     'CrosshairFeedback.shouldDraw(now,',
     'self.crosshair.Visible = not scoped',
@@ -817,9 +817,9 @@ for needle in (
     'self.adsDot.BackgroundColor3 = color',
 ):
     assert needle in hud, f"Adaptive hip-fire / ADS UI missing: {needle}"
-assert 'hud:registerPredictedShot(weaponId)' in client
+assert 'hud:registerPredictedShot(weaponId, followUp)' in client
 assert 'hud:updateCrosshair(deltaTime, moveAmount, sprinting)' in client
-assert client.index('hud:registerPredictedShot(weaponId)') < (
+assert client.index('hud:registerPredictedShot(weaponId, followUp)') < (
     client.index('remotes.FireWeapon:FireServer({', client.index('local function fireWeapon(')))
 assert client.count('RunService:BindToRenderStep("IronYardClientCameraFeel",') == 1, (
     "Hip-fire responsiveness must reuse the existing frame callback")

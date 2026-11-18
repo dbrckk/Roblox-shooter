@@ -31,6 +31,13 @@ local localMix = Audio.select("ECO", true, 900, true, 900)
 assert(localMix and localMix.layers == 2 and localMix.volume == 1
     and localMix.highGain == 0 and localMix.midGain == 0,
     "Local shooter sound remains immediate regardless of other shots")
+local rifleFirst = Audio.select("ECO", true, 0, true, 900, "AssaultRifle", false)
+local rifleFollowUp = Audio.select("ECO", true, 0, true, 900, "AssaultRifle", true)
+assert(rifleFirst.volume == 1 and rifleFollowUp.volume > 0.8 and rifleFollowUp.volume < 0.9)
+assert(rifleFollowUp.layers == rifleFirst.layers, "Keep both layers on every local rifle shot")
+assert(Audio.select("ECO", true, 0, true, 900, "Pistol", true).volume == 1)
+assert(Audio.select("ECO", true, 20, false, 0, "AssaultRifle", true).volume == 1,
+    "Remote gun audio is unaffected by local burst feedback")
 -- Different weapons no longer broadcast identical acoustic reach.
 local rifle = Audio.select("BALANCED", true, 120, false, 0, "AssaultRifle")
 local pistol = Audio.select("BALANCED", true, 120, false, 0, "Pistol")

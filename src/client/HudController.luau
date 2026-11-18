@@ -93,6 +93,7 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.currentWeaponId = "AssaultRifle"
 	self.hitToken = 0
     self.reticleKick = 0
+    self.rifleReticlePending = false
     self.reticleLastAt = -math.huge
     self.reticleRadius = nil
     self.lastConfirmedHudHitAt = -math.huge
@@ -1000,6 +1001,7 @@ end
 function HudController:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
     self.reticleKick = 0
+    self.rifleReticlePending = false
     self.reticleRadius = nil
     -- Equip must force a fresh readout even when two magazines happen to
     -- share the same text and the server snapshot arrives a frame later.
@@ -1028,20 +1030,25 @@ function HudController:setWeapon(weaponId)
 end
 
 -- Predicted shot bloom is cosmetic; only a server "Hit" triggers damage feedback.
-function HudController:registerPredictedShot(weaponId)
+function HudController:registerPredictedShot(weaponId, followUp)
     if weaponId ~= self.currentWeaponId then return end
-    self.reticleKick = CrosshairFeedback.kick(weaponId, self.reticleKick)
+    self.reticleKick = CrosshairFeedback.kick(weaponId, self.reticleKick, followUp)
+    self.rifleReticlePending = weaponId == "AssaultRifle"
 end
 
--- Reuse the existing client RenderStepped loop. Radius only writes when
--- the rounded position changes and at most once every 45ms. No Tweens.
+-- Draw a changed rifle impulse on the next frame. Ordinary rounded radius
+-- updates still use the 45ms throttle on the existing frame callback.
 function HudController:updateCrosshair(dt, moving, running)
-    self.reticleKick = CrosshairFeedback.recover(self.reticleKick, dt)
+    local freshRifleShot = self.rifleReticlePending
+    self.rifleReticlePending = false
+    if not freshRifleShot then
+        self.reticleKick = CrosshairFeedback.recover(self.reticleKick, dt)
+    end
     local radius = CrosshairFeedback.radius(
         self.currentWeaponId, moving, running, self.reticleKick)
     local now = os.clock()
     if not CrosshairFeedback.shouldDraw(now,
-        self.reticleLastAt, self.reticleRadius, radius) then return end
+        self.reticleLastAt, self.reticleRadius, radius, freshRifleShot) then return end
     self.reticleLastAt = now
     self.reticleRadius = radius
     self.crosshairLines[1].Position = UDim2.new(0.5, 0, 0.5, -radius)

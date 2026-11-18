@@ -10,6 +10,7 @@ local shared = ReplicatedStorage:WaitForChild("Shared")
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
 local WeaponConfig = require(shared:WaitForChild("WeaponConfig"))
 local WeaponAimReloadPolicy = require(shared:WaitForChild("WeaponAimReloadPolicy"))
+local WeaponSpreadPolicy = require(shared:WaitForChild("WeaponSpreadPolicy"))
 local ScopeFovPolicy = require(shared:WaitForChild("ScopeFovPolicy"))
 local CombatVfxProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local RemoteCombatFxBudget = require(shared:WaitForChild("RemoteCombatFxBudget"))
@@ -902,16 +903,19 @@ local function fireWeapon(weaponId)
 		return
 	end
 
+    -- Presentation uses the same pause window as the server burst policy.
+    -- The server still classifies its own admitted shots independently.
+    local followUp = weaponId == "AssaultRifle" and now - lastShot < WeaponSpreadPolicy.RESET_SECONDS
 	lastLocalFire[weaponId] = now
     nextLocalGlobalFireAt = WeaponConfig.nextGlobalFireAt(weaponId, now)
     if ammo and ammo.capacity > 0 then
         ammo.loaded = math.max(0, ammo.loaded - 1)
         hud:setAmmo(weaponId, ammo.loaded, ammo.capacity, false)
     end
-	visuals:kick(weaponId)
-    hud:registerPredictedShot(weaponId)
+	visuals:kick(weaponId, followUp)
+    hud:registerPredictedShot(weaponId, followUp)
     movementAudio:duckForShot(weaponId, now)
-	visuals:playFireSound(weaponId, ray.Origin, true)
+	visuals:playFireSound(weaponId, ray.Origin, true, followUp)
 
 
     if config.kind == "Raycast" or config.kind == "Pellet" then

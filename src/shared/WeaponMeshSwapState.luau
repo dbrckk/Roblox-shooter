@@ -2,7 +2,7 @@
 -- Not used for genuine weapon changes: they deliberately start a fresh equip.
 local P = {}
 P.Fields = {
-    "equipStartedAt", "fireStartedAt", "recoil",
+    "equipStartedAt", "fireStartedAt", "shotTiltScale", "recoil",
     "reloadActive", "reloadStartedAt", "reloadBlend",
     "reloadHandX", "reloadHandY", "reloadHandZ",
     "magazineDipBlend", "pistolOffhandAlpha",
