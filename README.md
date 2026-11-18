@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 95** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `d37b835b53d4cda49729a98af2e7c6a6aaebfa6b`. Sur mobile, le tir prend en compte le dernier glissement sur **FIRE**, et le bouton **RLD** affiche la progression du rechargement confirmée par le serveur. [Publication de la version 95](https://github.com/dbrckk/Roblox-shooter/actions/runs/44279347422)
+Roblox a confirmé la **version de place 96** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `5aeca62d69f53fd0e4fd8f7f0dc3d8bfb52005d4`. Sur mobile, une pression brève sur le bouton de saut conserve le saut habituel. Un maintien de 180 ms permet d’activer le boost en l’air. [Publication de la version 96](https://github.com/dbrckk/Roblox-shooter/actions/runs/44281659183)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
