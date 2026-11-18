@@ -141,7 +141,10 @@ local function newHud(serverPlayer, player, deliverReturn)
     local Color3 = {fromRGB = function() end}
     local status, roster, emptyRoster = {}, {}, {}
     local GuiService = {}
-    local UDim2 = {new = function() end, fromOffset = function() end}
+    local UDim2 = {
+        new = function(sx, x, sy, y) return {X = {Scale=sx, Offset=x}, Y = {Scale=sy, Offset=y}} end,
+        fromOffset = function(x, y) return {X = {Offset=x}, Y = {Offset=y}} end,
+    }
     local inputType = {Name = "Touch"}
     local UserInputService = {TouchEnabled = true, GetLastInputType = function() return inputType end}
     local GamepadCombatPolicy = {isGamepad = function(name) return name == "Gamepad1" end}
@@ -270,6 +273,7 @@ local d = connectPlayer(4)
 local menu = newHud(c, cr)
 menu.open()
 assert(menu.solo.Visible and menu.teams.Visible and menu.search.Visible)
+assert(210 * 0.9 + menu.roster.Size.Y.Offset >= 36, "Compact viewport needs one whole invite row")
 menu.teams.Activated:fire()
 assert(not menu.search.Visible and menu.roster.Visible)
 assert(string.find(menu.status.Text, "INVITE A TEAMMATE", 1, true))
@@ -283,7 +287,9 @@ Room.request(a, true, c.UserId, nil, true)
 Room.match()
 advance(0.41)
 menu.open()
-assert(menu.invite.Visible and string.find(menu.invite.Text, "TEAM UP WITH", 1, true))
+assert(menu.invite.Visible and menu.invite.Text == "JOIN TEAM" and not menu.roster.Visible)
+assert(menu.status.Text:find("2v2 INVITE", 1, true) and menu.status.Text:find(a.DisplayName, 1, true))
+assert(menu.invite.Position.Y.Offset + 38 <= 210 * 0.9, "Invitation must fit small landscape screens")
 local token = c:GetAttribute("IronYardDuelInvitation")
 assert(token and token:sub(-2) == ":2")
 Room.request(d, true, a.UserId, token)
@@ -294,7 +300,7 @@ assert(a:GetAttribute("IronYardDuelTravel") == "TEAM_SEARCHING")
 assert(c:GetAttribute("IronYardDuelTravel") == "TEAM_SEARCHING")
 assert(c:GetAttribute("IronYardDuelTeammate") == a.UserId)
 assert(a:GetAttribute("IronYardDuelTeammate") == c.UserId)
-assert(menu.status.Text:find("WAITING FOR ANOTHER TEAM", 1, true) and menu.status.Text:find(a.DisplayName, 1, true))
+assert(menu.status.Text:find("FINDING A TEAM", 1, true) and menu.status.Text:find(a.DisplayName, 1, true))
 assert(not menu.roster.Visible and menu.search.Text == "CANCEL TEAM SEARCH")
 assert(not menu.solo.Interactable and not menu.teams.Interactable)
 

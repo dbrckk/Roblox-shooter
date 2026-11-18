@@ -150,8 +150,8 @@ end
 local menu = Instance.new("Frame")
 menu.Name = "DuelLobby"
 menu.AnchorPoint = Vector2.new(0.5, 0.5)
-menu.Position = UDim2.fromScale(0.5, 0.54)
-menu.Size = UDim2.new(0.84, 0, 0.79, 0)
+menu.Position = UDim2.fromScale(0.5, 0.5)
+menu.Size = UDim2.new(0.84, 0, 0.90, 0)
 menu.BackgroundColor3 = Color3.fromRGB(27, 35, 35)
 menu.BorderSizePixel = 0
 menu.Visible = false
@@ -311,8 +311,7 @@ local function refreshInviteRows()
         local text = blocked and string.format("WAIT %ds  ·  %s", seconds, row.name)
             or ((selectedTeamFormat and "TEAM UP  " or "INVITE  ") .. row.name)
         if row.button.Text ~= text then row.button.Text = text end
-        local available = not blocked and not requestPending
-            and player:GetAttribute("IronYardDuelTravel") ~= "TEAM_SEARCHING"
+        local available = roster.Visible and not blocked and not requestPending
         row.button.Interactable = available
         row.button.Selectable = available
         row.button.AutoButtonColor = available
@@ -533,8 +532,11 @@ local function duelLabel()
         local teammateId = player:GetAttribute(teammateAttribute)
         local teammate = type(teammateId) == "number" and Players:GetPlayerByUserId(teammateId)
         local name = teammate and teammate.DisplayName or "TEAMMATE"
-        currentStatus = "WAITING FOR ANOTHER TEAM\nWITH " .. name
+        currentStatus = "FINDING A TEAM\nWITH " .. name
         if elapsedText then currentStatus ..= " · " .. elapsedText end
+    elseif incoming then
+        currentStatus = string.format("%s · %ds\n%s", teamIncoming and "2v2 INVITE" or "1v1 INVITE",
+            inviteSeconds, incoming.DisplayName)
     end
     status.Text = requestPending and "WAITING FOR SERVER"
         or (readyRequest and "NO CONFIRMATION · TRY AGAIN" or currentStatus)
@@ -559,8 +561,7 @@ local function duelLabel()
     invite.Selectable = invite.Interactable and invite.Visible
     decline.Selectable = decline.Interactable and decline.Visible
     invite.Text = replying and readyRequest.enabled and "ACCEPTING…"
-        or (incoming and string.format("%ds · %s %s", inviteSeconds,
-            teamIncoming and "TEAM UP WITH" or "ACCEPT", incoming.DisplayName) or "")
+        or (incoming and (teamIncoming and "JOIN TEAM" or "ACCEPT") or "")
     decline.Text = replying and not readyRequest.enabled and "DECLINING…" or "DECLINE"
     displayedInvitation = invite.Visible and invitation or nil
     displayedInviterId = invite.Visible and incomingId or nil
@@ -571,7 +572,7 @@ local function duelLabel()
     invite.Position = UDim2.fromOffset(12, inviteTop)
     decline.Position = UDim2.new(1, -106, 0, inviteTop)
     local top = inviteTop + (invite.Visible and 44 or 0)
-    roster.Visible = not busy and not teamSearching
+    roster.Visible = not busy and not teamSearching and not invite.Visible
     if not roster.Visible then emptyRoster.Visible = false end
     roster.Position = UDim2.fromOffset(12, top)
     roster.Size = UDim2.new(1, -24, 1, -top - 8)
