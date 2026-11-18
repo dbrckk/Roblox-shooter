@@ -29,11 +29,13 @@ Le serveur source enregistre les deux identités dans MemoryStore avant le trans
 
 Si la liste des duellistes reste indisponible après la fenêtre de vérification de 12 secondes, le serveur renvoie le joueur en FFA. Après un échec de transfert, **BACK TO FFA** permet de réessayer. Seule une liste vérifiée donne accès au combat.
 
+Le retour automatique en FFA envoie ensemble les joueurs encore présents. Si Roblox indique le serveur public choisi dans le signal d’échec, le joueur concerné réessaie vers ce même serveur. **BACK TO FFA** permet de partir seul ou, après un échec, de retenter vers un autre serveur public. Un joueur attendu qui arrive alors que la salle est déjà fermée est redirigé vers le FFA. [Téléportation de groupe dans Roblox](https://create.roblox.com/docs/reference/engine/classes/TeleportService#TeleportInitFailed)
+
 Une fois un retour en FFA engagé, la salle réservée ferme la revanche, même si le transfert échoue. Après un échec ou un délai dépassé, **BACK TO FFA** redevient disponible. La relance reste individuelle et n’est pas déclenchée en boucle par le serveur.
 
 Une demande de retour est liée au numéro de série affiché. Pendant l’attente de l’adversaire et le compte à rebours, le même bouton reste valable si le serveur passe d’un de ces écrans à l’autre avant de recevoir la demande. Une demande envoyée depuis les résultats est valable pendant ces mêmes résultats. Une série déjà engagée se poursuit si une demande partie du lobby arrive en retard.
 
-Le premier joueur admis déclenche une attente de 40 secondes, affichée dans le HUD. Si le second est admis avant l’échéance, le duel peut commencer et les revanches conservent leur fonctionnement. Si l’échéance est atteinte, les joueurs admis repartent en FFA, même si le second arrive avant la prochaine mise à jour du serveur.
+Le premier joueur admis déclenche une attente de 40 secondes, affichée dans le HUD. En 2v2, le HUD affiche aussi le nombre de joueurs admis sur quatre. Si le second est admis avant l’échéance, le duel peut commencer et les revanches conservent leur fonctionnement. Si l’échéance est atteinte, les joueurs admis repartent en FFA, même si le second arrive avant la prochaine mise à jour du serveur.
 
 Si un combattant quitte le serveur FFA pendant la préparation du transfert, le joueur restant voit **OPPONENT LEFT BEFORE TRANSFER** et peut relancer la recherche immédiatement.
 

@@ -107,7 +107,7 @@ end}
 local function connectPlayer(id)
     local p = {UserId = id, Name = "Player" .. id, DisplayName = "Player " .. id, Parent = Players}
     local authoritative, replicated = {}, {}
-    local client = {}
+    local client = {UserId = id}
     function client:GetAttribute(key) return replicated[key] end
     function p:GetAttribute(key) return authoritative[key] end
     function p:SetAttribute(key, value)
@@ -139,6 +139,8 @@ local function newHud(serverPlayer, player, deliverReturn)
     local UDim = {new = function() end}
     local Color3 = {fromRGB = function() end}
     local GuiService, gui = {MenuOpened = signal(), MenuClosed = signal()}, {}
+    local top, header, detail = {}, {}, {}
+    local function updateDuelProgress() end
     local UDim2 = {}
     function UDim2.new(sx, x, sy, y)
         return {X = {Scale=sx, Offset=x}, Y = {Scale=sy, Offset=y}}
@@ -211,6 +213,10 @@ HUD_ENTRY_POINT = r"""
         row = function(id) return inviteRows[id].button end,
         focus = function(control) GuiService.SelectedObject = control end,
         selected = function() return GuiService.SelectedObject end,
+        matchDetail = function()
+            update()
+            return detail.Text
+        end,
         input = function(name)
             inputType.Name = name
             UserInputService.LastInputTypeChanged:fire(inputType)
@@ -735,7 +741,8 @@ local function spawnCharacter(player)
     return humanoid, root
 end
 
-local a, b, c = connectPlayer(1), connectPlayer(2), connectPlayer(3)
+local a, ar = connectPlayer(1)
+local b, c = connectPlayer(2), connectPlayer(3)
 local victories = {}
 local placements = 0
 modules.SpawnService.placeDuelTeams = function(roster, bout, arena)
@@ -754,12 +761,16 @@ MatchService.start()
 advance(7)
 assert(Workspace:GetAttribute("NeonMatchPhase") == "WAITING" and placements == 0)
 assert(Workspace:GetAttribute("IronYardDuelSize") == 4)
+assert(Workspace:GetAttribute("IronYardDuelArrivedCount") == 3)
+local hud = newHud(a, ar)
+assert(hud.matchDetail():find("3/4 ARRIVED", 1, true), "The lobby must show the verified arrivals")
 local d = connectPlayer(4)
 local intruder = connectPlayer(5)
 assert(intruder.kickReason and Room.combatantCount() == 4)
 for _, operator in ipairs({a,b,c,d}) do spawnCharacter(operator) end
 
 reachPhase("DUEL_PREP")
+assert(Workspace:GetAttribute("IronYardDuelArrivedCount") == 4)
 local _, oldRoot = c.Character:FindFirstChildOfClass(), c.Character:FindFirstChild()
 assert(oldRoot.Anchored)
 spawnCharacter(c)
@@ -812,9 +823,34 @@ local forfeit = Workspace.lastDuelResult
 assert(forfeit.reason == "FORFEIT" and forfeit.winnerTeam == 2)
 assert(#victories == 2, "Forfeit was credited as a completed victory")
 advance(12.1)
-assert(#transfers == 3 and Room.isClosing(), "Every remaining player must receive the FFA transfer")
-for _, transfer in ipairs(transfers) do assert(not transfer.options.ReservedServerAccessCode) end
-print("2v2 match: admission, prep retry, friendly-fire, no second life, victory, rematch and forfeit passed.")
+assert(#transfers == 1 and Room.isClosing(), "The automatic return should use one public group transfer")
+local groupReturn = transfers[1]
+assert(#groupReturn.group == 3 and groupReturn.group[1] == a
+    and groupReturn.group[2] == b and groupReturn.group[3] == d)
+assert(not groupReturn.options.ReservedServerAccessCode and not groupReturn.options.ServerInstanceId)
+
+-- Roblox can provide the chosen destination for just the player whose group transfer failed.
+local retryOptions = Instance.new("TeleportOptions")
+retryOptions:SetTeleportData(groupReturn.options:GetTeleportData())
+retryOptions.ServerInstanceId = "public-ffa-destination"
+Teleport.TeleportInitFailed:fire(d, nil, nil, game.PlaceId, retryOptions)
+advance(1.51)
+assert(#transfers == 2 and #transfers[2].group == 1 and transfers[2].group[1] == d)
+assert(transfers[2].options.ServerInstanceId == retryOptions.ServerInstanceId,
+    "The retry should use the same FFA server")
+Teleport.TeleportInitFailed:fire(d, nil, nil, game.PlaceId, retryOptions)
+assert(d:GetAttribute("IronYardDuelTravel") == "RETURNING", "A duplicate failure interrupted the retry")
+Teleport.TeleportInitFailed:fire(d, nil, nil, game.PlaceId, transfers[2].options)
+assert(d:GetAttribute("IronYardDuelTravel") == "FAILED")
+remotes.ReturnToFfa.OnServerEvent:fire(d, "RESULTS", Workspace:GetAttribute("NeonMatchRound"))
+assert(#transfers == 3 and transfers[3].group[1] == d and not transfers[3].options.ServerInstanceId,
+    "The manual retry should be free to find another public FFA server")
+
+local late = connectPlayer(c.UserId)
+assert(#transfers == 4 and transfers[4].group[1] == late and Room.isClosing(),
+    "A reserved player who reconnects after the results must still be offered a return")
+assert(not transfers[4].options.ReservedServerAccessCode)
+print("2v2 match: admission, rematch, forfeit, grouped FFA return and late arrival passed.")
 """
 
 
@@ -828,6 +864,8 @@ def module(name, path, replacements=None):
 
 def run(luau):
     mode = module("PracticeMode", "src/shared/PracticeMode.luau")
+    readouts = (module("DuelReadout", "src/shared/DuelReadout.luau")
+                + module("DuelSpawnPlan", "src/shared/DuelSpawnPlan.luau"))
     queue = module("Queue", "src/shared/DuelQueue.luau")
     room = module("Room", "src/server/DuelRoom.luau", {
         'local Queue = require(Shared:WaitForChild("DuelQueue"))': "local Queue = Queue",
@@ -836,9 +874,10 @@ def run(luau):
     hud = (ROOT / "src/client/MatchHud.client.luau").read_text()
     input_end = hud.index("GuiService.MenuClosed:Connect(syncMenuSelection)")
     hud_source = hud[hud.index("local function duelButton("):hud.index("\n", input_end)]
-    lobby_client = HUD_FIXTURE + hud_source + HUD_ENTRY_POINT
+    match_readout = hud[hud.index("local function update()"):hud.index("local function connectStats")]
+    lobby_client = HUD_FIXTURE + hud_source + match_readout + HUD_ENTRY_POINT
     touch_layout = module("TouchLayout", "src/shared/TouchLayout.luau")
-    lobby = SERVER_FIXTURE + mode + queue + room + touch_layout + lobby_client + CHECKS
+    lobby = SERVER_FIXTURE + mode + queue + room + readouts + touch_layout + lobby_client + CHECKS
     results = (ROOT / "src/client/RoundResults.client.luau").read_text()
     rematch_state = results[results.index("local rematchRequest"):results.index("local function syncResultSelection")]
     results_render = """
@@ -852,7 +891,7 @@ def run(luau):
         + '\ngame.PrivateServerId = "reserved"\nrosters.reserved = {1, 2}\n' + room
         + module("DuelRules", "src/shared/DuelRules.luau")
         + module("DuelCombatState", "src/server/DuelCombatState.luau")
-        + module("DuelSpawnPlan", "src/shared/DuelSpawnPlan.luau")
+        + readouts
         + module("MatchLobbyPolicy", "src/shared/MatchLobbyPolicy.luau")
         + module("RoundStandings", "src/server/RoundStandings.luau")
         + DEDICATED_FIXTURE + module("MatchService", "src/server/MatchService.luau")
@@ -861,9 +900,9 @@ def run(luau):
     dedicated_with_hud = dedicated_server + touch_layout + lobby_client
     fixtures = {
         "lobby": lobby,
-        "team-lobby": SERVER_FIXTURE + mode + queue + room + touch_layout + lobby_client + TEAM_LOBBY_CHECKS,
+        "team-lobby": SERVER_FIXTURE + mode + queue + room + readouts + touch_layout + lobby_client + TEAM_LOBBY_CHECKS,
         "team-match": dedicated_server.replace("rosters.reserved = {1, 2}", "rosters.reserved = {1, 2, 3, 4}")
-        + TEAM_MATCH_CHECKS,
+        + touch_layout + lobby_client + TEAM_MATCH_CHECKS,
         "dedicated-sorting-first": dedicated,
         "dedicated-yard-first": dedicated.replace(
             'game.PrivateServerId = "reserved"',

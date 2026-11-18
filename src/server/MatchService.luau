@@ -406,7 +406,7 @@ local function startRound()
         if dedicatedRoster(players) then
             startDuelSeries(players)
         else
-            for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
+            DuelRoom.returnPlayersToFfa(players)
             transition("WAITING", 0)
         end
         return
@@ -462,6 +462,9 @@ local function tick()
     if Workspace:GetAttribute("IronYardDuelSize") ~= size then
         Workspace:SetAttribute("IronYardDuelSize", size)
     end
+    if DuelRoom.isDedicated and Workspace:GetAttribute("IronYardDuelArrivedCount") ~= #players then
+        Workspace:SetAttribute("IronYardDuelArrivedCount", #players)
+    end
     -- Last disconnect is not an abandoned 1v1 with a surviving winner.
     -- Clear stale duel mode and public RESULTS before the next player joins.
     if MatchLobbyPolicy.shouldReset(#players, phase, mode, duel ~= nil, lobbyMode) then
@@ -503,9 +506,7 @@ local function tick()
                     lastPublishedSecond = 0
                     publish(0)
                 end
-                for _, waitingPlayer in ipairs(players) do
-                    DuelRoom.returnToFfa(waitingPlayer)
-                end
+                DuelRoom.returnPlayersToFfa(players)
             elseif arrivalSeconds and arrivalSeconds ~= lastPublishedSecond then
                 lastPublishedSecond = arrivalSeconds
                 publish(arrivalSeconds)
@@ -524,7 +525,7 @@ local function tick()
 
     if phase == "COUNTDOWN" then
         if DuelRoom.isDedicated and not dedicatedRoster(players) then
-            for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
+            DuelRoom.returnPlayersToFfa(players)
             transition("WAITING", 0)
         elseif remaining <= 0 then
             startRound()
@@ -588,7 +589,7 @@ local function tick()
                 transition("COUNTDOWN", COUNTDOWN_SECONDS)
             elseif duel then
                 duel.returnStarted = true
-                for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
+                DuelRoom.returnPlayersToFfa(players)
             end
             return
         end
