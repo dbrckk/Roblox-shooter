@@ -894,6 +894,9 @@ local function fireWeapon(weaponId)
 		return
 	end
 
+    -- Automatic fire can wake before the render callback. Use any queued
+    -- touch movement when sampling the ray for this shot.
+    if applyTouchDrag then applyTouchDrag() end
 	local ray = getAimRay()
 	if not ray then
 		return
@@ -1707,7 +1710,7 @@ if UserInputService.TouchEnabled then
         aimPreset = player:GetAttribute("IronYardFireAimPreset")
     end)
 
-    releaseTouchFire = function()
+    releaseTouchFire = function(preserveDrag)
         if heldStateConnection then
             heldStateConnection:Disconnect()
             heldStateConnection = nil
@@ -1718,7 +1721,7 @@ if UserInputService.TouchEnabled then
         end
         heldFireInput = nil
         touchFireHeld = false
-        dragDelta = Vector2.zero
+        if preserveDrag ~= true then dragDelta = Vector2.zero end
         lastTouchPosition = nil
     end
 
@@ -1777,8 +1780,19 @@ if UserInputService.TouchEnabled then
     updateTouchActions()
     UserInputService.LastInputTypeChanged:Connect(updateTouchVisibility)
 
+    local function recordTouchPosition(input)
+        if input ~= heldFireInput then return end
+        local point = Vector2.new(input.Position.X, input.Position.Y)
+        dragDelta += point - lastTouchPosition
+        lastTouchPosition = point
+    end
+
     local function releaseEndedTouch(input)
-        if input == heldFireInput then releaseTouchFire() end
+        if input ~= heldFireInput then return end
+        local finished = input.UserInputState ~= Enum.UserInputState.Cancel
+        if finished then recordTouchPosition(input) end
+        -- A normal lift can arrive before the next rendered frame.
+        releaseTouchFire(finished)
     end
 
     fire.InputBegan:Connect(function(input)
@@ -1797,12 +1811,7 @@ if UserInputService.TouchEnabled then
         heldDeathConnection = humanoid.Died:Connect(releaseTouchFire)
         beginHeldFire(false, true)
     end)
-    UserInputService.TouchMoved:Connect(function(input)
-        if input ~= heldFireInput then return end
-        local point = Vector2.new(input.Position.X, input.Position.Y)
-        dragDelta += point - lastTouchPosition
-        lastTouchPosition = point
-    end)
+    UserInputService.TouchMoved:Connect(recordTouchPosition)
     UserInputService.TouchEnded:Connect(releaseEndedTouch)
     applyTouchDrag = function()
         if dragDelta == Vector2.zero then return end
@@ -1810,8 +1819,9 @@ if UserInputService.TouchEnabled then
         dragDelta = Vector2.zero
         local camera = getCamera()
         local _, humanoid = getCharacterParts()
-        if not camera or camera.CameraType ~= Enum.CameraType.Custom
-            or not humanoid or humanoid.Health <= 0 then return end
+        if combatInputBlocked() or not touchGui.Enabled
+            or not camera or camera.CameraType ~= Enum.CameraType.Custom
+            or not humanoid or humanoid.Health <= 0 or camera.CameraSubject ~= humanoid then return end
         local size = camera.ViewportSize
         local yaw, pitch = TouchAimPolicy.rotation(delta.X, delta.Y, math.min(size.X, size.Y),
             aimPreset, scoped and camera.FieldOfView or baseFieldOfView, baseFieldOfView)
