@@ -146,11 +146,11 @@ for _, preset in ipairs({"ECO", "BALANCED", "QUALITY"}) do
         local headshot = shot % 3 == 0
         local hit = Feedback.hitFeedback(preset, true, 40, headshot, killed)
         assert(hit and hit.duration > 0 and hit.duration <= 0.5)
-        assert(hit.sparks >= 1 and hit.sparks <= 3)
+        assert(hit.ticks >= 2 and hit.ticks <= 4)
         local core = Pool.claim(hitSlots, now, hit.duration, cap, 4)
         assert(core and core.priority == 4,
-            "Confirmed damage core must be admitted above generic debris")
-        for _ = 1, hit.sparks do
+            "First confirmed damage mark must be admitted above generic debris")
+        for _ = 2, hit.ticks do
             local spark = Pool.claim(hitSlots, now, hit.duration, cap, 3)
             if spark then assert(spark.priority == 3) end
         end

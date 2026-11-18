@@ -109,16 +109,20 @@ function Profile.hitFeedback(preset, touch, distance, headshot, killed)
     if type(distance) ~= "number" or distance ~= distance
         or distance < 0 or distance == math.huge
         or not Profile.budget(preset, touch, distance) then return nil end
-    -- Melee-range hits must not obscure the reticle on an Android display.
+    -- Scale within the preset range so distant cues do not shrink to a dot.
     local close = distance < 7
+    local scale = close and 0.62 or math.clamp(distance / 42, 1, 2.6)
+    local ticks = killed and 4 or (headshot and 3 or 2)
+    if close then
+        ticks = 2
+    elseif preset == "ECO" then
+        ticks = math.min(ticks, 3)
+    end
     return {
-        duration = killed and 0.26 or (headshot and 0.20 or 0.16),
-        sparks = close and 1 or ((touch and 1 or 2) + (killed and 1 or 0)),
-        -- One extra recycled ring on a confirmed elimination except ECO.
-        -- Readable on mobile without ParticleEmitters or new remotes.
-        eliminationRing = killed == true and preset ~= "ECO",
-        radius = (killed and 0.31 or (headshot and 0.26 or 0.19))
-            * (close and 0.62 or 1),
+        duration = killed and 0.26 or (headshot and 0.20 or 0.17),
+        ticks = ticks,
+        firstAngle = headshot and not killed and math.pi * 0.5 or math.pi * 0.25,
+        radius = (killed and 0.31 or (headshot and 0.26 or 0.19)) * scale,
     }
 end
 
