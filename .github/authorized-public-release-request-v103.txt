@@ -1,0 +1,7 @@
+IRON YARD v103 — single public update, 18 November 2026.
+
+Deploy the game source verified at 6777df3854e34b2ba2d807cd590691842cad37b9 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+The AR-24 distinguishes the first local shot after a 380 ms pause from follow-up shots. Sustained fire uses reduced viewmodel tilt and local shot gain. The reticle can respond on the next frame. The latest confirmed public place version is 98.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
