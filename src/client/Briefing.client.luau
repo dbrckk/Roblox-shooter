@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Guide = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("FirstMatchGuide"))
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
 
 local player = Players.LocalPlayer
@@ -89,6 +90,7 @@ local completed = {
 local updateGuide
 
 local function matchMode()
+    if PracticeMode.active(player) then return "PRACTICE" end
     if Workspace:GetAttribute("IronYardDedicatedDuel") == true then return "DUEL" end
     return Workspace:GetAttribute("IronYardMatchMode")
 end
@@ -176,7 +178,7 @@ local function onPhaseChanged()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local mode = matchMode()
     if phase == observedPhase and mode == observedMode then return end
-    if observedPhase == "LIVE" and observedMode == "FFA" then guideEnded = true end
+    if observedPhase == "LIVE" and observedMode == "FFA" and phase ~= "LIVE" then guideEnded = true end
     observedPhase, observedMode = phase, mode
     clearCard()
     if not guideDeadline and phase == "LIVE" and mode == "FFA" then guideDeadline = os.clock() + 60 end
@@ -184,6 +186,7 @@ local function onPhaseChanged()
 end
 
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(onPhaseChanged)
+player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(onPhaseChanged)
 Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(onPhaseChanged)
 Workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(onPhaseChanged)
 playerGui:GetAttributeChangedSignal("IronYardFirstShots"):Connect(updateGuide)

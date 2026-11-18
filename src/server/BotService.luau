@@ -10,6 +10,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local config = require(shared:WaitForChild("BotConfig"))
 local remotes = require(shared:WaitForChild("PrecisionNet")).getRemotes(true)
+local PracticeMode = require(shared:WaitForChild("PracticeMode"))
 local BotService = {}
 local BotVisuals = require(script.Parent:WaitForChild("BotVisuals"))
 local BotAnimation = require(script.Parent:WaitForChild("BotAnimation"))
@@ -310,7 +311,7 @@ local function getTargetModel(bot, limit)
     end
 
     for _, player in ipairs(Players:GetPlayers()) do
-        consider(player.Character)
+        if not PracticeMode.active(player) then consider(player.Character) end
     end
     for _, other in pairs(slots) do
         if other ~= bot then consider(other.model) end
@@ -676,6 +677,7 @@ local function shoot(bot, target, aimPoint, dt)
     -- Only fighters participate: neither practice dummies nor arbitrary NPCs are targets.
     local targetPlayer = Players:GetPlayerFromCharacter(hitModel)
     if not targetPlayer and not hitModel:GetAttribute("IsArenaBot") then return end
+    if targetPlayer and PracticeMode.active(targetPlayer) then return end
     if SpawnService.isProtected(hitModel) then return end
 
     if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end

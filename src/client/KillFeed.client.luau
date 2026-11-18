@@ -6,6 +6,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local player = Players.LocalPlayer
 local remotes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet")).getRemotes(false)
 local gui = Instance.new("ScreenGui")
@@ -37,6 +38,7 @@ local serial = 0
 local MAX_ENTRIES = touch and 2 or 4
 
 local function updateFeedLayout()
+    gui.Enabled = not PracticeMode.active(player)
     if not touch then return end
     local camera = Workspace.CurrentCamera
     if not camera then return end
@@ -71,8 +73,10 @@ end
 local currentCameraConnection = Workspace:GetPropertyChangedSignal(
     "CurrentCamera"):Connect(reconnectCamera)
 reconnectCamera()
+player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateFeedLayout)
 
 local function addEntry(info)
+    if PracticeMode.active(player) then return end
     if typeof(info) ~= "table" or typeof(info.attacker) ~= "string" or typeof(info.target) ~= "string" then
         return
     end

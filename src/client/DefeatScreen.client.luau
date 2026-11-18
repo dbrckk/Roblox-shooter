@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local DefeatPresentation = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("DefeatPresentation"))
 local DuelReadout = require(ReplicatedStorage:WaitForChild("Shared")
@@ -88,7 +89,7 @@ local entranceTween = nil
 local function update()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local mode = Workspace:GetAttribute("IronYardMatchMode")
-    local show = dead and activeCharacter == player.Character
+    local show = dead and activeCharacter == player.Character and not PracticeMode.active(player)
         and (phase == "LIVE" or (mode == "DUEL" and phase == "DUEL_BREAK"))
     shade.Visible = show
     if not show then return end
@@ -174,3 +175,4 @@ end
 player.CharacterAdded:Connect(watchCharacter)
 if player.Character then task.defer(watchCharacter, player.Character) end
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(update)

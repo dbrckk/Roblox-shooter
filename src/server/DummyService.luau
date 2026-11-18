@@ -1,27 +1,21 @@
-local Workspace = game:GetService("Workspace")
-
 local DummyService = {}
 
-local DUMMY_FOLDER_NAME = "DamageTestDummies"
 local RESPAWN_DELAY = 5
 
 local dummySpawns = {
-	Vector3.new(-18, 0, -62),
-	Vector3.new(-9, 0, -68),
-	Vector3.new(0, 0, -74),
-	Vector3.new(9, 0, -68),
-	Vector3.new(18, 0, -62),
+	Vector3.new(-12, 0, 10),
+	Vector3.new(-8, 0, -17),
+	Vector3.new(0, 0, -40),
+	Vector3.new(9, 0, -63),
+	Vector3.new(17, 0, -86),
 }
 
-local started = false
-local folder = nil
-local random = Random.new()
 
 local function makePart(name, size, position, color, transparency)
 	local part = Instance.new("Part")
 	part.Name = name
 	part.Anchored = true
-	part.CanCollide = true
+	part.CanCollide = false
 	part.CanTouch = false
 	part.Color = color
 	part.Material = Enum.Material.SmoothPlastic
@@ -54,7 +48,7 @@ local function addBillboard(model, head, humanoid, displayName)
 	billboard.AlwaysOnTop = true
 	billboard.LightInfluence = 0
 	billboard.MaxDistance = 180
-	billboard.Size = UDim2.fromOffset(150, 48)
+	billboard.Size = UDim2.fromOffset(184, 48)
 	billboard.StudsOffsetWorldSpace = Vector3.new(0, 1.28, 0)
 	billboard.Parent = head
 
@@ -122,60 +116,14 @@ local function addBillboard(model, head, humanoid, displayName)
 	return billboard, label, fill, healthText
 end
 
-local function collapseDummy(model)
-	model:SetAttribute("Dead", true)
-
-	for _, descendant in ipairs(model:GetDescendants()) do
-		if descendant:IsA("BasePart") then
-			descendant.Anchored = false
-			descendant.CanCollide = descendant.Name ~= "HumanoidRootPart" and descendant.Name ~= "HeadshotMarker"
-			descendant.AssemblyLinearVelocity = Vector3.new(
-				random:NextNumber(-7, 7),
-				random:NextNumber(5, 14),
-				random:NextNumber(-7, 7)
-			)
-			descendant.AssemblyAngularVelocity = Vector3.new(
-				random:NextNumber(-8, 8),
-				random:NextNumber(-8, 8),
-				random:NextNumber(-8, 8)
-			)
-		end
-	end
-end
-
-local function addHealthWatcher(model, humanoid, spawnIndex, nameLabel)
-	humanoid.Died:Connect(function()
-		if nameLabel then
-			nameLabel.Text = "RESPAWNING"
-			nameLabel.TextColor3 = Color3.fromRGB(255, 106, 106)
-		end
-
-		collapseDummy(model)
-
-		task.delay(RESPAWN_DELAY, function()
-			if model.Parent then
-				model:Destroy()
-			end
-
-			if started and folder then
-				DummyService.spawn(spawnIndex)
-			end
-		end)
-	end)
-end
-
-function DummyService.spawn(spawnIndex)
-	local spawnPosition = dummySpawns[spawnIndex]
-	if not spawnPosition or not folder then
-		return
-	end
+local function spawn(folder, origin, spawnIndex)
+	local spawnPosition = origin + dummySpawns[spawnIndex]
 
 	local model = Instance.new("Model")
-	model.Name = "Damage Dummy " .. tostring(spawnIndex)
-	model.Parent = folder
+	model.Name = string.format("TARGET %02d  /  %d STUDS", spawnIndex, 26 - dummySpawns[spawnIndex].Z)
 
 	local root = makePart("HumanoidRootPart", Vector3.new(2, 2, 1), spawnPosition + Vector3.new(0, 2.8, 0), Color3.fromRGB(70, 78, 94), 1)
-	root.CanCollide = false
+	root.CanQuery = false
 	root.Parent = model
 
 	local torso = makePart("Torso", Vector3.new(2.1, 2.2, 1), spawnPosition + Vector3.new(0, 2.7, 0), Color3.fromRGB(77, 92, 122), 0)
@@ -197,7 +145,7 @@ function DummyService.spawn(spawnIndex)
 	local rightLeg = makePart("Right Leg", Vector3.new(0.75, 2, 0.75), spawnPosition + Vector3.new(0.48, 1, 0), Color3.fromRGB(39, 45, 58), 0)
 	rightLeg.Parent = model
 
-	local targetMark = makePart("HeadshotMarker", Vector3.new(0.62, 0.08, 0.62), spawnPosition + Vector3.new(0, 4.45, -0.64), Color3.fromRGB(255, 76, 76), 0)
+	local targetMark = makePart("HeadshotMarker", Vector3.new(0.62, 0.08, 0.62), spawnPosition + Vector3.new(0, 4.45, 0.64), Color3.fromRGB(255, 76, 76), 0)
 	targetMark.CanCollide = false
 	targetMark.CanQuery = false
 	targetMark.Parent = model
@@ -205,33 +153,36 @@ function DummyService.spawn(spawnIndex)
 	local humanoid = Instance.new("Humanoid")
 	humanoid.Name = "Humanoid"
 	humanoid.BreakJointsOnDeath = false
+	humanoid.RequiresNeck = false
+	humanoid.RigType = Enum.HumanoidRigType.R6
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.MaxHealth = 100
 	humanoid.Health = 100
 	humanoid.Parent = model
 
 	model.PrimaryPart = root
-	local _, nameLabel = addBillboard(model, head, humanoid, "DUMMY " .. tostring(spawnIndex))
-	addHealthWatcher(model, humanoid, spawnIndex, nameLabel)
+	local _, nameLabel = addBillboard(model, head, humanoid, model.Name)
+	humanoid.Died:Connect(function()
+		nameLabel.Text = "RESETTING TARGET"
+		nameLabel.TextColor3 = Color3.fromRGB(255, 106, 106)
+		for _, child in ipairs(model:GetChildren()) do
+			if child:IsA("BasePart") then
+				child.CanQuery = false
+				child.Transparency = math.max(child.Transparency, 0.55)
+			end
+		end
+		task.delay(RESPAWN_DELAY, function()
+			if not folder:IsDescendantOf(workspace) then return end
+			model:Destroy()
+			spawn(folder, origin, spawnIndex)
+		end)
+	end)
+	model.Parent = folder
 end
 
-function DummyService.start()
-	if started then
-		return
-	end
-
-	started = true
-	folder = Workspace:FindFirstChild(DUMMY_FOLDER_NAME)
-	if folder then
-		folder:Destroy()
-	end
-
-	folder = Instance.new("Folder")
-	folder.Name = DUMMY_FOLDER_NAME
-	folder.Parent = Workspace
-
+function DummyService.populate(folder, origin)
 	for index in ipairs(dummySpawns) do
-		DummyService.spawn(index)
+		spawn(folder, origin, index)
 	end
 end
 

@@ -6,6 +6,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SpawnSafety = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SpawnSafety"))
 local DuelSpawnPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelSpawnPlan"))
 
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
+local PracticeRange = require(script.Parent:WaitForChild("PracticeRange"))
+
 local SpawnService = {}
 local started = false
 local rng = Random.new()
@@ -23,7 +26,7 @@ local function livePositions(excludeCharacter)
     if excludeCharacter then table.insert(ignoredCharacters, excludeCharacter) end
     for _, player in ipairs(Players:GetPlayers()) do
         local character = player.Character
-        if character and character ~= excludeCharacter then
+        if character and character ~= excludeCharacter and not PracticeMode.active(player) then
             local root = character:FindFirstChild("HumanoidRootPart")
             local humanoid = character:FindFirstChildOfClass("Humanoid")
             if root and humanoid and humanoid.Health > 0 then
@@ -183,6 +186,16 @@ function SpawnService.place(player, character, preferredPosition, faceToward, ot
     return true
 end
 
+function SpawnService.placeInPractice(player, character)
+    local room = PracticeRange.room(player)
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not room or not root then return end
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    character:PivotTo(CFrame.lookAt(room.spawn, room.spawn - Vector3.zAxis))
+    SpawnService.clearProtection(character)
+end
+
 local function watchPlayer(player)
     local function onCharacter(character)
         task.spawn(function()
@@ -210,6 +223,10 @@ local function watchPlayer(player)
                 for attempt = 1, 3 do
                     if player.Character ~= character or not root:IsDescendantOf(Workspace)
                         or Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
+                        return
+                    end
+                    if PracticeMode.active(player) then
+                        SpawnService.placeInPractice(player, character)
                         return
                     end
                     if SpawnService.place(player, character) then return end
@@ -277,7 +294,7 @@ end
 
 function SpawnService.placePlayers()
     for _, player in ipairs(Players:GetPlayers()) do
-        if player.Character then
+        if player.Character and not PracticeMode.active(player) then
             SpawnService.place(player, player.Character)
         end
     end

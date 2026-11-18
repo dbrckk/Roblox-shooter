@@ -19,6 +19,8 @@ local DuelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild(
 local MatchLobbyPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MatchLobbyPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
+local PracticeRange = require(script.Parent:WaitForChild("PracticeRange"))
 local MatchService = {}
 local started = false
 
@@ -53,7 +55,8 @@ local lastStandingsPayload = nil
 
 local function readyPlayers()
     local players = DuelRoom.players()
-    if #players ~= 2 then return nil end
+    if #players ~= 2 or PracticeMode.active(players[1])
+        or PracticeMode.active(players[2]) then return nil end
     if DuelRules.canStart(#players,
         players[1]:GetAttribute("IronYardDuelReady"),
         players[2]:GetAttribute("IronYardDuelReady")) then
@@ -101,6 +104,7 @@ end
 local function currentStandings()
     local entries = {}
     for _, player in ipairs(DuelRoom.players()) do
+        if PracticeMode.active(player) then continue end
         local stats = player:FindFirstChild("leaderstats")
         local deaths = stats and stats:FindFirstChild("Deaths")
         table.insert(entries, {
@@ -552,16 +556,57 @@ local function tick()
     end
 end
 
+local function setPractice(player, enabled, session)
+    if not RemoteGuard.allow(player, "SetPracticeRange") then return end
+    if typeof(enabled) ~= "boolean" or not PracticeMode.matches(player, session)
+        or enabled == PracticeMode.active(player) then return end
+
+    local function deny(reason)
+        player:SetAttribute("IronYardPracticeNotice", reason)
+    end
+    if mode ~= "FFA" or DuelRoom.isDedicated then return deny("FFA ONLY") end
+    if player:GetAttribute("IronYardDuelReady") == true
+        or player:GetAttribute("IronYardDuelTravel") == "CONNECTING" then
+        return deny("CANCEL DUEL SEARCH FIRST")
+    end
+    local character = player.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root or root.Anchored or not humanoid or humanoid.Health <= 0
+        or not character:IsDescendantOf(Workspace) then
+        return deny("WAIT FOR RESPAWN")
+    end
+    if enabled then
+        if phase == "LIVE" and not WeaponService.canEnterPractice(player, character) then
+            return deny("WAIT 5S AFTER COMBAT")
+        end
+        MovementService.resetDuelMovement(player)
+        PracticeRange.enter(player, humanoid.Health, round)
+        SpawnService.placeInPractice(player, character)
+    else
+        local room = PracticeRange.room(player)
+        if not room or not SpawnService.place(player, character) then
+            return deny("FFA SPAWN BUSY · RETRY")
+        end
+        if room.round == round then humanoid.Health = math.min(room.health, humanoid.MaxHealth) end
+        MovementService.resetDuelMovement(player)
+        PracticeRange.leave(player)
+    end
+    WeaponService.onPracticeChanged(player, enabled)
+    player:SetAttribute("IronYardPracticeNotice", nil)
+end
+
 function MatchService.start()
     if started then return end
     started = true
     DuelCombatState.clear()
     DuelRoom.start()
     local remotes = PrecisionNet.getRemotes(true)
+    remotes.SetPracticeRange.OnServerEvent:Connect(setPractice)
     remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation, requestedRound)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end
-        if player.Parent ~= Players then return end
+        if player.Parent ~= Players or PracticeMode.active(player) then return end
         if invitation ~= nil and (DuelRoom.isDedicated or DuelRoom.isLocal) then return end
         if DuelRoom.isDedicated then
             -- A delayed vote or cancellation belongs to the results that sent it.

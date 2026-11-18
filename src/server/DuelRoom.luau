@@ -9,6 +9,7 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local Shared = game:GetService("ReplicatedStorage"):WaitForChild("Shared")
 local Queue = require(Shared:WaitForChild("DuelQueue"))
+local PracticeMode = require(Shared:WaitForChild("PracticeMode"))
 
 local Room = {}
 Room.isLocal = RunService:IsStudio()
@@ -114,7 +115,7 @@ local function clearClosedInvitations(now, departingPlayer)
             state = "INVITE_EXPIRED"
         elseif target == departingPlayer or target.Parent ~= Players then
             state = "INVITE_TARGET_LEFT"
-        elseif pending[target] then
+        elseif pending[target] or PracticeMode.active(target) then
             state = "INVITE_TARGET_BUSY"
         else
             continue
@@ -131,7 +132,7 @@ local function publishInvitations()
         local entry = entries[player]
         local target = entry.target
         if target and player.Parent == Players and entry.expires > now
-            and not invitations[target] and not pending[target] then
+            and not invitations[target] and not pending[target] and not PracticeMode.active(target) then
             invitations[target] = entry.invitation
         end
     end
@@ -239,7 +240,7 @@ function Room.request(player, enabled, target, invitation)
             if not entries[player] then setState(player, "INVITE_COOLDOWN") end
             return
         end
-        if not opponent or opponent == player or pending[opponent] then
+        if not opponent or opponent == player or pending[opponent] or PracticeMode.active(opponent) then
             clearRequest(player)
             setState(player, "UNAVAILABLE")
             return
@@ -273,7 +274,7 @@ end
 function Room.match()
     clearClosedInvitations(Workspace:GetServerTimeNow())
     local first, second = Queue.pair(entries, order, function(player)
-        return player.Parent == Players and not pending[player]
+        return player.Parent == Players and not pending[player] and not PracticeMode.active(player)
     end)
     if first then
         reserve(first, second)
