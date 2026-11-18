@@ -1,0 +1,7 @@
+IRON YARD v102 — single public update, 18 November 2026.
+
+Deploy the game source verified at de47804e2a684a00e5464998bcf94959135d39b9 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+The first FFA briefing advances from the round objective to firing, a server-confirmed reload, and opening the 1v1 menu. The instructions follow the current input device and close during menus, results, and duels. The latest confirmed public place version is 97.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
