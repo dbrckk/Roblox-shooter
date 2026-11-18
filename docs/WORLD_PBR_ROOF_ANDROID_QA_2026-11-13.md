@@ -43,3 +43,10 @@ of the player's upward view and can appear uniformly repetitive on mobile.
 
 A completed CI or positive MaterialVariant count does not verify visual quality.
 Public Roblox publication is a separate owner-authorized, guarded workflow.
+
+## Comparer les temps d’image sur Android
+
+1. Ouvrir **PERF**, choisir un profil et lancer **MESURER 240 IMAGES**. Le panneau se masque pendant la capture. Parcourir le même trajet du terminal avec le même nombre de bots sur chaque profil.
+2. Comparer les captures **ECO**, **BALANCED** et **QUALITY** conservées dans le panneau. Relever le P95, le P99, le pic, le nombre d’images au-dessus de 33 ms et la durée de chaque capture.
+3. Pour mesurer une bascule, lancer une capture puis changer le profil dans **SET**. Le panneau démarre un nouveau relevé au changement et l’identifie par son profil de départ et d’arrivée. Fermer **SET** pour continuer le trajet et afficher le résultat.
+4. Noter l’appareil, le profil et le build sur chaque relevé. Si une capture est interrompue par la mise en arrière-plan, la relancer depuis le même point.

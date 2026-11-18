@@ -34,7 +34,7 @@ for needle in (
     'Workspace:GetAttribute("IronYardWeaponMeshReadyCount")',
     'label.AutomaticSize = Enum.AutomaticSize.Y',
     'scroller.AutomaticCanvasSize = Enum.AutomaticSize.Y',
-    'panel.Size = UDim2.new(0, 300, 1, -110)',
+    'panel.Size = UDim2.new(1, -24, 1, -110)',
     'panelLimit.MaxSize = Vector2.new(300, 485)',
     '.. weaponDeliverySnapshot()',
 ):

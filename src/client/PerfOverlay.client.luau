@@ -25,7 +25,8 @@ gui.Name = "IronYardPrivatePerformance"
 gui.IgnoreGuiInset = false
 gui.DisplayOrder = 80
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+local playerGui = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local toggle = Instance.new("TextButton")
 toggle.Name = "PerfToggle"
@@ -44,7 +45,7 @@ panel.Name = "PerformancePanel"
 panel.Visible = false
 -- PERF is owner-only and must remain usable on compact landscape phones.
 -- A fixed 485px panel previously extended below the physical viewport.
-panel.Size = UDim2.new(0, 300, 1, -110)
+panel.Size = UDim2.new(1, -24, 1, -110)
 panel.Position = UDim2.fromOffset(12, 100)
 local panelLimit = Instance.new("UISizeConstraint")
 panelLimit.MaxSize = Vector2.new(300, 485)
@@ -54,9 +55,22 @@ panel.BackgroundTransparency = 0.07
 panel.BorderSizePixel = 0
 panel.Parent = gui
 
+local measure = Instance.new("TextButton")
+measure.Name = "MeasureFrameTimes"
+measure.Size = UDim2.new(1, -20, 0, 26)
+measure.Position = UDim2.fromOffset(10, 6)
+measure.BackgroundColor3 = toggle.BackgroundColor3
+measure.TextColor3 = toggle.TextColor3
+measure.BorderSizePixel = 0
+measure.Font = toggle.Font
+measure.TextSize = 12
+measure.Text = "MESURER " .. FrameWindow.CAPACITY .. " IMAGES"
+measure.Parent = panel
+
 local scroller = Instance.new("ScrollingFrame")
 scroller.Name = "DiagnosticsScroll"
-scroller.Size = UDim2.fromScale(1, 1)
+scroller.Position = UDim2.fromOffset(0, 36)
+scroller.Size = UDim2.new(1, 0, 1, -36)
 scroller.CanvasSize = UDim2.fromOffset(0, 0)
 scroller.AutomaticCanvasSize = Enum.AutomaticSize.Y
 scroller.ScrollingDirection = Enum.ScrollingDirection.Y
@@ -85,6 +99,24 @@ local lastPacket = nil
 local frameWindow = FrameWindow.new()
 local frameSeconds = 0
 local latestFrameStats = nil
+local GRAPHICS_ATTRIBUTE = "IronYardGraphicsPreset"
+local PRESETS = { "ECO", "BALANCED", "QUALITY" }
+local function graphicPreset()
+    local preset = player:GetAttribute(GRAPHICS_ATTRIBUTE)
+    return table.find(PRESETS, preset) and preset or "BALANCED"
+end
+local currentPreset = graphicPreset()
+local capture
+local capturesByPreset = {}
+local lastTransition
+local captureNotice
+
+local function clearFrameReadings()
+    FrameWindow.clear(frameWindow)
+    frameSeconds = 0
+    latestFrameStats = nil
+end
+
 local CLIENT_PERF_ATTRIBUTES = {
     "IronYardPerfWeaponSamples", "IronYardPerfWeaponMeanMs",
     "IronYardPerfWeaponPeakMs", "IronYardPerfWeaponParts",
@@ -244,18 +276,39 @@ local function localSwapSummary()
         data.lod.count, cached, ram)
 end
 
+local function captureSummary()
+    local lines = { "Profil " .. currentPreset }
+    if captureNotice then table.insert(lines, captureNotice) end
+    local function append(name, stats)
+        table.insert(lines, string.format("%s | %d images · %.1fs\n"
+            .. "P95 %.0fms | P99 %.0fms\nPic %.0fms | >33ms %d/%d",
+            name, stats.count, stats.meanMs * stats.count / 1000,
+            stats.p95Ms, stats.p99Ms, stats.peakMs, stats.slow33, stats.count))
+    end
+    for _, preset in ipairs(PRESETS) do
+        local stats = capturesByPreset[preset]
+        if stats then append(preset, stats) end
+    end
+    if lastTransition then append(lastTransition.name, lastTransition.stats) end
+    return table.concat(lines, "\n") .. "\n\n"
+end
+
 local function updateLabel()
-    if not active then return end
+    -- Hide the panel and avoid its scans, text layout and sorting while
+    -- recording the route. Keep the same single render signal for sampling.
+    if not active or capture or not panel.Visible then return end
+    local captures = captureSummary()
     local p = lastPacket
     if not p or not p.rates or not p.timings then
         local frames = latestFrameStats
         label.Text = string.format(
             "IRON YARD / PRIVATE PROFILER\n"
+            .. "%s"
             .. "FPS client: %.0f | P95: %.0fms\n"
             .. "P99: %.0fms\n"
             .. "%s\n\n"
             .. "Statistiques serveur en cours...",
-            frames and frames.fps or 0,
+            captures, frames and frames.fps or 0,
             frames and frames.p95Ms or 0,
             frames and frames.p99Ms or 0,
             weaponMetrics()) .. pbrSnapshot() .. localSwapSummary()
@@ -276,6 +329,7 @@ local function updateLabel()
     local path = t.pathMs or {}
     label.Text = string.format(
         "IRON YARD / PRIVATE PROFILER\n"
+        .. "%s"
         .. "FPS client: %4.0f   pic: %.0fms\n"
         .. "P95: %.0fms  P99: %.0fms\n"
         .. ">33ms: %d / %d images\n"
@@ -290,7 +344,7 @@ local function updateLabel()
         .. "Pose ms: %.1f avg / %.1f pic\n"
         .. "Pose: %.1f/s | Feu: %.1f/s\n"
         .. "%s",
-        fps, framePeak, p95, p99, slow, samples,
+        captures, fps, framePeak, p95, p99, slow, samples,
         p.bots or 0, rays,
         r.targetRay or 0, r.navRay or 0,
         r.tacticsRay or 0, (r.muzzleRay or 0) + (r.shotRay or 0),
@@ -303,11 +357,60 @@ local function updateLabel()
         weaponMetrics()) .. pbrSnapshot() .. localSwapSummary()
 end
 
+local function beginCapture(fromPreset)
+    if not active then return end
+    capture = { preset = currentPreset, fromPreset = fromPreset }
+    captureNotice = nil
+    clearFrameReadings()
+    panel.Visible = false
+    toggle.Text = "STOP"
+end
+
+local function endCapture(stats, notice)
+    if stats and capture.fromPreset then
+        lastTransition = { name = capture.fromPreset .. " → " .. capture.preset, stats = stats }
+    elseif stats then
+        capturesByPreset[capture.preset] = stats
+    end
+    capture = nil
+    captureNotice = notice
+    clearFrameReadings()
+    panel.Visible = playerGui:GetAttribute("IronYardSettingsOpen") ~= true
+    toggle.Text = "CLOSE"
+    updateLabel()
+end
+
+measure.Activated:Connect(function()
+    if not capture then beginCapture() end
+end)
+
+player:GetAttributeChangedSignal(GRAPHICS_ATTRIBUTE):Connect(function()
+    local preset = graphicPreset()
+    if preset == currentPreset then return end
+    local previous = currentPreset
+    currentPreset = preset
+    if capture then
+        -- Start a clean, separately labelled transition at the selection.
+        beginCapture(previous)
+    elseif active then
+        clearFrameReadings()
+    end
+end)
+
+playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
+    if active and not capture and not panel.Visible
+        and playerGui:GetAttribute("IronYardSettingsOpen") ~= true then
+        panel.Visible = true
+        updateLabel()
+    end
+end)
+
 remote.OnClientEvent:Connect(function(packet)
     if not active or typeof(packet) ~= "table" then return end
     if packet.status == "OFF" then
         WeaponSwapMetrics.enable(false)
         active = false
+        capture = nil
         panel.Visible = false
         toggle.Text = "PERF"
         player:SetAttribute("IronYardPrivatePerfActive", false)
@@ -320,6 +423,10 @@ remote.OnClientEvent:Connect(function(packet)
 end)
 
 toggle.Activated:Connect(function()
+    if capture then
+        endCapture(nil, "Mesure annulée")
+        return
+    end
     active = not active
     WeaponSwapMetrics.enable(active)
     panel.Visible = active
@@ -328,16 +435,14 @@ toggle.Activated:Connect(function()
     if active then
         clearClientWeaponReadings()
         lastPacket = nil
-        FrameWindow.clear(frameWindow)
-        latestFrameStats = nil
-        frameSeconds = 0
+        clearFrameReadings()
         updateLabel()
     end
     remote:FireServer(active and "start" or "stop")
 end)
 
 RunService.RenderStepped:Connect(function(dt)
-    if not active then return end
+    if not active or (not capture and not panel.Visible) then return end
     local accepted, restarted = FrameWindow.push(frameWindow, dt)
     if restarted then
         -- The phone was backgrounded (or returned an invalid frame delta).
@@ -347,9 +452,16 @@ RunService.RenderStepped:Connect(function(dt)
         latestFrameStats = nil
         lastPacket = nil
         clearClientWeaponReadings()
-        updateLabel()
+        if capture then endCapture(nil, "Mesure interrompue")
+        else updateLabel() end
     end
     if not accepted then return end
+    if capture then
+        if frameWindow.count == FrameWindow.CAPACITY then
+            endCapture(FrameWindow.snapshot(frameWindow), nil)
+        end
+        return
+    end
     frameSeconds += dt
     if frameSeconds >= 1.0 then
         latestFrameStats = FrameWindow.snapshot(frameWindow)

@@ -70,6 +70,11 @@ for phrase in (
     'FrameWindow.clear(frameWindow)',
     '"P95: %.0fms  P99: %.0fms',
     '">33ms: %d / %d images',
+    'if not active or capture or not panel.Visible then return end',
+    'capture = { preset = currentPreset, fromPreset = fromPreset }',
+    'capturesByPreset[capture.preset] = stats',
+    'if frameWindow.count == FrameWindow.CAPACITY then',
+    'endCapture(nil, "Mesure interrompue")',
 ):
     assert phrase in client, "Client percentile profiler wiring missing: " + phrase
 for phrase in (
