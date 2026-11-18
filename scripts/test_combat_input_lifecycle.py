@@ -46,7 +46,11 @@ function UserInputService:GetFocusedTextBox() return nil end
 
 local duelOpen = false
 local playerGui = {GetAttribute = function() return duelOpen end}
-local hud = {open = false, updateCrosshair = function() end}
+local hud = {
+    open = false,
+    updateCrosshair = function() end,
+    updateReloadProgress = function() end,
+}
 function hud:isSettingsOpen() return self.open end
 function hud:toggleSettings() self.open = not self.open end
 
