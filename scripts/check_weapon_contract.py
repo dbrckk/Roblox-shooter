@@ -1180,7 +1180,7 @@ def main():
         has(killFeed, needle, "Mobile kill-feed space management")
     has(tacticalHud, "board.Visible = false", "Hide duplicate top-3 HUD on small touch screens")
     has(progressionHud, "local compact = UserInputService.TouchEnabled", "Compact mobile rank display")
-    has(progressionHud, "panel.Size = UDim2.fromOffset(205, compact and 27 or 96)",
+    has(progressionHud, "panel.Size = UDim2.fromOffset(205, compact and 27 or 110)",
         "Player rank must not obstruct the virtual joystick")
 
     print("IRON YARD weapon, ammo, ADS and control source contracts: OK")

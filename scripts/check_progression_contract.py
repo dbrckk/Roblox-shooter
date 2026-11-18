@@ -213,6 +213,11 @@ def main():
     require("CareerReadout.rank(xp, level)" in ui and
             "CareerReadout.rank(xp, level)" in podium,
             "Both displays must share rank computation")
+    require("nextFinishLabel.Text = CareerReadout.finishGoal(status, xp, nextFinish)" in ui
+            and "finishGoalLabel.Text = CareerReadout.finishGoal(careerStatus, xp," in podium,
+            "Both displays must identify the next cosmetic and remaining XP")
+    require("nextFinishLabel.Visible = not compact" in ui,
+            "Keep the in-combat Android career HUD compact")
     require("CombatAward" in hud, "Medal feedback must remain intact")
 
     contains(doc.lower(), ("updateasync", "idempotent", "45", "180", "studio",

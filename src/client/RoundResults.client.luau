@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local BuildInfo = require(Shared:WaitForChild("BuildInfo"))
 local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
+local OperatorFinishes = require(Shared:WaitForChild("OperatorFinishes"))
 local GamepadCombatPolicy = require(Shared:WaitForChild("GamepadCombatPolicy"))
 local remotes = require(Shared:WaitForChild("PrecisionNet")).getRemotes(false)
 
@@ -90,6 +91,8 @@ local progressLabel = label("Rank", 11, UDim2.fromOffset(16, 157),
     UDim2.new(1, -32, 0, 18), muted)
 local saveLabel = label("CareerSaveState", 10, UDim2.fromOffset(16, 178),
     UDim2.new(1, -32, 0, 16), muted)
+local finishGoalLabel = label("CareerFinishGoal", 10, UDim2.fromOffset(16, 208),
+    UDim2.new(1, -32, 0, 16), amber)
 
 local track = Instance.new("Frame")
 track.Name = "CareerProgressTrack"
@@ -264,9 +267,8 @@ render = function()
     local xp = safeCount("IronYardLifetimeXP")
     local level = math.max(1, safeCount("IronYardProgressLevel"))
     local rankInfo = CareerReadout.rank(xp, level)
-    local saveInfo = CareerReadout.save(
-        player:GetAttribute("IronYardProgressStatus"), xp,
-        safeCount("IronYardSavedXP"))
+    local careerStatus = player:GetAttribute("IronYardProgressStatus")
+    local saveInfo = CareerReadout.save(careerStatus, xp, safeCount("IronYardSavedXP"))
 
     title.Text = isDuel and (isWinner and "DUEL VICTORY" or "DUEL COMPLETE")
         or (isWinner and "VICTORY" or ("ROUND " .. tostring(round) .. " COMPLETE"))
@@ -313,6 +315,7 @@ render = function()
     saveLabel.Text = saveInfo.label
     saveLabel.TextColor3 = saveInfo.tone == "saved" and green
         or (saveInfo.tone == "pending" and amber or Color3.fromRGB(244, 154, 104))
+    finishGoalLabel.Text = CareerReadout.finishGoal(careerStatus, xp, OperatorFinishes.nextUnlock(level))
     fill.Size = UDim2.fromScale(rankInfo.fraction, 1)
 
     local top = snapshot and snapshot.standings or standings()

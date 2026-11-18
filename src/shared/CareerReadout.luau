@@ -2,6 +2,10 @@
 local Readout = {}
 local MAX_SAFE_INT = 9007199254740991
 
+local function xpForRank(rank)
+    return 250 * (rank - 1) * (rank - 1)
+end
+
 function Readout.count(value)
     if type(value) ~= "number" or value ~= value
         or value < 0 or value >= MAX_SAFE_INT then
@@ -16,14 +20,25 @@ function Readout.rank(xp, level)
     if rank >= 1000 then
         return { rank = rank, maxed = true, toNext = 0, fraction = 1 }
     end
-    local start = 250 * (rank - 1) * (rank - 1)
-    local target = 250 * rank * rank
+    local start = xpForRank(rank)
+    local target = xpForRank(rank + 1)
     return {
         rank = rank,
         maxed = false,
         toNext = math.max(0, target - amount),
         fraction = math.clamp((amount - start) / (target - start), 0, 1),
     }
+end
+
+function Readout.finishGoal(status, xp, nextFinish)
+    if status == nil or status == "LOADING" then return "FINISHES LOADING" end
+    if not nextFinish then return "ALL FINISHES UNLOCKED" end
+    local remaining = xpForRank(nextFinish.level) - Readout.count(xp)
+    if remaining <= 0 then
+        -- The XP and level attributes can arrive in different callbacks.
+        return nextFinish.name .. " · RANK SYNCING"
+    end
+    return string.format("%s · %d XP LEFT", nextFinish.name, remaining)
 end
 
 -- ONLINE means a lease exists, not that new earned XP has reached DataStore.

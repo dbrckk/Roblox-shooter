@@ -81,6 +81,10 @@ Before this change the RESULTS podium displayed lifetime XP while hiding the in-
 
 The results screen refreshes on live save-status and saved-XP attribute changes and now shows XP **remaining** to the next rank. Studio and DataStore failures remain visibly unconfirmed. DataStore v1 keys, awards, authoritative server logic and gameplay are unchanged.
 
+## Prochain déblocage cosmétique
+
+Le panneau de carrière affiche la finition équipée. La carrière et les résultats affichent le nom de la prochaine finition et les XP restants jusqu’à son rang. Si les XP du palier arrivent avant le rang, la ligne indique `RANK SYNCING`. La finition est automatiquement appliquée au modèle à la première personne selon le rang répliqué, et l’état de sauvegarde des XP reste visible séparément.
+
 
 ## Refus des confirmations de sauvegarde incohérentes (12 novembre 2026)
 

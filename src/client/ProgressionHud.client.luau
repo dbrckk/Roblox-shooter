@@ -21,7 +21,7 @@ gui.Parent = playerGui
 
 local panel = Instance.new("Frame")
 panel.Name = "Career"
-panel.Size = UDim2.fromOffset(205, 96)
+panel.Size = UDim2.fromOffset(205, 110)
 panel.Position = UDim2.fromOffset(12, 291)
 panel.BackgroundColor3 = Color3.fromRGB(37, 43, 43)
 panel.BackgroundTransparency = 0.10
@@ -64,10 +64,12 @@ local statusLabel = label("Status", UDim2.fromOffset(10, 48), UDim2.fromOffset(1
 
 local finishLabel = label("CareerFinish", UDim2.fromOffset(10, 63),
     UDim2.fromOffset(185, 15), 10, Color3.fromRGB(230, 199, 144))
+local nextFinishLabel = label("NextCareerFinish", UDim2.fromOffset(10, 78),
+    UDim2.fromOffset(185, 15), 10, Color3.fromRGB(233, 231, 217))
 
 local track = Instance.new("Frame")
 track.Name = "RankXPTrack"
-track.Position = UDim2.fromOffset(10, 83)
+track.Position = UDim2.fromOffset(10, 97)
 track.Size = UDim2.fromOffset(185, 6)
 track.BorderSizePixel = 0
 track.BackgroundColor3 = Color3.fromRGB(68, 75, 69)
@@ -99,18 +101,16 @@ local function update()
     local wins = safeCount("IronYardLifetimeVictories")
     local finish = OperatorFinishes.forLevel(level)
     local nextFinish = OperatorFinishes.nextUnlock(level)
-    finishLabel.Text = nextFinish
-        and (finish.name .. "  /  NEXT LV " .. tostring(nextFinish.level))
-        or (finish.name .. "  /  MAX FINISH")
+    finishLabel.Text = "EQUIPPED  /  " .. finish.name
     finishLabel.TextColor3 = Color3.fromRGB(
         finish.accent[1], finish.accent[2], finish.accent[3])
+    nextFinishLabel.Text = CareerReadout.finishGoal(status, xp, nextFinish)
     local rankInfo = CareerReadout.rank(xp, level)
-    local nextLevel = 250 * level * level
     fill.Size = UDim2.fromScale(rankInfo.fraction, 1)
 
     title.Text = string.format("RANK %d    |    %d XP", level, xp)
     if level < 1000 then
-        details.Text = string.format("%d KILLS   /   %d WINS   /   NEXT %d", kills, wins, nextLevel)
+        details.Text = string.format("%d KILLS   /   %d WINS", kills, wins)
     else
         details.Text = string.format("%d KILLS   /   %d WINS   /   MAX RANK", kills, wins)
     end
@@ -122,10 +122,11 @@ local function update()
             or Color3.fromRGB(244, 154, 104))
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local compact = UserInputService.TouchEnabled and phase == "LIVE"
-    panel.Size = UDim2.fromOffset(205, compact and 27 or 96)
+    panel.Size = UDim2.fromOffset(205, compact and 27 or 110)
     details.Visible = not compact
     statusLabel.Visible = not compact
     finishLabel.Visible = not compact
+    nextFinishLabel.Visible = not compact
     track.Visible = not compact
     if compact then
         title.Text = string.format("RANK %d  |  %s", level, saveInfo.compact)
