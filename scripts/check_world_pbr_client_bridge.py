@@ -17,8 +17,15 @@ for text, requirements in (
     (client, [
         'Policy.clientVariant(part:GetAttribute(KEY)',
         'part.MaterialVariant = desired',
-        'MaterialService:GetMaterialVariant(part.Material, desired)',
-        'Workspace:GetAttribute("IronYardWorldPbrStatus") ~= "CONFIGURED"',
+        'MaterialService:GetMaterialVariant(base, desired)',
+        'Workspace:GetAttribute("IronYardWorldPbrStatus") == "CONFIGURED"',
+        'if configured and available[desired] == nil then',
+        'UserInputService.TouchEnabled and 12 or 32',
+        'math.min(tail, head + batchSize - 1)',
+        'if queued[part] then return end',
+        'part:IsDescendantOf(game) and CollectionService:HasTag(part, TAG)',
+        'RunService.Heartbeat:Connect(applyBatch)',
+        'batchConnection:Disconnect()',
         'CollectionService:GetInstanceAddedSignal(TAG)',
         'CollectionService:GetInstanceRemovedSignal(TAG)',
         'part:GetAttributeChangedSignal(KEY)',
@@ -51,4 +58,4 @@ for text, requirements in (
 ):
     for needle in requirements:
         assert needle in text, f"Missing client PBR bridge guarantee: {needle}"
-print("IRON YARD world PBR: approved tag replication, client fallback, ECO and streaming contract OK")
+print("IRON YARD world PBR: bounded updates, approved tags, fallback, ECO and streaming contract OK")
