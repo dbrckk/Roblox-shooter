@@ -6,6 +6,8 @@ local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
 local ShutdownTracker = require(script.Parent:WaitForChild("ProgressionShutdownTracker"))
 local DetachedRelease = require(script.Parent:WaitForChild("ProgressionDetachedRelease"))
@@ -244,20 +246,28 @@ end
 local function add(player, deltas)
     local record = records[player]
     if not record or not player.Parent then return end
+    local previousXP = record.base.xp + record.earned.xp
     -- The pure ledger returns a complete validated snapshot or throws
     -- without touching the prior one. Keep all four counters consistent if
     -- an unexpected award is malformed or a session approaches integer limits.
     record.earned = Ledger.applyGrant(record.earned, deltas)
     publish(player, record)
+    -- Only announce a crossing from a known career baseline. Loading or
+    -- retrying the DataStore never enters this award path.
+    if record.loaded or record.status == "STUDIO" then
+        local finish = OperatorFinishes.earnedBetween(
+            levelForXP(previousXP), levelForXP(record.base.xp + record.earned.xp))
+        return finish and finish.level or nil
+    end
 end
 
 function ProgressionService.recordElimination(player, points, headshot)
     assert(safeInt(points) and points <= 1000, "Untrusted XP grant")
-    add(player, { xp = points, eliminations = 1, headshots = headshot and 1 or 0 })
+    return add(player, { xp = points, eliminations = 1, headshots = headshot and 1 or 0 })
 end
 
 function ProgressionService.recordVictory(player)
-    add(player, { xp = 250, victories = 1 })
+    return add(player, { xp = 250, victories = 1 })
 end
 
 function ProgressionService.start()

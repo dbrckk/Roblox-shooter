@@ -29,6 +29,12 @@ for _, nextLevel in ipairs(expected) do
     level = nextLevel
 end
 equal(F.nextUnlock(15), nil, "No fake next unlock after final tier")
+for _, threshold in ipairs(expected) do
+    equal(F.earnedBetween(threshold - 1, threshold), F.forLevel(threshold), "New finish earned")
+    equal(F.earnedBetween(threshold, threshold), nil, "Same rank never repeats a finish")
+end
+equal(F.earnedBetween(3, 5), nil, "Ranks in an existing finish are not unlocks")
+equal(F.earnedBetween(15, 6), nil, "Lower rank does not emit an unlock")
 
 for _, levelToCheck in ipairs({1, 3, 6, 10, 15}) do
     local finish = F.forLevel(levelToCheck)

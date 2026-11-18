@@ -51,6 +51,12 @@ function OperatorFinishes.nextUnlock(level)
     return nil
 end
 
+function OperatorFinishes.earnedBetween(previousLevel, level)
+    local finish = OperatorFinishes.forLevel(level)
+    if finish.level > OperatorFinishes.forLevel(previousLevel).level then return finish end
+    return nil
+end
+
 function OperatorFinishes.count()
     return #finishes
 end
