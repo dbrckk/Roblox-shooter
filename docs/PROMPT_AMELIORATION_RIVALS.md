@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 106 comme base. Le stand permet d’essayer les cinq armes avec le réticule et les impacts de cette version. Les mesures de fluidité sur Android restent à relever. [Publication de la version 106](https://github.com/dbrckk/Roblox-shooter/actions/runs/44328691246)
+2. Prends la version publique 107 comme base. Le 1v1 alterne entre Freight Yard et Sorting Bay à la revanche. Les mesures de fluidité sur Android restent à relever. [Publication de la version 107](https://github.com/dbrckk/Roblox-shooter/actions/runs/44330963097)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -16,7 +16,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 | --- | --- | --- |
 | 1 | **Stand d’entraînement publié en version 105.** Ouvrir **SET → PRACTICE RANGE** depuis le FFA. Le stand individuel comporte cinq cibles à des distances différentes. **SET → BACK TO FFA** rétablit les munitions de la partie. | Vérifier en jeu le parcours clavier, tactile et manette. Les simulations des callbacks serveur couvrent les cinq armes, le rejet des anciens tirs et rechargements et l’isolation des scores, des XP et des cibles. |
 | 2 | **Tir mobile amélioré en version 106.** Le tir et le traceur démarrent localement. Les traces de contact et les sons d’impact suivent les rayons du serveur. Le réticule réagit dès l’image suivante pour chaque arme, et le recul à l’écran tourne moins pendant une visée tactile. | Comparer la séquence de tir ci-dessous sur Android. Relever le P95 et le P99 du temps d’image dans `PERF`. |
-| 3 | **Sorting Bay intégré au 1v1.** La nouvelle halle de tri comprend deux allées de service, des couverts proches et des départs symétriques. Le serveur garde la même arène pendant la série et change de carte à la revanche. | Vérifier une série et sa revanche avec deux clients Roblox, puis le retour au FFA. Relever le P95 et le P99 sur Android dans les deux arènes. |
+| 3 | **Sorting Bay publié en version 107.** La nouvelle halle de tri comprend deux allées de service, des couverts proches et des départs symétriques. Le serveur garde la même arène pendant la série et change de carte à la revanche. | Vérifier une série et sa revanche avec deux clients Roblox, puis le retour au FFA. Relever le P95 et le P99 sur Android dans les deux arènes. |
 | 4 | **Objectifs de session.** Ajouter des objectifs courts fondés sur des actions confirmées par le serveur. | Les résultats expliquent la progression de l’objectif et sa récompense cosmétique. Une action compte une seule fois, y compris après reconnexion. |
 | 5 | **Groupes et 2v2.** Étendre les invitations en réutilisant les transferts et le retour du 1v1. | Quatre joueurs rejoignent la même instance, le score et les équipes restent cohérents et un départ a une issue claire. Mesurer le délai d’attente avant d’élargir la disponibilité. |
 
