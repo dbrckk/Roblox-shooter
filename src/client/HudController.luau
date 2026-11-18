@@ -21,6 +21,8 @@ local GRAPHICS_PRESETS = { "ECO", "BALANCED", "QUALITY" }
 local GRAPHICS_LABELS = { "ECO", "BAL", "HIGH" }
 local TOUCH_SIZE_LABELS = { "SMALL", "MED", "LARGE" }
 local HIT_SOUND_LABELS = { "OFF", "LOW", "STD" }
+local FOOTSTEP_VOLUME_ATTRIBUTE = "IronYardOpponentFootstepVolume"
+local FOOTSTEP_VOLUME_STEP = 25
 local RELOAD_COLOR = Color3.fromRGB(241, 189, 97)
 local RELOAD_BAR_WIDTH = 112
 local MARKER_QUADRANTS = {
@@ -97,6 +99,11 @@ function HudController.new(player, gui, WeaponConfig, options)
     self.lastConfirmedHudHitPriority = 0
     self.damageReadoutToken = 0
     self.hitSoundLevel = #HIT_SOUND_LABELS
+    local storedVolume = player:GetAttribute(FOOTSTEP_VOLUME_ATTRIBUTE)
+    self.opponentFootstepVolume = type(storedVolume) == "number" and storedVolume == storedVolume
+        and clampSetting(math.round(storedVolume / FOOTSTEP_VOLUME_STEP) * FOOTSTEP_VOLUME_STEP, 0, 100)
+        or 100
+    player:SetAttribute(FOOTSTEP_VOLUME_ATTRIBUTE, self.opponentFootstepVolume)
 	self.settingsOpen = false
 	self.baseFov = self.options.baseFov or DEFAULT_FOV
 	self.mouseSensitivity = self.options.mouseSensitivity or DEFAULT_SENSITIVITY
@@ -567,6 +574,7 @@ local FIRE_AIM_LABELS = { "LOW", "MID", "HIGH" }
 
 function HudController:_buildSettingsMenu()
     local touch = UserInputService.TouchEnabled
+    local panelHeight = touch and 330 or 311
     local settingsRect = TouchLayout.MENU_BUTTONS.Settings
     local settingsGui = self.gui
     if touch then
@@ -593,7 +601,7 @@ function HudController:_buildSettingsMenu()
 	panel.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
 	panel.BorderSizePixel = 0
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-    panel.Size = UDim2.fromOffset(340, touch and 295 or 290)
+    panel.Size = UDim2.fromOffset(340, panelHeight)
     -- Adapt to small landscape Android viewports, including notched phones.
     local responsiveScale = Instance.new("UIScale")
     responsiveScale.Parent = panel
@@ -601,7 +609,7 @@ function HudController:_buildSettingsMenu()
         local camera = workspace.CurrentCamera
         local viewport = touch and settingsGui.AbsoluteSize or (camera and camera.ViewportSize)
         if not viewport or viewport.X <= 0 or viewport.Y <= 0 then return end
-        responsiveScale.Scale = math.min(viewport.X / 352, viewport.Y / 307, 1)
+        responsiveScale.Scale = math.min(viewport.X / 352, viewport.Y / (panelHeight + 12), 1)
     end
     local viewportConnection
     local function attachCamera()
@@ -631,7 +639,7 @@ function HudController:_buildSettingsMenu()
 	makeStroke(panel, Color3.fromRGB(90, 102, 126), 0.15, 1)
 	self.settingsPanel = panel
 
-	local title = makeText(panel, "Title", "SETTINGS", UDim2.fromOffset(22, 18), UDim2.fromOffset(220, 28), 18)
+	local title = makeText(panel, "Title", "SETTINGS", UDim2.fromOffset(22, 14), UDim2.fromOffset(220, 24), 18)
 	title.Font = Enum.Font.GothamBold
 	title.ZIndex = 11
 
@@ -699,9 +707,18 @@ function HudController:_buildSettingsMenu()
             self:_refreshSettingsText()
         end)
 
+    self.opponentFootstepValueLabel = self:_makeStepper(panel, "ENEMY STEP FX",
+        UDim2.fromOffset(22, touch and 278 or 259), 0, 100, FOOTSTEP_VOLUME_STEP, function()
+            return self.opponentFootstepVolume .. "%"
+        end, function(delta, minValue, maxValue)
+            self.opponentFootstepVolume = clampSetting(self.opponentFootstepVolume + delta, minValue, maxValue)
+            self.player:SetAttribute(FOOTSTEP_VOLUME_ATTRIBUTE, self.opponentFootstepVolume)
+            self:_refreshSettingsText()
+        end)
+
     local hint = makeText(panel, "Hint",
         touch and "Drag on FIRE to aim while shooting" or "Press M to close",
-        UDim2.fromOffset(22, touch and 275 or 257), UDim2.fromOffset(260, 16), 12)
+        UDim2.fromOffset(22, 40), UDim2.fromOffset(252, 16), 12)
 	hint.TextColor3 = Color3.fromRGB(162, 173, 190)
 	hint.ZIndex = 11
 
@@ -773,6 +790,9 @@ function HudController:_refreshSettingsText()
     end
     if self.hitSoundValueLabel then
         self.hitSoundValueLabel.Text = HIT_SOUND_LABELS[self.hitSoundLevel]
+    end
+    if self.opponentFootstepValueLabel then
+        self.opponentFootstepValueLabel.Text = self.opponentFootstepVolume .. "%"
     end
 end
 

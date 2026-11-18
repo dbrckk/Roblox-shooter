@@ -1,6 +1,7 @@
 -- Short positional contacts from streamed opponent rigs, budgeted per listener.
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
 local UserInputService = game:GetService("UserInputService")
 local ContactAudio = require(script.Parent:WaitForChild("MovementContactAudio"))
 
@@ -10,6 +11,12 @@ local MAX_VOICES = mobile and 4 or 6
 local SAMPLE_SECONDS = 0.08
 local VOICE_SECONDS = 0.38
 local FOOT_LIFT = Vector3.new(0, 0.35, 0)
+local FOOTSTEP_VOLUME_ATTRIBUTE = "IronYardOpponentFootstepVolume"
+
+local mix = Instance.new("SoundGroup")
+mix.Name = "IronYardOpponentFootsteps"
+mix.Archivable = false
+mix.Parent = SoundService
 
 local tracks, due, exclude, voices = {}, {}, {}, {}
 local rays = RaycastParams.new()
@@ -68,7 +75,7 @@ local function reserveVoice(now)
     local emitter = Instance.new("Attachment")
     emitter.Name = "IronYardOpponentFootstep"
     emitter.Parent = workspace.Terrain
-    local voice = ContactAudio.createVoice("Footstep", emitter)
+    local voice = ContactAudio.createVoice("Footstep", emitter, mix)
     voice.emitter = emitter
     voice.sound.RollOffMode = Enum.RollOffMode.Linear
     voice.sound.RollOffMinDistance = 6
@@ -114,11 +121,22 @@ local function reset()
     end
 end
 
+local function updateVolume()
+    local percent = player:GetAttribute(FOOTSTEP_VOLUME_ATTRIBUTE)
+    local gain = type(percent) == "number" and percent == percent and math.clamp(percent / 100, 0, 1) or 1
+    mix.Volume = gain
+    if gain == 0 then reset() end
+end
+
+player:GetAttributeChangedSignal(FOOTSTEP_VOLUME_ATTRIBUTE):Connect(updateVolume)
+updateVolume()
+
 local function closer(a, b)
     return a.distance < b.distance
 end
 
 RunService.Heartbeat:Connect(function()
+    if mix.Volume == 0 then return end
     local now = os.clock()
     local elapsed = now - lastSampleAt
     if elapsed < SAMPLE_SECONDS then return end
