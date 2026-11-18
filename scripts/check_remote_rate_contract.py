@@ -16,7 +16,7 @@ net = read("src/shared/PrecisionNet.luau")
 
 for key in (
     "EquipWeapon", "FireWeapon", "ReloadWeapon", "SetSprinting",
-    "SetAiming", "SetDuelReady", "ReturnToFfa",
+    "SetAiming", "SetDuelReady", "ReturnToFfa", "SetPracticeRange",
     "MovementAction", "MovementUpdate", "MovementStop", "Diagnostics",
 ):
     assert key in policy, f"Missing bounded category: {key}"
@@ -48,13 +48,13 @@ def in_handler(body, signature, end_signature, ordered):
     indexes = [scope.index(fragment) for fragment in ordered]
     assert indexes == sorted(indexes), f"Admission must occur before handler mutations: {signature}"
 
-in_handler(weapon, "local function reloadWeapon(player, weaponId)",
+in_handler(weapon, "local function reloadWeapon(player, weaponId, session)",
            "\nlocal function canFire(", (
                'RemoteGuard.allow(player, "ReloadWeapon")',
                'typeof(weaponId) ~= "string"',
                'getState(player)',
            ))
-in_handler(weapon, "local function onEquipWeapon(player, weaponId)",
+in_handler(weapon, "local function onEquipWeapon(player, weaponId, session)",
            "\nlocal function onFireWeapon(", (
                'RemoteGuard.allow(player, "EquipWeapon")',
                "WeaponConfig.isValid(weaponId)",
@@ -83,12 +83,19 @@ in_handler(movement, "local function onMovementAction(player, payload)",
                "#action > 24",
                'if action == "Slide" then',
            ))
-in_handler(weapon, "local function onSetAiming(player, enabled)",
+in_handler(weapon, "local function onSetAiming(player, enabled, session)",
            "\nlocal function onFireWeapon(", (
                'RemoteGuard.allow(player, "SetAiming")',
                'typeof(enabled) ~= "boolean"',
            ))
 match = read("src/server/MatchService.luau")
+in_handler(match, "local function setPractice(player, enabled, session)",
+           "\nfunction MatchService.start()", (
+               'RemoteGuard.allow(player, "SetPracticeRange")',
+               'PracticeMode.matches(player, session)',
+               'PracticeRange.enter(player, humanoid.Health, round)',
+           ))
+assert "remotes.SetPracticeRange.OnServerEvent:Connect(setPractice)" in match
 in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(",
            "\n    remotes.ReturnToFfa.OnServerEvent:Connect(", (
                'RemoteGuard.allow(player, "SetDuelReady")',
@@ -105,7 +112,7 @@ in_handler(match, "remotes.ReturnToFfa.OnServerEvent:Connect(function(player, re
 assert 'RemoteGuard.allow(player, "Diagnostics")' in diagnostics
 assert "if not authorized(player)" in diagnostics
 for key in ("EquipWeapon", "ReloadWeapon", "FireWeapon", "SetSprinting",
-            "MovementAction", "PerformanceDiagnostics", "SetAiming", "SetDuelReady", "ReturnToFfa"):
+            "MovementAction", "PerformanceDiagnostics", "SetAiming", "SetDuelReady", "ReturnToFfa", "SetPracticeRange"):
     assert key + ' = "RemoteEvent"' in net, f"Unbound server remote: {key}"
 assert "remotes.SetAiming.OnServerEvent:Connect(onSetAiming)" in weapon
 assert "remotes.EquipWeapon.OnServerEvent:Connect(onEquipWeapon)" in weapon

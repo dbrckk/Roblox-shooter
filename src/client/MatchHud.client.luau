@@ -12,6 +12,7 @@ local DuelReadout = require(ReplicatedStorage:WaitForChild("Shared")
 local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TouchLayout"))
 local DuelSpawnPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelSpawnPlan"))
 local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "NeonStrikeMatchHud"
@@ -332,7 +333,8 @@ end
 
 local function canInvite(other)
     local travel = other:GetAttribute("IronYardDuelTravel")
-    return other.Parent == Players and other ~= player and not Workspace:GetAttribute("IronYardDuelLocal")
+    return other.Parent == Players and other ~= player and not PracticeMode.active(other)
+        and not Workspace:GetAttribute("IronYardDuelLocal")
         and travel ~= "CONNECTING" and travel ~= "RETURNING"
 end
 
@@ -383,7 +385,7 @@ local function duelLabel()
     local state = player:GetAttribute("IronYardDuelTravel")
     local ready = player:GetAttribute("IronYardDuelReady") == true
     local invitation = player:GetAttribute("IronYardDuelInvitation")
-    local canQueue = not dedicated
+    local canQueue = not dedicated and not PracticeMode.active(player)
         and Workspace:GetAttribute("IronYardMatchMode") ~= "DUEL" and phase ~= "RESULTS"
     local returnAvailable = dedicated and (phase == "WAITING" or phase == "COUNTDOWN")
     returnPhase = returnAvailable and phase or nil
@@ -635,20 +637,24 @@ end)
 local travelConnections = {}
 local function watchRosterPlayer(other)
     if other == player or travelConnections[other] then return end
-    travelConnections[other] = other:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(function()
+    local function refreshRow()
         if travelConnections[other] and menu.Visible and syncInviteRow(other) then
             refreshInviteRows()
         end
-    end)
+    end
+    travelConnections[other] = {
+        other:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(refreshRow),
+        other:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(refreshRow),
+    }
     if menu.Visible and syncInviteRow(other) then refreshInviteRows() end
     task.defer(duelLabel)
 end
 Players.PlayerAdded:Connect(watchRosterPlayer)
 Players.PlayerRemoving:Connect(function(other)
-    local connection = travelConnections[other]
-    if not connection then return end
+    local connections = travelConnections[other]
+    if not connections then return end
     travelConnections[other] = nil
-    connection:Disconnect()
+    for _, connection in ipairs(connections) do connection:Disconnect() end
     if removeInviteRow(other) then refreshInviteRows() end
     task.defer(duelLabel)
 end)
@@ -685,7 +691,10 @@ local function update()
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
     local headerText, detailText
-    if matchMode == "DUEL" and phase ~= "COUNTDOWN" and phase ~= "WAITING" then
+    if PracticeMode.active(player) then
+        headerText = "IRON YARD  /  PRACTICE RANGE"
+        detailText = "TRY ALL 5 WEAPONS  ·  SETTINGS TO EXIT"
+    elseif matchMode == "DUEL" and phase ~= "COUNTDOWN" and phase ~= "WAITING" then
         local score = myWins and string.format("YOU %d : %d RIVAL", myWins, rivalWins)
             or string.format("A %d : %d B", duelScoreA, duelScoreB)
         if phase == "LIVE" then
@@ -799,5 +808,10 @@ end
 player.CharacterAdded:Connect(bindDuelPad)
 player.CharacterRemoving:Connect(function() bindDuelPad(nil) end)
 player:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
+    if PracticeMode.active(player) then setMenu(false) end
+    duelLabel()
+    update()
+end)
 bindDuelPad(player.Character)
 duelLabel()

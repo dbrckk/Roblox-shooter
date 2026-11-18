@@ -56,7 +56,7 @@ def main():
     ):
         has(client, token, "Client must stamp shots and avoid stale ammo snapshots")
     for token in (
-        'epoch = weaponRoundEpoch,',
+        'message.epoch = weaponRoundEpoch',
         'if not FireEpochPolicy.matches(payload.epoch, weaponRoundEpoch) then',
         'workspace:SetAttribute("IronYardFireEpoch", weaponRoundEpoch)',
         'sendAmmo(player, weaponId)',
@@ -173,7 +173,7 @@ def main():
     assert rejection.index("return rejectFireWithAmmo(player, weaponId)") < (
         rejection.index("state.magazines[weaponId] = loaded - 1")
     ), "Rejected cooldown / equip / reload shots must not consume server ammo"
-    blocked_reload = server.split("local function reloadWeapon(player, weaponId)", 1)[1]
+    blocked_reload = server.split("local function reloadWeapon(player, weaponId, session)", 1)[1]
     blocked_reload = blocked_reload.split("local function rejectFireWithAmmo", 1)[0]
     assert 'RemoteGuard.allow(player, "ReloadWeapon")' in blocked_reload
     assert 'if loaded >= config.magazineSize or (state.reloadUntil[weaponId] or 0) > os.clock() then' in blocked_reload
@@ -315,7 +315,8 @@ def main():
             "Raycast and shotgun shots must emit sound using their tracer packet")
     require(server.count("broadcastFireFx(player, weaponId, origin, true)") == 1,
             "Only in-flight knife launch needs its separate audio packet")
-    require(server.count("CombatFxRelay.send(remotes.WeaponFx, {") == 2,
+    require(server.count("CombatFxRelay.send(remotes.WeaponFx,") == 2
+            and "remotes.WeaponFx:FireClient(player, packet)" in server,
             "PlayerTracer and knife-only FireSound must use filtered server routing")
     require("remotes.WeaponFx:FireAllClients({" not in server,
             "Never broadcast player shot FX to an entire distant lobby")
@@ -446,7 +447,7 @@ def main():
         has(aim_policy, needle, "Pure ADS policy")
     for needle in (
         'WaitForChild("AimStancePolicy")',
-        'local function onSetAiming(player, enabled)',
+        'local function onSetAiming(player, enabled, session)',
         'RemoteGuard.allow(player, "SetAiming")',
         'typeof(enabled) ~= "boolean"',
         'state.aimSince = os.clock()',
@@ -467,11 +468,11 @@ def main():
     require(server.count("state.aimSince = nil") == 4,
         "ADS must reset on scope release, equip, round and respawn")
     for needle in (
-        "remotes.SetAiming:FireServer(scoped)",
+        "remotes.SetAiming:FireServer(scoped, PracticeMode.session(player))",
         "cancelAimForMobility = function()",
         "if enabled and cancelAimForMobility then",
         'workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()',
-        'remotes.SetAiming:FireServer(true)',
+        'remotes.SetAiming:FireServer(true, PracticeMode.session(player))',
     ):
         has(client, needle, "ADS transition to server")
     require("payload.scoped" not in server and "payload.aiming" not in server,
@@ -647,11 +648,11 @@ def main():
     for token in (
         'DuelCombatState.canFire(player,',
         'DuelCombatState.canDamage(attacker, targetPlayer, targetCharacter,',
-        'if not duelCanDamage(attacker, targetPlayer, targetCharacter) then return false end',
+        'if not canDamage(attacker, targetPlayer, targetCharacter) then return false end',
         'if not duelCanFire(player) then return end',
-        'if duelCanDamage(player, opponent, model)',
-        'elseif duelCanDamage(player, opponent, model)',
-        'duelCanDamage(player, entry.player, entry.model)',
+        'local damageAllowed = canDamage(player, opponent, model)',
+        'elseif damageAllowed then',
+        'canDamage(player, entry.player, entry.model)',
         'or not duelCanFire(player)',
     ):
         has(server, token, "All duel hit paths bound to original rigs")

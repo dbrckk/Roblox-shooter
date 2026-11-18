@@ -11,6 +11,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local BuildInfo = require(Shared:WaitForChild("BuildInfo"))
 local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
 local OperatorFinishes = require(Shared:WaitForChild("OperatorFinishes"))
+local PracticeMode = require(Shared:WaitForChild("PracticeMode"))
 local GamepadCombatPolicy = require(Shared:WaitForChild("GamepadCombatPolicy"))
 local remotes = require(Shared:WaitForChild("PrecisionNet")).getRemotes(false)
 
@@ -243,7 +244,7 @@ local function updateLayout()
 end
 
 render = function()
-    if Workspace:GetAttribute("NeonMatchPhase") ~= "RESULTS" then
+    if Workspace:GetAttribute("NeonMatchPhase") ~= "RESULTS" or PracticeMode.active(player) then
         displayedResultsRound = nil
         rematchRequest = nil
         back.Visible = false
@@ -407,7 +408,7 @@ for _, attr in ipairs({
 end
 for _, attr in ipairs({
     "IronYardLifetimeXP", "IronYardProgressLevel", "IronYardRoundXP", "IronYardRoundFinishUnlocked",
-    "IronYardSavedXP", "IronYardProgressStatus", "IronYardDuelReady", "IronYardDuelTravel",
+    "IronYardSavedXP", "IronYardProgressStatus", "IronYardDuelReady", "IronYardDuelTravel", PracticeMode.ATTRIBUTE,
 }) do
     table.insert(attributeConnections,
         player:GetAttributeChangedSignal(attr):Connect(render))

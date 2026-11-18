@@ -256,12 +256,14 @@ print("Duel lobby network regression: slow confirmation, stale invite, shared re
 
 
 DEDICATED_FIXTURE = r"""
-local remotes = {SetDuelReady = {OnServerEvent = signal()}, ReturnToFfa = {OnServerEvent = signal()}}
+local remotes = {SetDuelReady = {OnServerEvent = signal()}, ReturnToFfa = {OnServerEvent = signal()},
+    SetPracticeRange = {OnServerEvent = signal()}}
 local function noop() end
 local modules = {
     DuelRoom = Room, DuelRules = DuelRules, MatchLobbyPolicy = MatchLobbyPolicy, RoundStandings = RoundStandings,
     BotService = {reconcileNow = noop, resetRound = noop, getScores = function() return {} end},
     SpawnService = {}, WeaponService = {}, MovementService = {},
+    PracticeMode = PracticeMode, PracticeRange = {},
     DuelCombatState = {clear = noop}, CombatAwards = {resetRound = noop}, SupplyService = {resetRound = noop},
     RemoteGuard = {allow = function() return true end},
     PrecisionNet = {getRemotes = function() return remotes end},
@@ -382,6 +384,8 @@ MatchService.start()
 reachPhase("RESULTS")
 local round = Workspace:GetAttribute("NeonMatchRound")
 assert(round == 1 and not Room.isClosing())
+remotes.SetPracticeRange.OnServerEvent:fire(first, true, 0)
+assert(not PracticeMode.active(first) and first:GetAttribute("IronYardPracticeNotice") == "FFA ONLY")
 local oldResults = resultsClient(first, firstReplica, round)
 oldResults.rematch.Activated:fire()
 oldResults.rematch.Activated:fire()
@@ -477,9 +481,11 @@ def module(name, path, replacements=None):
 
 
 def run(luau):
+    mode = module("PracticeMode", "src/shared/PracticeMode.luau")
     queue = module("Queue", "src/shared/DuelQueue.luau")
     room = module("Room", "src/server/DuelRoom.luau", {
-        'local Queue = require(Shared:WaitForChild("DuelQueue"))': "local Queue = Queue"
+        'local Queue = require(Shared:WaitForChild("DuelQueue"))': "local Queue = Queue",
+        'local PracticeMode = require(Shared:WaitForChild("PracticeMode"))': "local PracticeMode = PracticeMode",
     })
     hud = (ROOT / "src/client/MatchHud.client.luau").read_text()
     hud_sections = (
@@ -487,7 +493,7 @@ def run(luau):
         hud[hud.index("local displayedInvitation"):hud.index("UserInputService.InputBegan:Connect")],
     )
     lobby_client = HUD_FIXTURE + "\n".join(hud_sections) + HUD_ENTRY_POINT
-    lobby = SERVER_FIXTURE + queue + room + lobby_client + CHECKS
+    lobby = SERVER_FIXTURE + mode + queue + room + lobby_client + CHECKS
     results = (ROOT / "src/client/RoundResults.client.luau").read_text()
     rematch_state = results[results.index("local rematchRequest"):results.index("local function syncResultSelection")]
     results_render = """
@@ -497,7 +503,7 @@ def run(luau):
     """
     results_actions = results[results.index("rematch.Activated:Connect"):results.index("local function safeCount")]
     dedicated_server = (
-        SERVER_FIXTURE + queue
+        SERVER_FIXTURE + mode + queue
         + '\ngame.PrivateServerId = "reserved"\nrosters.reserved = {1, 2}\n' + room
         + module("DuelRules", "src/shared/DuelRules.luau")
         + module("MatchLobbyPolicy", "src/shared/MatchLobbyPolicy.luau")

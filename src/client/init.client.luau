@@ -131,6 +131,8 @@ local function applyMenuMouseState(isOpen)
 	end
 end
 
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
+
 hud = HudController.new(player, gui, WeaponConfig, {
 	baseFov = baseFieldOfView,
 	mouseSensitivity = mouseSensitivity,
@@ -147,6 +149,9 @@ hud = HudController.new(player, gui, WeaponConfig, {
 		applyMenuMouseState(isOpen)
         if updateTouchVisibility then updateTouchVisibility() end
 	end,
+    onPracticeRequested = function()
+        remotes.SetPracticeRange:FireServer(not PracticeMode.active(player), PracticeMode.session(player))
+    end,
     onCareerFinishChanged = function(preference)
         remotes.SetCareerFinish:FireServer(preference)
     end,
@@ -796,7 +801,7 @@ local function setScoped(enabled)
     applyCameraFov()
     hud:setScoped(scoped)
     visuals:setScoped(scoped)
-    remotes.SetAiming:FireServer(scoped)
+    remotes.SetAiming:FireServer(scoped, PracticeMode.session(player))
 end
 
 cancelAimForMobility = function()
@@ -842,7 +847,7 @@ local function equipWeapon(weaponId)
         visuals:setReloading(weaponId, ammunition.reloading,
             ammunition.loaded, ammunition.capacity)
     end
-	remotes.EquipWeapon:FireServer(weaponId)
+	remotes.EquipWeapon:FireServer(weaponId, PracticeMode.session(player))
 end
 
 local function getAimRay()
@@ -863,7 +868,7 @@ local function requestReload()
     local state = ammoByWeapon[currentWeaponId]
     if state and state.reloading then return end
     lastReloadRequestAt = now
-    remotes.ReloadWeapon:FireServer(currentWeaponId)
+    remotes.ReloadWeapon:FireServer(currentWeaponId, PracticeMode.session(player))
 end
 
 local function fireWeapon(weaponId)
@@ -880,7 +885,8 @@ local function fireWeapon(weaponId)
     end
     local _, humanoid = getCharacterParts()
     if not humanoid or humanoid.Health <= 0 then return end
-    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    local practice = PracticeMode.active(player)
+    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" and not practice then return end
     local fireEpoch = workspace:GetAttribute("IronYardFireEpoch")
     -- An unreplicated round generation cannot initiate a predicted shot.
     -- The actual server uses this snapshot to reject late round packets.
@@ -944,11 +950,12 @@ local function fireWeapon(weaponId)
 	remotes.FireWeapon:FireServer({
 		weaponId = weaponId,
         epoch = fireEpoch,
+        rangeSession = PracticeMode.session(player),
 		origin = ray.Origin,
 		direction = ray.Direction.Unit,
 	})
     -- Local onboarding only; never used as authoritative score or hit data.
-    if not playerGui:GetAttribute("IronYardFirstShots") then
+    if not practice and not playerGui:GetAttribute("IronYardFirstShots") then
         playerGui:SetAttribute("IronYardFirstShots", 1)
     end
 end
@@ -1362,7 +1369,7 @@ local function advanceFeedbackEpoch(epoch)
 end
 
 remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
-    if typeof(message) ~= "table" then return end
+    if typeof(message) ~= "table" or not PracticeMode.matches(player, message.rangeSession) then return end
 
     if message.kind == "Hit" or message.kind == "Protected" then
         if not FireEpochPolicy.acceptFeedback(message.epoch,
@@ -1393,7 +1400,7 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
         }
         hud:setAmmo(message.weaponId, message.loaded, message.capacity,
             message.reloading == true, message.reloadEndsAt)
-        if message.reloading == true and message.capacity > 0
+        if not PracticeMode.active(player) and message.reloading == true and message.capacity > 0
             and workspace:GetAttribute("NeonMatchPhase") == "LIVE"
             and workspace:GetAttribute("IronYardMatchMode") == "FFA"
             and FireEpochPolicy.matches(message.epoch, workspace:GetAttribute("IronYardFireEpoch"))
@@ -1437,7 +1444,7 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
             -- Prediction shows the central tracer and mark. The surface
             -- sound uses the server contact so it follows the actual shot.
             local ownShot = message.shooterUserId == player.UserId
-            if ownShot and workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
+            if ownShot and (workspace:GetAttribute("NeonMatchPhase") == "LIVE" or PracticeMode.active(player)) then
                 if typeof(message.impactNormal) == "Vector3" then
                     visuals:playImpactSound(message.origin + direction.Unit * fullLength, message.impactMaterial)
                 elseif typeof(message.pelletImpacts) == "table" then
@@ -1566,6 +1573,7 @@ workspace:GetAttributeChangedSignal("IronYardFireEpoch"):Connect(function()
     if not FireEpochPolicy.valid(epoch) or epoch <= observedFireEpoch then return end
     observedFireEpoch = epoch
     advanceFeedbackEpoch(epoch)
+    if PracticeMode.active(player) then return end
     if releaseTouchFire then releaseTouchFire() end
     lastLocalFire = {}
     nextLocalGlobalFireAt = 0
@@ -1591,15 +1599,28 @@ local function syncDuelMenuInput()
 end
 playerGui:GetAttributeChangedSignal("IronYardDuelMenuOpen"):Connect(syncDuelMenuInput)
 workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(syncDuelMenuInput)
+player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
+    clearHeldCombatInput()
+    setScoped(false)
+    hud:resetCombatFeedback()
+    lastLocalFire = {}
+    ammoByWeapon = {}
+    lastReloadRequestAt = -math.huge
+    visuals:setReloading(currentWeaponId, false)
+    equipWeapon(currentWeaponId)
+    hud:setSettingsOpen(false)
+    syncDuelMenuInput()
+end)
 workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
     syncDuelMenuInput()
+    if PracticeMode.active(player) then return end
     local newPhase = workspace:GetAttribute("NeonMatchPhase")
     if newPhase ~= "LIVE" and newPhase ~= "COUNTDOWN" then
         -- Releasing an old trigger during results or duel breaks must not
         -- silently fire shots as soon as the next match starts.
         clearHeldCombatInput()
     elseif scoped and newPhase == "LIVE" then
-        remotes.SetAiming:FireServer(true)
+        remotes.SetAiming:FireServer(true, PracticeMode.session(player))
     end
 end)
 
@@ -1667,7 +1688,7 @@ if UserInputService.TouchEnabled then
         local phase = workspace:GetAttribute("NeonMatchPhase")
         return nativeJumpButton and nativeJumpButton.Parent == jumpFrame and jumpFrame.Parent == jumpGui
             and jumpGui.Parent == playerGui and nativeJumpButton.Visible and jumpFrame.Visible and jumpGui.Enabled
-            and (phase == "LIVE" or phase == "COUNTDOWN")
+            and (phase == "LIVE" or phase == "COUNTDOWN" or PracticeMode.active(player))
             and not GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
     end
 
@@ -1838,7 +1859,8 @@ if UserInputService.TouchEnabled then
 
     updateTouchVisibility = function()
         local phase = workspace:GetAttribute("NeonMatchPhase")
-        local playable = not combatInputBlocked() and (phase == "LIVE" or phase == "COUNTDOWN")
+        local playable = not combatInputBlocked()
+            and (phase == "LIVE" or phase == "COUNTDOWN" or PracticeMode.active(player))
         local controllerActive = GamepadCombatPolicy.isGamepad(
             UserInputService:GetLastInputType().Name)
         local enabled = playable and not controllerActive and layoutReady
@@ -1908,7 +1930,8 @@ if UserInputService.TouchEnabled then
 
     fire.InputBegan:Connect(function(input)
         if input.UserInputType ~= Enum.UserInputType.Touch or heldFireInput
-            or not touchGui.Enabled or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+            or not touchGui.Enabled
+            or (workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" and not PracticeMode.active(player)) then return end
         local _, humanoid = getCharacterParts()
         if not humanoid or humanoid.Health <= 0 then return end
         heldFireInput = input

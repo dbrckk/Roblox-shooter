@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local Life = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("PlayerDeathLifecycle"))
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local ScoreService = {}
 local started = false
 local playerBindings = {}
@@ -63,7 +64,8 @@ local function attachPlayer(player)
             local function onDeath()
                 if not Life.recordDeath(state.life, generation, character,
                     humanoid, player.Character,
-                    Workspace:GetAttribute("NeonMatchPhase") == "LIVE") then
+                    Workspace:GetAttribute("NeonMatchPhase") == "LIVE"
+                        and not PracticeMode.active(player)) then
                     return
                 end
                 -- leaderstats can be replaced between rounds. Resolve the

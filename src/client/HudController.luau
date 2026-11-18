@@ -10,6 +10,7 @@ local FeedbackPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForC
 local BoostMeterPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("BoostMeterPolicy"))
 local CombatReadoutPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatReadoutPolicy"))
 local CrosshairFeedback = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CrosshairFeedbackPolicy"))
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 
@@ -695,7 +696,7 @@ end
 
 function HudController:_buildSettingsMenu()
     local touch = UserInputService.TouchEnabled
-    local panelHeight = touch and 330 or 311
+    local panelHeight = touch and 380 or 361
     local settingsRect = TouchLayout.MENU_BUTTONS.Settings
     local settingsGui = self.gui
     if touch then
@@ -862,6 +863,28 @@ function HudController:_buildSettingsMenu()
             self.player:SetAttribute(FOOTSTEP_VOLUME_ATTRIBUTE, self.opponentFootstepVolume)
             self:_refreshSettingsText()
         end)
+
+    local rangeButton = makeButton(settingsPage, "PracticeRange", "PRACTICE RANGE",
+        UDim2.fromOffset(22, panelHeight - 53), UDim2.fromOffset(296, 42))
+    rangeButton.ZIndex = 12
+    local function updateRangeButton()
+        local canEnter = workspace:GetAttribute("IronYardMatchMode") == "FFA"
+            and workspace:GetAttribute("IronYardDedicatedDuel") ~= true
+        rangeButton.Visible = canEnter and self.options.onPracticeRequested ~= nil
+        rangeButton.Selectable = rangeButton.Visible
+        local notice = self.player:GetAttribute("IronYardPracticeNotice")
+        rangeButton.Text = notice or (PracticeMode.active(self.player) and "BACK TO FFA" or "PRACTICE RANGE")
+    end
+    rangeButton.Activated:Connect(function()
+        if self.settingsOpen and settingsPage.Visible and rangeButton.Visible then
+            self.options.onPracticeRequested()
+        end
+    end)
+    self.player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateRangeButton)
+    self.player:GetAttributeChangedSignal("IronYardPracticeNotice"):Connect(updateRangeButton)
+    workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(updateRangeButton)
+    workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(updateRangeButton)
+    updateRangeButton()
 
     local hint = makeText(settingsPage, "Hint",
         touch and "Drag on FIRE to aim while shooting" or "Press M to close",
@@ -1255,7 +1278,8 @@ function HudController:showHitFeedback(message)
         self.eliminationToken += 1
         local eliminationToken = self.eliminationToken
         local confirmation = self.eliminationConfirmation
-        confirmation.Text = headshot and "HEADSHOT ELIMINATION" or "ELIMINATED"
+        confirmation.Text = PracticeMode.active(self.player) and "TARGET DOWN"
+            or (headshot and "HEADSHOT ELIMINATION" or "ELIMINATED")
         confirmation.TextColor3 = color
         confirmation.TextTransparency = 0
         confirmation.Visible = true

@@ -14,6 +14,8 @@ local AimStancePolicy = require(shared:WaitForChild("AimStancePolicy"))
 local FeedbackPolicy = require(shared:WaitForChild("CombatFeedbackPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local PrecisionNet = require(shared:WaitForChild("PrecisionNet"))
+local PracticeMode = require(shared:WaitForChild("PracticeMode"))
+local PracticeRange = require(script.Parent:WaitForChild("PracticeRange"))
 
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local MovementService = require(script.Parent:WaitForChild("MovementService"))
@@ -25,12 +27,14 @@ local WeaponService = {}
 
 local remotes = nil
 local playerState = {}
+local practiceState = {}
 local started = false
 local weaponRoundEpoch = 0
 local weaponRandom = Random.new()
 
 local function getState(player)
-    local state = playerState[player]
+    local states = PracticeMode.active(player) and practiceState or playerState
+    local state = states[player]
     if not state then
         state = {
             equippedWeaponId = "AssaultRifle",
@@ -47,7 +51,7 @@ local function getState(player)
             shotRayCharacter = nil,
             shotRayParams = nil,
         }
-        playerState[player] = state
+        states[player] = state
     end
 
     return state
@@ -68,6 +72,10 @@ local function getLiveCharacter(player)
     end
 
     return character, humanoid, head, root
+end
+
+local function canUseWeapons(player)
+    return PracticeMode.active(player) or workspace:GetAttribute("NeonMatchPhase") == "LIVE"
 end
 
 local function getHumanoidFromHit(part)
@@ -155,6 +163,7 @@ end
 local function sendFeedback(player, message)
     if remotes then
         message.epoch = weaponRoundEpoch
+        message.rangeSession = PracticeMode.session(player)
         remotes.WeaponFeedback:FireClient(player, message)
     end
 end
@@ -170,7 +179,7 @@ local function sendProtected(player, weaponId)
 end
 
 local function broadcastFireFx(player, weaponId, origin, soundOnly)
-    if not remotes then return end
+    if not remotes or PracticeMode.active(player) then return end
     -- Bot hearing is recorded for every accepted server shot. Hitscan
     -- audio now travels inside PlayerTracer instead of a second broadcast.
     -- Thrown knives have no PlayerTracer, so keep their sound-only packet.
@@ -193,7 +202,7 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
         local humanoid = getHumanoidFromHit(result.Instance)
         isWorldImpact = humanoid == nil
     end
-    CombatFxRelay.send(remotes.WeaponFx, {
+    local packet = {
         kind = "PlayerTracer",
         shooterUserId = player.UserId,
         weaponId = weaponId,
@@ -203,26 +212,38 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
         impactNormal = isWorldImpact and result.Normal or nil,
         impactMaterial = isWorldImpact and result.Material.Name or nil,
         pelletImpacts = pelletImpacts,
-    }, origin, player)
+    }
+    if PracticeMode.active(player) then
+        packet.rangeSession = PracticeMode.session(player)
+        remotes.WeaponFx:FireClient(player, packet)
+    else
+        CombatFxRelay.send(remotes.WeaponFx, packet, origin, player)
+    end
 end
 
 -- Bound to exact Roblox Characters by MatchService; UserIds alone are not lives.
 local function duelCanFire(player)
+    if PracticeMode.active(player) then return true end
     return DuelCombatState.canFire(player,
         workspace:GetAttribute("NeonMatchPhase"),
         workspace:GetAttribute("IronYardMatchMode"), DuelRoom.combatantCount())
 end
 
-local function duelCanDamage(attacker, targetPlayer, targetCharacter)
+local function canDamage(attacker, targetPlayer, targetCharacter)
+    if PracticeMode.active(attacker) then
+        return PracticeRange.ownsTarget(attacker, targetCharacter)
+    end
+    if targetPlayer and PracticeMode.active(targetPlayer) then return false end
+    if not targetPlayer and targetCharacter:GetAttribute("IsArenaBot") ~= true then
+        return false
+    end
     return DuelCombatState.canDamage(attacker, targetPlayer, targetCharacter,
         workspace:GetAttribute("NeonMatchPhase"),
         workspace:GetAttribute("IronYardMatchMode"), DuelRoom.combatantCount())
 end
 
 local function damageHit(attacker, weaponId, config, raycastResult, origin)
-    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
-        return false
-    end
+    if not canUseWeapons(attacker) then return false end
     if not raycastResult then return false end
 
     local targetHumanoid, targetCharacter = getHumanoidFromHit(raycastResult.Instance)
@@ -233,14 +254,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
     end
 
     local targetPlayer = Players:GetPlayerFromCharacter(targetCharacter)
-    -- Only the match's combatants can be hurt by public fire requests.
-    if not targetPlayer and targetCharacter:GetAttribute("IsArenaBot") ~= true then
-        return false
-    end
-    if targetPlayer == attacker then
-        return false
-    end
-    if not duelCanDamage(attacker, targetPlayer, targetCharacter) then return false end
+    if not canDamage(attacker, targetPlayer, targetCharacter) then return false end
 
     -- Avoid spawn-camping. Server-only protection is removed when its owner fires.
     if SpawnService.isProtected(targetCharacter) then
@@ -273,9 +287,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         distance = origin and (raycastResult.Position - origin).Magnitude or 0,
     })
 
-    -- Training targets still provide impact feedback, but cannot win PvP rounds.
-    if healthBefore > 0 and targetHumanoid.Health <= 0
-        and (targetPlayer ~= nil or targetCharacter:GetAttribute("IsArenaBot") == true) then
+    if healthBefore > 0 and targetHumanoid.Health <= 0 and not PracticeMode.active(attacker) then
         local stats = attacker:FindFirstChild("leaderstats")
         local kills = stats and stats:FindFirstChild("Eliminations")
         DeathNotice.record(targetCharacter, attacker.DisplayName, weaponId, headshot)
@@ -307,9 +319,8 @@ local function sendAmmo(player, weaponId)
     if not config or not remotes then return end
     local state = getState(player)
     local reloadRemaining = math.max(0, (state.reloadUntil[weaponId] or 0) - os.clock())
-    remotes.WeaponFeedback:FireClient(player, {
+    sendFeedback(player, {
         kind = "Ammo", weaponId = weaponId,
-        epoch = weaponRoundEpoch,
         loaded = getLoaded(state, weaponId, config) or -1,
         capacity = config.magazineSize or -1,
         reloading = reloadRemaining > 0,
@@ -323,10 +334,36 @@ local function cancelReload(state, weaponId)
     state.reloadUntil[weaponId] = nil
 end
 
-local function reloadWeapon(player, weaponId)
+function WeaponService.canEnterPractice(player, character)
+    local state = getState(player)
+    local lastHit = character:GetAttribute("IronYardLastHitTime") or -math.huge
+    return os.clock() - (state.lastAcceptedShotAt or -math.huge) >= 5
+        and workspace:GetServerTimeNow() - lastHit >= 5
+end
+
+function WeaponService.onPracticeChanged(player, enabled)
+    local public = playerState[player]
+    if public then
+        for id in pairs(public.reloadUntil) do cancelReload(public, id) end
+        public.aimSince = nil
+        public.aimCharacter = nil
+        public.aimWeaponId = nil
+    end
+    local practice = practiceState[player]
+    if enabled then
+        local state = getState(player)
+        if public then state.equippedWeaponId = public.equippedWeaponId end
+    elseif practice then
+        getState(player).equippedWeaponId = practice.equippedWeaponId
+        practiceState[player] = nil
+    end
+    sendAmmo(player, getState(player).equippedWeaponId)
+end
+
+local function reloadWeapon(player, weaponId, session)
     if not RemoteGuard.allow(player, "ReloadWeapon") then return end
-    if typeof(weaponId) ~= "string" then return end
-    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
+    if typeof(weaponId) ~= "string" or not PracticeMode.matches(player, session) then return end
+    if not canUseWeapons(player) then return end
     local state = getState(player)
     local config = WeaponConfig.get(weaponId)
     if not config or not config.magazineSize or state.equippedWeaponId ~= weaponId then return end
@@ -347,11 +384,11 @@ local function reloadWeapon(player, weaponId)
     sendAmmo(player, weaponId)
 
     task.delay(config.reloadSeconds, function()
-        if player.Character ~= character or state ~= playerState[player]
-            or state.reloadTokens[weaponId] ~= token
+        if player.Parent ~= Players or player.Character ~= character or state ~= getState(player)
+            or not PracticeMode.matches(player, session) or state.reloadTokens[weaponId] ~= token
             or state.equippedWeaponId ~= weaponId then return end
         local _, humanoid = getLiveCharacter(player)
-        if not humanoid or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+        if not humanoid or not canUseWeapons(player) then
             cancelReload(state, weaponId)
             sendAmmo(player, weaponId)
             return
@@ -391,7 +428,7 @@ local function canFire(player, weaponId, config)
     local loaded = getLoaded(state, weaponId, config)
     if loaded ~= nil then
         if loaded <= 0 then
-            remotes.WeaponFeedback:FireClient(player, { kind = "OutOfAmmo", weaponId = weaponId })
+            sendFeedback(player, { kind = "OutOfAmmo", weaponId = weaponId })
             sendAmmo(player, weaponId)
             return false
         end
@@ -399,6 +436,7 @@ local function canFire(player, weaponId, config)
         sendAmmo(player, weaponId)
     end
     state.lastFireAt[weaponId] = now
+    state.lastAcceptedShotAt = now
     state.nextGlobalFireAt = WeaponConfig.nextGlobalFireAt(weaponId, now)
     return true
 end
@@ -489,12 +527,10 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             end
             if humanoid and humanoid.Health > 0 and model ~= character then
                 local opponent = Players:GetPlayerFromCharacter(model)
-                if duelCanDamage(player, opponent, model)
-                    and (opponent or model:GetAttribute("IsArenaBot") == true)
-                    and SpawnService.isProtected(model) then
+                local damageAllowed = canDamage(player, opponent, model)
+                if damageAllowed and SpawnService.isProtected(model) then
                     struckShield = true
-                elseif duelCanDamage(player, opponent, model)
-                    and (opponent or model:GetAttribute("IsArenaBot") == true) then
+                elseif damageAllowed then
                     local entry = victims[humanoid]
                     if not entry then
                         entry = { model = model, player = opponent, damage = 0,
@@ -523,7 +559,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
     local anyHit = false
     for humanoid, entry in pairs(victims) do
         if humanoid.Health > 0 and entry.model.Parent
-            and duelCanDamage(player, entry.player, entry.model)
+            and canDamage(player, entry.player, entry.model)
             and not SpawnService.isProtected(entry.model) then
             local damage = math.max(1, math.floor(entry.damage + 0.5))
             local oldHealth = humanoid.Health
@@ -544,7 +580,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
                     killed = killed, distance = entry.distance,
                 })
             end
-            if killed then
+            if killed and not PracticeMode.active(player) then
                 DeathNotice.record(entry.model, player.DisplayName, weaponId, entry.headshots > 0)
                 local stats = player:FindFirstChild("leaderstats")
                 local score = stats and stats:FindFirstChild("Eliminations")
@@ -599,6 +635,8 @@ local function fireKnife(player, weaponId, config, direction)
     end
     local knife = createKnifeVisual(origin, direction)
     local launchedEpoch = weaponRoundEpoch
+    local launchedSession = PracticeMode.session(player)
+    local launchedInPractice = PracticeMode.active(player)
     params.FilterDescendantsInstances = { character, knife }
     local speed = config.projectileSpeed
     local maxRange = config.range
@@ -616,11 +654,12 @@ local function fireKnife(player, weaponId, config, direction)
             local deltaTime = RunService.Heartbeat:Wait()
             -- Projectile tasks may outlive a round, their original owner or
             -- character. Never apply late damage in a different combat state.
-            if launchedEpoch ~= weaponRoundEpoch
+            if (not launchedInPractice and launchedEpoch ~= weaponRoundEpoch)
+                or not PracticeMode.matches(player, launchedSession)
                 or not duelCanFire(player)
                 or player.Parent ~= Players
                 or player.Character ~= character
-                or workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+                or not canUseWeapons(player) then
                 knife:Destroy()
                 return
             end
@@ -651,8 +690,8 @@ local function fireKnife(player, weaponId, config, direction)
     end)
 end
 
-local function onEquipWeapon(player, weaponId)
-    if not RemoteGuard.allow(player, "EquipWeapon") then return end
+local function onEquipWeapon(player, weaponId, session)
+    if not RemoteGuard.allow(player, "EquipWeapon") or not PracticeMode.matches(player, session) then return end
     if typeof(weaponId) ~= "string" or not WeaponConfig.isValid(weaponId) then
         return
     end
@@ -671,8 +710,8 @@ local function onEquipWeapon(player, weaponId)
     sendAmmo(player, weaponId)
 end
 
-local function onSetAiming(player, enabled)
-    if not RemoteGuard.allow(player, "SetAiming") then return end
+local function onSetAiming(player, enabled, session)
+    if not RemoteGuard.allow(player, "SetAiming") or not PracticeMode.matches(player, session) then return end
     if typeof(enabled) ~= "boolean" then return end
     local state = getState(player)
     if not enabled then
@@ -682,7 +721,7 @@ local function onSetAiming(player, enabled)
         return
     end
     local phase = workspace:GetAttribute("NeonMatchPhase")
-    if phase ~= "LIVE" and phase ~= "COUNTDOWN" then return end
+    if phase ~= "LIVE" and phase ~= "COUNTDOWN" and not PracticeMode.active(player) then return end
     local character = getLiveCharacter(player)
     local weaponId = state.equippedWeaponId
     local definition = WeaponConfig.get(weaponId)
@@ -701,10 +740,11 @@ end
 
 local function onFireWeapon(player, payload)
     if not RemoteGuard.allow(player, "FireWeapon") then return end
-    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then
+    if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" and not PracticeMode.active(player) then
         return
     end
-    if typeof(payload) ~= "table" or typeof(payload.weaponId) ~= "string" then
+    if typeof(payload) ~= "table" or typeof(payload.weaponId) ~= "string"
+        or not PracticeMode.matches(player, payload.rangeSession) then
         return
     end
 
@@ -730,6 +770,7 @@ local function onFireWeapon(player, payload)
     -- A dead character cannot fire or consume its rate limit.
     local liveCharacter, liveHumanoid, liveHead, liveRoot = getLiveCharacter(player)
     if not liveCharacter then return end
+    if PracticeMode.active(player) and not PracticeRange.contains(player, liveHead.Position) then return end
     if not canFire(player, weaponId, config) then
         return
     end
@@ -768,6 +809,7 @@ function WeaponService.resetRound()
         for id in pairs(state.reloadUntil) do cancelReload(state, id) end
         state.magazines = {}
         state.lastFireAt = {}
+        state.lastAcceptedShotAt = nil
         state.lastSpreadAt = {}
         state.spreadCount = {}
         state.aimSince = nil
@@ -775,6 +817,11 @@ function WeaponService.resetRound()
         state.aimWeaponId = nil
         state.nextGlobalFireAt = 0
         state.nextProtectedNoticeAt = nil
+        if player.Parent and not PracticeMode.active(player) then
+            sendAmmo(player, state.equippedWeaponId)
+        end
+    end
+    for player, state in pairs(practiceState) do
         if player.Parent then sendAmmo(player, state.equippedWeaponId) end
     end
 end
@@ -785,6 +832,8 @@ function WeaponService.start()
     end
 
     started = true
+    -- Practice can start in the lobby before the first FFA round.
+    weaponRoundEpoch += 1
     workspace:SetAttribute("IronYardFireEpoch", weaponRoundEpoch)
     remotes = PrecisionNet.getRemotes(true)
 
@@ -812,7 +861,7 @@ function WeaponService.start()
             end)
         end)
         player.CharacterRemoving:Connect(function(character)
-            local state = playerState[player]
+            local state = (PracticeMode.active(player) and practiceState or playerState)[player]
             if state and state.shotRayCharacter == character then
                 state.shotRayCharacter = nil
                 state.shotRayParams = nil
@@ -824,6 +873,7 @@ function WeaponService.start()
 
     Players.PlayerRemoving:Connect(function(player)
         playerState[player] = nil
+        practiceState[player] = nil
     end)
 end
 
