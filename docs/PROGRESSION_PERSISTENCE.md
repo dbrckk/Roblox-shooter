@@ -244,3 +244,26 @@ sont modifiés par ce lot.**
 
 **Limite :** la suite ne simule ni le service DataStore Roblox, ni la latence,
 ni `BindToClose` réél ; la validation publiée du § précédent reste exigée.
+
+
+## Objectifs FFA quotidiens
+
+Les objectifs se renouvellent à minuit UTC. Le serveur compte cinq
+éliminations confirmées et trois armes distinctes qui ont servi à
+éliminer en FFA. Il valide la fin d’une FFA si le joueur reste en jeu
+jusqu’aux résultats et a au moins une élimination dans la manche.
+Le stand et le 1v1 sont exclus de ces objectifs.
+
+Le premier cycle terminé débloque la finition **Shift Lead** dans
+**SET → COLLECTION**. La progression utilise le bail et les mises à jour
+atomiques de la carrière. La sauvegarde combine les types d’armes et
+garde la progression la plus récente, même après un retry. Le passage
+au jour suivant réinitialise les compteurs et conserve le déblocage.
+Les anciens enregistrements sans objectifs sont lisibles. Une écriture
+d’un serveur antérieur à cette fonctionnalité peut supprimer les champs
+d’objectifs optionnels. Cette limite concerne les serveurs encore ouverts
+après une mise à jour et les retours à une ancienne version.
+
+Pour vérifier la durabilité réelle, avancer sur l’objectif, attendre
+la sauvegarde ou quitter normalement, puis rejoindre un serveur de la
+version qui inclut les objectifs. Répéter après avoir équipé Shift Lead.

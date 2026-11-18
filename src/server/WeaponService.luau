@@ -293,7 +293,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         local kills = stats and stats:FindFirstChild("Eliminations")
         DeathNotice.record(targetCharacter, attacker.DisplayName, weaponId, headshot)
         if kills then kills.Value += 1 end
-        CombatAwards.recordElimination(attacker, headshot)
+        CombatAwards.recordElimination(attacker, headshot, weaponId)
         remotes.KillFeed:FireAllClients({
             attacker = attacker.DisplayName,
             target = targetPlayer and targetPlayer.DisplayName or targetCharacter.Name,
@@ -586,7 +586,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
                 local stats = player:FindFirstChild("leaderstats")
                 local score = stats and stats:FindFirstChild("Eliminations")
                 if score then score.Value += 1 end
-                CombatAwards.recordElimination(player, entry.headshots > 0)
+                CombatAwards.recordElimination(player, entry.headshots > 0, weaponId)
                 remotes.KillFeed:FireAllClients({
                     attacker = player.DisplayName,
                     target = entry.player and entry.player.DisplayName or entry.model.Name,

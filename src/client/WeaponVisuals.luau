@@ -4,6 +4,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Objectives = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SessionObjectives"))
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local CombatVfxProfile = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatVfxProfile"))
 local TransientFxPool = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("TransientFxPool"))
@@ -191,6 +192,9 @@ function WeaponVisuals.new(WeaponConfig)
     Players.LocalPlayer:GetAttributeChangedSignal("IronYardFinishPreference"):Connect(function()
         self:_applyCareerFinish()
     end)
+    Players.LocalPlayer:GetAttributeChangedSignal(Objectives.UNLOCKED_ATTRIBUTE):Connect(function()
+        self:_applyCareerFinish()
+    end)
 	-- Draw after the native camera AND our local camera tilt/FOV pass.
     -- A naked RenderStepped connection has no guaranteed order vs Camera.
     RunService:BindToRenderStep("IronYardWeaponViewmodel",
@@ -293,7 +297,8 @@ function WeaponVisuals:_applyCareerFinish()
     if not self.model then return end
     local player = Players.LocalPlayer
     local level = player:GetAttribute("IronYardProgressLevel")
-    local finish = OperatorFinishes.equipped(level, player:GetAttribute("IronYardFinishPreference"))
+    local finish = OperatorFinishes.equipped(level, player:GetAttribute("IronYardFinishPreference"),
+        player:GetAttribute(Objectives.UNLOCKED_ATTRIBUTE))
     local accent, metal = rgb(finish.accent), rgb(finish.metal)
     local fabric, glove = rgb(finish.fabric), rgb(finish.glove)
     local armColors = {

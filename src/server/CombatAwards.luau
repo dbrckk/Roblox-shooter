@@ -1,6 +1,6 @@
 -- IRON YARD / server-authoritative, session-only combat awards.
 -- Cosmetics and XP never determine weapon damage, wins or matchmaking.
--- No persistent economy is implied until a separate, tested DataStore is added.
+-- Persistent grants go through the existing leased career service.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -46,7 +46,7 @@ local function medalFor(chain, streak, headshot)
     return "ELIMINATION"
 end
 
-function CombatAwards.recordElimination(player, headshot)
+function CombatAwards.recordElimination(player, headshot, weaponId)
     if not player or not player:IsA("Player") or not player.Parent then return end
     if Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
     local state = stateFor(player)
@@ -66,7 +66,8 @@ function CombatAwards.recordElimination(player, headshot)
     state.sessionXP += points
     -- Grant only after server-verified damage has registered a real elimination.
     -- ProgressionService remains safe when DataStore is temporarily offline.
-    local unlockedFinish = ProgressionService.recordElimination(player, points, headshot == true)
+    local objectiveWeapon = Workspace:GetAttribute("IronYardMatchMode") == "FFA" and weaponId or nil
+    local unlockedFinish = ProgressionService.recordElimination(player, points, headshot == true, objectiveWeapon)
     if unlockedFinish then player:SetAttribute("IronYardRoundFinishUnlocked", unlockedFinish) end
     player:SetAttribute("IronYardRoundXP", state.roundXP)
     player:SetAttribute("IronYardSessionXP", state.sessionXP)
@@ -109,6 +110,10 @@ function CombatAwards.recordVictory(player)
             streak = state.streak,
         })
     end
+end
+
+function CombatAwards.recordFfaCompletion(player)
+    ProgressionService.recordFfaCompletion(player)
 end
 
 function CombatAwards.recordDeath(player)

@@ -1,6 +1,8 @@
 -- IRON YARD / pure DataStore ledger state machine.
 -- No Roblox services or yields: safe inside UpdateAsync's retryable callback
 -- and executable in the standalone Luau interpreter for regression tests.
+local Objectives = if script then require(game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+    :WaitForChild("SessionObjectives")) else require("../shared/SessionObjectives")
 local Ledger = {}
 Ledger.STATS = { "xp", "eliminations", "headshots", "victories" }
 local MAX_SAFE_INT = 9007199254740991
@@ -59,7 +61,9 @@ function Ledger.normalize(raw)
     for _, field in ipairs(Ledger.STATS) do data[field] = stats[field] end
     -- Existing v1 records omit this optional preference. A malformed
     -- cosmetic choice never prevents loading the earned counters.
-    if safeInt(raw.finishPreference) and raw.finishPreference <= 1000 then
+    data.objectives = Objectives.normalize(raw.objectives)
+    if safeInt(raw.finishPreference) and (raw.finishPreference <= 1000
+        or (raw.finishPreference == Objectives.FINISH_ID and data.objectives and data.objectives.unlocked)) then
         data.finishPreference = raw.finishPreference
     end
 
@@ -134,9 +138,11 @@ function Ledger.acquire(previous, token, timestamp, leaseSeconds)
     return data
 end
 
-function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference)
+function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference, objectives, objectivesBeforeLoad)
     validateContext(token, timestamp, leaseSeconds)
     local snapshot = Ledger.copyStats(earnedSnapshot)
+    local valid = Objectives.normalize(objectives)
+    assert(objectives == nil or valid, "Invalid session objective snapshot")
     local data = Ledger.normalize(previous)
     if not data.lock or data.lock.owner ~= token then
         -- A release retry may arrive after a different server acquires the
@@ -150,6 +156,9 @@ function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds,
                     return nil
                 end
             end
+            -- An acknowledged release must also cover every objective.
+            if valid and Objectives.encode(Objectives.merge(data.objectives, valid))
+                ~= Objectives.encode(data.objectives) then return nil end
             return data
         end
         return nil
@@ -163,8 +172,12 @@ function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds,
         data[field] = updated
         data.lock.committed[field] = math.max(committed, snapshot[field])
     end
+    if valid then
+        data.objectives = Objectives.merge(data.objectives, valid, objectivesBeforeLoad == true)
+    end
     if finishPreference ~= nil then
-        assert(safeInt(finishPreference) and finishPreference <= Ledger.levelForXP(data.xp),
+        assert(safeInt(finishPreference) and (finishPreference <= Ledger.levelForXP(data.xp)
+            or (finishPreference == Objectives.FINISH_ID and data.objectives and data.objectives.unlocked)),
             "Invalid saved finish preference")
         data.finishPreference = finishPreference
     end

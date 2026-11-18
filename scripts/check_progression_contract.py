@@ -55,7 +55,7 @@ def main():
         "store:UpdateAsync(keyFor(player), function(previous)",
         "local snapshot = cloneSnapshot(record.earned)",
         "record.triedAcquire = true",
-        "function ProgressionService.recordElimination(player, points, headshot)",
+        "function ProgressionService.recordElimination(player, points, headshot, objectiveWeapon)",
         "function ProgressionService.recordVictory(player)",
         "function ProgressionService.start()",
         "Players.PlayerRemoving:Connect",
@@ -133,7 +133,7 @@ def main():
         "function Ledger.copyStats(value)",
         "raw.schema == 1",
         "function Ledger.acquire(previous, token, timestamp, leaseSeconds)",
-        "function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference)",
+        "function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference, objectives, objectivesBeforeLoad)",
         "lock.owner ~= token", "lock.expiresAt > timestamp",
         "lock.owner == token", "snapshot[field] - committed",
         "math.max(committed, snapshot[field])",
@@ -219,7 +219,7 @@ def main():
     require("nextFinishLabel.Visible = not compact" in ui,
             "Keep the in-combat Android career HUD compact")
     contains(data, ('RemoteGuard.allow(player, "SetCareerFinish")',
-                   "OperatorFinishes.canSelect(preference, level)",
+                   "OperatorFinishes.canSelect(preference, level, record.objectives.unlocked)",
                    "local finishPreference = record.finishPreference",
                    "LEASE_SECONDS, release, finishPreference",
                    "record.savedFinishPreference = finishPreference",
@@ -230,6 +230,22 @@ def main():
                       "data.finishPreference = finishPreference"),
              "Backward-compatible cosmetic persistence")
     require("CombatAward" in hud, "Medal feedback must remain intact")
+    contains(data, ("Objectives.merge(result.objectives, record.objectives, true)",
+                    "record.savedObjectives = result.objectives",
+                    "Objectives.eliminate(record.objectives, Objectives.day(os.time()), objectiveWeapon)",
+                    "Objectives.finishFfa(record.objectives, Objectives.day(os.time()))"),
+             "Current and saved server snapshots")
+    contains(ledger, ("Objectives.normalize(raw.objectives)",
+                      "Objectives.merge(data.objectives, valid, objectivesBeforeLoad == true)",
+                      "finishPreference == Objectives.FINISH_ID and data.objectives and data.objectives.unlocked"),
+             "Backward-compatible, lease-owned rewards")
+    contains(match, ("not PracticeMode.active(player) and scoreFor(player) > 0",
+                     "CombatAwards.recordFfaCompletion(player)"), "Verified FFA finish only")
+    contains(awards, ('Workspace:GetAttribute("IronYardMatchMode") == "FFA" and weaponId or nil',),
+             "Only accepted FFA kills advance objectives")
+    contains(weapon, ("CombatAwards.recordElimination(attacker, headshot, weaponId)",
+                      "CombatAwards.recordElimination(player, entry.headshots > 0, weaponId)"),
+             "Actual eliminated targets and their server-selected weapon")
 
     contains(doc.lower(), ("updateasync", "idempotent", "45", "180", "studio",
                            "published experience", "not a transaction guarantee"),

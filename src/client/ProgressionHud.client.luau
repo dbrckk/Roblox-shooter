@@ -5,6 +5,7 @@ local Workspace = game:GetService("Workspace")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
+local Objectives = require(Shared:WaitForChild("SessionObjectives"))
 local OperatorFinishes = require(Shared:WaitForChild("OperatorFinishes"))
 local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
 local player = Players.LocalPlayer
@@ -99,7 +100,8 @@ local function update()
     local level = math.max(1, safeCount("IronYardProgressLevel"))
     local kills = safeCount("IronYardLifetimeEliminations")
     local wins = safeCount("IronYardLifetimeVictories")
-    local finish = OperatorFinishes.equipped(level, player:GetAttribute("IronYardFinishPreference"))
+    local finish = OperatorFinishes.equipped(level, player:GetAttribute("IronYardFinishPreference"),
+        player:GetAttribute(Objectives.UNLOCKED_ATTRIBUTE))
     local nextFinish = OperatorFinishes.nextUnlock(level)
     finishLabel.Text = "EQUIPPED  /  " .. finish.name
     finishLabel.TextColor3 = Color3.fromRGB(
@@ -128,8 +130,12 @@ local function update()
     finishLabel.Visible = not compact
     nextFinishLabel.Visible = not compact
     track.Visible = not compact
+    local objective = Objectives.decode(player:GetAttribute(Objectives.ATTRIBUTE))
+    local goalCount = objective and string.format("  ·  OBJ %d/3", Objectives.completed(objective)) or ""
     if compact then
-        title.Text = string.format("RANK %d  |  %s", level, saveInfo.compact)
+        title.Text = string.format("RANK %d  |  %s%s", level, saveInfo.compact, goalCount)
+    else
+        details.Text ..= goalCount
     end
     panel.Visible = phase ~= "RESULTS"
         and playerGui:GetAttribute("IronYardBriefingOpen") ~= true
@@ -159,6 +165,7 @@ end
 for _, name in ipairs({
     "IronYardProgressStatus", "IronYardLifetimeXP", "IronYardSavedXP", "IronYardLifetimeEliminations",
     "IronYardLifetimeVictories", "IronYardProgressLevel", "IronYardFinishPreference",
+    Objectives.ATTRIBUTE, Objectives.UNLOCKED_ATTRIBUTE,
 }) do
     player:GetAttributeChangedSignal(name):Connect(update)
 end
