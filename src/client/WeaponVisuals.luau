@@ -1044,23 +1044,25 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
     local cadence = self.sprinting and 13.5 or 10
     self.stepPhase = (self.stepPhase + cadence * deltaTime * movement) % (math.pi * 2)
     local swayFactor, bobFactor = WeaponAimPose.damping(self.aimBlend)
+    local feel = WeaponFeel.get(self.currentWeaponId)
+    local backScale, pitchScale, lateralScale = WeaponFeel.aimRecoilScale(feel, self.aimBlend)
     bobAmount *= bobFactor
 	local bob = CFrame.new(
 		math.sin(self.stepPhase) * bobAmount,
 		math.abs(math.cos(self.stepPhase)) * bobAmount * 0.7,
-		self.recoil
+		self.recoil * backScale
 	)
 
 	local equipAlpha = smoothStep(math.min((timeNow - self.equipStartedAt) / 0.22, 1))
 	local equipMotion = CFrame.new(0, (1 - equipAlpha) * 0.5, (1 - equipAlpha) * 0.36)
         * CFrame.Angles(math.rad((1 - equipAlpha) * -18), math.rad((1 - equipAlpha) * 10), 0)
 
-    local feel = WeaponFeel.get(self.currentWeaponId)
     local fireAlpha = WeaponFeel.shotEnvelope(self.currentWeaponId,
         timeNow - self.fireStartedAt)
-    local fireMotion = CFrame.new(0, 0, fireAlpha * feel.back)
-        * CFrame.Angles(math.rad(fireAlpha * feel.pitch),
-            math.rad(fireAlpha * feel.yaw), math.rad(fireAlpha * feel.roll))
+    local fireMotion = CFrame.new(0, 0, fireAlpha * feel.back * backScale)
+        * CFrame.Angles(math.rad(fireAlpha * feel.pitch * pitchScale),
+            math.rad(fireAlpha * feel.yaw * lateralScale),
+            math.rad(fireAlpha * feel.roll * lateralScale))
 
 	local swayMotion = CFrame.Angles(self.sway.Y * swayFactor,
         self.sway.X * swayFactor, self.sway.X * 0.45 * swayFactor)
