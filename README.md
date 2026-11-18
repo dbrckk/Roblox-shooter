@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 93** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `818d05e8fc53e746eef02fd9c6771bb3643f0c30`. Cette version améliore la récupération du recul, les transitions d’arme après un sprint et la caméra à l’atterrissage et en glissade. Elle ajoute des sons de pas, d’atterrissage et de glissade adaptés au sol. [Publication de la version 93](https://github.com/dbrckk/Roblox-shooter/actions/runs/44273282603)
+Roblox a confirmé la **version de place 94** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `49592d5d503a56d98a6d4c5b4086ce567c6e5c31`. Les pas adverses sont spatialisés et atténués par les murs. Le réglage **ENEMY STEP FX** ajuste leurs effets de 0 à 100 %. Les sons de déplacement du joueur baissent brièvement pendant ses tirs. [Publication de la version 94](https://github.com/dbrckk/Roblox-shooter/actions/runs/44276867044)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
