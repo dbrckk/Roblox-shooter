@@ -128,3 +128,44 @@ for _, pair in ipairs(P.PAIRS) do
     assert(dx * dx + dz * dz > 260^2, "Both pads have distinct, opposed viewing origins")
 end
 assert(P.padLabel(nil) == nil and P.padLabel(0/0) == nil and P.padLabel(13) == nil)
+
+local bay = P.SortingBay
+assert(P.nextArena(nil, "") == P.SORTING)
+assert(P.nextArena(nil, "0000") == P.YARD)
+assert(P.nextArena(nil, "000f") == P.SORTING)
+assert(P.nextArena(P.SORTING, "0000") == P.YARD)
+assert(P.nextArena(P.YARD, "0000") == P.SORTING)
+
+local clearByIndex = {}
+for index, pad in ipairs(bay.pads) do
+    assert(math.abs(pad.x) + 2.1 < bay.halfWidth - 1)
+    assert(math.abs(pad.z) + 2.1 < bay.halfDepth - 1)
+    assert(P.padLabel(index, P.SORTING) == pad.label)
+    clearByIndex[index] = true
+    for _, shape in ipairs(bay.covers) do
+        for _, side in ipairs({ -1, 1 }) do
+            assert(math.abs(pad.x - side * shape.x) > shape.w / 2 + 2.1
+                or math.abs(pad.z - side * shape.z) > shape.d / 2 + 2.1,
+                "Sorting Bay pads must clear the overlap query footprint")
+        end
+    end
+end
+
+for i, pair in ipairs(bay.pairs) do
+    local first, second = bay.pads[pair[1]], bay.pads[pair[2]]
+    assert(first.x == -second.x and first.z == -second.z, "Spawns mirror through the hall")
+    local center = bay.covers[1]
+    assert(center.x == 0 and center.z == 0 and center.h > 7,
+        "Cover must intercept direct spawn-to-spawn sight lines")
+    local left, right = P.select(clearByIndex, i * 2 - 1, P.SORTING)
+    assert(left == pair[1] and right == pair[2])
+    local nextLeft, nextRight = P.select(clearByIndex, i * 2, P.SORTING)
+    assert(nextLeft == right and nextRight == left)
+end
+for _, cover in ipairs(bay.covers) do
+    assert(math.abs(cover.x) + cover.w / 2 <= 36, "Keep the long exterior service lanes open")
+end
+clearByIndex[1] = false
+assert(P.select(clearByIndex, 1, P.SORTING) == 3)
+assert(P.select({}, 1, P.SORTING) == nil)
+print("IRON YARD Sorting Bay: map rotation, mirrored starts, hidden approaches and clear service lanes")

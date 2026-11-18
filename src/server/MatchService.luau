@@ -5,6 +5,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local HttpService = game:GetService("HttpService")
 
+local MapService = require(script.Parent:WaitForChild("MapService"))
 local BotService = require(script.Parent:WaitForChild("BotService"))
 local SpawnService = require(script.Parent:WaitForChild("SpawnService"))
 local WeaponService = require(script.Parent:WaitForChild("WeaponService"))
@@ -15,6 +16,7 @@ local SupplyService = require(script.Parent:WaitForChild("SupplyService"))
 local CombatAwards = require(script.Parent:WaitForChild("CombatAwards"))
 local RoundStandings = require(script.Parent:WaitForChild("RoundStandings"))
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local DuelSpawnPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelSpawnPlan"))
 local DuelRules = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelRules"))
 local MatchLobbyPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("MatchLobbyPolicy"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
@@ -31,6 +33,7 @@ local ELIMINATIONS_TO_WIN = 15
 local DUEL_BOUT_SECONDS = 80
 local DUEL_BREAK_SECONDS = 7
 local duel = nil
+local lastDuelArena = nil
 local lobbyMode = DuelRoom.isDedicated and "DUEL" or "FFA"
 local mode = lobbyMode
 
@@ -94,6 +97,7 @@ local function duelRows()
 end
 
 local function publishDuelScores()
+    Workspace:SetAttribute("IronYardDuelArena", duel and duel.arena or "")
     Workspace:SetAttribute("IronYardDuelPlayerA", duel and duel.aId or 0)
     Workspace:SetAttribute("IronYardDuelPlayerB", duel and duel.bId or 0)
     Workspace:SetAttribute("IronYardDuelScoreA", duel and duel.aWins or 0)
@@ -206,6 +210,7 @@ local function endDuel(reason, winningSide)
             or winningSide == "B" and duel.bId or nil) or nil
     local snapshot = RoundStandings.build(duelRows(), round, forfeitChampion)
     snapshot.mode = "DUEL"
+    snapshot.arena = duel.arena
     snapshot.bouts = duel.bouts
     snapshot.reason = reason
     snapshot.winnerUserId = winningSide == "A" and duel.aId
@@ -239,7 +244,7 @@ local function startDuelBout()
         return c and h and h.Health > 0 and c:FindFirstChild("HumanoidRootPart")
     end
     if not alive(a) or not alive(b) then return false end
-    if not SpawnService.placeDuelPair(a,b,duel.bouts+1) then return false end
+    if not SpawnService.placeDuelPair(a, b, duel.bouts + 1, duel.arena) then return false end
 
     MovementService.resetDuelMovement(a)
     MovementService.resetDuelMovement(b)
@@ -325,6 +330,9 @@ local function startLiveDuelBout()
 end
 
 local function startDuelSeries(players)
+    local arena = DuelSpawnPlan.nextArena(lastDuelArena, game.JobId)
+    MapService.prepareDuelArena(arena)
+    lastDuelArena = arena
     DuelCombatState.clear()
     finalResult = nil
     Workspace:SetAttribute("IronYardFinalStandings", "")
@@ -332,7 +340,7 @@ local function startDuelSeries(players)
         aPlayer=players[1], bPlayer=players[2],
         aId=players[1].UserId, bId=players[2].UserId,
         aName=players[1].DisplayName, bName=players[2].DisplayName,
-        aWins=0, bWins=0, bouts=0, waitSince=os.clock(),
+        aWins=0, bWins=0, bouts=0, waitSince=os.clock(), arena=arena,
     }
     -- Duel choices are consumed; a rematch requires two fresh opt-ins.
     players[1]:SetAttribute("IronYardDuelReady", false)

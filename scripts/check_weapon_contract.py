@@ -534,7 +534,7 @@ def main():
         'local function endDuel(reason, winningSide)',
         'DuelRules.boutWinner(ah,am,bh,bm,remaining<=0)',
         'BotService.reconcileNow()',
-        'SpawnService.placeDuelPair(a,b,duel.bouts+1)',
+        'SpawnService.placeDuelPair(a, b, duel.bouts + 1, duel.arena)',
         'WeaponService.resetRound()',
         'Workspace:SetAttribute("IronYardMatchMode", mode)',
         'transition("DUEL_BREAK", DUEL_BREAK_SECONDS)',
@@ -566,9 +566,9 @@ def main():
     has(duel_spawn, 'if Workspace:GetAttribute("IronYardMatchMode") == "DUEL" then',
         "No delayed FFA placement during duel preparation")
     for token in (
-        'function SpawnService.placeDuelPair(a, b, bout)',
+        'function SpawnService.placeDuelPair(a, b, bout, arena)',
         'clearAt(position, aChar, bChar)',
-        'DuelSpawnPlan.select(clear, bout)',
+        'DuelSpawnPlan.select(clear, bout, arena)',
         'DuelSpawnPlan.canCommit(a, b, aChar, bChar,',
         'not clearAt(first, aChar, bChar)',
         'not clearAt(second, aChar, bChar)',
@@ -577,7 +577,7 @@ def main():
     ):
         has(duel_spawn, token, "Collision-safe opposite duel spawns")
     for token in (
-        'function Plan.select(clear, bout)',
+        'function Plan.select(clear, bout, arena)',
         'Plan.PAIRS = {{1,4}, {2,3}, {5,8}, {6,7}, {9,10}, {11,12}}',
     ):
         has(duel_spawn_plan, token, "Validated opposing spawn pad policy")
@@ -702,7 +702,7 @@ def main():
         'duelToggle.Activated:Connect(toggleDuel)',
         '"IronYardDuelScoreA"', '"IronYardDuelScoreB"',
         '"DUEL_BREAK"', '"IronYardDuelReadyCount"',
-        '"DUEL_PREP"', 'DuelSpawnPlan.padLabel(pad) or "PREPARE"',
+        '"DUEL_PREP"', 'DuelSpawnPlan.padLabel(pad, duelArena) or "PREPARE"',
         'local function updateDuelProgress(mode, phase, myWins, rivalWins)',
         'updateDuelProgress(matchMode, phase, myWins, rivalWins)',
         'duelProgress.Name = "DuelProgress"',

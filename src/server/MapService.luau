@@ -10,6 +10,8 @@ local ArenaArt = require(script.Parent:WaitForChild("ArenaArt"))
 local IndustrialProps = require(script.Parent:WaitForChild("IndustrialProps"))
 local CoverArt = require(script.Parent:WaitForChild("CoverArt"))
 local WorldPbr = require(script.Parent:WaitForChild("WorldPbrMaterials"))
+local DuelSpawnPlan = require(Shared:WaitForChild("DuelSpawnPlan"))
+local SortingBay = require(script.Parent:WaitForChild("SortingBay"))
 local MapService = {}
 local started = false
 
@@ -282,6 +284,10 @@ function MapService.start()
     CoverArt.build(folder)
     IndustrialProps.build(folder)
     ArenaArt.applyLighting()
+end
+
+function MapService.prepareDuelArena(arena)
+    if arena == DuelSpawnPlan.SORTING then SortingBay.build() end
 end
 
 return MapService
