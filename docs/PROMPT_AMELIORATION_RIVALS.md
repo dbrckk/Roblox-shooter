@@ -5,22 +5,20 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 103 comme base du prochain cycle. Elle comprend le FFA, le 1v1 réservé, le briefing, cinq armes et la carrière avec finitions. Le retour du joueur permet de poursuivre l’amélioration sur cette base. [Publication de la version 103](https://github.com/dbrckk/Roblox-shooter/actions/runs/44301142206)
+2. Prends la version publique 104 comme base du prochain cycle. Elle comprend le FFA, le 1v1 réservé, le briefing, cinq armes et la collection de finitions de carrière. [Publication de la version 104](https://github.com/dbrckk/Roblox-shooter/actions/runs/44305123288)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
 
+**Collection publiée en version 104.** Les simulations couvrent le choix d’une finition débloquée, le refus d’une finition verrouillée et la récupération après reconnexion. L’utilisation du DataStore en partie reste à vérifier sur un serveur de la version 104. [Fonctionnement et stockage](PROGRESSION_PERSISTENCE.md#collection-des-finitions)
+
 | Ordre | Lot | Critère de livraison |
 | --- | --- | --- |
-| 1 | **Collection et choix de finition.** Réunir les cinq finitions existantes dans la carrière, avec aperçu, état verrouillé ou débloqué et choix de la finition équipée. | Une finition acquise s’applique aux armes et aux mains, reste sélectionnée après réapparition et revient après reconnexion. Le serveur vérifie le rang requis et la progression XP existante reste compatible. |
-| 2 | **Espace d’entraînement.** Rendre les cibles de `DummyService` accessibles depuis le lobby pour apprendre le tir, la visée et le rechargement avec les cinq armes. | Le joueur sait comment entrer, essayer une arme et revenir en FFA au clavier, au tactile ou à la manette. Les essais sont isolés des scores et récompenses de la partie publique. |
-| 3 | **Deuxième arène de 1v1.** Concevoir une arène compacte dans le terminal, avec couverture proche et une ligne de tir plus longue. L’intégrer à la rotation des duels existants. | Les deux joueurs voient la même arène et disposent de départs comparables. La revanche et le retour au lobby fonctionnent sur les deux cartes. Relever le P95 et le P99 sur le trajet de référence Android. |
-| 4 | **Objectifs de session.** Proposer des objectifs courts fondés sur les actions déjà confirmées par le serveur, comme terminer une FFA ou réussir des éliminations avec plusieurs armes. | La progression est lisible en partie et dans les résultats. Chaque action valide compte une seule fois, et les récompenses sont cosmétiques. |
-| 5 | **2v2 et groupes.** Étendre les invitations à deux équipes en réutilisant les flux de transfert, de préparation et de retour du 1v1. | Quatre volontaires rejoignent la même instance, les équipes et scores restent cohérents, et un départ permet une issue claire. Comparer le remplissage et l’attente avec le 1v1 avant d’étendre la rotation. |
-
-Le prochain lot porte sur la collection et la sélection d’une finition. Le mécanisme d’application existe déjà dans `WeaponVisuals`, et les paliers sont définis dans `OperatorFinishes`. Le choix doit rejoindre le parcours de carrière et rester cohérent avec le rang répliqué.
-
-**Collection intégrée.** Le menu **SET → COLLECTION** présente les cinq finitions, leurs couleurs et leur rang requis. Le registre sauvegarde le choix avec les XP. Les simulations couvrent un changement pendant une sauvegarde, la validation des finitions verrouillées et la récupération après reconnexion. [Fonctionnement et stockage](PROGRESSION_PERSISTENCE.md#collection-des-finitions)
+| 1 | **Stand d’entraînement.** Ajouter un accès depuis le lobby et réutiliser `DummyService` pour essayer les cinq armes, viser et recharger. | Depuis le menu, un joueur rejoint le stand, touche une cible et revient au FFA au clavier, au tactile ou à la manette. Le serveur isole les tirs, les scores et les XP du FFA et des duels. |
+| 2 | **Sensations de tir sur mobile.** Utiliser le stand pour affiner le recul, les sons, les impacts et le réticule. | Comparer une séquence identique avant et après sur Android. Vérifier la lisibilité des impacts et distinguer l’animation locale du tir de la confirmation serveur. Relever le P95 et le P99 du temps d’image. |
+| 3 | **Deuxième arène de 1v1.** Ajouter un secteur du terminal avec couverture rapprochée et une ligne de tir longue. | Les départs offrent des options comparables. Les deux joueurs voient la même carte, et la revanche puis le retour au lobby fonctionnent sur les deux arènes. |
+| 4 | **Objectifs de session.** Ajouter des objectifs courts fondés sur des actions confirmées par le serveur. | Les résultats expliquent la progression de l’objectif et sa récompense cosmétique. Une action compte une seule fois, y compris après reconnexion. |
+| 5 | **Groupes et 2v2.** Étendre les invitations en réutilisant les transferts et le retour du 1v1. | Quatre joueurs rejoignent la même instance, le score et les équipes restent cohérents et un départ a une issue claire. Mesurer le délai d’attente avant d’élargir la disponibilité. |
 
 ## Ordre des chantiers et critères de livraison
 

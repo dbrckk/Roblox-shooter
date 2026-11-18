@@ -13,9 +13,9 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 103** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `a99baf38db58b1ec70042f6b865c0a4f1b19daa6`. Les résultats signalent la finition gagnée pendant la partie et affichent le prochain palier avec les XP restants. [Publication de la version 103](https://github.com/dbrckk/Roblox-shooter/actions/runs/44301142206)
+Roblox a confirmé la **version de place 104** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `7bb63ef82db6d67026348372c795d54c94567ace`. Le menu **SET → COLLECTION** présente les cinq finitions de carrière. Le joueur peut équiper une finition débloquée ou laisser **AUTO** suivre son rang. [Publication de la version 104](https://github.com/dbrckk/Roblox-shooter/actions/runs/44305123288)
 
-Le prochain cycle commence par le choix des finitions déjà débloquées, puis un espace d’entraînement et une deuxième arène 1v1. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 103](https://github.com/dbrckk/Roblox-shooter/actions/runs/44301063091)
+Le prochain lot est un stand d’entraînement accessible depuis le lobby. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 104](https://github.com/dbrckk/Roblox-shooter/actions/runs/44305044987)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
