@@ -1,0 +1,7 @@
+IRON YARD v99 — single public update, 18 November 2026.
+
+Deploy the game source verified at 2e5a22e56d5a069d470a95247b5eb89a4d7cb6d1 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This build applies the latest mobile FIRE drag before sampling aim, preserves the last movement on a normal touch release, and mirrors the server-confirmed reload state and progress on RLD. The latest confirmed public place version is 94.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
