@@ -13,9 +13,9 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 107** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `2fe3143a00041fbed0ef3f7c5a2fa86cff70c64c`. **Sorting Bay** rejoint la rotation 1v1. Chaque série se déroule sur la même arène, les joueurs échangent leurs côtés entre les manches et la revanche change d’arène. [Publication de la version 107](https://github.com/dbrckk/Roblox-shooter/actions/runs/44330963097)
+Roblox a confirmé la **version de place 108** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `ad1641ce609d5af511cf0c9f4f3617029e452373`. Le FFA propose trois objectifs quotidiens. Le premier cycle complet débloque **Shift Lead** dans **SET → COLLECTION**. Les objectifs et la finition ont une sauvegarde distincte de la carrière. [Publication de la version 108](https://github.com/dbrckk/Roblox-shooter/actions/runs/44336884158)
 
-Le prochain lot ajoute des objectifs de session avec des récompenses cosmétiques. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 107](https://github.com/dbrckk/Roblox-shooter/actions/runs/44330859178)
+Le prochain chantier porte sur les groupes et les duels 2v2. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression) · [Build de la version 108](https://github.com/dbrckk/Roblox-shooter/actions/runs/44336784075)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
