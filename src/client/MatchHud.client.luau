@@ -493,12 +493,12 @@ local function duelLabel()
         duelToggle.Text = touch and "…" or "CONNECTING…"
     elseif requestPending then
         duelToggle.Text = touch and "DUELS\n…" or "DUELS · SENDING"
+    elseif incoming then
+        duelToggle.Text = (teamIncoming and "2v2" or "1v1") .. (touch and " !" or " · INVITE")
     elseif readyRequest or state == "FAILED" or state == "INVITE_DECLINED" or opponentLeft
         or state == "TEAM_PARTNER_LEFT" or state == "TEAM_CANCELLED" or state == "INVITE_COOLDOWN"
         or state == "INVITE_TARGET_BUSY" or state == "UNAVAILABLE" or state == "INVITE_EXPIRED" then
         duelToggle.Text = touch and "DUELS !" or "DUELS · STATUS"
-    elseif incoming then
-        duelToggle.Text = (teamIncoming and "2v2" or "1v1") .. (touch and " !" or " · INVITE")
     elseif searching then
         duelToggle.Text = format .. (touch and "" or " · SEARCHING")
     elseif invited then
@@ -506,11 +506,12 @@ local function duelLabel()
     else
         duelToggle.Text = controller and (touch and "R3\nDUELS" or "R3 · DUELS") or (touch and "DUELS" or "V · DUELS")
     end
-    if not requestPending and not readyRequest then
-        if elapsedText then
+    if not requestPending then
+        local seconds = inviteSeconds or (not readyRequest and outgoingSeconds)
+        if seconds then
+            duelToggle.Text ..= string.format("\n%ds", seconds)
+        elseif not readyRequest and elapsedText then
             duelToggle.Text ..= "\n" .. elapsedText
-        elseif inviteSeconds or outgoingSeconds then
-            duelToggle.Text ..= string.format("\n%ds", inviteSeconds or outgoingSeconds)
         end
     end
     local currentStatus = outgoingSeconds and string.format("%s · %ds · %s",
@@ -533,8 +534,9 @@ local function duelLabel()
     local pendingStatus = sendingInvite
         and ((readyRequest.teamInvite and "SENDING 2v2 INVITE…\n" or "SENDING INVITE…\n") .. readyRequest.targetName)
         or "WAITING FOR SERVER"
+    local confirmationMissing = readyRequest and (not incoming or readyRequest.invitation == invitation)
     status.Text = requestPending and pendingStatus
-        or (readyRequest and "NO CONFIRMATION · TRY AGAIN" or currentStatus)
+        or (confirmationMissing and "NO CONFIRMATION · TRY AGAIN" or currentStatus)
     search.Text = requestPending and not replying and not sendingInvite
         and (readyRequest.enabled and "SENDING REQUEST…" or "CANCELLING…")
         or (teamSearching and "CANCEL TEAM SEARCH" or ready and "CANCEL REQUEST" or "FIND OPPONENT")
