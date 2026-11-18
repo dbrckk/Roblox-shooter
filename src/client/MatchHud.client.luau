@@ -796,7 +796,8 @@ local function update()
             elseif travel == "RETURNING" then
                 detailText = states.RETURNING
             else
-                local waiting = teamDuel and "WAITING FOR ALL FOUR" or "WAITING FOR OPPONENT"
+                local waiting = teamDuel and string.format("2v2  ·  %d/4 ARRIVED",
+                    Workspace:GetAttribute("IronYardDuelArrivedCount") or 0) or "WAITING FOR OPPONENT"
                 detailText = seconds > 0 and string.format("%s  /  %ds", waiting, seconds) or waiting
             end
         else
@@ -865,7 +866,7 @@ for _, name in ipairs({
     "IronYardMatchMode", "IronYardDuelReadyCount", "IronYardDedicatedDuel", "IronYardDuelLocal",
     "IronYardDuelBout", "IronYardDuelScoreA", "IronYardDuelScoreB",
     "IronYardDuelPlayerA", "IronYardDuelPlayerB", "IronYardDuelLastResult", "IronYardDuelArena",
-    "IronYardDuelPlayerA2", "IronYardDuelPlayerB2", "IronYardDuelSize",
+    "IronYardDuelPlayerA2", "IronYardDuelPlayerB2", "IronYardDuelSize", "IronYardDuelArrivedCount",
 }) do
     Workspace:GetAttributeChangedSignal(name):Connect(function()
         update()

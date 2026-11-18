@@ -81,6 +81,7 @@ end
 local function beginTransfer(group, state)
     local transfer = {
         group = group,
+        publicGroup = state == "RETURNING" and #group > 1,
         attempts = {},
         retries = {},
     }
@@ -96,7 +97,7 @@ end
 
 local teleport
 
-local function transferFailed(player, transfer, attempt)
+local function transferFailed(player, transfer, attempt, serverInstanceId)
     if pending[player] ~= transfer or transfer.attempts[player] ~= attempt then return end
     transfer.attempts[player] = nil
     if transfer.retries[player] then
@@ -106,18 +107,22 @@ local function transferFailed(player, transfer, attempt)
     transfer.retries[player] = true
     task.delay(TRAVEL_RETRY_DELAY, function()
         if pending[player] == transfer and player.Parent == Players then
-            teleport({ player }, transfer)
+            teleport({ player }, transfer, serverInstanceId)
         end
     end)
 end
 
-teleport = function(group, transfer)
+teleport = function(group, transfer, serverInstanceId)
     -- Each TeleportAsync call has its own identity, even for a retry to
     -- the same room. A delayed failure from the previous call is stale.
     local attempt = HttpService:GenerateGUID(false)
     for _, player in ipairs(group) do transfer.attempts[player] = attempt end
     local options = Instance.new("TeleportOptions")
-    if transfer.code then options.ReservedServerAccessCode = transfer.code end
+    if transfer.code then
+        options.ReservedServerAccessCode = transfer.code
+    elseif serverInstanceId then
+        options.ServerInstanceId = serverInstanceId
+    end
     options:SetTeleportData({ ironYardTransfer = attempt })
     local ok = pcall(TeleportService.TeleportAsync, TeleportService, game.PlaceId, group, options)
     if not ok then
@@ -370,22 +375,39 @@ function Room.arrivalSecondsLeft()
     return math.max(0, math.ceil(arrivalDeadline - os.clock()))
 end
 
-function Room.returnToFfa(player, retryRequested)
-    local isCombatant = admitted[player.UserId] == player
-    if not Room.isDedicated or player.Parent ~= Players or pending[player]
-        or (not isCombatant and not returnOnly[player]) then return end
-    if leaving[player] and not retryRequested then return end
-    -- A room that starts sending players back cannot start a new duel.
-    -- Failed transfers can be retried explicitly without reopening it.
-    leaving[player] = true
-    if isCombatant and not closing then
-        closing = true
-        Workspace:SetAttribute("IronYardDuelExitStarted", true)
+local function canReturnToFfa(player, retryRequested)
+    return player.Parent == Players and not pending[player] and (not leaving[player] or retryRequested)
+        and (admitted[player.UserId] == player or returnOnly[player])
+end
+
+local function sendToFfa(group)
+    if #group == 0 then return end
+    for _, player in ipairs(group) do
+        leaving[player] = true
+        if admitted[player.UserId] == player and not closing then
+            -- A verified participant's departure permanently closes the rematch.
+            closing = true
+            Workspace:SetAttribute("IronYardDuelExitStarted", true)
+        end
+        player:SetAttribute("IronYardDuelReady", false)
     end
-    player:SetAttribute("IronYardDuelReady", false)
-    local group = { player }
     local transfer = beginTransfer(group, "RETURNING")
     task.spawn(teleport, group, transfer)
+end
+
+function Room.returnToFfa(player, retryRequested)
+    if Room.isDedicated and canReturnToFfa(player, retryRequested) then
+        sendToFfa({ player })
+    end
+end
+
+function Room.returnPlayersToFfa(players)
+    if not Room.isDedicated then return end
+    local group = {}
+    for _, player in ipairs(players) do
+        if canReturnToFfa(player) then table.insert(group, player) end
+    end
+    sendToFfa(group)
 end
 
 function Room.isClosing()
@@ -423,6 +445,10 @@ local function admit(player)
         return
     end
     admitted[player.UserId] = player
+    if closing then
+        Room.returnToFfa(player)
+        return
+    end
     local now = os.clock()
     arrivalDeadline = arrivalDeadline or now + ARRIVAL_TIMEOUT
     if now < arrivalDeadline and Room.combatantCount() == #expected then
@@ -470,7 +496,10 @@ function Room.start()
         if not attempt then return end
         local data = options:GetTeleportData()
         if type(data) ~= "table" or data.ironYardTransfer ~= attempt then return end
-        transferFailed(player, transfer, attempt)
+        -- A failed member of a public group can retry the server Roblox chose.
+        local serverInstanceId = transfer.publicGroup and options.ServerInstanceId
+        transferFailed(player, transfer, attempt, type(serverInstanceId) == "string"
+            and serverInstanceId ~= "" and serverInstanceId or nil)
     end)
 end
 
