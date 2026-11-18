@@ -66,7 +66,8 @@ function CombatAwards.recordElimination(player, headshot)
     state.sessionXP += points
     -- Grant only after server-verified damage has registered a real elimination.
     -- ProgressionService remains safe when DataStore is temporarily offline.
-    ProgressionService.recordElimination(player, points, headshot == true)
+    local unlockedFinish = ProgressionService.recordElimination(player, points, headshot == true)
+    if unlockedFinish then player:SetAttribute("IronYardRoundFinishUnlocked", unlockedFinish) end
     player:SetAttribute("IronYardRoundXP", state.roundXP)
     player:SetAttribute("IronYardSessionXP", state.sessionXP)
     player:SetAttribute("IronYardKillStreak", state.streak)
@@ -94,7 +95,8 @@ function CombatAwards.recordVictory(player)
     local bonus = 250
     state.roundXP += bonus
     state.sessionXP += bonus
-    ProgressionService.recordVictory(player)
+    local unlockedFinish = ProgressionService.recordVictory(player)
+    if unlockedFinish then player:SetAttribute("IronYardRoundFinishUnlocked", unlockedFinish) end
     player:SetAttribute("IronYardRoundXP", state.roundXP)
     player:SetAttribute("IronYardSessionXP", state.sessionXP)
     if remotes then
@@ -128,6 +130,7 @@ function CombatAwards.resetRound()
         if player.Parent then
             player:SetAttribute("IronYardRoundXP", 0)
             player:SetAttribute("IronYardKillStreak", 0)
+            player:SetAttribute("IronYardRoundFinishUnlocked", nil)
         end
     end
 end

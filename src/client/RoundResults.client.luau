@@ -312,6 +312,13 @@ render = function()
         safeCount("IronYardRoundXP"), xp)
     progressLabel.Text = rankInfo.maxed and "RANK 1000  |  MAX RANK"
         or string.format("RANK %d  |  %d XP TO NEXT", rankInfo.rank, rankInfo.toNext)
+    local unlockedLevel = safeCount("IronYardRoundFinishUnlocked")
+    if unlockedLevel > 1 and unlockedLevel <= level then
+        local unlocked = OperatorFinishes.forLevel(unlockedLevel)
+        if unlocked.level == unlockedLevel then
+            progressLabel.Text = string.format("RANK %d  |  %s UNLOCKED", rankInfo.rank, unlocked.name)
+        end
+    end
     saveLabel.Text = saveInfo.label
     saveLabel.TextColor3 = saveInfo.tone == "saved" and green
         or (saveInfo.tone == "pending" and amber or Color3.fromRGB(244, 154, 104))
@@ -399,7 +406,7 @@ for _, attr in ipairs({
         Workspace:GetAttributeChangedSignal(attr):Connect(render))
 end
 for _, attr in ipairs({
-    "IronYardLifetimeXP", "IronYardProgressLevel", "IronYardRoundXP",
+    "IronYardLifetimeXP", "IronYardProgressLevel", "IronYardRoundXP", "IronYardRoundFinishUnlocked",
     "IronYardSavedXP", "IronYardProgressStatus", "IronYardDuelReady", "IronYardDuelTravel",
 }) do
     table.insert(attributeConnections,
