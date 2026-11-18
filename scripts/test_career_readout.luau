@@ -1,5 +1,7 @@
 -- Pure shared podium and mobile career status regression.
 local R = require("../src/shared/CareerReadout")
+local Finishes = require("../src/shared/OperatorFinishes")
+local Ledger = require("../src/server/ProgressionLedger")
 local function eq(x, y, reason) assert(x == y, reason .. ": " .. tostring(x)) end
 eq(R.save("ONLINE", 570, 570).tone, "saved", "Saved only when equal")
 eq(R.save("ONLINE", 570, 420).pending, 150, "Unsaved delta")
@@ -30,4 +32,23 @@ local top = R.rank(250 * 999 * 999, 1000)
 assert(top.maxed and top.fraction == 1 and top.toNext == 0)
 eq(R.rank(0, 0).rank, 1, "Minimum rank")
 eq(R.rank(0/0, 1).fraction, 0, "Corrupt XP bar safe")
+eq(R.finishGoal("LOADING", 0, Finishes.nextUnlock(1)), "FINISHES LOADING",
+    "No cosmetic target until career state is known")
+local reached = { {1000, 3}, {6250, 6}, {20250, 10}, {49000, 15} }
+for _, reward in ipairs(reached) do
+    local threshold, targetLevel = reward[1], reward[2]
+    local before = Ledger.levelForXP(threshold - 1)
+    local at = Ledger.levelForXP(threshold)
+    local nextFinish = Finishes.nextUnlock(before)
+    assert(at == targetLevel and nextFinish.level == at)
+    eq(R.finishGoal("ONLINE", threshold - 1, nextFinish),
+        nextFinish.name .. " · 1 XP LEFT", "Uses the server rank threshold")
+    eq(R.finishGoal("ONLINE", threshold, nextFinish),
+        nextFinish.name .. " · RANK SYNCING", "XP may arrive before its rank")
+    assert(Finishes.forLevel(at).name == nextFinish.name, "Server rank activates the exact finish")
+    assert(R.finishGoal("ONLINE", threshold, Finishes.nextUnlock(at))
+        ~= nextFinish.name .. " · RANK SYNCING")
+end
+eq(R.finishGoal("ONLINE", 49000, Finishes.nextUnlock(15)), "ALL FINISHES UNLOCKED",
+    "Last finish reached")
 print("IRON YARD career save status, podium and rank readout regression: OK")

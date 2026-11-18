@@ -54,7 +54,9 @@ Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients R
 
 **Lot 4 publié en version 100.** Le client répartit les mises à jour du décor PBR sur plusieurs images et lit le dernier profil graphique au moment d’appliquer chaque variante. En simulation, un lot de 144 surfaces passe de 144 applications immédiates à un maximum de 12 par image sur mobile. Trois événements de matériau consécutifs passent de 432 recherches de variante à 36. Vérifier dans `PERF` la couverture des matériaux et les temps d’image sur Android, pendant une traversée puis après une bascule ECO/BALANCED/QUALITY. [Publication de la version 100](https://github.com/dbrckk/Roblox-shooter/actions/runs/44291604676)
 
-**Mesures du lot 4.** Le panneau propriétaire `PERF` enregistre des captures de 240 images distinctes par profil et pour la dernière bascule. Le panneau se masque pendant la collecte pour éviter ses recalculs dans les échantillons. [Protocole Android](WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md#comparer-les-temps-dimage-sur-android)
+**Captures PERF publiées en version 101.** Le panneau propriétaire enregistre des captures de 240 images distinctes par profil et pour la dernière bascule. Le panneau se masque pendant la collecte pour éviter ses recalculs dans les échantillons. [Publication de la version 101](https://github.com/dbrckk/Roblox-shooter/actions/runs/44293393361) · [Protocole Android](WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md#comparer-les-temps-dimage-sur-android)
+
+**Avancement du lot 5.** La carrière et les résultats affichent la prochaine finition et les XP restants. Les tests comparent les quatre paliers au calcul du rang côté serveur et couvrent l’arrivée des XP avant le rang. La reconnexion à un serveur Roblox réel reste à tester. [Progression persistante](PROGRESSION_PERSISTENCE.md#prochain-déblocage-cosmétique)
 
 ## Première application
 
