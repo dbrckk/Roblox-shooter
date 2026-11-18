@@ -1,6 +1,7 @@
 -- IRON YARD: short, non-blocking match briefing for PC and mobile.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
+local GuiService = game:GetService("GuiService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -60,15 +61,32 @@ local function makeText(name, y, size, color)
 end
 local title = makeText("ObjectiveTitle", 5, 14, Color3.fromRGB(247, 238, 217))
 local subtitle = makeText("ObjectiveDetails", 30, 12, Color3.fromRGB(214, 212, 194))
-local token = 0
-local function controllerActive()
-    return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
+local COUNTDOWN_CONTROLS = {
+    gamepad = "RT FIRE • LT AIM • A JUMP",
+    touch = "TAP FIRE • HOLD JUMP TO BOOST",
+    keyboard = "SPRINT • SLIDE • USE COVER",
+}
+local function inputDevice()
+    local lastInput = UserInputService:GetLastInputType()
+    if GamepadCombatPolicy.isGamepad(lastInput.Name) then return "gamepad" end
+    if UserInputService.TouchEnabled and lastInput ~= Enum.UserInputType.Keyboard
+        and not string.find(lastInput.Name, "Mouse", 1, true) then
+        return "touch"
+    end
+    return "keyboard"
 end
-local playedIntro = false
-local hintScheduled = false
-local phaseToken = 0
+
+local token = 0
+local guideDeadline
+local guideEnded = false
+local activeCard
 local observedPhase, observedMode
 local activeFades = {}
+local shown = {}
+local completed = {
+    DUEL = playerGui:GetAttribute("IronYardDuelMenuOpen") == true,
+}
+local updateGuide
 
 local function matchMode()
     if Workspace:GetAttribute("IronYardDedicatedDuel") == true then return "DUEL" end
@@ -76,7 +94,7 @@ local function matchMode()
 end
 
 local function menuOpen()
-    return playerGui:GetAttribute("IronYardSettingsOpen") == true
+    return GuiService.MenuIsOpen or playerGui:GetAttribute("IronYardSettingsOpen") == true
         or playerGui:GetAttribute("IronYardDuelMenuOpen") == true
 end
 
@@ -89,13 +107,14 @@ local function clearCard()
     token += 1
     for _, fade in ipairs(activeFades) do fade:Cancel() end
     table.clear(activeFades)
+    activeCard = nil
     setCardVisible(false)
 end
 
-local function display(a, b, timeout)
-    if matchMode() ~= "FFA" or menuOpen() then return end
+local function display(card, a, b, timeout)
     clearCard()
     local current = token
+    activeCard = card
     title.Text = a
     subtitle.Text = b
     setCardVisible(true)
@@ -113,31 +132,43 @@ local function display(a, b, timeout)
             fade.Completed:Wait()
             if token == current then
                 table.clear(activeFades)
-                setCardVisible(false)
+                clearCard()
+                updateGuide()
             end
         end)
     end
 end
 
--- One short, non-blocking follow-up after the first actual shot.
--- The client increments the attribute only when a live FireWeapon is sent.
-local function firstShotHint()
-    if not playedIntro or matchMode() ~= "FFA" or menuOpen() or hintScheduled
-        or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" then return end
-    if (playerGui:GetAttribute("IronYardFirstShots") or 0) < 1 then return end
-    hintScheduled = true
-    local stats = player:FindFirstChild("leaderstats")
-    local kills = stats and stats:FindFirstChild("Eliminations")
-    local text = Guide.hint(UserInputService.TouchEnabled, 1,
-        kills and kills.Value or 0, controllerActive())
-    if text then
-        local current = phaseToken
-        -- Let the objective card finish; this cue never blocks input.
-        task.delay(8.5, function()
-            if current == phaseToken and Workspace:GetAttribute("NeonMatchPhase") == "LIVE" then
-                display("STAY ALIVE   /   TAKE COVER", text, 5)
-            end
-        end)
+updateGuide = function()
+    local phase = Workspace:GetAttribute("NeonMatchPhase")
+    if menuOpen() or matchMode() ~= "FFA" then
+        if activeCard then clearCard() end
+        return
+    end
+    if phase == "COUNTDOWN" then
+        if not activeCard then
+            display("COUNTDOWN", "IRON YARD   /   PREPARE TO DEPLOY", COUNTDOWN_CONTROLS[inputDevice()])
+        end
+        return
+    end
+    if phase ~= "LIVE" or guideEnded or not guideDeadline then return end
+    local remaining = guideDeadline - os.clock()
+    if remaining <= 0 then return end
+    if not shown.OBJECTIVE then
+        shown.OBJECTIVE = true
+        display("OBJECTIVE", "MISSION   /   FREE FOR ALL",
+            Guide.objective(Workspace:GetAttribute("NeonMatchScoreLimit")), math.min(5, remaining))
+        return
+    end
+    completed.FIRE = (playerGui:GetAttribute("IronYardFirstShots") or 0) > 0
+    completed.RELOAD = playerGui:GetAttribute("IronYardFirstReload") == true
+    if activeCard and not completed[activeCard] then return end
+    if activeCard then clearCard() end
+    local action = Guide.nextAction(completed, shown)
+    if action then
+        shown[action] = true
+        local heading, control = Guide.prompt(action, inputDevice())
+        display(action, heading, control, math.min(5, remaining))
     end
 end
 
@@ -145,38 +176,31 @@ local function onPhaseChanged()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local mode = matchMode()
     if phase == observedPhase and mode == observedMode then return end
+    if observedPhase == "LIVE" and observedMode == "FFA" then guideEnded = true end
     observedPhase, observedMode = phase, mode
-    phaseToken += 1
     clearCard()
-    if mode ~= "FFA" then return end
-    if phase == "COUNTDOWN" then
-        display("IRON YARD   /   PREPARE TO DEPLOY",
-            controllerActive() and "RT FIRE • LT AIM • A JUMP"
-                or (UserInputService.TouchEnabled and "TAP FIRE • HOLD JUMP TO BOOST"
-                    or "SPRINT • SLIDE • USE COVER"))
-    elseif Guide.shouldPrompt(phase, playedIntro) and not menuOpen() then
-        playedIntro = true
-        display("MISSION   /   FREE FOR ALL",
-            Guide.objective(Workspace:GetAttribute("NeonMatchScoreLimit")), 8)
-        local current = phaseToken
-        task.delay(8.5, function()
-            if current ~= phaseToken or Workspace:GetAttribute("NeonMatchPhase") ~= "LIVE"
-                or hintScheduled then return end
-            local hint = Guide.hint(UserInputService.TouchEnabled, 0, 0,
-                controllerActive())
-            if hint then display("FIRST ENGAGEMENT   /   CONTROLS", hint, 5) end
-        end)
-    end
+    if not guideDeadline and phase == "LIVE" and mode == "FFA" then guideDeadline = os.clock() + 60 end
+    updateGuide()
 end
 
 Workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(onPhaseChanged)
 Workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(onPhaseChanged)
 Workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(onPhaseChanged)
-playerGui:GetAttributeChangedSignal("IronYardFirstShots"):Connect(firstShotHint)
-playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
-    if menuOpen() then clearCard() end
-end)
+playerGui:GetAttributeChangedSignal("IronYardFirstShots"):Connect(updateGuide)
+playerGui:GetAttributeChangedSignal("IronYardFirstReload"):Connect(updateGuide)
+playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(updateGuide)
 playerGui:GetAttributeChangedSignal("IronYardDuelMenuOpen"):Connect(function()
-    if menuOpen() then clearCard() end
+    if playerGui:GetAttribute("IronYardDuelMenuOpen") == true then completed.DUEL = true end
+    updateGuide()
+end)
+GuiService.MenuOpened:Connect(updateGuide)
+GuiService.MenuClosed:Connect(updateGuide)
+UserInputService.LastInputTypeChanged:Connect(function()
+    if activeCard == "COUNTDOWN" then
+        subtitle.Text = COUNTDOWN_CONTROLS[inputDevice()]
+    elseif activeCard and activeCard ~= "OBJECTIVE" then
+        local _, control = Guide.prompt(activeCard, inputDevice())
+        subtitle.Text = control
+    end
 end)
 onPhaseChanged()

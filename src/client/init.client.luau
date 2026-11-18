@@ -1386,6 +1386,13 @@ remotes.WeaponFeedback.OnClientEvent:Connect(function(message)
         }
         hud:setAmmo(message.weaponId, message.loaded, message.capacity,
             message.reloading == true, message.reloadEndsAt)
+        if message.reloading == true and message.capacity > 0
+            and workspace:GetAttribute("NeonMatchPhase") == "LIVE"
+            and workspace:GetAttribute("IronYardMatchMode") == "FFA"
+            and FireEpochPolicy.matches(message.epoch, workspace:GetAttribute("IronYardFireEpoch"))
+            and playerGui:GetAttribute("IronYardFirstReload") ~= true then
+            playerGui:SetAttribute("IronYardFirstReload", true)
+        end
         -- A valid server Ammo update, not an unconfirmed request, ends ADS.
         if WeaponAimReloadPolicy.releaseOnConfirmedReload(currentWeaponId,
             message.weaponId, message.reloading, scoped) then

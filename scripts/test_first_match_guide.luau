@@ -4,20 +4,30 @@ assert(Guide.objective(20) == "FIRST TO 20 ELIMINATIONS")
 assert(Guide.objective(nil) == "FIRST TO 15 ELIMINATIONS")
 assert(Guide.objective(0) == "FIRST TO 1 ELIMINATIONS")
 assert(Guide.objective(999) == "FIRST TO 100 ELIMINATIONS")
-assert(Guide.shouldPrompt("LIVE", false))
-assert(not Guide.shouldPrompt("LIVE", true))
-assert(not Guide.shouldPrompt("RESULTS", false))
-assert(Guide.hint(true, 0, 0):find("LEFT STICK", 1, true))
-assert(Guide.hint(false, 0, 0):find("WASD", 1, true))
-assert(Guide.hint(true, 1, 0):find("COVER", 1, true))
-assert(Guide.hint(false, 1, 0):find("RELOAD", 1, true))
-assert(Guide.hint(true, 1, 1) == nil, "Experienced player needs no follow-up")
-assert(Guide.hint(false, 0, 0, true):find("RT FIRE", 1, true))
-assert(Guide.hint(true, 0, 0, true):find("LT AIM", 1, true),
-    "Bluetooth gamepad must override mobile touch copy")
-assert(Guide.hint(false, 1, 0, true):find("RELOAD [X]", 1, true))
-assert(Guide.hint(true, 1, 0, true):find("SWITCH [Y]", 1, true))
-assert(Guide.hint(true, 1, 1, true) == nil)
-assert(Guide.hint(true, 0, 0, false):find("RIGHT SIDE", 1, true))
 
-print("IRON YARD first-match objective and contextual mobile/desktop prompts: OK")
+local completed, shown = {}, {}
+assert(Guide.nextAction(completed, shown) == "FIRE")
+shown.FIRE = true
+assert(Guide.nextAction(completed, shown) == nil, "Idle players are shown each cue once")
+completed.FIRE = true
+assert(Guide.nextAction(completed, shown) == "RELOAD")
+assert(Guide.nextAction({ FIRE = true, RELOAD = true }, {}) == "DUEL",
+    "Skip reload guidance when the server already confirmed it")
+shown.RELOAD = true
+assert(Guide.nextAction(completed, shown) == "DUEL", "Duel is discoverable without mandatory reload")
+completed.DUEL = true
+assert(Guide.nextAction(completed, shown) == nil, "Opening the duel menu completes its guidance")
+
+local expected = {
+    keyboard = { FIRE = "LEFT CLICK TO FIRE", RELOAD = "PRESS R", DUEL = "PRESS V FOR 1V1" },
+    touch = { FIRE = "TAP FIRE TO SHOOT", RELOAD = "TAP RLD", DUEL = "TAP 1V1" },
+    gamepad = { FIRE = "PRESS RT TO FIRE", RELOAD = "PRESS X", DUEL = "PRESS RIGHT STICK [R3]" },
+}
+for device, actions in pairs(expected) do
+    for action, binding in pairs(actions) do
+        local heading, control = Guide.prompt(action, device)
+        assert(type(heading) == "string" and #heading > 0)
+        assert(control == binding, device .. " " .. action .. " must show its actual binding")
+    end
+end
+print("IRON YARD first-match guidance: objective, progression and three device bindings passed")

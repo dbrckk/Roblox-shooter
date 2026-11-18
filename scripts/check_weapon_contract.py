@@ -146,12 +146,16 @@ def main():
     ), "Hiding touch UI for Bluetooth pad must not un-aim a live controller"
     for token in (
         'WaitForChild("GamepadCombatPolicy")',
-        "local function controllerActive()",
-        "Guide.hint(UserInputService.TouchEnabled, 1,",
-        "controllerActive() and",
+        "local function inputDevice()",
+        "Guide.prompt(action, inputDevice())",
+        "UserInputService.LastInputTypeChanged:Connect(function()",
     ):
         has(briefing, token, "Player-facing controller onboarding")
-    has(guide, 'if gamepad == true then', "Controller-specific first match tips")
+    has(guide, 'gamepad = { FIRE = "PRESS RT TO FIRE", RELOAD = "PRESS X", DUEL = "PRESS RIGHT STICK [R3]" }',
+        "Controller-specific first match tips")
+    has(client, 'playerGui:SetAttribute("IronYardFirstReload", true)', "Confirmed reload onboarding")
+    has(briefing, 'playerGui:GetAttributeChangedSignal("IronYardFirstReload"):Connect(updateGuide)',
+        "Onboarding reacts to the server-confirmed reload")
     # The first-person client predicts ammo immediately before FireServer;
     # on a server-rejected but otherwise valid shot, authoritative ammo MUST
     # be resent. Without this the HUD can remain at zero until respawn.
