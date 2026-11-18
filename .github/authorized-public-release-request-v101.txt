@@ -1,0 +1,7 @@
+IRON YARD v101 — single public update, 18 November 2026.
+
+Deploy the game source verified at 8c158521f2b63f1e35bf5f69cb0c94eb7f9422f9 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+This build measures the native Roblox jump button when laying out touch controls and moves overlapping controls to leave the jump and boost gesture accessible. The latest confirmed public place version is 96.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
