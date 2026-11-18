@@ -983,7 +983,7 @@ def main():
         "Local muzzle flashes use the current-frame rendered firearm socket")
     has(viewmodel, "WeaponFxFramePolicy.flashReady(self.currentWeaponId, flashAt, now)",
         "Stale Android first-person muzzle FX must be dropped")
-    has(client, "visuals:kick(weaponId)", "Local admitted shot queues its own FX")
+    has(client, "visuals:kick(weaponId, followUp)", "Local admitted shot queues its own FX")
     require("visuals:drawLocalMuzzleFlash()" not in client,
         "Local flash must not be spawned from the previous-frame viewmodel")
     render = viewmodel.split("function WeaponVisuals:_render(deltaTime)", 1)[1].split(

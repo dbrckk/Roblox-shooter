@@ -23,10 +23,11 @@ local REACH = {
     Knife = 0.38,
 }
 
-function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponId)
+function Audio.select(preset, mobile, distance, localShot, activeVoices, weaponId, followUp)
     if localShot then
         -- Your weapon sound must never be gated by other players' audio.
-        return { layers = 2, volume = 1, maxDistance = 160,
+        local volume = weaponId == "AssaultRifle" and followUp == true and 0.86 or 1
+        return { layers = 2, volume = volume, maxDistance = 160,
             lifetime = 2, maxVoices = math.huge,
             lowGain = 0, midGain = 0, highGain = 0 }
     end

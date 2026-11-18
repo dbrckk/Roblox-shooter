@@ -6,6 +6,7 @@ local PROFILES = {
     AssaultRifle = {
         kickCap = 0.16, recovery = 14.5, shotSeconds = 0.13, shotDecay = 2.85,
         back = 0.055, pitch = 5.5, yaw = -1.2, roll = 0.7,
+        followUpTilt = 0.76,
         adsBack = 0.74, adsPitch = 0.42, adsLateral = 0.20,
         equipSeconds = 0.20, equipDrop = 0.32, equipBack = 0.27,
         equipPitch = -14, equipYaw = 8,
@@ -88,6 +89,11 @@ function Feel.shotEnvelope(id, age)
     if not profile or not finite(age) or age < 0 then return 0 end
     local fraction = math.clamp(1 - age / profile.shotSeconds, 0, 1)
     return fraction ^ (profile.shotDecay or 2)
+end
+
+function Feel.shotTiltScale(id, followUp)
+    local profile = PROFILES[id]
+    return followUp == true and profile and profile.followUpTilt or 1
 end
 
 -- Retain more rearward travel than tilt as the gun enters the sight line.

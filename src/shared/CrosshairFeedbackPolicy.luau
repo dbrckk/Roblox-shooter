@@ -8,7 +8,8 @@ local function finite(n)
         and math.abs(n) ~= math.huge
 end
 
-function Policy.kick(weaponId, previous)
+function Policy.kick(weaponId, previous, followUp)
+    if weaponId == "AssaultRifle" and followUp ~= true then return 2.8 end
     if not finite(previous) then previous = 0 end
     return math.min(12, math.max(0, previous) + (IMPULSE[weaponId] or 0))
 end
@@ -27,10 +28,10 @@ function Policy.radius(weaponId, moveAmount, sprinting, kick)
 end
 
 -- No UI updates when rounded radius is unchanged; no per-shot Tweens.
-function Policy.shouldDraw(now, previousAt, previousRadius, radius)
+function Policy.shouldDraw(now, previousAt, previousRadius, radius, freshRifleShot)
     return finite(now) and finite(radius)
         and previousRadius ~= radius
-        and (not finite(previousAt) or now - previousAt >= 0.045)
+        and (freshRifleShot == true or not finite(previousAt) or now - previousAt >= 0.045)
 end
 
 return Policy

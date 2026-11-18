@@ -115,6 +115,7 @@ function WeaponVisuals.new(WeaponConfig)
     self.cachedViewmodel = nil
 	self.recoil = 0
 	self.fireStartedAt = -math.huge
+    self.shotTiltScale = 1
 	self.equipStartedAt = os.clock()
 	self.sprinting = false
 	self.sprintBlend = 0
@@ -731,6 +732,8 @@ function WeaponVisuals:setWeapon(weaponId)
     self.aimPose = nil
 	self.equipStartedAt = os.clock()
 	self.recoil = 0
+    self.fireStartedAt = -math.huge
+    self.shotTiltScale = 1
     self.reloadActive = false
     self.reloadShellCount = 1
     self.reloadBlend = 0
@@ -997,11 +1000,12 @@ function WeaponVisuals:_ejectCartridge(plan)
     })
 end
 
-function WeaponVisuals:kick(weaponId)
+function WeaponVisuals:kick(weaponId, followUp)
     local config = self.WeaponConfig.get(weaponId)
     if not config or weaponId ~= self.currentWeaponId then return end
     self.recoil = WeaponFeel.kick(weaponId, self.recoil, config.recoilKick or 0.08)
     self.fireStartedAt = os.clock()
+    self.shotTiltScale = WeaponFeel.shotTiltScale(weaponId, followUp)
     -- Schedule visible first-person FX until AFTER the final camera-aligned
     -- viewmodel pose is written. No 1-frame-old muzzle/receiver coordinates.
     self.pendingLocalFlashAt = weaponId ~= "Knife" and self.fireStartedAt or nil
@@ -1060,10 +1064,11 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
 
     local fireAlpha = WeaponFeel.shotEnvelope(self.currentWeaponId,
         timeNow - self.fireStartedAt)
+    local fireTilt = fireAlpha * self.shotTiltScale
     local fireMotion = CFrame.new(0, 0, fireAlpha * feel.back * backScale)
-        * CFrame.Angles(math.rad(fireAlpha * feel.pitch * pitchScale),
-            math.rad(fireAlpha * feel.yaw * lateralScale),
-            math.rad(fireAlpha * feel.roll * lateralScale))
+        * CFrame.Angles(math.rad(fireTilt * feel.pitch * pitchScale),
+            math.rad(fireTilt * feel.yaw * lateralScale),
+            math.rad(fireTilt * feel.roll * lateralScale))
 
 	local swayMotion = CFrame.Angles(self.sway.Y * swayFactor,
         self.sway.X * swayFactor, self.sway.X * 0.45 * swayFactor)
@@ -1841,7 +1846,7 @@ function WeaponVisuals:playImpactSound(position, materialName)
     sound:Play()
 end
 
-function WeaponVisuals:playFireSound(weaponId, origin, localShot)
+function WeaponVisuals:playFireSound(weaponId, origin, localShot, followUp)
     local config = self.WeaponConfig.get(weaponId)
     if not config or typeof(origin) ~= "Vector3" then return end
     local camera = workspace.CurrentCamera
@@ -1856,7 +1861,7 @@ function WeaponVisuals:playFireSound(weaponId, origin, localShot)
     local distance = ownShot and 0 or (camera.CFrame.Position - origin).Magnitude
     local mix = WeaponAudio.select(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId)
+        UserInputService.TouchEnabled, distance, ownShot, #self.remoteSoundEmitters, weaponId, followUp)
     if not mix then return end
 
     -- One cover ray ONLY for an admitted, distant remote sound. Ignore all

@@ -19,6 +19,15 @@ for _, id in ipairs(ids) do
     assert(settled > 0 and settled < stacked, id .. " smoothly recovers")
     assert(Feel.recover(id, stacked, 0) == stacked)
     assert(Feel.shotEnvelope(id, 0) == 1)
+    assert(Feel.shotTiltScale(id, false) == 1)
+    local tilt = Feel.shotTiltScale(id, true)
+    if id == "AssaultRifle" then
+        assert(tilt > 0.70 and tilt < 0.85, "Follow-up tilt is smaller without flattening all movement")
+        local back, pitch = Feel.aimRecoilScale(p, 1)
+        assert(back > pitch and tilt * pitch < pitch)
+    else
+        assert(tilt == 1, "Other weapon tilt is preserved")
+    end
     assert(Feel.shotEnvelope(id, p.shotSeconds + 0.001) == 0)
     assert(Feel.shotEnvelope(id, p.shotSeconds / 2) > 0)
     durations[id] = p.shotSeconds
