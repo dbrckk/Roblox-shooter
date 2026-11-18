@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 104 comme base du prochain cycle. Elle comprend le FFA, le 1v1 réservé, le briefing, cinq armes et la collection de finitions de carrière. [Publication de la version 104](https://github.com/dbrckk/Roblox-shooter/actions/runs/44305123288)
+2. Prends la version publique 105 comme base du prochain cycle. Elle comprend le FFA, le 1v1 réservé, le briefing, la collection de finitions et le stand d’entraînement pour les cinq armes. [Publication de la version 105](https://github.com/dbrckk/Roblox-shooter/actions/runs/44326260237)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -14,7 +14,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 
 | Ordre | Lot | Critère de livraison |
 | --- | --- | --- |
-| 1 | **Stand d’entraînement intégré.** Ouvrir **SET → PRACTICE RANGE** depuis le FFA. Le stand individuel comporte cinq cibles à des distances différentes. **SET → BACK TO FFA** rétablit les munitions de la partie. | Vérifier en jeu le parcours clavier, tactile et manette. Les simulations des callbacks serveur couvrent les cinq armes, le rejet des anciens tirs et rechargements et l’isolation des scores, des XP et des cibles. |
+| 1 | **Stand d’entraînement publié en version 105.** Ouvrir **SET → PRACTICE RANGE** depuis le FFA. Le stand individuel comporte cinq cibles à des distances différentes. **SET → BACK TO FFA** rétablit les munitions de la partie. | Vérifier en jeu le parcours clavier, tactile et manette. Les simulations des callbacks serveur couvrent les cinq armes, le rejet des anciens tirs et rechargements et l’isolation des scores, des XP et des cibles. |
 | 2 | **Sensations de tir sur mobile.** Utiliser le stand pour affiner le recul, les sons, les impacts et le réticule. | Comparer une séquence identique avant et après sur Android. Vérifier la lisibilité des impacts et distinguer l’animation locale du tir de la confirmation serveur. Relever le P95 et le P99 du temps d’image. |
 | 3 | **Deuxième arène de 1v1.** Ajouter un secteur du terminal avec couverture rapprochée et une ligne de tir longue. | Les départs offrent des options comparables. Les deux joueurs voient la même carte, et la revanche puis le retour au lobby fonctionnent sur les deux arènes. |
 | 4 | **Objectifs de session.** Ajouter des objectifs courts fondés sur des actions confirmées par le serveur. | Les résultats expliquent la progression de l’objectif et sa récompense cosmétique. Une action compte une seule fois, y compris après reconnexion. |
