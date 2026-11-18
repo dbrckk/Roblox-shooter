@@ -1,0 +1,7 @@
+IRON YARD v94 — single public update, 18 November 2026.
+
+Deploy the game source verified at 31a4f479d9d357ecc35e4e92db4688a61eb6de0f to the existing public experience: creator 9774173158, universe 10775909016, root place 99189039770065.
+
+A return to FFA requested during the duel lobby remains valid if the opponent arrives and the countdown starts before the server receives the request. The lobby return remains tied to the displayed series. Roblox confirmed the previous public place version was 89.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks and one-shot publisher.
