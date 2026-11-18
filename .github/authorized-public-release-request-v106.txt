@@ -1,0 +1,7 @@
+IRON YARD v106 — single public update, 18 November 2026.
+
+Deploy the game source verified at 153de3526fc24c5e387e4c9063b3a8ace2ec74fb to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Career and round results show the next cosmetic finish and its remaining XP. Career also shows the automatically equipped finish. Both views keep the existing save status. The latest confirmed public place version is 101.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
