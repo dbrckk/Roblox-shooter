@@ -12,12 +12,14 @@ local Objectives = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild
 local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
+local ObjectiveLedger = require(script.Parent:WaitForChild("ObjectiveLedger"))
 local ShutdownTracker = require(script.Parent:WaitForChild("ProgressionShutdownTracker"))
 local DetachedRelease = require(script.Parent:WaitForChild("ProgressionDetachedRelease"))
 
 local ProgressionService = {}
 local STORE_NAME = "IronYard_Progression_v1"
 local AUTOSAVE_SECONDS = 45
+local OBJECTIVE_REFRESH_SECONDS = 90
 local LEASE_SECONDS = 180
 local RETRY_LIMIT = 3
 local records = {}
@@ -41,6 +43,16 @@ end
 
 local levelForXP = Ledger.levelForXP
 
+local function rotateObjectiveDay(record)
+    local day = Objectives.day(os.time())
+    local old = record.objectiveEvents
+    if old.day < day then
+        record.previousObjectiveEvents = old.day == day - 1 and old or nil
+        record.objectiveEvents = Objectives.forDay(nil, day)
+    end
+    return record.objectiveEvents.day
+end
+
 local function setStatus(player, record, status)
     record.status = status
     if player.Parent then
@@ -61,11 +73,19 @@ local function publish(player, record)
     player:SetAttribute("IronYardLifetimeHeadshots", base.headshots + earned.headshots)
     player:SetAttribute("IronYardLifetimeVictories", base.victories + earned.victories)
     player:SetAttribute("IronYardProgressLevel", levelForXP(total))
-    player:SetAttribute("IronYardFinishPreference", record.finishPreference)
-    player:SetAttribute("IronYardSavedFinishPreference", record.savedFinishPreference)
+    local day = rotateObjectiveDay(record)
+    local saved = record.savedObjectiveRecord
+    local view = ObjectiveLedger.commit(saved, record.token, day,
+        record.objectiveEvents, record.previousObjectiveEvents, record.objectiveChoice)
+    record.objectives = view.current.progress
+    record.finishPreference = view.selection and view.selection.selected and Objectives.FINISH_ID
+        or record.rankPreference
     player:SetAttribute(Objectives.ATTRIBUTE, Objectives.encode(record.objectives))
-    player:SetAttribute(Objectives.SAVED_ATTRIBUTE, Objectives.encode(record.savedObjectives))
+    player:SetAttribute(Objectives.SAVED_ATTRIBUTE, saved and Objectives.encode(saved.current.progress))
     player:SetAttribute(Objectives.UNLOCKED_ATTRIBUTE, record.objectives.unlocked)
+    player:SetAttribute("IronYardFinishPreference", record.finishPreference)
+    player:SetAttribute("IronYardSavedFinishPreference",
+        saved and saved.selection and saved.selection.selected and Objectives.FINISH_ID or record.savedRankPreference)
 end
 
 local function createRecord(player)
@@ -76,7 +96,7 @@ local function createRecord(player)
         base = zero(),
         earned = zero(),
         committed = zero(),
-        objectives = Objectives.forDay(nil, Objectives.day(os.time())),
+        objectiveEvents = Objectives.forDay(nil, Objectives.day(os.time())),
         loaded = false,
         triedAcquire = false,
         saving = false,
@@ -107,6 +127,37 @@ local function retry(operation)
     return false, lastError
 end
 
+local function syncObjectives(player, record, refresh)
+    if record.status == "STUDIO" then return true end
+    if not store or record.objectiveSaving then return false end
+    local day = rotateObjectiveDay(record)
+    local today, yesterday, choice = record.objectiveEvents, record.previousObjectiveEvents, record.objectiveChoice
+    if not refresh and record.savedObjectiveRecord and today == record.savedObjectiveEvents
+        and yesterday == record.savedPreviousObjectiveEvents
+        and choice == record.savedObjectiveChoice then return true end
+
+    record.objectiveSaving = true
+    ShutdownTracker.begin(shutdownTracker)
+    local ok, result = retry(function()
+        return store:UpdateAsync("objectives_" .. tostring(player.UserId), function(previous)
+            return ObjectiveLedger.commit(previous, record.token, day, today, yesterday, choice)
+        end)
+    end)
+    record.objectiveSaving = false
+    if ok and result then
+        record.savedObjectiveRecord = result
+        record.objectiveReadAt = os.clock()
+        record.savedObjectiveEvents = today
+        record.savedPreviousObjectiveEvents = yesterday
+        record.savedObjectiveChoice = choice
+        if isLive(player, record) then publish(player, record) end
+    elseif not ok then
+        warn("[IRON YARD] Objective save retry required: " .. tostring(result))
+    end
+    ShutdownTracker.finish(shutdownTracker)
+    return ok and result ~= nil
+end
+
 local function acquire(player, record)
     if record.loaded or record.saving or record.closing or not store then return end
     record.saving = true
@@ -119,12 +170,6 @@ local function acquire(player, record)
         end)
     end)
     record.saving = false
-    if success and result then
-        -- Actions in this new session may have occurred while the store yielded.
-        record.objectives = Objectives.forDay(
-            Objectives.merge(result.objectives, record.objectives, true), Objectives.day(os.time()))
-        record.savedObjectives = result.objectives
-    end
     if not isLive(player, record) then
         -- The player left during acquisition; release any lock just acquired.
         if success and result then
@@ -146,9 +191,9 @@ local function acquire(player, record)
         record.base = Ledger.sessionBase(result, record.token)
         record.committed = copyStats(result.lock.committed)
         local preference = result.finishPreference or 0
-        record.finishPreference = OperatorFinishes.canSelect(preference, levelForXP(result.xp), record.objectives.unlocked)
+        record.rankPreference = OperatorFinishes.canSelect(preference, levelForXP(result.xp))
             and preference or 0
-        record.savedFinishPreference = record.finishPreference
+        record.savedRankPreference = record.rankPreference
         setStatus(player, record, "ONLINE")
         publish(player, record) -- includes XP earned during the load
         ShutdownTracker.finish(shutdownTracker)
@@ -176,24 +221,19 @@ flush = function(player, record, release)
     end
     record.saving = true
     local snapshot = cloneSnapshot(record.earned)
-    local finishPreference = record.finishPreference
-    record.objectives = Objectives.forDay(record.objectives, Objectives.day(os.time()))
-    local objectives = record.objectives
-    -- If the original acquire was committed but its response was lost,
-    -- the final owned release still needs to combine the pre-load actions.
-    local objectivesBeforeLoad = not record.loaded
+    local finishPreference = record.rankPreference
     local success, result = retry(function()
         local timestamp = os.time()
         return store:UpdateAsync(keyFor(player), function(previous)
             return Ledger.commit(previous, record.token, snapshot, timestamp,
-                LEASE_SECONDS, release, finishPreference, objectives, objectivesBeforeLoad)
+                LEASE_SECONDS, release, finishPreference)
         end)
     end)
     record.saving = false
     if success and result then
         record.committed = cloneSnapshot(snapshot)
-        record.savedFinishPreference = finishPreference
-        record.savedObjectives = result.objectives
+        record.savedRankPreference = finishPreference
+        if release then record.careerReleased = true end
         record.lastWriteAt = os.clock()
         if player.Parent then
             setStatus(player, record, release and "CLOSED" or "ONLINE")
@@ -206,6 +246,15 @@ flush = function(player, record, release)
     if not success then warn("[IRON YARD] DataStore save failed after retries: " .. tostring(result)) end
     ShutdownTracker.finish(shutdownTracker)
     return false
+end
+
+local function flushDeparture(player, record)
+    local released = true
+    if not record.careerReleased and (record.loaded or record.triedAcquire) then
+        released = flush(player, record, true)
+    end
+    local objectivesSaved = syncObjectives(player, record)
+    return released and objectivesSaved
 end
 
 -- PlayerRemoving gives a busy DataStore a bounded synchronous chance
@@ -222,14 +271,14 @@ queueDetachedRelease = function(player, record)
             -- PlayerRemoving/flush. Bound detached memory and work; the
             -- server's own BindToClose limit remains 26 seconds.
             local untilTime = os.clock() + 45
-            while record.saving and os.clock() < untilTime do
+            while (record.saving or record.objectiveSaving) and os.clock() < untilTime do
                 task.wait(0.15)
             end
-            if record.saving then return false end
+            if record.saving or record.objectiveSaving then return false end
             -- Only the original server/session token can release this key.
             -- An unacknowledged acquisition may still own its lease.
             for attempt = 1, 2 do
-                if flush(player, record, true) then return true end
+                if flushDeparture(player, record) then return true end
                 if attempt < 2 then task.wait(2) end
             end
             return false
@@ -265,11 +314,12 @@ local function attach(player)
         -- Deliberately keep Studio builds off live player keys. Studio API
         -- access, if enabled, otherwise writes into the production universe.
         setStatus(player, record, "STUDIO")
-        record.finishPreference = 0
+        record.rankPreference = 0
         publish(player, record)
         return
     end
     task.spawn(loadOrRetry, player, record)
+    task.spawn(syncObjectives, player, record)
 end
 
 local function add(player, deltas, objectiveWeapon)
@@ -282,7 +332,8 @@ local function add(player, deltas, objectiveWeapon)
     if record.closing then return end
     record.earned = Ledger.applyGrant(record.earned, deltas)
     if objectiveWeapon then
-        record.objectives = Objectives.eliminate(record.objectives, Objectives.day(os.time()), objectiveWeapon)
+        local day = rotateObjectiveDay(record)
+        record.objectiveEvents = Objectives.eliminate(record.objectiveEvents, day, objectiveWeapon)
     end
     publish(player, record)
     -- Only announce a crossing from a known career baseline. Loading or
@@ -306,9 +357,10 @@ end
 function ProgressionService.recordFfaCompletion(player)
     local record = records[player]
     if not record or not isLive(player, record) then return end
-    local updated = Objectives.finishFfa(record.objectives, Objectives.day(os.time()))
-    if updated == record.objectives then return end
-    record.objectives = updated
+    local day = rotateObjectiveDay(record)
+    local updated = Objectives.finishFfa(record.objectiveEvents, day)
+    if updated == record.objectiveEvents then return end
+    record.objectiveEvents = updated
     publish(player, record)
 end
 
@@ -319,8 +371,17 @@ local function setFinishPreference(player, preference)
         or preference == record.finishPreference then return end
     local level = levelForXP(record.base.xp + record.earned.xp)
     if not OperatorFinishes.canSelect(preference, level, record.objectives.unlocked) then return end
-    record.finishPreference = preference
-    player:SetAttribute("IronYardFinishPreference", preference)
+    local selected = preference == Objectives.FINISH_ID
+    if not selected then record.rankPreference = preference end
+    local localChoice = record.objectiveChoice
+    local savedChoice = record.savedObjectiveRecord and record.savedObjectiveRecord.selection
+    record.objectiveChoice = {
+        selected = selected, token = record.token,
+        stamp = math.max(DateTime.now().UnixTimestampMillis,
+            localChoice and localChoice.stamp + 1 or 0,
+            savedChoice and savedChoice.stamp + 1 or 0),
+    }
+    publish(player, record)
 end
 
 function ProgressionService.start()
@@ -347,15 +408,10 @@ function ProgressionService.start()
         -- this tracker can keep BindToClose waiting for the in-flight save.
         ShutdownTracker.begin(shutdownTracker)
         local untilTime = os.clock() + 12
-        while record.saving and os.clock() < untilTime do task.wait(0.15) end
-        local released = true
-        if record.loaded or record.triedAcquire then
-            released = flush(player, record, true)
-            if not released then
-                -- Never silently discard a busy autosave's final XP snapshot.
-                -- The detached task survives unlink and has a shutdown slot.
-                queueDetachedRelease(player, record)
-            end
+        while (record.saving or record.objectiveSaving) and os.clock() < untilTime do task.wait(0.15) end
+        if not flushDeparture(player, record) then
+            -- The detached task survives unlink and has a shutdown slot.
+            queueDetachedRelease(player, record)
         end
         records[player] = nil
         ShutdownTracker.finish(shutdownTracker)
@@ -370,12 +426,18 @@ function ProgressionService.start()
                         if record.loaded then
                             flush(player, record, false)
                         else
-                            local updated = Objectives.forDay(record.objectives, Objectives.day(os.time()))
-                            if updated ~= record.objectives then
-                                record.objectives = updated
-                                publish(player, record)
-                            end
                             loadOrRetry(player, record)
+                        end
+                    end)
+                    task.spawn(function()
+                        if rotateObjectiveDay(record) ~= record.objectives.day then publish(player, record) end
+                        -- A destination server can load before the source's
+                        -- final save. Reconcile again after joining, even if
+                        -- this session has earned no objective progress yet.
+                        local refresh = not record.objectivesReconciled
+                            or os.clock() - (record.objectiveReadAt or 0) >= OBJECTIVE_REFRESH_SECONDS
+                        if syncObjectives(player, record, refresh) then
+                            record.objectivesReconciled = true
                         end
                     end)
                 end
@@ -388,11 +450,11 @@ function ProgressionService.start()
         for player, record in pairs(records) do
             -- PlayerRemoving already owns the final release of its record;
             -- never compete with that in-flight write on the same key.
-            if not record.closing and (record.loaded or record.triedAcquire) then
+            if not record.closing and record.status ~= "STUDIO" then
                 record.closing = true
                 pending += 1
                 task.spawn(function()
-                    flush(player, record, true)
+                    if not flushDeparture(player, record) then queueDetachedRelease(player, record) end
                     pending -= 1
                 end)
             end
