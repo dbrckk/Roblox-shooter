@@ -5,8 +5,20 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Utilise la [validation de la version 97](#validation-de-la-version-97-et-prochains-lots) comme point de départ. Le jeu inclut le FFA, le 1v1 dans une instance réservée, les invitations, la revanche, le retour en FFA, cinq armes et la progression persistante. La CI couvre les demandes de duel reçues en retard et les régressions sur les commandes tactiles. [Transitions 1v1](MATCH_TRANSITIONS.md)
-3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. Appuie-toi sur la feuille de route active pour les détails techniques et la séquence des lots. [Feuille de route V3](ROADMAP_V3_SANS_TEST_ANDROID.md)
+2. Prends la version publique 103 comme base du prochain cycle. Elle comprend le FFA, le 1v1 réservé, le briefing, cinq armes et la carrière avec finitions. Le retour du joueur permet de poursuivre l’amélioration sur cette base. [Publication de la version 103](https://github.com/dbrckk/Roblox-shooter/actions/runs/44301142206)
+3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
+
+## Prochain cycle de progression
+
+| Ordre | Lot | Critère de livraison |
+| --- | --- | --- |
+| 1 | **Collection et choix de finition.** Réunir les cinq finitions existantes dans la carrière, avec aperçu, état verrouillé ou débloqué et choix de la finition équipée. | Une finition acquise s’applique aux armes et aux mains, reste sélectionnée après réapparition et revient après reconnexion. Le serveur vérifie le rang requis et la progression XP existante reste compatible. |
+| 2 | **Espace d’entraînement.** Rendre les cibles de `DummyService` accessibles depuis le lobby pour apprendre le tir, la visée et le rechargement avec les cinq armes. | Le joueur sait comment entrer, essayer une arme et revenir en FFA au clavier, au tactile ou à la manette. Les essais sont isolés des scores et récompenses de la partie publique. |
+| 3 | **Deuxième arène de 1v1.** Concevoir une arène compacte dans le terminal, avec couverture proche et une ligne de tir plus longue. L’intégrer à la rotation des duels existants. | Les deux joueurs voient la même arène et disposent de départs comparables. La revanche et le retour au lobby fonctionnent sur les deux cartes. Relever le P95 et le P99 sur le trajet de référence Android. |
+| 4 | **Objectifs de session.** Proposer des objectifs courts fondés sur les actions déjà confirmées par le serveur, comme terminer une FFA ou réussir des éliminations avec plusieurs armes. | La progression est lisible en partie et dans les résultats. Chaque action valide compte une seule fois, et les récompenses sont cosmétiques. |
+| 5 | **2v2 et groupes.** Étendre les invitations à deux équipes en réutilisant les flux de transfert, de préparation et de retour du 1v1. | Quatre volontaires rejoignent la même instance, les équipes et scores restent cohérents, et un départ permet une issue claire. Comparer le remplissage et l’attente avec le 1v1 avant d’étendre la rotation. |
+
+Le prochain lot porte sur la collection et la sélection d’une finition. Le mécanisme d’application existe déjà dans `WeaponVisuals`, et les paliers sont définis dans `OperatorFinishes`. Le choix doit rejoindre le parcours de carrière et rester cohérent avec le rang répliqué.
 
 ## Ordre des chantiers et critères de livraison
 
@@ -46,7 +58,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 | 4 | **Améliorer le rendu et la fluidité Android.** Relever avec `PERF` les sources des modèles, les temps d’image et les pics pendant un combat à quatre bots puis une traversée du terminal. Prioriser la silhouette, les repères de trajet ou le pire pic mesuré selon les résultats. | Comparaison ECO/BALANCED/QUALITY sur le même appareil, avec captures des armes, de VANGUARD et des surfaces PBR. Comparer le P95 et le P99 sans modifier les colliders de jeu. [Audit visuel Android](AUDIT_ANDROID_VISUAL_2026-11-13.md) |
 | 5 | **Rendre la progression plus lisible.** Vérifier la sauvegarde et la récupération de l’XP en rejoignant une nouvelle session, puis afficher le prochain déblocage cosmétique dans le parcours de carrière existant. | Les gains restent visibles après reconnexion, une erreur de sauvegarde est identifiable et la récompense est attribuée une seule fois. [Persistance](PROGRESSION_PERSISTENCE.md) |
 
-Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients Roblox, poursuivre avec l’amélioration du briefing et conserver le scénario 1v1 comme vérification en partie.
+Les livraisons de ce cycle figurent ci-dessous. [Prochain cycle](#prochain-cycle-de-progression)
 
 **Lot 2 publié en version 98.** Le briefing FFA guide le premier tir, le rechargement et l’accès au 1v1. L’indication suit le clavier, le tactile ou la manette, et le rechargement accepté par le serveur retire le conseil correspondant. Les simulations couvrent les actions anticipées, le changement de périphérique, les menus et le passage en duel. Vérifier ensuite l’enchaînement en jeu sur petit écran. [Publication de la version 98](https://github.com/dbrckk/Roblox-shooter/actions/runs/44287293265)
 
@@ -57,6 +69,8 @@ Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients R
 **Captures PERF publiées en version 101.** Le panneau propriétaire enregistre des captures de 240 images distinctes par profil et pour la dernière bascule. Le panneau se masque pendant la collecte pour éviter ses recalculs dans les échantillons. [Publication de la version 101](https://github.com/dbrckk/Roblox-shooter/actions/runs/44293393361) · [Protocole Android](WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md#comparer-les-temps-dimage-sur-android)
 
 **Lot 5 publié en version 102.** La carrière et les résultats affichent la prochaine finition et les XP restants. Les tests comparent les quatre paliers au calcul du rang côté serveur et couvrent l’arrivée des XP avant le rang. La reconnexion simulée retrouve la finition de rang 3 et le palier suivant après sauvegarde et réessai. La reconnexion à un serveur Roblox réel reste à tester. [Publication de la version 102](https://github.com/dbrckk/Roblox-shooter/actions/runs/44294376128) · [Progression persistante](PROGRESSION_PERSISTENCE.md#prochain-déblocage-cosmétique)
+
+**Fin de partie en version 103.** Les résultats affichent la finition obtenue par un gain d’XP pendant la partie si la progression a déjà été chargée. Les tests couvrent les seuils, la localité au match et les niveaux restaurés. [Build de la version 103](https://github.com/dbrckk/Roblox-shooter/actions/runs/44301063091) · [Publication](https://github.com/dbrckk/Roblox-shooter/actions/runs/44301142206)
 
 ## Première application
 
