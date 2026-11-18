@@ -54,6 +54,8 @@ Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients R
 
 **Lot 4 publié en version 100.** Le client répartit les mises à jour du décor PBR sur plusieurs images et lit le dernier profil graphique au moment d’appliquer chaque variante. En simulation, un lot de 144 surfaces passe de 144 applications immédiates à un maximum de 12 par image sur mobile. Trois événements de matériau consécutifs passent de 432 recherches de variante à 36. Vérifier dans `PERF` la couverture des matériaux et les temps d’image sur Android, pendant une traversée puis après une bascule ECO/BALANCED/QUALITY. [Publication de la version 100](https://github.com/dbrckk/Roblox-shooter/actions/runs/44291604676)
 
+**Mesures du lot 4.** Le panneau propriétaire `PERF` enregistre des captures de 240 images distinctes par profil et pour la dernière bascule. Le panneau se masque pendant la collecte pour éviter ses recalculs dans les échantillons. [Protocole Android](WORLD_PBR_ROOF_ANDROID_QA_2026-11-13.md#comparer-les-temps-dimage-sur-android)
+
 ## Première application
 
 Corriger la première impression du 1v1. Le briefing FFA utilise le même bandeau que le score et peut brièvement afficher un objectif FFA en plein duel, tandis que le bouton 1v1 disparaît pendant le briefing du lobby. Garder l’accès au 1v1 visible pendant les conseils FFA, suspendre les conseils quand le menu 1v1 est ouvert et préserver le score et la préparation en duel. Vérifier aussi que les conseils différés d’une ancienne manche ne réapparaissent pas dans le duel suivant.
