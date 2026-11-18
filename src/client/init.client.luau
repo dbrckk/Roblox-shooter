@@ -1689,6 +1689,7 @@ if UserInputService.TouchEnabled then
     local sprint = button("Sprint", "RUN")
     local slide = button("Slide", "SLIDE")
     local reload = button("Reload", "RLD")
+    hud:bindTouchReloadButton(reload)
     local rifle = button("AssaultRifle", "AR")
     local pistol = button("Pistol", "P")
     local shotgun = button("Shotgun", "SG")

@@ -434,6 +434,35 @@ function HudController:_buildAmmoLabel()
     self.reloadFill = fill
 end
 
+function HudController:bindTouchReloadButton(button)
+    self.touchReloadButton = button
+    button.Text = self.touchReloadText or "RLD"
+
+    local track = Instance.new("Frame")
+    track.Name = "ReloadProgress"
+    track.Position = UDim2.new(0, 4, 1, -6)
+    track.Size = UDim2.new(1, -8, 0, 3)
+    track.BackgroundColor3 = Color3.fromRGB(27, 32, 31)
+    track.BorderSizePixel = 0
+    track.Active = false
+    track.Visible = self.reloadEndsAt ~= nil
+    track.ZIndex = button.ZIndex + 1
+    track.Parent = button
+    makeCorner(track, 2)
+
+    local fill = Instance.new("Frame")
+    fill.Name = "Fill"
+    fill.Size = UDim2.fromScale((self.lastReloadPixels or 0) / RELOAD_BAR_WIDTH, 1)
+    fill.BackgroundColor3 = RELOAD_COLOR
+    fill.BorderSizePixel = 0
+    fill.Active = false
+    fill.ZIndex = track.ZIndex + 1
+    fill.Parent = track
+    makeCorner(fill, 2)
+    self.touchReloadTrack = track
+    self.touchReloadFill = fill
+end
+
 function HudController:updateReloadProgress()
     if not self.reloadEndsAt or self.lastReloadPixels == RELOAD_BAR_WIDTH then return end
     local remaining = self.reloadEndsAt - workspace:GetServerTimeNow()
@@ -442,6 +471,9 @@ function HudController:updateReloadProgress()
     if pixels == self.lastReloadPixels then return end
     self.lastReloadPixels = pixels
     self.reloadFill.Size = UDim2.new(0, pixels, 1, 0)
+    if self.touchReloadFill then
+        self.touchReloadFill.Size = UDim2.fromScale(pixels / RELOAD_BAR_WIDTH, 1)
+    end
 end
 
 function HudController:setAmmo(weaponId, loaded, capacity, reloading, reloadEndsAt)
@@ -483,6 +515,23 @@ function HudController:setAmmo(weaponId, loaded, capacity, reloading, reloadEnds
         self.reloadEndsAt = nil
         self.lastReloadPixels = nil
         self.reloadTrack.Visible = false
+    end
+
+    local touchText = "RLD"
+    if tone == "RELOADING" then
+        touchText = "LOAD"
+    elseif tone == "UNLIMITED" then
+        touchText = "–"
+    elseif loaded and capacity and loaded >= capacity then
+        touchText = "FULL"
+    end
+    if touchText ~= self.touchReloadText then
+        self.touchReloadText = touchText
+        if self.touchReloadButton then self.touchReloadButton.Text = touchText end
+    end
+    local progressVisible = self.reloadEndsAt ~= nil
+    if self.touchReloadTrack and self.touchReloadTrack.Visible ~= progressVisible then
+        self.touchReloadTrack.Visible = progressVisible
     end
 end
 
