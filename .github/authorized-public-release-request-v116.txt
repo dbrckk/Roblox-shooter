@@ -1,0 +1,7 @@
+IRON YARD v116 — single public update, 18 November 2026.
+
+Deploy the game source verified at 86205c4dbf57061bcb528406fe59a64ed6a8dcca to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Ship pull request #255. Show incoming 1v1 and 2v2 invitations ahead of old errors and ongoing searches. Keep the remaining reply time visible. The latest confirmed public place version is 111.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
