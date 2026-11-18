@@ -21,6 +21,8 @@ local GRAPHICS_PRESETS = { "ECO", "BALANCED", "QUALITY" }
 local GRAPHICS_LABELS = { "ECO", "BAL", "HIGH" }
 local TOUCH_SIZE_LABELS = { "SMALL", "MED", "LARGE" }
 local HIT_SOUND_LABELS = { "OFF", "LOW", "STD" }
+local RELOAD_COLOR = Color3.fromRGB(241, 189, 97)
+local RELOAD_BAR_WIDTH = 112
 local MARKER_QUADRANTS = {
     { -1, -1, 45 }, { 1, -1, -45 }, { -1, 1, -45 }, { 1, 1, 45 },
 }
@@ -402,13 +404,48 @@ function HudController:_buildAmmoLabel()
     t.Text = "AMMO  --"
     t.Parent = self.gui
     self.ammoLabel = t
+
+    local track = Instance.new("Frame")
+    track.Name = "ReloadProgress"
+    track.AnchorPoint = Vector2.new(0.5, 0)
+    track.Position = UDim2.new(0.5, 0, 1, 2)
+    track.Size = UDim2.fromOffset(RELOAD_BAR_WIDTH, 4)
+    track.BackgroundColor3 = Color3.fromRGB(27, 32, 31)
+    track.BorderSizePixel = 0
+    track.Visible = false
+    track.Parent = t
+    makeCorner(track, 2)
+
+    local fill = Instance.new("Frame")
+    fill.Name = "Fill"
+    fill.Size = UDim2.new(0, 0, 1, 0)
+    fill.BackgroundColor3 = RELOAD_COLOR
+    fill.BorderSizePixel = 0
+    fill.Parent = track
+    makeCorner(fill, 2)
+    self.reloadTrack = track
+    self.reloadFill = fill
 end
 
-function HudController:setAmmo(weaponId, loaded, capacity, reloading)
+function HudController:updateReloadProgress()
+    if not self.reloadEndsAt or self.lastReloadPixels == RELOAD_BAR_WIDTH then return end
+    local remaining = self.reloadEndsAt - workspace:GetServerTimeNow()
+    local ratio = math.clamp(1 - remaining / self.reloadDuration, 0, 1)
+    local pixels = math.max(self.lastReloadPixels or 0, math.floor(ratio * RELOAD_BAR_WIDTH))
+    if pixels == self.lastReloadPixels then return end
+    self.lastReloadPixels = pixels
+    self.reloadFill.Size = UDim2.new(0, pixels, 1, 0)
+end
+
+function HudController:setAmmo(weaponId, loaded, capacity, reloading, reloadEndsAt)
     if weaponId ~= self.currentWeaponId or not self.ammoLabel then return end
     -- Server snapshots may repeat the same loaded/capacity/reload state.
     -- Keep all transitions instant while skipping identical UI writes.
     local text, tone = CombatReadoutPolicy.ammo(loaded, capacity, reloading)
+    if tone == "RELOADING" and loaded ~= nil then
+        local magazine = CombatReadoutPolicy.ammo(loaded, capacity, false)
+        text = magazine .. "  ·  " .. text
+    end
     if text ~= self.lastAmmoText then
         self.ammoLabel.Text = text
         self.lastAmmoText = text
@@ -418,7 +455,7 @@ function HudController:setAmmo(weaponId, loaded, capacity, reloading)
         if tone == "UNLIMITED" then
             color = Color3.fromRGB(218, 219, 204)
         elseif tone == "RELOADING" then
-            color = Color3.fromRGB(241, 189, 97)
+            color = RELOAD_COLOR
         elseif tone == "UNKNOWN" then
             color = Color3.fromRGB(231, 217, 181)
         elseif tone == "LOW" then
@@ -428,6 +465,17 @@ function HudController:setAmmo(weaponId, loaded, capacity, reloading)
         end
         self.ammoLabel.TextColor3 = color
         self.lastAmmoTone = tone
+    end
+
+    if tone == "RELOADING" and self.reloadDuration and self.reloadDuration > 0
+        and type(reloadEndsAt) == "number" and reloadEndsAt > 0 and reloadEndsAt < math.huge then
+        self.reloadEndsAt = reloadEndsAt
+        self:updateReloadProgress()
+        if not self.reloadTrack.Visible then self.reloadTrack.Visible = true end
+    elseif self.reloadEndsAt then
+        self.reloadEndsAt = nil
+        self.lastReloadPixels = nil
+        self.reloadTrack.Visible = false
     end
 end
 
@@ -889,6 +937,7 @@ function HudController:setWeapon(weaponId)
     self.lastAmmoText = nil
     self.lastAmmoTone = nil
 	local config = self.WeaponConfig.get(weaponId)
+    self.reloadDuration = config and config.reloadSeconds
 	self.weaponLabel.Text = config and config.displayName or weaponId
     self:setAmmo(weaponId, nil, config and config.magazineSize, false)
 

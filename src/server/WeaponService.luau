@@ -306,13 +306,15 @@ local function sendAmmo(player, weaponId)
     local config = WeaponConfig.get(weaponId)
     if not config or not remotes then return end
     local state = getState(player)
+    local reloadRemaining = math.max(0, (state.reloadUntil[weaponId] or 0) - os.clock())
     remotes.WeaponFeedback:FireClient(player, {
         kind = "Ammo", weaponId = weaponId,
         epoch = weaponRoundEpoch,
         loaded = getLoaded(state, weaponId, config) or -1,
         capacity = config.magazineSize or -1,
-        reloading = (state.reloadUntil[weaponId] or 0) > os.clock(),
+        reloading = reloadRemaining > 0,
         reloadSeconds = config.reloadSeconds or 0,
+        reloadEndsAt = reloadRemaining > 0 and workspace:GetServerTimeNow() + reloadRemaining or nil,
     })
 end
 
@@ -657,7 +659,10 @@ local function onEquipWeapon(player, weaponId)
 
     local state = getState(player)
     if state.equippedWeaponId ~= weaponId then
-        cancelReload(state, state.equippedWeaponId)
+        local previousWeaponId = state.equippedWeaponId
+        local hadReload = state.reloadUntil[previousWeaponId] ~= nil
+        cancelReload(state, previousWeaponId)
+        if hadReload then sendAmmo(player, previousWeaponId) end
         state.aimSince = nil
         state.aimCharacter = nil
         state.aimWeaponId = nil
