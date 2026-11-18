@@ -57,6 +57,27 @@ function OperatorFinishes.earnedBetween(previousLevel, level)
     return nil
 end
 
+function OperatorFinishes.atIndex(index)
+    return finishes[index]
+end
+
+function OperatorFinishes.canSelect(preference, level)
+    if preference == 0 then return true end
+    for _, finish in ipairs(finishes) do
+        if preference == finish.level then
+            return finish.level <= OperatorFinishes.forLevel(level).level
+        end
+    end
+    return false
+end
+
+function OperatorFinishes.equipped(level, preference)
+    if preference ~= 0 and OperatorFinishes.canSelect(preference, level) then
+        return OperatorFinishes.forLevel(preference)
+    end
+    return OperatorFinishes.forLevel(level)
+end
+
 function OperatorFinishes.count()
     return #finishes
 end

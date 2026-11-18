@@ -133,7 +133,7 @@ def main():
         "function Ledger.copyStats(value)",
         "raw.schema == 1",
         "function Ledger.acquire(previous, token, timestamp, leaseSeconds)",
-        "function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release)",
+        "function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference)",
         "lock.owner ~= token", "lock.expiresAt > timestamp",
         "lock.owner == token", "snapshot[field] - committed",
         "math.max(committed, snapshot[field])",
@@ -218,6 +218,17 @@ def main():
             "Both displays must identify the next cosmetic and remaining XP")
     require("nextFinishLabel.Visible = not compact" in ui,
             "Keep the in-combat Android career HUD compact")
+    contains(data, ('RemoteGuard.allow(player, "SetCareerFinish")',
+                   "OperatorFinishes.canSelect(preference, level)",
+                   "local finishPreference = record.finishPreference",
+                   "LEASE_SECONDS, release, finishPreference",
+                   "record.savedFinishPreference = finishPreference",
+                   "SetCareerFinish.OnServerEvent:Connect(setFinishPreference)"),
+             "Server-owned cosmetic selection and save acknowledgement")
+    contains(ledger, ("data.finishPreference = raw.finishPreference",
+                      "finishPreference <= Ledger.levelForXP(data.xp)",
+                      "data.finishPreference = finishPreference"),
+             "Backward-compatible cosmetic persistence")
     require("CombatAward" in hud, "Medal feedback must remain intact")
 
     contains(doc.lower(), ("updateasync", "idempotent", "45", "180", "studio",

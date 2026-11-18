@@ -57,6 +57,11 @@ function Ledger.normalize(raw)
     local stats = Ledger.copyStats(raw)
     local data = { schema = 1, lock = nil, lastSession = nil }
     for _, field in ipairs(Ledger.STATS) do data[field] = stats[field] end
+    -- Existing v1 records omit this optional preference. A malformed
+    -- cosmetic choice never prevents loading the earned counters.
+    if safeInt(raw.finishPreference) and raw.finishPreference <= 1000 then
+        data.finishPreference = raw.finishPreference
+    end
 
     if raw.lock ~= nil then
         local lock = raw.lock
@@ -129,7 +134,7 @@ function Ledger.acquire(previous, token, timestamp, leaseSeconds)
     return data
 end
 
-function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release)
+function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference)
     validateContext(token, timestamp, leaseSeconds)
     local snapshot = Ledger.copyStats(earnedSnapshot)
     local data = Ledger.normalize(previous)
@@ -157,6 +162,11 @@ function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds,
         assert(safeInt(updated), "Progression total overflow")
         data[field] = updated
         data.lock.committed[field] = math.max(committed, snapshot[field])
+    end
+    if finishPreference ~= nil then
+        assert(safeInt(finishPreference) and finishPreference <= Ledger.levelForXP(data.xp),
+            "Invalid saved finish preference")
+        data.finishPreference = finishPreference
     end
     if release then
         data.lastSession = {

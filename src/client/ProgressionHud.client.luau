@@ -99,7 +99,7 @@ local function update()
     local level = math.max(1, safeCount("IronYardProgressLevel"))
     local kills = safeCount("IronYardLifetimeEliminations")
     local wins = safeCount("IronYardLifetimeVictories")
-    local finish = OperatorFinishes.forLevel(level)
+    local finish = OperatorFinishes.equipped(level, player:GetAttribute("IronYardFinishPreference"))
     local nextFinish = OperatorFinishes.nextUnlock(level)
     finishLabel.Text = "EQUIPPED  /  " .. finish.name
     finishLabel.TextColor3 = Color3.fromRGB(
@@ -158,7 +158,7 @@ end
 
 for _, name in ipairs({
     "IronYardProgressStatus", "IronYardLifetimeXP", "IronYardSavedXP", "IronYardLifetimeEliminations",
-    "IronYardLifetimeVictories", "IronYardProgressLevel",
+    "IronYardLifetimeVictories", "IronYardProgressLevel", "IronYardFinishPreference",
 }) do
     player:GetAttributeChangedSignal(name):Connect(update)
 end
