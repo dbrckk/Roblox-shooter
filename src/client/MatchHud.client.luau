@@ -254,7 +254,7 @@ local function gamepadActive()
     return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
 end
 
-local function syncMenuSelection(preferInvite)
+local function syncMenuSelection()
     local selected = GuiService.SelectedObject
     local ownsSelection = selected and selected:IsDescendantOf(menu)
     if not menu.Visible or GuiService.MenuIsOpen or not gamepadActive() then
@@ -262,7 +262,7 @@ local function syncMenuSelection(preferInvite)
         return
     end
     if ownsSelection and selected.Visible and selected.Interactable and selected.Selectable then return end
-    GuiService.SelectedObject = preferInvite and invite.Visible and invite.Interactable and invite
+    GuiService.SelectedObject = (invite.Selectable and invite)
         or (search.Selectable and search)
         or (teamTab.Selectable and teamTab)
         or close
@@ -287,7 +287,7 @@ local function setMenu(visible)
     gui.DisplayOrder = visible and 45 or 20
     playerGui:SetAttribute("IronYardDuelMenuOpen", visible)
     updateQuickCancel()
-    syncMenuSelection(visible)
+    syncMenuSelection()
 end
 
 local function refreshInviteRows()
@@ -319,7 +319,7 @@ local function refreshInviteRows()
             nextRefresh = math.min(nextRefresh, remaining - seconds + 1)
         end
     end
-    syncMenuSelection(false)
+    syncMenuSelection()
     if nextRefresh < math.huge then
         countdownTask = task.delay(math.max(0.02, nextRefresh), function()
             countdownTask = nil
@@ -579,7 +579,7 @@ local function duelLabel()
     emptyRoster.Position = roster.Position
     updateQuickCancel()
     if wasPending ~= requestPending or menu.Visible then refreshInviteRows() end
-    syncMenuSelection(false)
+    syncMenuSelection()
     if nextRefresh < math.huge then
         duelClockTask = task.delay(math.max(0.02, nextRefresh), function()
             duelClockTask = nil
@@ -658,8 +658,8 @@ UserInputService.InputBegan:Connect(function(input, used)
     end
 end)
 UserInputService.LastInputTypeChanged:Connect(duelLabel)
-GuiService.MenuOpened:Connect(function() syncMenuSelection(false) end)
-GuiService.MenuClosed:Connect(function() syncMenuSelection(true) end)
+GuiService.MenuOpened:Connect(syncMenuSelection)
+GuiService.MenuClosed:Connect(syncMenuSelection)
 for _, name in ipairs({
     "IronYardDuelReady", "IronYardDuelTravel", "IronYardDuelInvitation", SEARCH_STARTED_ATTRIBUTE,
     OUTGOING_INVITE_ATTRIBUTE, teammateAttribute,
