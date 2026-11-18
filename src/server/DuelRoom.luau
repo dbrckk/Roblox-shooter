@@ -44,6 +44,7 @@ local function clearRequest(player)
     if player.Parent == Players then
         player:SetAttribute("IronYardDuelSearchStartedAt", nil)
         player:SetAttribute("IronYardDuelOutgoingInvite", nil)
+        player:SetAttribute("IronYardDuelTeammate", nil)
         player:SetAttribute("IronYardDuelReady", false)
     end
 end
@@ -64,6 +65,7 @@ local function queueTeam(first, second, now)
         local teammate = player == first and second or first
         entries[player] = { teammate = teammate, captain = first, startedAt = now }
         table.insert(order, player)
+        player:SetAttribute("IronYardDuelTeammate", teammate.UserId)
         player:SetAttribute("IronYardDuelSearchStartedAt", now)
         player:SetAttribute("IronYardDuelReady", true)
         setState(player, "TEAM_SEARCHING")

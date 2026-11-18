@@ -151,7 +151,7 @@ def main():
         "UserInputService.LastInputTypeChanged:Connect(function()",
     ):
         has(briefing, token, "Player-facing controller onboarding")
-    has(guide, 'gamepad = { FIRE = "PRESS RT TO FIRE", RELOAD = "PRESS X", DUEL = "PRESS RIGHT STICK [R3]" }',
+    has(guide, 'gamepad = { FIRE = "PRESS RT TO FIRE", RELOAD = "PRESS X", DUEL = "PRESS R3 FOR DUELS" }',
         "Controller-specific first match tips")
     has(client, 'playerGui:SetAttribute("IronYardFirstReload", true)', "Confirmed reload onboarding")
     has(briefing, 'playerGui:GetAttributeChangedSignal("IronYardFirstReload"):Connect(updateGuide)',
