@@ -19,14 +19,16 @@ assert 'scripts/check_duel_prep_contract.py' in workflow
 
 prep = server.split("local function duelPrepState()", 1)[1].split(
     "\nlocal function retryInterruptedDuelPrep()", 1)[0]
-assert 'type(entry) ~= "table"' in prep
+assert 'type(entry) == "table"' in prep
 for needle in (
     'entry.root.Parent ~= nil and entry.root.Anchored',
-    'h ~= nil and h.Health > 0',
-    'entry.root:IsDescendantOf(c)',
+    'humanoid ~= nil and humanoid.Health > 0',
+    'entry.root:IsDescendantOf(character)',
     'DuelRules.prepState(prep,',
-    'a and a.Character',
-    'b and b.Character',
+    'character == entry.character',
+    'a.Character, liveAndAnchored(prep[1], a.Character)',
+    'b.Character, liveAndAnchored(prep[2], b.Character)',
+    'if not liveAndAnchored(prep[index], player.Character) then return "INTERRUPTED" end',
 ):
     assert needle in prep, f"Original duel rig guard missing: {needle}"
 
@@ -35,8 +37,7 @@ retry = server.split("local function retryInterruptedDuelPrep()", 1)[1].split(
 for needle in (
     'DuelCombatState.clear()',
     'releaseDuelPrep()',
-    'duel.liveCharacterA = nil',
-    'duel.liveCharacterB = nil',
+    'duel.liveCharacters = nil',
     'duel.waitSince = duel.waitSince or os.clock()',
     'transition("DUEL_BREAK", DUEL_BREAK_SECONDS)',
     'return false',
@@ -48,7 +49,7 @@ start = server.split("local function startLiveDuelBout()", 1)[1].split(
 assert 'if duelPrepState() ~= "READY" then' in start
 assert 'return retryInterruptedDuelPrep()' in start
 assert start.index('if duelPrepState()') < start.index('releaseDuelPrep()')
-assert 'if not DuelCombatState.begin(a, b) then' in start
+assert 'if not DuelCombatState.begin(table.unpack(players)) then' in start
 assert start.count('return retryInterruptedDuelPrep()') == 2
 assert 'duel.waitSince = nil' in start
 assert 'duel.bouts += 1' in start

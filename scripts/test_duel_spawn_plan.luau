@@ -169,3 +169,27 @@ clearByIndex[1] = false
 assert(P.select(clearByIndex, 1, P.SORTING) == 3)
 assert(P.select({}, 1, P.SORTING) == nil)
 print("IRON YARD Sorting Bay: map rotation, mirrored starts, hidden approaches and clear service lanes")
+
+-- The four committed pads are distinct, share the same team end and swap
+-- across the middle together. A partial layout must never be returned.
+for _, arena in ipairs({P.YARD, P.SORTING}) do
+    local pads = arena == P.SORTING and P.SortingBay.pads or P.PADS
+    local clear = table.create(#pads, true)
+    for bout = 1, 5, 2 do
+        local first = assert(P.selectTeams(clear, bout, arena))
+        local reverse = assert(P.selectTeams(clear, bout + 1, arena))
+        local used = {}
+        for index, pad in ipairs(first) do
+            assert(not used[pad] and pads[pad])
+            used[pad] = true
+            local across = index % 2 == 1 and index + 1 or index - 1
+            assert(reverse[index] == first[across])
+            assert(pads[pad].z * pads[first[across]].z < 0)
+        end
+        assert(pads[first[1]].z * pads[first[3]].z > 0)
+        assert(pads[first[2]].z * pads[first[4]].z > 0)
+    end
+    local blocked = table.create(#pads, false)
+    for _, pad in ipairs({1, 2, 3}) do blocked[pad] = true end
+    assert(P.selectTeams(blocked, 1, arena) == nil)
+end

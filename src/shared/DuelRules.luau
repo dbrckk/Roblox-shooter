@@ -57,6 +57,18 @@ function Duel.boutWinner(healthA, maximumA, healthB, maximumB, expired)
     if math.abs(a - b) < 0.00001 then return "DRAW" end
     return a > b and "A" or "B"
 end
+-- At the deadline, surviving operators take priority. Ties are decided
+-- by remaining health as a fraction of each operator's maximum health.
+function Duel.teamBoutWinner(health, maximum, expired)
+    local aliveA = (health[1] > 0 and 1 or 0) + (health[3] > 0 and 1 or 0)
+    local aliveB = (health[2] > 0 and 1 or 0) + (health[4] > 0 and 1 or 0)
+    if aliveA == 0 or aliveB == 0 then return Duel.boutWinner(aliveA, 2, aliveB, 2, false) end
+    if expired ~= true then return nil end
+    if aliveA ~= aliveB then return aliveA > aliveB and "A" or "B" end
+    return Duel.boutWinner(health[1] / maximum[1] + health[3] / maximum[3], 2,
+        health[2] / maximum[2] + health[4] / maximum[4], 2, true)
+end
+
 -- A duel normally finishes at five wins. A hard bout cap prevents
 -- unbounded series of draws, but at that cap a real points leader must
 -- win rather than be incorrectly declared tied. Return the terminal reason

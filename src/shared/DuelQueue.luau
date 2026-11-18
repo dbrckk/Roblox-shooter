@@ -5,7 +5,8 @@ function Queue.pair(entries, order, available)
     local firstSearch
     local eligible = {}
     for _, player in ipairs(order) do
-        if entries[player] and available(player) then eligible[player] = true end
+        if entries[player] and not entries[player].teamInvite
+            and not entries[player].teammate and available(player) then eligible[player] = true end
     end
     for _, player in ipairs(order) do
         if not eligible[player] then continue end

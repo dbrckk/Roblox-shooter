@@ -58,32 +58,38 @@ local lastStandingsPayload = nil
 
 local function readyPlayers()
     local players = DuelRoom.players()
-    if #players ~= 2 or PracticeMode.active(players[1])
-        or PracticeMode.active(players[2]) then return nil end
-    if DuelRules.canStart(#players,
-        players[1]:GetAttribute("IronYardDuelReady"),
-        players[2]:GetAttribute("IronYardDuelReady")) then
-        table.sort(players, function(a,b) return a.UserId < b.UserId end)
-        return players
+    if #players ~= DuelRoom.requiredPlayers() then return nil end
+    for _, player in ipairs(players) do
+        if PracticeMode.active(player) or player:GetAttribute("IronYardDuelReady") ~= true then return nil end
     end
-    return nil
+    if not DuelRoom.isDedicated then
+        table.sort(players, function(a, b) return a.UserId < b.UserId end)
+    end
+    return players
 end
 
-local function dedicatedPair(players)
-    return #players == 2 and not DuelRoom.isClosing()
+local function dedicatedRoster(players)
+    return #players == DuelRoom.requiredPlayers() and not DuelRoom.isClosing()
 end
 
 local function duelParticipants()
     if not duel then return nil, nil end
-    -- Preserve original opt-in participants in local Studio test servers.
     return duel.aPlayer, duel.bPlayer
 end
 
 local function duelPlayersIntact()
     if not duel then return false end
-    local a,b = duelParticipants()
-    return a and b and a.Parent == Players and b.Parent == Players
-        and DuelRules.sameParticipants(DuelRoom.players(), a, b)
+    local players = DuelRoom.players()
+    if #duel.players == 2 then
+        local a, b = duelParticipants()
+        return a.Parent == Players and b.Parent == Players
+            and DuelRules.sameParticipants(players, a, b)
+    end
+    if #players ~= #duel.players then return false end
+    for _, player in ipairs(duel.players) do
+        if player.Parent ~= Players or not table.find(players, player) then return false end
+    end
+    return true
 end
 
 local function duelRows()
@@ -100,6 +106,8 @@ local function publishDuelScores()
     Workspace:SetAttribute("IronYardDuelArena", duel and duel.arena or "")
     Workspace:SetAttribute("IronYardDuelPlayerA", duel and duel.aId or 0)
     Workspace:SetAttribute("IronYardDuelPlayerB", duel and duel.bId or 0)
+    Workspace:SetAttribute("IronYardDuelPlayerA2", duel and duel.players[3] and duel.players[3].UserId or 0)
+    Workspace:SetAttribute("IronYardDuelPlayerB2", duel and duel.players[4] and duel.players[4].UserId or 0)
     Workspace:SetAttribute("IronYardDuelScoreA", duel and duel.aWins or 0)
     Workspace:SetAttribute("IronYardDuelScoreB", duel and duel.bWins or 0)
     Workspace:SetAttribute("IronYardDuelBout", duel and duel.bouts or 0)
@@ -200,34 +208,44 @@ local function endDuel(reason, winningSide)
     if not duel then return end
     DuelCombatState.clear()
     releaseDuelPrep()
-    duel.liveCharacterA = nil
-    duel.liveCharacterB = nil
+    duel.liveCharacters = nil
     -- An abandoned duel may end with the winner on fewer bout points.
     -- Keep every real score, but give the verified surviving champion rank 1
     -- in the result card instead of contradicting the winner banner.
     local forfeitChampion = reason == "FORFEIT"
         and (winningSide == "A" and duel.aId
             or winningSide == "B" and duel.bId or nil) or nil
-    local snapshot = RoundStandings.build(duelRows(), round, forfeitChampion)
+    local teams = #duel.players == 4
+    local rows = duelRows()
+    if teams then
+        rows[1].name, rows[2].name = "TEAM A", "TEAM B"
+        rows[1].sortKey, rows[2].sortKey = 1, 2
+    end
+    local snapshot = RoundStandings.build(rows, round, forfeitChampion)
     snapshot.mode = "DUEL"
     snapshot.arena = duel.arena
     snapshot.bouts = duel.bouts
     snapshot.reason = reason
     snapshot.winnerUserId = winningSide == "A" and duel.aId
         or winningSide == "B" and duel.bId or 0
-    snapshot.winner = winningSide == "A" and duel.aName
-        or winningSide == "B" and duel.bName or "DRAW"
+    snapshot.winner = winningSide == "A" and rows[1].name
+        or winningSide == "B" and rows[2].name or "DRAW"
+    local winningIndex = winningSide == "A" and 1 or winningSide == "B" and 2 or nil
+    if teams then
+        snapshot.teams = {
+            {duel.aId, duel.players[3].UserId},
+            {duel.bId, duel.players[4].UserId},
+        }
+        snapshot.winnerTeam = winningIndex
+    end
     finalResult = snapshot
     Workspace:SetAttribute("IronYardFinalStandings", HttpService:JSONEncode(snapshot))
-    -- Direct original Player references work for negative Studio user IDs.
-    local winningPlayer = winningSide == "A" and duel.aPlayer
-        or winningSide == "B" and duel.bPlayer or nil
-    -- Neither disconnects nor cancelled spawns award persistent XP.
-    -- Both five-win victories and unique-leader hard-cap finishes are
-    -- legitimate fully played series; a capped DRAW grants no victory.
-    if winningPlayer and winningPlayer.Parent == Players
-        and (reason == "SCORE_LIMIT" or reason == "BOUT_LIMIT") then
-        CombatAwards.recordVictory(winningPlayer)
+    -- A forfeit or interrupted series never awards the victory bonus.
+    if winningIndex and (reason == "SCORE_LIMIT" or reason == "BOUT_LIMIT") then
+        for index = winningIndex, #duel.players, 2 do
+            local winningPlayer = duel.players[index]
+            if winningPlayer.Parent == Players then CombatAwards.recordVictory(winningPlayer) end
+        end
     end
     transition("RESULTS", RESULTS_SECONDS, snapshot.winner,
         snapshot.winnerUserId)
@@ -235,29 +253,27 @@ end
 
 local function startDuelBout()
     if not duel or not duelPlayersIntact() then return false end
-    local a,b = duelParticipants()
-    -- Characters are Roblox-owned. Wait for both real, living rigs after
-    -- RespawnTime rather than spawning an unfair one-sided duel.
-    local function alive(p)
-        local c = p and p.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
-        return c and h and h.Health > 0 and c:FindFirstChild("HumanoidRootPart")
+    local players = duel.players
+    local prep = {}
+    for index, player in ipairs(players) do
+        local character = player.Character
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if not root or root.Anchored or not humanoid or humanoid.Health <= 0 then return false end
+        prep[index] = {character = character, root = root}
     end
-    if not alive(a) or not alive(b) then return false end
-    if not SpawnService.placeDuelPair(a, b, duel.bouts + 1, duel.arena) then return false end
+    local placed
+    if #players == 4 then
+        placed = SpawnService.placeDuelTeams(players, duel.bouts + 1, duel.arena)
+    else
+        placed = SpawnService.placeDuelPair(players[1], players[2], duel.bouts + 1, duel.arena)
+    end
+    if not placed then return false end
 
-    MovementService.resetDuelMovement(a)
-    MovementService.resetDuelMovement(b)
-    local rootA = a.Character:FindFirstChild("HumanoidRootPart")
-    local rootB = b.Character:FindFirstChild("HumanoidRootPart")
-    if not rootA or not rootB or rootA.Anchored or rootB.Anchored then
-        return false
-    end
-    duel.prep = {
-        { character = a.Character, root = rootA },
-        { character = b.Character, root = rootB },
-    }
-    for _, entry in ipairs(duel.prep) do
+    -- All anchors belong to this prep. Exceptions are recovered by the scheduler.
+    duel.prep = prep
+    for index, entry in ipairs(prep) do
+        MovementService.resetDuelMovement(players[index])
         entry.root.AssemblyLinearVelocity = Vector3.zero
         entry.root.AssemblyAngularVelocity = Vector3.zero
         entry.root.Anchored = true
@@ -267,36 +283,34 @@ local function startDuelBout()
     return true
 end
 
--- An interrupted preparation (death/respawn, removed root, missing
--- stored prep or unanchoring) must release BOTH old roots immediately.
+-- An interrupted preparation must release every original root immediately.
 -- Checking the original character generations prevents a late respawn
 -- from inheriting the abandoned preparation.
 local function duelPrepState()
-    if not duel then return "INTERRUPTED" end
-    local a,b = duelParticipants()
-    local prep = duel.prep
-    local first = type(prep) == "table" and prep[1] or nil
-    local second = type(prep) == "table" and prep[2] or nil
-    local function liveAndAnchored(entry, player)
-        if type(entry) ~= "table" or not player then return false end
-        local c = player.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
-        return c ~= nil and entry.root ~= nil
-            and entry.root.Parent ~= nil and entry.root.Anchored
-            and h ~= nil and h.Health > 0
-            and entry.root:IsDescendantOf(c)
+    local prep = duel and duel.prep
+    if type(prep) ~= "table" or #prep ~= #duel.players then return "INTERRUPTED" end
+    local function liveAndAnchored(entry, character)
+        local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+        return type(entry) == "table" and character ~= nil and character == entry.character
+            and entry.root ~= nil and entry.root.Parent ~= nil and entry.root.Anchored
+            and entry.root:IsDescendantOf(character) and humanoid ~= nil and humanoid.Health > 0
     end
-    return DuelRules.prepState(prep,
-        a and a.Character, liveAndAnchored(first, a),
-        b and b.Character, liveAndAnchored(second, b))
+    if #duel.players == 2 then
+        local a, b = duelParticipants()
+        return DuelRules.prepState(prep, a.Character, liveAndAnchored(prep[1], a.Character),
+            b.Character, liveAndAnchored(prep[2], b.Character))
+    end
+    for index, player in ipairs(duel.players) do
+        if not liveAndAnchored(prep[index], player.Character) then return "INTERRUPTED" end
+    end
+    return "READY"
 end
 
 local function retryInterruptedDuelPrep()
     if not duel then return false end
     DuelCombatState.clear()
     releaseDuelPrep()
-    duel.liveCharacterA = nil
-    duel.liveCharacterB = nil
+    duel.liveCharacters = nil
     -- Keep the original 20-second recovery budget, including repeated
     -- interrupted preparations; never start a new deadline on each retry.
     duel.waitSince = duel.waitSince or os.clock()
@@ -309,19 +323,20 @@ local function startLiveDuelBout()
     if duelPrepState() ~= "READY" then
         return retryInterruptedDuelPrep()
     end
-    local a,b = duelParticipants()
+    local players = duel.players
     releaseDuelPrep()
-    -- Lock both participants to the same character generation for this bout.
-    duel.liveCharacterA = a.Character
-    duel.liveCharacterB = b.Character
     Workspace:SetAttribute("IronYardDuelLastResult", "")
-    -- All shields are removed before the same server tick unlocks fire.
-    SpawnService.clearProtection(a.Character)
-    SpawnService.clearProtection(b.Character)
-    if not DuelCombatState.begin(a, b) then
+    if not DuelCombatState.begin(table.unpack(players)) then
         return retryInterruptedDuelPrep()
     end
     WeaponService.resetRound()
+    duel.liveCharacters = {}
+    for index, player in ipairs(players) do
+        local character = player.Character
+        duel.liveCharacters[index] = character
+        SpawnService.clearProtection(character)
+        character:SetAttribute("IronYardLiveDuelEpoch", Workspace:GetAttribute("IronYardFireEpoch"))
+    end
     duel.waitSince = nil
     duel.bouts += 1
     publishDuelScores()
@@ -337,14 +352,13 @@ local function startDuelSeries(players)
     finalResult = nil
     Workspace:SetAttribute("IronYardFinalStandings", "")
     duel = {
-        aPlayer=players[1], bPlayer=players[2],
+        players=players, aPlayer=players[1], bPlayer=players[2],
         aId=players[1].UserId, bId=players[2].UserId,
         aName=players[1].DisplayName, bName=players[2].DisplayName,
         aWins=0, bWins=0, bouts=0, waitSince=os.clock(), arena=arena,
     }
-    -- Duel choices are consumed; a rematch requires two fresh opt-ins.
-    players[1]:SetAttribute("IronYardDuelReady", false)
-    players[2]:SetAttribute("IronYardDuelReady", false)
+    -- A rematch requires fresh consent from every original participant.
+    for _, player in ipairs(players) do player:SetAttribute("IronYardDuelReady", false) end
     mode = "DUEL"
     Workspace:SetAttribute("IronYardMatchMode", mode)
     Workspace:SetAttribute("IronYardDuelLastResult", "")
@@ -371,8 +385,7 @@ local function finishDuelBout(result)
     -- was already included in duel.bouts at spawn; never count it twice.
     duel.bouts = n
     publishDuelScores()
-    duel.liveCharacterA = nil
-    duel.liveCharacterB = nil
+    duel.liveCharacters = nil
     if complete then
         endDuel(finishReason, winner)
     else
@@ -390,7 +403,7 @@ local function startRound()
     finalResult = nil
     Workspace:SetAttribute("IronYardFinalStandings", "")
     if DuelRoom.isDedicated then
-        if dedicatedPair(players) then
+        if dedicatedRoster(players) then
             startDuelSeries(players)
         else
             for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
@@ -445,6 +458,10 @@ end
 local function tick()
     if not DuelRoom.isDedicated and not DuelRoom.isLocal then DuelRoom.match() end
     local players = DuelRoom.players()
+    local size = DuelRoom.requiredPlayers()
+    if Workspace:GetAttribute("IronYardDuelSize") ~= size then
+        Workspace:SetAttribute("IronYardDuelSize", size)
+    end
     -- Last disconnect is not an abandoned 1v1 with a surviving winner.
     -- Clear stale duel mode and public RESULTS before the next player joins.
     if MatchLobbyPolicy.shouldReset(#players, phase, mode, duel ~= nil, lobbyMode) then
@@ -466,12 +483,21 @@ local function tick()
         -- Player object references remain truthy after disconnect. Only
         -- the original combatant still present in the live roster can win.
         local side = DuelRules.forfeitSide(players, a, b)
+        if #duel.players == 4 then
+            local missing = {}
+            for index, participant in ipairs(duel.players) do
+                if participant.Parent ~= Players or not table.find(players, participant) then
+                    missing[index % 2] = true
+                end
+            end
+            side = missing[0] and not missing[1] and "A" or missing[1] and not missing[0] and "B" or nil
+        end
         endDuel(side and "FORFEIT" or "LOBBY_CHANGED", side)
         return
     end
     if phase == "WAITING" then
         local arrivalSeconds = DuelRoom.isDedicated and DuelRoom.arrivalSecondsLeft() or nil
-        if DuelRoom.isDedicated and (not dedicatedPair(players) or arrivalSeconds == 0) then
+        if DuelRoom.isDedicated and (not dedicatedRoster(players) or arrivalSeconds == 0) then
             if DuelRoom.isClosing() or arrivalSeconds == 0 then
                 if lastPublishedSecond ~= 0 then
                     lastPublishedSecond = 0
@@ -497,7 +523,7 @@ local function tick()
     end
 
     if phase == "COUNTDOWN" then
-        if DuelRoom.isDedicated and not dedicatedPair(players) then
+        if DuelRoom.isDedicated and not dedicatedRoster(players) then
             for _, player in ipairs(players) do DuelRoom.returnToFfa(player) end
             transition("WAITING", 0)
         elseif remaining <= 0 then
@@ -514,16 +540,21 @@ local function tick()
             end
         end
         if duel then
-            local a,b=duelParticipants()
-            local function health(p, expectedCharacter)
-                local c=p and p.Character
-                local h=c and c:FindFirstChildOfClass("Humanoid")
-                return DuelRules.healthForBout(expectedCharacter, c,
-                    h and h.Health or 0, h and h.MaxHealth or 100)
+            local health, maximum = {}, {}
+            for index, player in ipairs(duel.players) do
+                local character = player.Character
+                local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+                health[index], maximum[index] = DuelRules.healthForBout(
+                    duel.liveCharacters[index], character,
+                    humanoid and humanoid.Health or 0, humanoid and humanoid.MaxHealth or 100)
             end
-            local ah,am=health(a, duel.liveCharacterA)
-            local bh,bm=health(b, duel.liveCharacterB)
-            local result=DuelRules.boutWinner(ah,am,bh,bm,remaining<=0)
+            local expired = remaining <= 0
+            local result
+            if #duel.players == 4 then
+                result = DuelRules.teamBoutWinner(health, maximum, expired)
+            else
+                result = DuelRules.boutWinner(health[1], maximum[1], health[2], maximum[2], expired)
+            end
             if result then finishDuelBout(result) end
         else
             local standings = currentStandings().standings
@@ -550,7 +581,7 @@ local function tick()
         if DuelRoom.isDedicated then
             if duel and duel.returnStarted then return end
             local rematch = readyPlayers()
-            if rematch and duelPlayersIntact() and dedicatedPair(rematch) then
+            if rematch and duelPlayersIntact() and dedicatedRoster(rematch) then
                 DuelCombatState.clear()
                 duel = nil
                 publishDuelScores()
@@ -618,7 +649,7 @@ function MatchService.start()
     DuelRoom.start()
     local remotes = PrecisionNet.getRemotes(true)
     remotes.SetPracticeRange.OnServerEvent:Connect(setPractice)
-    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation, requestedRound)
+    remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation, requestedRound, teamInvite)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end
         if player.Parent ~= Players or PracticeMode.active(player) then return end
@@ -627,8 +658,8 @@ function MatchService.start()
             -- A delayed vote or cancellation belongs to the results that sent it.
             if phase == "RESULTS" and os.clock() < deadline
                 and requestedRound == round and duel and not duel.returnStarted and duelPlayersIntact()
-                and dedicatedPair(DuelRoom.players())
-                and (duel.aPlayer == player or duel.bPlayer == player) then
+                and dedicatedRoster(DuelRoom.players())
+                and table.find(duel.players, player) then
                 player:SetAttribute("IronYardDuelReady", enabled)
             end
         elseif DuelRoom.isLocal then
@@ -636,7 +667,7 @@ function MatchService.start()
                 (duel ~= nil and phase ~= "RESULTS")) then return end
             player:SetAttribute("IronYardDuelReady", enabled)
         else
-            DuelRoom.request(player, enabled, target, invitation)
+            DuelRoom.request(player, enabled, target, invitation, teamInvite)
         end
     end)
     remotes.ReturnToFfa.OnServerEvent:Connect(function(player, requestedPhase, requestedRound)

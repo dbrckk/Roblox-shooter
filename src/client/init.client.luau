@@ -120,11 +120,19 @@ local function applyMenuMouseState(isOpen)
         or playerGui:GetAttribute("IronYardDuelMenuOpen") == true
         or (workspace:GetAttribute("IronYardDedicatedDuel")
             and workspace:GetAttribute("NeonMatchPhase") ~= "LIVE")
+    if playerGui:GetAttribute("IronYardSpectating") then
+        player.CameraMode = Enum.CameraMode.Classic
+        player.CameraMaxZoomDistance = 9
+        player.CameraMinZoomDistance = 9
+    else
+        player.CameraMinZoomDistance = 0.5
+        player.CameraMaxZoomDistance = 0.5
+    end
     if needsPointer then
 		player.CameraMode = Enum.CameraMode.Classic
 		UserInputService.MouseIconEnabled = true
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-	else
+	elseif not playerGui:GetAttribute("IronYardSpectating") then
 		player.CameraMode = Enum.CameraMode.LockFirstPerson
 		UserInputService.MouseIconEnabled = false
 		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
@@ -171,6 +179,7 @@ end
 local function combatInputBlocked()
     return GuiService.MenuIsOpen or hud:isSettingsOpen()
         or playerGui:GetAttribute("IronYardDuelMenuOpen") == true
+        or playerGui:GetAttribute("IronYardSpectating") == true
 end
 
 local function getCharacterParts()
@@ -894,7 +903,14 @@ local function fireWeapon(weaponId)
     if workspace:GetAttribute("IronYardMatchMode") == "DUEL" then
         local a = workspace:GetAttribute("IronYardDuelPlayerA")
         local b = workspace:GetAttribute("IronYardDuelPlayerB")
-        if player.UserId ~= a and player.UserId ~= b then return end
+        if workspace:GetAttribute("IronYardDuelSize") == 4 then
+            local character = player.Character
+            local a2 = workspace:GetAttribute("IronYardDuelPlayerA2")
+            local b2 = workspace:GetAttribute("IronYardDuelPlayerB2")
+            if not character or character:GetAttribute("IronYardLiveDuelEpoch") ~= fireEpoch
+                or (player.UserId ~= a and player.UserId ~= b and player.UserId ~= a2 and player.UserId ~= b2)
+                then return end
+        elseif player.UserId ~= a and player.UserId ~= b then return end
     end
 
 	local now = os.clock()
@@ -1595,13 +1611,15 @@ end)
 
 -- A new round resets the authoritative aim timer. Reannounce held aim once.
 local function syncDuelMenuInput()
-    if playerGui:GetAttribute("IronYardDuelMenuOpen") and clearHeldCombatInput then
+    if (playerGui:GetAttribute("IronYardDuelMenuOpen") or playerGui:GetAttribute("IronYardSpectating"))
+        and clearHeldCombatInput then
         clearHeldCombatInput()
     end
     applyMenuMouseState(hud:isSettingsOpen())
     if updateTouchVisibility then updateTouchVisibility() end
 end
 playerGui:GetAttributeChangedSignal("IronYardDuelMenuOpen"):Connect(syncDuelMenuInput)
+playerGui:GetAttributeChangedSignal("IronYardSpectating"):Connect(syncDuelMenuInput)
 workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(syncDuelMenuInput)
 player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
     clearHeldCombatInput()

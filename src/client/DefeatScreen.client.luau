@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local DefeatPresentation = require(ReplicatedStorage:WaitForChild("Shared")
     :WaitForChild("DefeatPresentation"))
@@ -16,7 +17,7 @@ gui.Name = "IronYardDefeatScreen"
 gui.DisplayOrder = 26 -- Official RoundResults appears above at 30.
 gui.IgnoreGuiInset = false
 gui.ResetOnSpawn = false
-gui.Parent = player:WaitForChild("PlayerGui")
+gui.Parent = playerGui
 
 local shade = Instance.new("Frame")
 shade.Name = "DefeatShade"
@@ -89,7 +90,9 @@ local entranceTween = nil
 local function update()
     local phase = Workspace:GetAttribute("NeonMatchPhase")
     local mode = Workspace:GetAttribute("IronYardMatchMode")
-    local show = dead and activeCharacter == player.Character and not PracticeMode.active(player)
+    local teamSide = Workspace:GetAttribute("IronYardDuelSize") == 4
+        and DuelReadout.sideIn(Workspace, player.UserId)
+    local show = not playerGui:GetAttribute("IronYardSpectating") and dead and activeCharacter == player.Character and not PracticeMode.active(player)
         and (phase == "LIVE" or (mode == "DUEL" and phase == "DUEL_BREAK"))
     shade.Visible = show
     if not show then return end
@@ -111,10 +114,10 @@ local function update()
     local stamp = activeCharacter:GetAttribute("IronYardDefeatAt")
     local startedAt = typeof(stamp) == "number" and stamp > 0 and stamp or diedAt
     local elapsed = startedAt and math.max(0, Workspace:GetServerTimeNow() - startedAt) or 0
-    local verdict = DuelReadout.boutLabel(
-        Workspace:GetAttribute("IronYardDuelLastResult"),
-        player.UserId, Workspace:GetAttribute("IronYardDuelPlayerA"),
-        Workspace:GetAttribute("IronYardDuelPlayerB"))
+    local a = Workspace:GetAttribute("IronYardDuelPlayerA")
+    local b = Workspace:GetAttribute("IronYardDuelPlayerB")
+    local verdict = DuelReadout.boutLabel(Workspace:GetAttribute("IronYardDuelLastResult"),
+        teamSide == "A" and a or teamSide == "B" and b or player.UserId, a, b)
     local heading, countdownText, hintText = DefeatPresentation.labels(
         mode, phase, Workspace:GetAttribute("NeonMatchTimeLeft"),
         Players.RespawnTime - elapsed, verdict)

@@ -162,7 +162,7 @@ menu.SelectionBehaviorLeft = Enum.SelectionBehavior.Stop
 menu.SelectionBehaviorRight = Enum.SelectionBehavior.Stop
 menu.Parent = gui
 local menuLimit = Instance.new("UISizeConstraint")
-menuLimit.MaxSize = Vector2.new(360, 310)
+menuLimit.MaxSize = Vector2.new(360, 350)
 menuLimit.Parent = menu
 local menuCorner = Instance.new("UICorner")
 menuCorner.CornerRadius = UDim.new(0, 12)
@@ -182,7 +182,9 @@ local close = duelButton(menu, "Close", "×", UDim2.fromOffset(35, 32),
     UDim2.new(1, -44, 0, 7))
 close.Modal = true
 local search = duelButton(menu, "Search", "FIND OPPONENT",
-    UDim2.new(1, -24, 0, 38), UDim2.fromOffset(12, 47))
+    UDim2.new(1, -100, 0, 38), UDim2.fromOffset(12, 47))
+local formatSwitch = duelButton(menu, "DuelFormat", "1v1  ▾",
+    UDim2.fromOffset(68, 38), UDim2.new(1, -80, 0, 47))
 local invite = duelButton(menu, "AcceptInvite", "",
     UDim2.new(1, -124, 0, 38), UDim2.fromOffset(12, 91))
 local decline = duelButton(menu, "DeclineInvite", "DECLINE",
@@ -217,7 +219,11 @@ emptyRoster.Text = "No players available to invite in this server."
 emptyRoster.Visible = false
 emptyRoster.Parent = menu
 
+local selectedTeamFormat = false
 local states = {
+    TEAM_SEARCHING = "LOOKING FOR ANOTHER TEAM",
+    TEAM_CANCELLED = "TEAMMATE CANCELLED THE SEARCH",
+    TEAM_PARTNER_LEFT = "TEAMMATE LEFT THE SERVER",
     SEARCHING = "LOOKING FOR A 1v1",
     INVITED = "WAITING FOR INVITE RESPONSE",
     CONNECTING = "CONNECTING TO DUEL…",
@@ -253,14 +259,15 @@ local function syncMenuSelection(preferInvite)
     end
     if ownsSelection and selected.Visible and selected.Interactable and selected.Selectable then return end
     GuiService.SelectedObject = preferInvite and invite.Visible and invite.Interactable and invite
-        or (search.Interactable and search or close)
+        or (search.Interactable and search or formatSwitch.Visible and formatSwitch.Interactable and formatSwitch or close)
 end
 
 local function updateQuickCancel()
     quickCancel.Visible = duelToggle.Visible and not menu.Visible
         and not requestPending
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
-        and player:GetAttribute("IronYardDuelTravel") == "SEARCHING"
+        and (player:GetAttribute("IronYardDuelTravel") == "SEARCHING"
+            or player:GetAttribute("IronYardDuelTravel") == "TEAM_SEARCHING")
         and player:GetAttribute("IronYardDuelReady") == true
 end
 
@@ -293,9 +300,10 @@ local function refreshInviteRows()
         local blocked = remaining > 0
         local seconds = math.ceil(remaining)
         local text = blocked and string.format("WAIT %ds  ·  %s", seconds, row.name)
-            or ("INVITE  " .. row.name)
+            or ((selectedTeamFormat and "TEAM UP  " or "INVITE  ") .. row.name)
         if row.button.Text ~= text then row.button.Text = text end
         local available = not blocked and not requestPending
+            and player:GetAttribute("IronYardDuelTravel") ~= "TEAM_SEARCHING"
         row.button.Interactable = available
         row.button.Selectable = available
         row.button.AutoButtonColor = available
@@ -335,7 +343,7 @@ local function canInvite(other)
     local travel = other:GetAttribute("IronYardDuelTravel")
     return other.Parent == Players and other ~= player and not PracticeMode.active(other)
         and not Workspace:GetAttribute("IronYardDuelLocal")
-        and travel ~= "CONNECTING" and travel ~= "RETURNING"
+        and travel ~= "CONNECTING" and travel ~= "RETURNING" and travel ~= "TEAM_SEARCHING"
 end
 
 local function syncInviteRow(other)
@@ -354,7 +362,7 @@ local function syncInviteRow(other)
         if not menu.Visible or requestPending or inviteRows[other.UserId] ~= row or not button.Interactable
             or not canInvite(other) then return end
         readyRequest = nil
-        remotes.SetDuelReady:FireServer(true, other.UserId)
+        remotes.SetDuelReady:FireServer(true, other.UserId, nil, nil, selectedTeamFormat or nil)
         setMenu(false)
     end)
     return true
@@ -392,10 +400,11 @@ local function duelLabel()
     returnRound = returnAvailable and Workspace:GetAttribute("NeonMatchRound") or nil
     local shown = (canQueue or returnAvailable)
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
-    local searching = canQueue and state == "SEARCHING" and ready
+    local teamSearching = state == "TEAM_SEARCHING"
+    local searching = canQueue and (state == "SEARCHING" or teamSearching) and ready
     local invited = canQueue and state == "INVITED" and ready
     local now = (shown and canQueue or readyRequest ~= nil) and Workspace:GetServerTimeNow() or 0
-    local incoming, incomingId, inviteExpiry, inviteSeconds
+    local incoming, incomingId, inviteExpiry, inviteSeconds, teamIncoming
     local nextRefresh = math.huge
     local busy = state == "CONNECTING"
     local wasPending = requestPending
@@ -422,6 +431,10 @@ local function duelLabel()
     end
     if shown and canQueue and not busy and type(invitation) == "string" then
         local sender, expiryMillis = invitation:match("^(%d+):%d+:(%d+)$")
+        if not sender then
+            sender, expiryMillis = invitation:match("^(%d+):%d+:(%d+):2$")
+            teamIncoming = sender ~= nil
+        end
         if sender then
             incomingId = tonumber(sender)
             inviteExpiry = tonumber(expiryMillis) / 1000
@@ -447,10 +460,14 @@ local function duelLabel()
             nextRefresh = math.min(nextRefresh, seconds + 1 - elapsed)
         end
     end
-    local outgoingSeconds, outgoingRecipient
+    local outgoingSeconds, outgoingRecipient, teamOutgoing
     local outgoing = player:GetAttribute(OUTGOING_INVITE_ATTRIBUTE)
     if invited and shown and type(outgoing) == "string" then
         local recipient, expiryMillis = outgoing:match("^(%d+):(%d+)$")
+        if not recipient then
+            recipient, expiryMillis = outgoing:match("^(%d+):(%d+):2$")
+            teamOutgoing = recipient ~= nil
+        end
         if recipient then
             local remaining = tonumber(expiryMillis) / 1000 - now
             if remaining > 0 then
@@ -509,6 +526,15 @@ local function duelLabel()
             duelToggle.Text = "R3\n1v1"
         end
     end
+    if not returnAvailable and not busy then
+        if teamSearching then
+            duelToggle.Text = UserInputService.TouchEnabled and "2v2" or "2v2 · SEARCHING"
+        elseif (incoming and teamIncoming) or teamOutgoing then
+            duelToggle.Text = UserInputService.TouchEnabled and "2v2 !" or "2v2 · INVITE"
+        elseif not ready and not incoming and not opponentLeft and state ~= "FAILED" then
+            duelToggle.Text = controller and "R3 · DUELS" or "DUELS"
+        end
+    end
     if requestPending then
         local action = readyRequest.invitation and (readyRequest.enabled and "ACCEPTING" or "DECLINING")
             or (readyRequest.enabled and "SENDING" or "CANCELLING")
@@ -522,16 +548,21 @@ local function duelLabel()
     elseif outgoingSeconds then
         duelToggle.Text ..= string.format("\n%ds", outgoingSeconds)
     end
-    local currentStatus = outgoingSeconds and string.format("%ds LEFT  ·  %s", outgoingSeconds,
-        outgoingRecipient and outgoingRecipient.DisplayName or "INVITE SENT")
-        or (elapsedText and ("1v1 SEARCH  ·  " .. elapsedText))
-        or (states[state] or "1v1 DUEL")
+    local currentStatus = outgoingSeconds and string.format("%s · %ds · %s",
+        teamOutgoing and "2v2 INVITE" or "1v1 INVITE", outgoingSeconds,
+        outgoingRecipient and outgoingRecipient.DisplayName or "SENT")
+        or (elapsedText and ((teamSearching and "2v2 SEARCH  ·  " or "1v1 SEARCH  ·  ") .. elapsedText))
+        or (states[state] or (selectedTeamFormat and "2v2 · INVITE A TEAMMATE" or "1v1 DUEL"))
     status.Text = requestPending and "WAITING FOR SERVER"
         or (readyRequest and "NO CONFIRMATION · TRY AGAIN" or currentStatus)
     local replying = requestPending and readyRequest.invitation ~= nil
     search.Text = requestPending and not replying and (readyRequest.enabled and "SENDING REQUEST…" or "CANCELLING…")
-        or (ready and "CANCEL REQUEST" or "FIND OPPONENT")
-    search.Interactable = not busy and not requestPending
+        or (ready and "CANCEL REQUEST" or selectedTeamFormat and "PICK A TEAMMATE" or "FIND OPPONENT")
+    search.Interactable = not busy and not requestPending and (ready or not selectedTeamFormat)
+    formatSwitch.Visible = not Workspace:GetAttribute("IronYardDuelLocal")
+    formatSwitch.Interactable = not ready and not busy and not requestPending
+    formatSwitch.Selectable = formatSwitch.Interactable and formatSwitch.Visible
+    formatSwitch.Text = selectedTeamFormat and "2v2  ▾" or "1v1  ▾"
     search.Selectable = search.Interactable
     invite.Visible = incoming ~= nil
     decline.Visible = invite.Visible
@@ -540,7 +571,8 @@ local function duelLabel()
     invite.Selectable = invite.Interactable and invite.Visible
     decline.Selectable = decline.Interactable and decline.Visible
     invite.Text = replying and readyRequest.enabled and "ACCEPTING…"
-        or (incoming and string.format("%ds · ACCEPT %s", inviteSeconds, incoming.DisplayName) or "")
+        or (incoming and string.format("%ds · %s %s", inviteSeconds,
+            teamIncoming and "TEAM UP WITH" or "ACCEPT", incoming.DisplayName) or "")
     decline.Text = replying and not readyRequest.enabled and "DECLINING…" or "DECLINE"
     displayedInvitation = invite.Visible and invitation or nil
     displayedInviterId = invite.Visible and incomingId or nil
@@ -551,7 +583,7 @@ local function duelLabel()
     roster.Size = UDim2.new(1, -24, 1, -top - 8)
     emptyRoster.Position = roster.Position
     updateQuickCancel()
-    if wasPending ~= requestPending then refreshInviteRows() end
+    if wasPending ~= requestPending or menu.Visible then refreshInviteRows() end
     syncMenuSelection(false)
     if nextRefresh < math.huge then
         duelClockTask = task.delay(math.max(0.02, nextRefresh), function()
@@ -596,6 +628,11 @@ quickCancel.Activated:Connect(function()
     if quickCancel.Visible then sendReadyRequest(false) end
 end)
 close.Activated:Connect(function() setMenu(false) end)
+formatSwitch.Activated:Connect(function()
+    if not menu.Visible or not formatSwitch.Interactable then return end
+    selectedTeamFormat = not selectedTeamFormat
+    duelLabel()
+end)
 search.Activated:Connect(function()
     if not menu.Visible or not search.Interactable then return end
     local start = player:GetAttribute("IronYardDuelReady") ~= true
@@ -684,11 +721,14 @@ local function update()
     local duelScoreB = Workspace:GetAttribute("IronYardDuelScoreB") or 0
     local duelAId = Workspace:GetAttribute("IronYardDuelPlayerA")
     local duelBId = Workspace:GetAttribute("IronYardDuelPlayerB")
-    local myWins, rivalWins = DuelReadout.scores(player.UserId,
+    local teamDuel = Workspace:GetAttribute("IronYardDuelSize") == 4
+    local side = teamDuel and DuelReadout.sideIn(Workspace, player.UserId)
+    local scoreReaderId = side == "A" and duelAId or side == "B" and duelBId or player.UserId
+    local myWins, rivalWins = DuelReadout.scores(scoreReaderId,
         duelAId, duelBId, duelScoreA, duelScoreB)
     local lastDuelResult = Workspace:GetAttribute("IronYardDuelLastResult")
     local boutLabel = DuelReadout.boutLabel(lastDuelResult,
-        player.UserId, duelAId, duelBId)
+        scoreReaderId, duelAId, duelBId)
     local kills = eliminations and eliminations.Value or 0
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
@@ -697,11 +737,14 @@ local function update()
         headerText = "IRON YARD  /  PRACTICE RANGE"
         detailText = "TRY ALL 5 WEAPONS  ·  SETTINGS TO EXIT"
     elseif matchMode == "DUEL" and phase ~= "COUNTDOWN" and phase ~= "WAITING" then
-        local score = myWins and string.format("YOU %d : %d RIVAL", myWins, rivalWins)
+        local score = myWins and string.format(teamDuel and "TEAM %d : %d RIVALS" or "YOU %d : %d RIVAL",
+            myWins, rivalWins)
             or string.format("A %d : %d B", duelScoreA, duelScoreB)
         if phase == "LIVE" then
             headerText = string.format("%s  |  %d · %s", arenaTitle, duelBout, clock)
-            detailText = "FIRST TO 5   /   " .. score
+            local spectating = playerGui:GetAttribute("IronYardSpectating")
+            detailText = spectating and ("SPECTATING TEAMMATE   /   " .. score)
+                or ("FIRST TO 5   /   " .. score)
         elseif phase == "DUEL_PREP" then
             headerText = string.format("%s  /  %ds   ·   %s",
                 arenaTitle, math.clamp(seconds, 1, 3), score)
@@ -726,8 +769,8 @@ local function update()
             elseif travel == "RETURNING" then
                 detailText = states.RETURNING
             else
-                detailText = seconds > 0 and string.format("WAITING FOR OPPONENT  /  %ds", seconds)
-                    or "WAITING FOR OPPONENT"
+                local waiting = teamDuel and "WAITING FOR ALL FOUR" or "WAITING FOR OPPONENT"
+                detailText = seconds > 0 and string.format("%s  /  %ds", waiting, seconds) or waiting
             end
         else
             detailText = "WAITING FOR OPERATORS"
@@ -737,7 +780,7 @@ local function update()
         local localDuel = Workspace:GetAttribute("IronYardDuelLocal")
             and readyCount == 2 and #Players:GetPlayers() == 2
         detailText = (Workspace:GetAttribute("IronYardDedicatedDuel") or localDuel)
-            and ("1v1 DUEL NEXT  /  " .. seconds .. "s")
+            and ((teamDuel and "2v2 NEXT  /  " or "1v1 DUEL NEXT  /  ") .. seconds .. "s")
             or string.format("FIRST TO %d ELIMINATIONS   /   %ds", target, seconds)
     elseif phase == "LIVE" then
         headerText = string.format("ROUND %d  |  %s", count, clock)
@@ -795,6 +838,7 @@ for _, name in ipairs({
     "IronYardMatchMode", "IronYardDuelReadyCount", "IronYardDedicatedDuel", "IronYardDuelLocal",
     "IronYardDuelBout", "IronYardDuelScoreA", "IronYardDuelScoreB",
     "IronYardDuelPlayerA", "IronYardDuelPlayerB", "IronYardDuelLastResult", "IronYardDuelArena",
+    "IronYardDuelPlayerA2", "IronYardDuelPlayerB2", "IronYardDuelSize",
 }) do
     Workspace:GetAttributeChangedSignal(name):Connect(function()
         update()
@@ -810,6 +854,7 @@ end
 player.CharacterAdded:Connect(bindDuelPad)
 player.CharacterRemoving:Connect(function() bindDuelPad(nil) end)
 player:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(update)
+playerGui:GetAttributeChangedSignal("IronYardSpectating"):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
     if PracticeMode.active(player) then setMenu(false) end
     duelLabel()

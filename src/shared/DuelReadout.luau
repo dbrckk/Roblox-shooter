@@ -10,6 +10,15 @@ local function score(n)
         or n % 1 ~= 0 then return nil end
     return n
 end
+function Readout.sideIn(world, userId)
+    if not validId(userId) then return nil end
+    if userId == world:GetAttribute("IronYardDuelPlayerA")
+        or userId == world:GetAttribute("IronYardDuelPlayerA2") then return "A" end
+    if userId == world:GetAttribute("IronYardDuelPlayerB")
+        or userId == world:GetAttribute("IronYardDuelPlayerB2") then return "B" end
+    return nil
+end
+
 function Readout.scores(userId, aId, bId, aWins, bWins)
     if not validId(userId) or not validId(aId) or not validId(bId)
         or aId == bId then return nil end

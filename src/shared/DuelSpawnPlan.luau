@@ -93,6 +93,25 @@ function Plan.select(clear, bout, arena)
 end
 
 
+-- Each team has two distinct pads on the same end of the map. Swap ends
+-- in the next bout, then rotate to the next clear layout.
+local yardTeams = {{1,4,5,8}, {3,2,7,6}, {1,3,5,7}}
+local sortingTeams = {{1,2,3,4}, {3,4,5,6}, {1,2,5,6}}
+
+function Plan.selectTeams(clear, bout, arena)
+    local layouts = arena == Plan.SORTING and sortingTeams or yardTeams
+    local start = math.floor((bout - 1) / 2)
+    for offset = 0, #layouts - 1 do
+        local layout = layouts[(start + offset) % #layouts + 1]
+        local a, b, c, d = table.unpack(layout)
+        if clear[a] and clear[b] and clear[c] and clear[d] then
+            if bout % 2 == 0 then return {b, a, d, c} end
+            return {a, b, c, d}
+        end
+    end
+    return nil
+end
+
 -- Validate both ORIGINAL Roblox Player objects and character generations
 -- immediately before an opposite-pad commit. A respawned avatar or missing
 -- rig invalidates the entire pair, never half-spawns one competitor.
