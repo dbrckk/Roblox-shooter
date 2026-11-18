@@ -126,11 +126,13 @@ assert "self:_pulseDamage(self.previousHealth - health)" in controller, (
 camera_feel = client.split("local function updateCameraFeel(deltaTime)", 1)[1].split(
     "-- One automatic-fire task", 1
 )[0]
+assert "followingPlayer and not GuiService.ReducedMotionEnabled" in camera_feel
 reduced_camera, standard_camera = camera_feel.split(
-    "if GuiService.ReducedMotionEnabled then", 1
-)[1].split("local _, humanoid = getCharacterParts()", 1)
-for needle in ("cameraRoll = 0", "if not scoped and camera.FieldOfView ~= baseFieldOfView then",
-               "camera.FieldOfView = baseFieldOfView", "return"):
+    "\tlocal sliding = os.clock() < localSlidingUntil", 1
+)
+for needle in ("cameraRoll = 0", "cameraMotion.descentSpeed = 0",
+               "if not motionHumanoid then", "humanoid.CameraOffset = STANDING_CAMERA_OFFSET",
+               "followingPlayer and not scoped", "camera.FieldOfView = baseFieldOfView", "return"):
     assert needle in reduced_camera, f"Reduced-motion camera path missing: {needle}"
 assert "camera.CFrame *=" not in reduced_camera
 assert "camera.CFrame *=" in standard_camera and "baseFieldOfView + fovBonus" in standard_camera
