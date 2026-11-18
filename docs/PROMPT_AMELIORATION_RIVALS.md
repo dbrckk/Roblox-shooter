@@ -52,7 +52,7 @@ Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients R
 
 **Lot 3 publié en version 99.** L’AR‑24 distingue le premier tir après 380 ms de pause des tirs suivants. Le réticule peut réagir dès l’image suivante, et l’inclinaison du modèle ainsi que le volume local sont atténués en rafale. Comparer en jeu le tir isolé et la rafale à l’arrêt, en déplacement et près d’une couverture. Les confirmations de touche proviennent toujours du serveur. [Publication de la version 99](https://github.com/dbrckk/Roblox-shooter/actions/runs/44289437185)
 
-**Avancement du lot 4.** Le client répartit les mises à jour du décor PBR sur plusieurs images et lit le dernier profil graphique au moment d’appliquer chaque variante. En simulation, un lot de 144 surfaces passe de 144 applications immédiates à un maximum de 12 par image sur mobile. Trois événements de matériau consécutifs passent de 432 recherches de variante à 36. Vérifier dans `PERF` la couverture des matériaux et les temps d’image sur Android, pendant une traversée puis après une bascule ECO/BALANCED/QUALITY.
+**Lot 4 publié en version 100.** Le client répartit les mises à jour du décor PBR sur plusieurs images et lit le dernier profil graphique au moment d’appliquer chaque variante. En simulation, un lot de 144 surfaces passe de 144 applications immédiates à un maximum de 12 par image sur mobile. Trois événements de matériau consécutifs passent de 432 recherches de variante à 36. Vérifier dans `PERF` la couverture des matériaux et les temps d’image sur Android, pendant une traversée puis après une bascule ECO/BALANCED/QUALITY. [Publication de la version 100](https://github.com/dbrckk/Roblox-shooter/actions/runs/44291604676)
 
 ## Première application
 
