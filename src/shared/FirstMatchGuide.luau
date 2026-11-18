@@ -4,12 +4,12 @@ local Guide = {}
 local ACTION_LABELS = {
     FIRE = "FIRST ENGAGEMENT",
     RELOAD = "RELOAD FROM COVER",
-    DUEL = "TRY A 1V1 DUEL",
+    DUEL = "CHOOSE 1V1 OR 2V2",
 }
 local CONTROLS = {
-    keyboard = { FIRE = "LEFT CLICK TO FIRE", RELOAD = "PRESS R", DUEL = "PRESS V FOR 1V1" },
-    touch = { FIRE = "TAP FIRE TO SHOOT", RELOAD = "TAP RLD", DUEL = "TAP 1V1" },
-    gamepad = { FIRE = "PRESS RT TO FIRE", RELOAD = "PRESS X", DUEL = "PRESS RIGHT STICK [R3]" },
+    keyboard = { FIRE = "LEFT CLICK TO FIRE", RELOAD = "PRESS R", DUEL = "PRESS V FOR DUELS" },
+    touch = { FIRE = "TAP FIRE TO SHOOT", RELOAD = "TAP RLD", DUEL = "TAP DUELS" },
+    gamepad = { FIRE = "PRESS RT TO FIRE", RELOAD = "PRESS X", DUEL = "PRESS R3 FOR DUELS" },
 }
 
 function Guide.objective(limit)
