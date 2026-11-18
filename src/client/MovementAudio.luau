@@ -26,10 +26,20 @@ local SLIDES = {
     GLASS = { id = "rbxassetid://9113823112", volume = 0.24, high = -3 },
 }
 
-local function createVoice(name)
+local SHOT_GAIN = {
+    AssaultRifle = 0.58,
+    Pistol = 0.73,
+    Shotgun = 0.43,
+    Sniper = 0.40,
+}
+local SHOT_HOLD_SECONDS = 0.045
+local SHOT_RELEASE_SECONDS = 0.20
+
+local function createVoice(name, group)
     local sound = Instance.new("Sound")
     sound.Name = name
     sound.Volume = 0
+    sound.SoundGroup = group
     sound.Archivable = false
     local filter = Instance.new("EqualizerSoundEffect")
     filter.Parent = sound
@@ -50,10 +60,16 @@ local function play(voice, contact, volume, speed, high)
 end
 
 function MovementAudio.new()
+    local group = Instance.new("SoundGroup")
+    group.Name = "IronYardLocalMovement"
+    group.Volume = 1
+    group.Archivable = false
+    group.Parent = SoundService
+
     local slideVoices = {}
     local slideSounds = {}
     for surface, profile in pairs(SLIDES) do
-        local voice = createVoice("IronYardSlide")
+        local voice = createVoice("IronYardSlide", group)
         voice.sound.SoundId = profile.id
         voice.filter.HighGain = profile.high
         slideVoices[surface] = voice
@@ -65,13 +81,28 @@ function MovementAudio.new()
     end)
 
     return setmetatable({
-        stepVoices = { createVoice("IronYardMovementContact"), createVoice("IronYardMovementContact") },
-        landingVoice = createVoice("IronYardMovementContact"),
+        group = group,
+        stepVoices = {
+            createVoice("IronYardMovementContact", group),
+            createVoice("IronYardMovementContact", group),
+        },
+        landingVoice = createVoice("IronYardMovementContact", group),
         slideVoices = slideVoices,
         stepIndex = 0,
         strideProgress = 0.65,
         descentSpeed = 0,
+        shotGain = 1,
+        releaseAt = -math.huge,
     }, MovementAudio)
+end
+
+function MovementAudio:duckForShot(weaponId, now)
+    local gain = SHOT_GAIN[weaponId]
+    if not gain or not self.humanoid then return end
+    -- Keep the current attenuation if a quieter shot arrives mid-recovery.
+    self.shotGain = math.min(self.group.Volume, gain)
+    self.releaseAt = now + SHOT_HOLD_SECONDS
+    self.group.Volume = self.shotGain
 end
 
 function MovementAudio:_updateSlide(floor, speed, remaining, dt)
@@ -109,11 +140,14 @@ function MovementAudio:_updateSlide(floor, speed, remaining, dt)
     end
 end
 
-function MovementAudio:update(humanoid, root, slideRemaining, dt)
+function MovementAudio:update(humanoid, root, slideRemaining, dt, now)
     if self.humanoid ~= humanoid then
         self.humanoid = humanoid
         self.strideProgress = 0.65
         self.descentSpeed = 0
+        self.shotGain = 1
+        self.releaseAt = -math.huge
+        self.group.Volume = 1
         for _, voice in ipairs(self.stepVoices) do
             voice.sound:Stop()
         end
@@ -127,6 +161,13 @@ function MovementAudio:update(humanoid, root, slideRemaining, dt)
         end
     end
     if not humanoid then return end
+
+    if self.group.Volume < 1 and now > self.releaseAt then
+        -- Absolute elapsed time also clears stale attenuation on mobile resume.
+        local t = math.min((now - self.releaseAt) / SHOT_RELEASE_SECONDS, 1)
+        local eased = t * t * (3 - 2 * t)
+        self.group.Volume = self.shotGain + (1 - self.shotGain) * eased
+    end
 
     local floor = humanoid.FloorMaterial
     local velocity = root.AssemblyLinearVelocity
