@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 109 comme base et vérifie le parcours 2v2 avec quatre clients Roblox. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 109](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447)
+2. Prends la version publique 110 comme base et vérifie le nouveau menu DUELS sur Android en paysage. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 110](https://github.com/dbrckk/Roblox-shooter/actions/runs/44345292787)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -20,7 +20,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 | 4 | **Objectifs FFA quotidiens publiés en version 108.** Finir une FFA après une élimination, obtenir cinq éliminations et utiliser trois armes distinctes pour éliminer. Le premier cycle terminé débloque **Shift Lead** dans **SET → COLLECTION**. | La progression s’affiche dans le HUD et les résultats. Simuler les rediffusions de sauvegarde, le changement de jour UTC et la reconnexion. Vérifier ensuite la sauvegarde sur Roblox. |
 | 5 | **Groupes et 2v2 publiés en version 109.** Depuis le FFA, ouvrir **DUELS**, choisir **2v2** et inviter un coéquipier du même serveur. Le binôme rejoint la file après acceptation. Deux binômes sont envoyés dans la même salle réservée. | Les simulations couvrent les invitations, l’arrivée à quatre, les tirs alliés, la revanche et le forfait. Le retour en FFA après une arrivée incomplète et la restauration de la caméra ont aussi été simulés. Vérifier le transfert, la caméra sur Android, la revanche et le retour en FFA avec quatre clients Roblox. Relever le délai de recherche. |
 
-**Suivi du 2v2.** Le joueur confirme que le mode fonctionne en version 109. La prochaine mise à jour affiche 1v1 et 2v2 côte à côte dans **DUELS**. Après acceptation, le 2v2 affiche le coéquipier et le temps écoulé pendant la recherche d’une autre équipe. Le briefing indique les commandes d’accès à **DUELS** au clavier, au tactile et à la manette. Le délai réel de recherche et la lisibilité restent à mesurer sur Android.
+**Suivi du 2v2.** Le joueur confirme que le mode fonctionne en version 109. La version 110 affiche 1v1 et 2v2 côte à côte dans **DUELS**. Après acceptation, le 2v2 affiche le coéquipier et le temps écoulé pendant la recherche d’une autre équipe. Le briefing indique les commandes d’accès à **DUELS** au clavier, au tactile et à la manette. Le délai réel de recherche et la lisibilité restent à mesurer sur Android.
 
 ### Vérifier le tir sur Android
 

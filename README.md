@@ -13,7 +13,9 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 109** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `f2047ef512bddd9dee041a21fe74257bd4fb79fb`. Dans **DUELS → 2v2**, deux binômes du même lobby jouent au premier à cinq. Le coéquipier survivant peut être suivi en spectateur et la revanche demande quatre votes. [Publication de la version 109](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341799070)
+Roblox a confirmé la **version de place 110** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `c013cecf4c68f7f94b25f534b59e09ddfd46ed80`. Le menu **DUELS** affiche **1v1** et **2v2** côte à côte. Pendant la recherche 2v2, il indique le coéquipier et le temps écoulé. [Publication de la version 110](https://github.com/dbrckk/Roblox-shooter/actions/runs/44345292787) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44345166493)
+
+Depuis la version 109, deux binômes du même lobby peuvent jouer au premier à cinq en 2v2. Le joueur éliminé peut suivre son coéquipier survivant et la revanche demande quatre votes. [Publication du 2v2](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447)
 
 Depuis la version 108, le FFA propose trois objectifs quotidiens. Le premier cycle complet débloque **Shift Lead** dans **SET → COLLECTION**. Les objectifs et la finition ont une sauvegarde distincte de la carrière. [Plan de progression](docs/PROMPT_AMELIORATION_RIVALS.md#prochain-cycle-de-progression)
 
