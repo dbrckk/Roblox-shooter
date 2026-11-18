@@ -55,7 +55,8 @@ for needle in (
 
 for needle in (
     'local preset = player:GetAttribute("IronYardTouchSizePreset")',
-    "TouchLayout.compute(viewport.X, viewport.Y, preset)",
+    "TouchLayout.compute(viewport.X, viewport.Y, preset, jumpBounds)",
+    "nativeJumpButton.AbsolutePosition - touchRoot.AbsolutePosition",
     'player:GetAttributeChangedSignal("IronYardTouchSizePreset"):Connect(layoutControls)',
     "TouchLayout.check(viewport.X, viewport.Y, positions)",
     'if not valid then',

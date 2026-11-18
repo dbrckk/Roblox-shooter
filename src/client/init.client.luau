@@ -1158,6 +1158,7 @@ local gamepadJumpHeld = false
 local keyboardJumpHeld = false
 local touchJumpHeld = false
 local updateTouchJump, releaseTouchJump
+local nativeJumpButton, updateTouchLayout
 local primaryFireTaskActive = false
 
 local function beginHeldFire(gamepad, touch)
@@ -1637,7 +1638,8 @@ equipWeapon(currentWeaponId)
 if UserInputService.TouchEnabled then
     -- Give a quick tap time to finish before arming the boost.
     local BOOST_HOLD_SECONDS = 0.18
-    local jumpButton, jumpFrame, jumpGui, jumpConnection
+    local jumpFrame, jumpGui
+    local jumpConnections = {}
     local jumpTouch, jumpHumanoid, jumpPressedAt
 
     releaseTouchJump = function()
@@ -1649,8 +1651,8 @@ if UserInputService.TouchEnabled then
 
     local function jumpAvailable()
         local phase = workspace:GetAttribute("NeonMatchPhase")
-        return jumpButton and jumpButton.Parent == jumpFrame and jumpFrame.Parent == jumpGui
-            and jumpGui.Parent == playerGui and jumpButton.Visible and jumpFrame.Visible and jumpGui.Enabled
+        return nativeJumpButton and nativeJumpButton.Parent == jumpFrame and jumpFrame.Parent == jumpGui
+            and jumpGui.Parent == playerGui and nativeJumpButton.Visible and jumpFrame.Visible and jumpGui.Enabled
             and (phase == "LIVE" or phase == "COUNTDOWN")
             and not GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
     end
@@ -1667,31 +1669,43 @@ if UserInputService.TouchEnabled then
         touchJumpHeld = os.clock() - jumpPressedAt >= BOOST_HOLD_SECONDS
     end
 
+    local function refreshJumpLayout()
+        if updateTouchLayout then task.defer(updateTouchLayout) end
+    end
+
+    local function clearJumpButton()
+        for _, connection in ipairs(jumpConnections) do connection:Disconnect() end
+        table.clear(jumpConnections)
+        nativeJumpButton, jumpFrame, jumpGui = nil, nil, nil
+        releaseTouchJump()
+    end
+
     local function bindJumpButton(candidate)
         if candidate.Name ~= "JumpButton" or not candidate:IsA("GuiButton") then return end
         local frame = candidate.Parent
         local gui = frame and frame.Parent
         if not gui or gui.Parent ~= playerGui or gui.Name ~= "TouchGui" or not gui:IsA("ScreenGui")
             or frame.Name ~= "TouchControlFrame" or not frame:IsA("GuiObject") then return end
-        if jumpConnection then jumpConnection:Disconnect() end
-        releaseTouchJump()
-        jumpButton, jumpFrame, jumpGui = candidate, frame, gui
-        jumpConnection = candidate.InputBegan:Connect(function(input)
-            if candidate ~= jumpButton or jumpTouch or input.UserInputType ~= Enum.UserInputType.Touch
+        clearJumpButton()
+        nativeJumpButton, jumpFrame, jumpGui = candidate, frame, gui
+        jumpConnections[1] = candidate.InputBegan:Connect(function(input)
+            if candidate ~= nativeJumpButton or jumpTouch or input.UserInputType ~= Enum.UserInputType.Touch
                 or input.UserInputState ~= Enum.UserInputState.Begin
                 or combatInputBlocked() or not jumpAvailable() then return end
             local _, humanoid = getCharacterParts()
             if not humanoid or humanoid.Health <= 0 then return end
             jumpTouch, jumpHumanoid, jumpPressedAt = input, humanoid, os.clock()
         end)
+        jumpConnections[2] = candidate:GetPropertyChangedSignal("AbsolutePosition"):Connect(refreshJumpLayout)
+        jumpConnections[3] = candidate:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshJumpLayout)
+        refreshJumpLayout()
     end
 
     playerGui.DescendantAdded:Connect(bindJumpButton)
     playerGui.DescendantRemoving:Connect(function(descendant)
-        if descendant ~= jumpButton then return end
-        jumpConnection:Disconnect()
-        jumpButton, jumpFrame, jumpGui, jumpConnection = nil, nil, nil, nil
-        releaseTouchJump()
+        if descendant ~= nativeJumpButton then return end
+        clearJumpButton()
+        refreshJumpLayout()
     end)
     local nativeGui = playerGui:FindFirstChild("TouchGui")
     local nativeFrame = nativeGui and nativeGui:FindFirstChild("TouchControlFrame")
@@ -1833,7 +1847,13 @@ if UserInputService.TouchEnabled then
         if preset ~= "COMPACT" and preset ~= "STANDARD" and preset ~= "LARGE" then
             preset = "STANDARD"
         end
-        local positions = TouchLayout.compute(viewport.X, viewport.Y, preset)
+        local jumpBounds
+        if nativeJumpButton then
+            local offset = nativeJumpButton.AbsolutePosition - touchRoot.AbsolutePosition
+            local size = nativeJumpButton.AbsoluteSize
+            jumpBounds = { x = offset.X, y = offset.Y, w = size.X, h = size.Y }
+        end
+        local positions = TouchLayout.compute(viewport.X, viewport.Y, preset, jumpBounds)
         local valid, reason = TouchLayout.check(viewport.X, viewport.Y, positions)
         layoutReady = valid
         if not valid then
@@ -1847,7 +1867,9 @@ if UserInputService.TouchEnabled then
         end
         updateTouchVisibility()
     end
+    updateTouchLayout = layoutControls
     touchRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutControls)
+    touchRoot:GetPropertyChangedSignal("AbsolutePosition"):Connect(layoutControls)
     player:GetAttributeChangedSignal("IronYardTouchSizePreset"):Connect(layoutControls)
     task.defer(layoutControls)
 
