@@ -123,7 +123,7 @@ def main():
         "UserInputService.GamepadDisconnected:Connect(releaseControllerInputs)",
         "UserInputService.WindowFocusReleased:Connect(clearHeldCombatInput)",
         "if isOpen and clearHeldCombatInput then clearHeldCombatInput() end",
-        "or gamepadJumpHeld)",
+        "(keyboardJumpHeld or gamepadJumpHeld or touchJumpHeld)",
         "if native and native.Magnitude >= 0.15 then",
         "UserInputService.LastInputTypeChanged:Connect(updateTouchVisibility)",
         "local enabled = playable and not controllerActive",

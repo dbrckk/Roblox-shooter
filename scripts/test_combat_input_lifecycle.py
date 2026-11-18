@@ -19,9 +19,15 @@ fixture = r"""
 local function signal()
     local handlers = {}
     return {
-        Connect = function(_, handler) table.insert(handlers, handler) end,
+        Connect = function(_, handler)
+            local connection = {callback = handler, connected = true}
+            table.insert(handlers, connection)
+            return {Disconnect = function() connection.connected = false end}
+        end,
         fire = function(_, ...)
-            for _, handler in ipairs(handlers) do handler(...) end
+            for _, handler in ipairs(handlers) do
+                if handler.connected then handler.callback(...) end
+            end
         end,
     }
 end
@@ -35,17 +41,37 @@ local function enum()
 end
 
 local Enum = {KeyCode = enum(), UserInputType = enum(), RenderPriority = {Camera = {Value = 1}}}
+Enum.UserInputState = enum()
+local now = 0
+local os = {clock = function() return now end}
 local GuiService = {MenuIsOpen = false, MenuOpened = signal(), MenuClosed = signal()}
 local UserInputService = {
     InputBegan = signal(), InputEnded = signal(), JumpRequest = signal(),
-    WindowFocusReleased = signal(), GamepadDisconnected = signal(),
+    WindowFocusReleased = signal(), GamepadDisconnected = signal(), TouchEnded = signal(),
+    TouchEnabled = true,
 }
+local lastDevice = Enum.UserInputType.Touch
+function UserInputService:GetLastInputType() return lastDevice end
 local physicalSpace = false
 function UserInputService:IsKeyDown() return physicalSpace end
 function UserInputService:GetFocusedTextBox() return nil end
 
 local duelOpen = false
-local playerGui = {GetAttribute = function() return duelOpen end}
+local playerGui = {
+    GetAttribute = function() return duelOpen end,
+    DescendantAdded = signal(), DescendantRemoving = signal(),
+    FindFirstChild = function() return nil end,
+}
+local phase = "LIVE"
+local workspace = {GetAttribute = function() return phase end}
+local nativeGui = {Name = "TouchGui", Parent = playerGui, Enabled = true,
+    IsA = function(_, class) return class == "ScreenGui" end}
+local nativeFrame = {Name = "TouchControlFrame", Parent = nativeGui, Visible = true,
+    IsA = function(_, class) return class == "GuiObject" end}
+local function newJumpButton()
+    return {Name = "JumpButton", Parent = nativeFrame, Visible = true, InputBegan = signal(),
+        IsA = function(_, class) return class == "GuiButton" end}
+end
 local hud = {
     open = false,
     updateCrosshair = function() end,
@@ -82,8 +108,13 @@ local updateTouchVisibility = function() refreshes += 1 end
 local function noop() end
 local applyMenuMouseState, showLocalBody, tryStartWallRun, updateLocalWallRun = noop, noop, noop, noop
 local applyBoostThrust, applyAirControl, applyFallGravity, updateCameraFeel = noop, noop, noop, noop
-local function getCharacterParts() return nil, nil end
-local function isGrounded() return false end
+local humanoid = {Health = 100, MoveDirection = {Magnitude = 0}}
+local grounded = false
+local function getCharacterParts() return nil, humanoid end
+local function isGrounded() return grounded end
+local MovementConfig = {boostFuelMax = 100, boostFuelRegenPerSecond = 76}
+local localBoostFuel = 100
+function hud:setBoostFuel() end
 local render
 local RunService = {BindToRenderStep = function(_, _, _, fn) render = fn end}
 
@@ -150,7 +181,77 @@ duelOpen = true
 UserInputService.JumpRequest:fire()
 press("ButtonR2", "Gamepad1")
 assert(shots == 2 and jumps == 0, "Duel lobby still blocks combat inputs")
-print("IRON YARD menu input lifecycle: mouse, gamepad, touch release and fresh boost passed")
+
+duelOpen = false
+local jump = newJumpButton()
+playerGui.DescendantAdded:fire(jump)
+local function touchJump(button)
+    local input = {UserInputType = Enum.UserInputType.Touch, UserInputState = Enum.UserInputState.Begin}
+    button.InputBegan:fire(input)
+    return input
+end
+local tap = touchJump(jump)
+UserInputService.JumpRequest:fire()
+now += 0.12
+render(0.016)
+UserInputService.TouchEnded:fire(tap)
+assert(jumps == 1 and not boosting, "Brief touch still jumps without boosting")
+local held = touchJump(jump)
+local second = touchJump(jump)
+grounded = true
+now += 0.2
+render(0.016)
+assert(not boosting, "A hold cannot start boost before takeoff")
+grounded = false
+render(0.016)
+UserInputService.TouchEnded:fire(second)
+assert(boosting, "A separate finger cannot release the active jump hold")
+UserInputService.TouchEnded:fire(held)
+assert(not boosting, "The owning finger releases boost immediately")
+
+local function holdJump(button)
+    local input = touchJump(button)
+    now += 0.2
+    render(0.016)
+    assert(boosting, "A fresh hold on an available native button boosts in air")
+    return input
+end
+
+held = holdJump(jump)
+held.UserInputState = Enum.UserInputState.Cancel
+render(0.016)
+assert(not boosting, "Cancelled touch releases boost before the next thrust")
+holdJump(jump)
+openMenu()
+closeMenu()
+render(0.016)
+assert(not boosting, "Menu closure cannot resume an old held touch")
+holdJump(jump)
+lastDevice = Enum.UserInputType.Gamepad1
+render(0.016)
+lastDevice = Enum.UserInputType.Touch
+render(0.016)
+assert(not boosting, "Switching to controller releases the touch hold")
+holdJump(jump)
+phase = "DUEL_PREP"
+render(0.016)
+phase = "LIVE"
+render(0.016)
+assert(not boosting, "A new round cannot inherit a held touch from duel prep")
+holdJump(jump)
+humanoid = {Health = 100, MoveDirection = {Magnitude = 0}}
+render(0.016)
+assert(not boosting, "Replacing the character clears the old hold")
+holdJump(jump)
+playerGui.DescendantRemoving:fire(jump)
+assert(not boosting, "Removing the native button releases its held input")
+local replacement = newJumpButton()
+playerGui.DescendantAdded:fire(replacement)
+holdJump(replacement)
+nativeGui.Enabled = false
+render(0.016)
+assert(not boosting, "Hiding the native touch GUI releases boost")
+print("IRON YARD input lifecycle: keyboard, controller, tap, held jump, cancellation and native button replacement passed")
 """
 
 guard = ""
@@ -160,6 +261,7 @@ chunks = [
     fixture, "local GamepadCombatPolicy = (function()\n" + gamepad + "\nend)()\n", guard,
     section("local mouseFireHeld = false", "local function advanceFeedbackEpoch("),
     section('RunService:BindToRenderStep("IronYardClientCameraFeel"', "\nenforceFirstPerson()"),
+    section("-- Observe the native jump button", "-- IRON YARD / SAFE AREA"),
     checks,
 ]
 with TemporaryDirectory() as directory:

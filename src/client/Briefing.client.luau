@@ -152,7 +152,7 @@ local function onPhaseChanged()
     if phase == "COUNTDOWN" then
         display("IRON YARD   /   PREPARE TO DEPLOY",
             controllerActive() and "RT FIRE • LT AIM • A JUMP"
-                or (UserInputService.TouchEnabled and "MOVE • AIM • TAP FIRE"
+                or (UserInputService.TouchEnabled and "TAP FIRE • HOLD JUMP TO BOOST"
                     or "SPRINT • SLIDE • USE COVER"))
     elseif Guide.shouldPrompt(phase, playedIntro) and not menuOpen() then
         playedIntro = true

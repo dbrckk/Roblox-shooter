@@ -1156,6 +1156,8 @@ local gamepadAimHeld = false
 local gamepadSprintHeld = false
 local gamepadJumpHeld = false
 local keyboardJumpHeld = false
+local touchJumpHeld = false
+local updateTouchJump, releaseTouchJump
 local primaryFireTaskActive = false
 
 local function beginHeldFire(gamepad, touch)
@@ -1202,11 +1204,12 @@ local function releaseControllerInputs()
         gamepadSprintHeld = false
         setSprinting(false)
     end
-    stopBoosting()
+    if not touchJumpHeld then stopBoosting() end
 end
 
 clearHeldCombatInput = function()
     if releaseTouchFire then releaseTouchFire() end
+    if releaseTouchJump then releaseTouchJump() end
     mouseFireHeld = false
     keyboardJumpHeld = false
     releaseControllerInputs()
@@ -1324,7 +1327,7 @@ UserInputService.InputEnded:Connect(function(input)
             setSprinting(false)
         elseif action == "JUMP" then
             gamepadJumpHeld = false
-            stopBoosting()
+            if not touchJumpHeld then stopBoosting() end
         end
         return
     end
@@ -1334,7 +1337,7 @@ UserInputService.InputEnded:Connect(function(input)
 		setScoped(false)
 	elseif input.KeyCode == Enum.KeyCode.Space then
         keyboardJumpHeld = false
-		stopBoosting()
+		if not touchJumpHeld then stopBoosting() end
 	elseif input.KeyCode == Enum.KeyCode.LeftShift or input.KeyCode == Enum.KeyCode.RightShift then
 		setSprinting(false)
 	end
@@ -1594,6 +1597,7 @@ RunService:BindToRenderStep("IronYardClientCameraFeel",
 	end
 
     local blocked = combatInputBlocked()
+    if updateTouchJump then updateTouchJump(blocked) end
 	showLocalBody()
     if not blocked then tryStartWallRun() end
 	updateLocalWallRun()
@@ -1620,7 +1624,7 @@ RunService:BindToRenderStep("IronYardClientCameraFeel",
 			localBoostFuel + MovementConfig.boostFuelRegenPerSecond * deltaTime
 		)
 		hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)
-	elseif (keyboardJumpHeld or gamepadJumpHeld) and not localWallRunning and not blocked then
+	elseif (keyboardJumpHeld or gamepadJumpHeld or touchJumpHeld) and not localWallRunning and not blocked then
 		startBoosting()
 	end
 end)
@@ -1628,6 +1632,76 @@ end)
 enforceFirstPerson()
 hud:setBoostFuel(localBoostFuel / MovementConfig.boostFuelMax)
 equipWeapon(currentWeaponId)
+
+-- Observe the native jump button without taking over Roblox's jump input.
+if UserInputService.TouchEnabled then
+    -- Give a quick tap time to finish before arming the boost.
+    local BOOST_HOLD_SECONDS = 0.18
+    local jumpButton, jumpFrame, jumpGui, jumpConnection
+    local jumpTouch, jumpHumanoid, jumpPressedAt
+
+    releaseTouchJump = function()
+        jumpTouch, jumpHumanoid = nil, nil
+        local wasHeld = touchJumpHeld
+        touchJumpHeld = false
+        if wasHeld and not keyboardJumpHeld and not gamepadJumpHeld then stopBoosting() end
+    end
+
+    local function jumpAvailable()
+        local phase = workspace:GetAttribute("NeonMatchPhase")
+        return jumpButton and jumpButton.Parent == jumpFrame and jumpFrame.Parent == jumpGui
+            and jumpGui.Parent == playerGui and jumpButton.Visible and jumpFrame.Visible and jumpGui.Enabled
+            and (phase == "LIVE" or phase == "COUNTDOWN")
+            and not GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
+    end
+
+    updateTouchJump = function(blocked)
+        if not jumpTouch then return end
+        local _, humanoid = getCharacterParts()
+        if blocked or not jumpAvailable() or humanoid ~= jumpHumanoid or humanoid.Health <= 0
+            or jumpTouch.UserInputState == Enum.UserInputState.End
+            or jumpTouch.UserInputState == Enum.UserInputState.Cancel then
+            releaseTouchJump()
+            return
+        end
+        touchJumpHeld = os.clock() - jumpPressedAt >= BOOST_HOLD_SECONDS
+    end
+
+    local function bindJumpButton(candidate)
+        if candidate.Name ~= "JumpButton" or not candidate:IsA("GuiButton") then return end
+        local frame = candidate.Parent
+        local gui = frame and frame.Parent
+        if not gui or gui.Parent ~= playerGui or gui.Name ~= "TouchGui" or not gui:IsA("ScreenGui")
+            or frame.Name ~= "TouchControlFrame" or not frame:IsA("GuiObject") then return end
+        if jumpConnection then jumpConnection:Disconnect() end
+        releaseTouchJump()
+        jumpButton, jumpFrame, jumpGui = candidate, frame, gui
+        jumpConnection = candidate.InputBegan:Connect(function(input)
+            if candidate ~= jumpButton or jumpTouch or input.UserInputType ~= Enum.UserInputType.Touch
+                or input.UserInputState ~= Enum.UserInputState.Begin
+                or combatInputBlocked() or not jumpAvailable() then return end
+            local _, humanoid = getCharacterParts()
+            if not humanoid or humanoid.Health <= 0 then return end
+            jumpTouch, jumpHumanoid, jumpPressedAt = input, humanoid, os.clock()
+        end)
+    end
+
+    playerGui.DescendantAdded:Connect(bindJumpButton)
+    playerGui.DescendantRemoving:Connect(function(descendant)
+        if descendant ~= jumpButton then return end
+        jumpConnection:Disconnect()
+        jumpButton, jumpFrame, jumpGui, jumpConnection = nil, nil, nil, nil
+        releaseTouchJump()
+    end)
+    local nativeGui = playerGui:FindFirstChild("TouchGui")
+    local nativeFrame = nativeGui and nativeGui:FindFirstChild("TouchControlFrame")
+    local nativeButton = nativeFrame and nativeFrame:FindFirstChild("JumpButton")
+    if nativeButton then bindJumpButton(nativeButton) end
+
+    UserInputService.TouchEnded:Connect(function(input)
+        if input == jumpTouch then releaseTouchJump() end
+    end)
+end
 
 -- IRON YARD / SAFE AREA Android FPS controls: responsive and mutually exclusive
 -- with the full-screen results card. Roblox still owns the native joystick/jump.
