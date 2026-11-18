@@ -105,7 +105,7 @@ local Instance = {new = function()
     }
 end}
 local function connectPlayer(id)
-    local p = {UserId = id, DisplayName = "Player " .. id, Parent = Players}
+    local p = {UserId = id, Name = "Player" .. id, DisplayName = "Player " .. id, Parent = Players}
     local authoritative, replicated = {}, {}
     local client = {}
     function client:GetAttribute(key) return replicated[key] end
@@ -131,20 +131,49 @@ HUD_FIXTURE = r"""
 local function newHud(serverPlayer, player, deliverReturn)
     local upstream = 0.4
     local sent, returns = {}, {}
-    local function activeControl()
-        return {Activated = signal(), Visible = true, Interactable = true, Selectable = true}
+    local function enumGroup()
+        return setmetatable({}, {__index = function(_, key) return key end})
     end
-    local menu, gui = {Visible = false}, {}
-    local search, invite, decline = activeControl(), activeControl(), activeControl()
-    local close, duelToggle, quickCancel = activeControl(), activeControl(), activeControl()
-    local soloTab, teamTab = activeControl(), activeControl()
+    local Enum = setmetatable({}, {__index = enumGroup})
+    local Vector2 = {new = function(x, y) return {X=x, Y=y} end}
+    local UDim = {new = function() end}
     local Color3 = {fromRGB = function() end}
-    local status, roster, emptyRoster = {}, {}, {}
-    local GuiService = {}
-    local UDim2 = {
-        new = function(sx, x, sy, y) return {X = {Scale=sx, Offset=x}, Y = {Scale=sy, Offset=y}} end,
-        fromOffset = function(x, y) return {X = {Offset=x}, Y = {Offset=y}} end,
-    }
+    local GuiService, gui = {}, {}
+    local UDim2 = {}
+    function UDim2.new(sx, x, sy, y)
+        return {X = {Scale=sx, Offset=x}, Y = {Scale=sy, Offset=y}}
+    end
+    function UDim2.fromOffset(x, y) return UDim2.new(0, x, 0, y) end
+    function UDim2.fromScale(x, y) return UDim2.new(x, 0, y, 0) end
+
+    local Instance = {new = function()
+        local control = {Activated = signal(), Visible = true, Interactable = true, Selectable = true}
+        function control:IsDescendantOf(root)
+            local parent = self.Parent
+            while parent do
+                if parent == root then return true end
+                parent = parent.Parent
+            end
+            return false
+        end
+        function control:Destroy() self.Parent = nil end
+        return control
+    end}
+    local serverPlayers = Players
+    local Players = setmetatable({}, {__index = serverPlayers})
+    local views = {}
+    function Players:GetPlayers()
+        local visible = {}
+        for _, other in ipairs(serverPlayers:GetPlayers()) do
+            local view = player
+            if other ~= serverPlayer then
+                view = views[other] or setmetatable({Parent=Players}, {__index=other})
+                views[other] = view
+            end
+            table.insert(visible, view)
+        end
+        return visible
+    end
     local inputType = {Name = "Touch"}
     local UserInputService = {TouchEnabled = true, GetLastInputType = function() return inputType end}
     local GamepadCombatPolicy = {isGamepad = function(name) return name == "Gamepad1" end}
@@ -164,17 +193,20 @@ local function newHud(serverPlayer, player, deliverReturn)
         local deliver = function() Room.request(serverPlayer, args[1], args[2], args[3], args[5]) end
         task.delay(upstream, deliver)
     end}
-    local function refreshInviteRows() end
-    local function updateRoster() end
 """
 
 HUD_ENTRY_POINT = r"""
     serverPlayer.render = duelLabel
     duelLabel()
     return {
-        open = toggleDuel, search = search, invite = invite, decline = decline, status = status, solo = soloTab, teams = teamTab, roster = roster,
+        open = toggleDuel, search = search, invite = invite, decline = decline, status = status,
+        solo = soloTab, teams = teamTab, roster = roster, menu = menu, limit = menuLimit,
         sent = sent, returns = returns, render = duelLabel,
         delay = function(seconds) upstream = seconds end,
+        row = function(id) return inviteRows[id].button end,
+        focus = function(control) GuiService.SelectedObject = control end,
+        selected = function() return GuiService.SelectedObject end,
+        input = function(name) inputType.Name = name; duelLabel() end,
     }
 end
 """
@@ -273,7 +305,15 @@ local d = connectPlayer(4)
 local menu = newHud(c, cr)
 menu.open()
 assert(menu.solo.Visible and menu.teams.Visible and menu.search.Visible)
-assert(210 * 0.9 + menu.roster.Size.Y.Offset >= 36, "Compact viewport needs one whole invite row")
+local function size(axis, parent)
+    return axis.Scale * parent + axis.Offset
+end
+local compactHeight = math.min(size(menu.menu.Size.Y, TouchLayout.MIN_HEIGHT), menu.limit.MaxSize.Y)
+local compactWidth = math.min(size(menu.menu.Size.X, TouchLayout.MIN_WIDTH), menu.limit.MaxSize.X)
+assert(size(menu.roster.Size.Y, compactHeight) >= size(menu.row(1).Size.Y, compactHeight),
+    "Compact viewport needs one whole invite row")
+assert(size(menu.solo.Position.X, compactWidth) + size(menu.solo.Size.X, compactWidth)
+    < size(menu.teams.Position.X, compactWidth), "Duel format controls must not overlap")
 menu.teams.Activated:fire()
 assert(not menu.search.Visible and menu.roster.Visible)
 assert(string.find(menu.status.Text, "INVITE A TEAMMATE", 1, true))
@@ -281,15 +321,22 @@ menu.search.Activated:fire()
 assert(#menu.sent == 0, "2v2 must not start a solo search")
 menu.solo.Activated:fire()
 assert(menu.search.Visible and menu.search.Text == "FIND OPPONENT")
-menu.open()
-
+menu.input("Gamepad1")
+menu.focus(menu.row(1))
 Room.request(a, true, c.UserId, nil, true)
 Room.match()
 advance(0.41)
-menu.open()
+assert(menu.selected() == menu.invite, "Incoming invitation hid the focused row without focusing the reply")
+menu.input("Touch")
+assert(not menu.selected(), "Switching to touch must clear the gamepad focus")
 assert(menu.invite.Visible and menu.invite.Text == "JOIN TEAM" and not menu.roster.Visible)
 assert(menu.status.Text:find("2v2 INVITE", 1, true) and menu.status.Text:find(a.DisplayName, 1, true))
-assert(menu.invite.Position.Y.Offset + 38 <= 210 * 0.9, "Invitation must fit small landscape screens")
+assert(size(menu.invite.Position.Y, compactHeight) + size(menu.invite.Size.Y, compactHeight) <= compactHeight,
+    "Invitation must fit small landscape screens")
+assert(size(menu.invite.Position.X, compactWidth) + size(menu.invite.Size.X, compactWidth)
+    < size(menu.decline.Position.X, compactWidth), "Invitation actions must not overlap")
+assert(size(menu.decline.Position.X, compactWidth) + size(menu.decline.Size.X, compactWidth) <= compactWidth,
+    "Decline action must stay inside the safe panel")
 local token = c:GetAttribute("IronYardDuelInvitation")
 assert(token and token:sub(-2) == ":2")
 Room.request(d, true, a.UserId, token)
@@ -679,12 +726,10 @@ def run(luau):
         'local PracticeMode = require(Shared:WaitForChild("PracticeMode"))': "local PracticeMode = PracticeMode",
     })
     hud = (ROOT / "src/client/MatchHud.client.luau").read_text()
-    hud_sections = (
-        hud[hud.index("local currentTab = "):hud.index("local function refreshInviteRows()")],
-        hud[hud.index("local displayedInvitation"):hud.index("UserInputService.InputBegan:Connect")],
-    )
-    lobby_client = HUD_FIXTURE + "\n".join(hud_sections) + HUD_ENTRY_POINT
-    lobby = SERVER_FIXTURE + mode + queue + room + lobby_client + CHECKS
+    hud_source = hud[hud.index('local function duelButton('):hud.index("UserInputService.InputBegan:Connect")]
+    lobby_client = HUD_FIXTURE + hud_source + HUD_ENTRY_POINT
+    touch_layout = module("TouchLayout", "src/shared/TouchLayout.luau")
+    lobby = SERVER_FIXTURE + mode + queue + room + touch_layout + lobby_client + CHECKS
     results = (ROOT / "src/client/RoundResults.client.luau").read_text()
     rematch_state = results[results.index("local rematchRequest"):results.index("local function syncResultSelection")]
     results_render = """
@@ -704,10 +749,10 @@ def run(luau):
         + DEDICATED_FIXTURE + module("MatchService", "src/server/MatchService.luau")
     )
     dedicated = dedicated_server + RESULTS_FIXTURE + rematch_state + results_render + results_actions + DEDICATED_CHECKS
-    dedicated_with_hud = dedicated_server + lobby_client
+    dedicated_with_hud = dedicated_server + touch_layout + lobby_client
     fixtures = {
         "lobby": lobby,
-        "team-lobby": SERVER_FIXTURE + mode + queue + room + lobby_client + TEAM_LOBBY_CHECKS,
+        "team-lobby": SERVER_FIXTURE + mode + queue + room + touch_layout + lobby_client + TEAM_LOBBY_CHECKS,
         "team-match": dedicated_server.replace("rosters.reserved = {1, 2}", "rosters.reserved = {1, 2, 3, 4}")
         + TEAM_MATCH_CHECKS,
         "dedicated-sorting-first": dedicated,
