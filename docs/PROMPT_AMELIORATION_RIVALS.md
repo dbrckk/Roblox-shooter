@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Utilise la version publique 95 (18 novembre 2026) comme point de départ documenté. Elle inclut le FFA, le 1v1 entre joueurs du même lobby dans une instance réservée, les invitations, la revanche, le retour en FFA, cinq armes et la progression persistante. Le 1v1 est accessible à la manette et la CI couvre les demandes reçues en retard. Le transfert de bout en bout et la fluidité sur appareils réels demandent encore une mesure. [Publication Roblox](https://github.com/dbrckk/Roblox-shooter/actions/runs/44279347422) · [Transitions 1v1](MATCH_TRANSITIONS.md)
+2. Utilise la [validation de la version 97](#validation-de-la-version-97-et-prochains-lots) comme point de départ. Le jeu inclut le FFA, le 1v1 dans une instance réservée, les invitations, la revanche, le retour en FFA, cinq armes et la progression persistante. La CI couvre les demandes de duel reçues en retard et les régressions sur les commandes tactiles. [Transitions 1v1](MATCH_TRANSITIONS.md)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. Appuie-toi sur la feuille de route active pour les détails techniques et la séquence des lots. [Feuille de route V3](ROADMAP_V3_SANS_TEST_ANDROID.md)
 
 ## Ordre des chantiers et critères de livraison
@@ -26,6 +26,27 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 - Utilise la CI pour la logique et l’intégration. Pour le rendu, la latence, la sensation de tir, la téléportation et la persistance, distingue explicitement simulation, essai Studio et vérification Roblox en conditions réelles. Garde les objectifs chiffrés comme objectifs tant qu’ils ne sont pas mesurés.
 - Termine par le résultat visible pour le joueur, la preuve avant/après, les fichiers et la PR, puis les vérifications qui restent. Une fusion sur `main` prépare une version. Une demande distincte de mise à jour déclenche le circuit de publication publique existant avec CI du commit exact.
 - Ajoute une courte entrée de suivi à un changement de priorité ou à la clôture d’un chantier. Au prochain « continue », reprends la première vérification ou amélioration utile qui manque.
+
+## Validation de la version 97 et prochains lots
+
+### Bilan du 18 novembre 2026
+
+- **Publication confirmée.** Roblox a accepté la version de place 97 issue du commit `535ce0ec7ed79d54f23d15161c62379a63f14b3f`. Le workflow a contrôlé le propriétaire, l’univers, la place publique et la CI du commit exact. [Journal de publication](https://github.com/dbrckk/Roblox-shooter/actions/runs/44283980844)
+- **Vérifications reproductibles terminées.** Compilation Luau, 149 commandes de test et de contrôle, et build Rojo réussis sur la source publiée. Les suites incluent les phases FFA et 1v1, les sauvegardes simulées, le combat, les spawns, les bots, les assets et les commandes tactiles. [CI du commit publié](https://github.com/dbrckk/Roblox-shooter/actions/runs/44283884563)
+- **Retour en partie.** Le joueur confirme que le correctif tactile fonctionne. La couverture géométrique des trois tailles de commandes et les séquences de maintien, relâchement et annulation du saut–boost sont vérifiées en simulation.
+- **Mesures encore ouvertes.** Transfert 1v1 avec deux clients, retour en FFA, persistance après reconnexion, FPS et temps d’image Android, rendu et chargement des assets PBR en jeu.
+
+### Ordre de travail
+
+| Priorité | Amélioration | Critère de livraison |
+| --- | --- | --- |
+| 1 | **Fiabiliser le parcours 1v1 public.** Rejouer recherche et invitation, transfert, départ de l’adversaire, revanche et retour en FFA. Réutiliser les délais et reprises de `DuelRoom` pour corriger les défauts observés. | Deux volontaires se retrouvent dans la même instance réservée, un troisième joueur reste en FFA et chaque échec permet de reprendre le jeu. Relever le build dans les résultats. [Scénarios réseau](MATCH_TRANSITIONS.md) |
+| 2 | **Guider la première minute.** Faire évoluer le briefing de `FirstMatchGuide` selon les actions réalisées. Afficher l’objectif, l’action suivante et la touche adaptée au périphérique. | Un nouveau joueur trouve le tir, le rechargement et le 1v1. Les conseils cessent après l’action et restent hors des commandes et des écrans de duel. |
+| 3 | **Polir les sensations de l’AR-24.** Comparer le premier tir et la rafale en mouvement et près d’une couverture. Accorder recul, retour sonore et confirmations de touche à leur événement réel. | Les retours restent lisibles pendant une rafale et près des couvertures. Les vidéos avant/après montrent le même scénario. Les dégâts et la cadence restent contrôlés par le serveur. [Référence de combat](RIVALS_QUALITY_BENCHMARK.md) |
+| 4 | **Améliorer le rendu et la fluidité Android.** Relever avec `PERF` les sources des modèles, les temps d’image et les pics pendant un combat à quatre bots puis une traversée du terminal. Prioriser la silhouette, les repères de trajet ou le pire pic mesuré selon les résultats. | Comparaison ECO/BALANCED/QUALITY sur le même appareil, avec captures des armes, de VANGUARD et des surfaces PBR. Comparer le P95 et le P99 sans modifier les colliders de jeu. [Audit visuel Android](AUDIT_ANDROID_VISUAL_2026-11-13.md) |
+| 5 | **Rendre la progression plus lisible.** Vérifier la sauvegarde et la récupération de l’XP en rejoignant une nouvelle session, puis afficher le prochain déblocage cosmétique dans le parcours de carrière existant. | Les gains restent visibles après reconnexion, une erreur de sauvegarde est identifiable et la récompense est attribuée une seule fois. [Persistance](PROGRESSION_PERSISTENCE.md) |
+
+Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients Roblox, poursuivre avec l’amélioration du briefing et conserver le scénario 1v1 comme vérification en partie.
 
 ## Première application
 

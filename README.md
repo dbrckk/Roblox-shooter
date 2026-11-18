@@ -15,6 +15,8 @@
 
 Roblox a confirmé la **version de place 97** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `535ce0ec7ed79d54f23d15161c62379a63f14b3f`. Sur mobile, le HUD tient compte de la position du bouton de saut Roblox et décale les commandes qui le recouvrent. Un appui bref déclenche le saut habituel, et un maintien de 180 ms permet d’activer le boost en l’air. [Publication de la version 97](https://github.com/dbrckk/Roblox-shooter/actions/runs/44283980844)
 
+Le retour utilisateur confirme le fonctionnement du correctif tactile en partie. Les 149 commandes de test et de contrôle passent sur la source publiée. [Bilan de validation et prochaines améliorations](docs/PROMPT_AMELIORATION_RIVALS.md#validation-de-la-version-97-et-prochains-lots)
+
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
 
@@ -49,7 +51,7 @@ Adaptation du moteur libre [roblox-precision-framework](https://github.com/lukas
 
 ## Publication Roblox DIRECTEMENT PUBLIQUE
 
-Le dépôt comprend un [workflow manuel de publication publique](https://github.com/dbrckk/Roblox-shooter/actions/workflows/publish-roblox-public.yml) qui refuse les univers privés, les mauvais propriétaires, la mauvaise place et tout commit dont la CI n'est pas verte. Aucune publication automatique n'est déclenchée par un push. La destination IRON YARD doit déjà être **publique** dans Roblox Creator Dashboard. Le build affiche son SHA Git sur les résultats de manche pour identifier la version ; un retour arrière est documenté. **La version v57 a bien été publiée sur l’expérience publique** le 13 novembre 2026 (place Roblox version 53, [preuve](https://github.com/dbrckk/Roblox-shooter/actions/runs/43415071087)). Les tests sur appareil et les performances réelles restent à valider. [Guide Android/PC de publication et de rollback](docs/PUBLIC_ROBLOX_PUBLISHING.md).
+Le workflow de publication vérifie le propriétaire, la destination publique et la réussite de la CI pour le commit exact. La mise à jour passe par un commit d’autorisation dédié. L’écran des résultats affiche le SHA Git du build pour identifier la version jouée. [Workflow de publication](https://github.com/dbrckk/Roblox-shooter/actions/workflows/publish-roblox-public.yml) · [Guide de publication et de retour arrière](docs/PUBLIC_ROBLOX_PUBLISHING.md)
 
 ## Construire et jouer
 

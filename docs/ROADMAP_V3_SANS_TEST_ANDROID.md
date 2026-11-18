@@ -7,6 +7,8 @@
 
 > **V3 est la liste active des priorités.** [V2](ROADMAP_V2_PUBLIC.md) et [l'audit du 8 novembre](AUDIT_GLOBAL_2026-11-08.md) sont des références historiques utiles, mais plusieurs de leurs statuts sont périmés. [L'historique technique](ROADMAP.md) n'est pas le backlog actif. Aucun « fait », « FPS améliorés » ou « assets PBR visibles » ne peut être inféré d'un simple build vert.
 
+Le bilan de la version publique 97 du 18 novembre et l’ordre des prochains lots s’appuient sur le retour tactile et sur la CI du build publié. Les actualisations ci-dessous conservent l’état des versions précédentes. [Validation et ordre de travail](PROMPT_AMELIORATION_RIVALS.md#validation-de-la-version-97-et-prochains-lots)
+
 ### Actualisation — PUBLIC v64 à v66 : continuité des manches, IA et morts (14 novembre 2026)
 
 - **v64 :** [PR #105](https://github.com/dbrckk/Roblox-shooter/pull/105) protège la boucle unique de MatchService contre une exception Roblox. Après trois échecs successifs, elle libère les racines de préparation de duel et revient à WAITING, sans attribuer de victoire fictive. Publication [#43570550592](https://github.com/dbrckk/Roblox-shooter/actions/runs/43570550592), place 60.
