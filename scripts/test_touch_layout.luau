@@ -1,5 +1,21 @@
 local Layout = require("../src/shared/TouchLayout")
 
+local function checkNativeJump(w, h, preset)
+    local small = math.min(w, h) <= 500
+    local size = small and 70 or 120
+    local jump = { x = w - (size * 1.5 - 10), y = h - (small and size + 20 or size * 1.75),
+        w = size, h = size }
+    local controls = Layout.compute(w, h, preset, jump)
+    local ok, reason = Layout.check(w, h, controls)
+    assert(ok, string.format("%dx%d %s with native jump: %s", w, h, preset, tostring(reason)))
+    for _, name in ipairs(Layout.NAMES) do
+        local rect = controls[name]
+        assert(rect.x + rect.w <= jump.x or jump.x + jump.w <= rect.x
+            or rect.y + rect.h <= jump.y or jump.y + jump.h <= rect.y,
+            string.format("%dx%d %s: %s overlaps native jump", w, h, preset, name))
+    end
+end
+
 local screens = {
     {260, 210}, {280, 225}, {300, 240}, {300, 260}, {320, 280}, {360, 300}, {400, 800}, {568, 320},
     {640, 360}, {740, 360}, {800, 400}, {915, 412},
@@ -20,6 +36,7 @@ for _, viewport in ipairs(screens) do
             "Utility controls must be below weapon selection")
         assert(layout.Fire.y > layout.Reload.y,
             "Fire must be below utility controls")
+        checkNativeJump(w, h, preset)
         sizes[preset] = layout.Fire.w
     end
     assert(sizes.COMPACT <= sizes.STANDARD and sizes.STANDARD <= sizes.LARGE,
@@ -51,7 +68,8 @@ for w = Layout.MIN_WIDTH, 1200, 13 do
         for _, preset in ipairs(Layout.PRESETS) do
             local valid, reason = Layout.check(w, h, Layout.compute(w, h, preset))
             assert(valid, string.format("%dx%d %s: %s", w, h, preset, tostring(reason)))
+            checkNativeJump(w, h, preset)
         end
     end
 end
-print("IRON YARD touch controls: compact safe-area sweep, menus and overlap checks OK")
+print("IRON YARD touch controls: safe bounds, menus and native jump clearance OK")

@@ -69,7 +69,9 @@ local nativeGui = {Name = "TouchGui", Parent = playerGui, Enabled = true,
 local nativeFrame = {Name = "TouchControlFrame", Parent = nativeGui, Visible = true,
     IsA = function(_, class) return class == "GuiObject" end}
 local function newJumpButton()
+    local properties = {AbsolutePosition = signal(), AbsoluteSize = signal()}
     return {Name = "JumpButton", Parent = nativeFrame, Visible = true, InputBegan = signal(),
+        GetPropertyChangedSignal = function(_, name) return properties[name] end,
         IsA = function(_, class) return class == "GuiButton" end}
 end
 local hud = {
@@ -85,7 +87,8 @@ local weapon = {}
 local WeaponConfig = {get = function() return weapon end}
 local AutomaticFireCadence = {waitSeconds = function() return 0.1 end, isAutomatic = function() return true end}
 local queued = {}
-local task = {spawn = function(fn) table.insert(queued, coroutine.create(fn)) end, wait = coroutine.yield}
+local task = {spawn = function(fn) table.insert(queued, coroutine.create(fn)) end,
+    wait = coroutine.yield, defer = function(fn) fn() end}
 local function advanceFire()
     for i = #queued, 1, -1 do
         local thread = queued[i]
@@ -183,8 +186,13 @@ press("ButtonR2", "Gamepad1")
 assert(shots == 2 and jumps == 0, "Duel lobby still blocks combat inputs")
 
 duelOpen = false
+local layoutChanges = 0
+updateTouchLayout = function() layoutChanges += 1 end
 local jump = newJumpButton()
 playerGui.DescendantAdded:fire(jump)
+jump:GetPropertyChangedSignal("AbsolutePosition"):fire()
+jump:GetPropertyChangedSignal("AbsoluteSize"):fire()
+assert(layoutChanges == 3, "Native button creation, movement and resize each refresh layout")
 local function touchJump(button)
     local input = {UserInputType = Enum.UserInputType.Touch, UserInputState = Enum.UserInputState.Begin}
     button.InputBegan:fire(input)
@@ -245,6 +253,9 @@ assert(not boosting, "Replacing the character clears the old hold")
 holdJump(jump)
 playerGui.DescendantRemoving:fire(jump)
 assert(not boosting, "Removing the native button releases its held input")
+local changesAfterRemoval = layoutChanges
+jump:GetPropertyChangedSignal("AbsoluteSize"):fire()
+assert(layoutChanges == changesAfterRemoval, "A removed native button cannot refresh layout")
 local replacement = newJumpButton()
 playerGui.DescendantAdded:fire(replacement)
 holdJump(replacement)

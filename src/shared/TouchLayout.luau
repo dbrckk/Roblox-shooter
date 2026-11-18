@@ -17,6 +17,11 @@ Layout.NAMES = {
     "AssaultRifle", "Pistol", "Shotgun", "Sniper", "Knife",
     "Sprint", "Slide", "Reload", "Fire", "Aim",
 }
+local WEAPONS = { "AssaultRifle", "Pistol", "Shotgun", "Sniper", "Knife" }
+local ACTIONS = { "Reload", "Slide", "Sprint" }
+local AIM_AND_FIRE = { "Fire", "Aim" }
+local JUMP_CLEARANCE = 6
+
 local function round(n)
     return math.floor(n + 0.5)
 end
@@ -24,7 +29,43 @@ local function box(x, y, w, h)
     return { x = round(x), y = round(y), w = round(w), h = round(h) }
 end
 
-function Layout.compute(width, height, preset)
+local function intersects(a, b)
+    return a.x < b.x + b.w and b.x < a.x + a.w
+        and a.y < b.y + b.h and b.y < a.y + a.h
+end
+
+local function clearJumpButton(buttons, row, jump, gap)
+    local overlaps = false
+    local totalWidth = 0
+    local leftLimit = 0
+    for _, name in ipairs(row) do
+        local rect = buttons[name]
+        overlaps = overlaps or intersects(rect, jump)
+        totalWidth += rect.w
+        for _, menu in pairs(Layout.MENU_BUTTONS) do
+            if rect.y < menu.y + menu.h and menu.y < rect.y + rect.h then
+                leftLimit = math.max(leftLimit, menu.x + menu.w + gap)
+            end
+        end
+    end
+    if not overlaps then return end
+
+    local rightEdge = math.floor(jump.x)
+    local minWidth = 28 * #row
+    local available = rightEdge - leftLimit - gap * (#row - 1)
+    -- Keep the existing row usable if the native geometry leaves too little
+    -- space for its minimum hit targets. The other rows can still move.
+    if available < minWidth then return end
+    local scale = totalWidth > available and (available - minWidth) / (totalWidth - minWidth) or 1
+    for _, name in ipairs(row) do
+        local rect = buttons[name]
+        rect.w = 28 + math.floor((rect.w - 28) * scale)
+        rect.x = rightEdge - rect.w
+        rightEdge = rect.x - gap
+    end
+end
+
+function Layout.compute(width, height, preset, nativeJump)
     assert(type(width) == "number" and type(height) == "number"
         and width >= Layout.MIN_WIDTH and height >= Layout.MIN_HEIGHT, "Invalid touch viewport")
     local factor = FACTORS[preset or "STANDARD"]
@@ -56,11 +97,11 @@ function Layout.compute(width, height, preset)
     fireY -= overflow
     local buttons = {}
 
-    for i, name in ipairs({ "AssaultRifle", "Pistol", "Shotgun", "Sniper", "Knife" }) do
+    for i, name in ipairs(WEAPONS) do
         buttons[name] = box(width - right - weaponW - (i - 1) * (weaponW + gap),
             weaponY, weaponW, weaponH)
     end
-    for i, name in ipairs({ "Reload", "Slide", "Sprint" }) do
+    for i, name in ipairs(ACTIONS) do
         buttons[name] = box(width - right - actionW - (i - 1) * (actionW + gap),
             actionY, actionW, actionH)
     end
@@ -69,12 +110,16 @@ function Layout.compute(width, height, preset)
     buttons.Fire = box(fireX, fireY, fireSize, fireSize)
     buttons.Aim = box(fireX - gap - aimW,
         fireY + round((fireSize - aimH) / 2), aimW, aimH)
+    if nativeJump and nativeJump.w > 0 and nativeJump.h > 0 then
+        local jump = {
+            x = nativeJump.x - JUMP_CLEARANCE, y = nativeJump.y - JUMP_CLEARANCE,
+            w = nativeJump.w + JUMP_CLEARANCE * 2, h = nativeJump.h + JUMP_CLEARANCE * 2,
+        }
+        clearJumpButton(buttons, WEAPONS, jump, gap)
+        clearJumpButton(buttons, ACTIONS, jump, gap)
+        clearJumpButton(buttons, AIM_AND_FIRE, jump, gap)
+    end
     return buttons
-end
-
-local function intersects(a, b)
-    return a.x < b.x + b.w and b.x < a.x + a.w
-        and a.y < b.y + b.h and b.y < a.y + a.h
 end
 
 -- Also reserve a reachable settings button outside the firing cluster.
