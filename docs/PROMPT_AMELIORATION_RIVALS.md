@@ -50,7 +50,7 @@ Au prochain lot, commencer par le parcours 1v1. En l’absence de deux clients R
 
 **Lot 2 publié en version 98.** Le briefing FFA guide le premier tir, le rechargement et l’accès au 1v1. L’indication suit le clavier, le tactile ou la manette, et le rechargement accepté par le serveur retire le conseil correspondant. Les simulations couvrent les actions anticipées, le changement de périphérique, les menus et le passage en duel. Vérifier ensuite l’enchaînement en jeu sur petit écran. [Publication de la version 98](https://github.com/dbrckk/Roblox-shooter/actions/runs/44287293265)
 
-**Avancement du lot 3.** L’AR‑24 distingue le premier tir après 380 ms de pause des tirs suivants. Le réticule réagit à l’image suivante, et l’inclinaison du modèle ainsi que le volume local sont atténués en rafale. Comparer en jeu le tir isolé et la rafale à l’arrêt, en déplacement et près d’une couverture. Les confirmations de touche proviennent toujours du serveur.
+**Lot 3 publié en version 99.** L’AR‑24 distingue le premier tir après 380 ms de pause des tirs suivants. Le réticule peut réagir dès l’image suivante, et l’inclinaison du modèle ainsi que le volume local sont atténués en rafale. Comparer en jeu le tir isolé et la rafale à l’arrêt, en déplacement et près d’une couverture. Les confirmations de touche proviennent toujours du serveur. [Publication de la version 99](https://github.com/dbrckk/Roblox-shooter/actions/runs/44289437185)
 
 ## Première application
 
