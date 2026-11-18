@@ -27,6 +27,8 @@ Après un refus, l’émetteur attend 30 secondes avant de pouvoir réinviter la
 
 Le serveur source enregistre les deux identités dans MemoryStore avant le transfert. Le serveur réservé vérifie son roster avant de démarrer le compte à rebours. L’armement et les dégâts suivent les personnages des combattants admis. Le retour en FFA est automatique après les résultats, sauf si les deux combattants choisissent **REMATCH**. **BACK TO FFA** permet de revenir plus tôt ou de réessayer un retour échoué. Si un seul joueur arrive, l’attente est bornée et le retour est proposé. Roblox Studio conserve le duel local pour vérifier les transitions sans téléportation.
 
+Si la liste des duellistes reste indisponible après la fenêtre de vérification de 12 secondes, le serveur renvoie le joueur en FFA. Après un échec de transfert, **BACK TO FFA** permet de réessayer. Seule une liste vérifiée donne accès au combat.
+
 Une fois un retour en FFA engagé, la salle réservée ferme la revanche, même si le transfert échoue. Après un échec ou un délai dépassé, **BACK TO FFA** redevient disponible. La relance reste individuelle et n’est pas déclenchée en boucle par le serveur.
 
 Une demande de retour est liée au numéro de série affiché. Pendant l’attente de l’adversaire et le compte à rebours, le même bouton reste valable si le serveur passe d’un de ces écrans à l’autre avant de recevoir la demande. Une demande envoyée depuis les résultats est valable pendant ces mêmes résultats. Une série déjà engagée se poursuit si une demande partie du lobby arrive en retard.
