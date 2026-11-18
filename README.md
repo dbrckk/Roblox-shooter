@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-**État vérifié le 18 novembre 2026** — Roblox a confirmé la **version de place 92** sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `2103752271071b428eeb2d7252c68998a6253a79`. Le HUD affiche la progression du rechargement et le nombre de balles. Les marques de touche restent ouvertes autour de la cible et leur taille suit la distance. Les sons d’impact diffèrent selon la surface touchée. [Publication de la version 92](https://github.com/dbrckk/Roblox-shooter/actions/runs/44269437323)
+Roblox a confirmé la **version de place 93** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `818d05e8fc53e746eef02fd9c6771bb3643f0c30`. Cette version améliore la récupération du recul, les transitions d’arme après un sprint et la caméra à l’atterrissage et en glissade. Elle ajoute des sons de pas, d’atterrissage et de glissade adaptés au sol. [Publication de la version 93](https://github.com/dbrckk/Roblox-shooter/actions/runs/44273282603)
 
 Les premières protections serveur et la récupération de progression sont en place. Le projet maintient **une seule expérience publique**, sans phase privée : GitHub Actions construit une place testable. Un push ordinaire ne publie rien ; seul un commit comportant une autorisation unique, suivi de sa CI verte et des vérifications du propriétaire/de la destination publique, peut déclencher le workflow de publication. Un build GitHub n'est pas une publication Roblox.
 
