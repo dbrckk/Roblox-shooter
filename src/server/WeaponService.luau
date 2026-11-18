@@ -205,6 +205,8 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
     local packet = {
         kind = "PlayerTracer",
         shooterUserId = player.UserId,
+        epoch = weaponRoundEpoch,
+        rangeSession = PracticeMode.session(player),
         weaponId = weaponId,
         origin = origin,
         direction = direction,
@@ -214,7 +216,6 @@ local function broadcastTrace(player, weaponId, origin, direction, range, result
         pelletImpacts = pelletImpacts,
     }
     if PracticeMode.active(player) then
-        packet.rangeSession = PracticeMode.session(player)
         remotes.WeaponFx:FireClient(player, packet)
     else
         CombatFxRelay.send(remotes.WeaponFx, packet, origin, player)
@@ -508,7 +509,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
     local extraWorldImpacts = {}
     local struckShield = false
 
-    for _ = 1, config.pellets do
+    for pelletIndex = 1, config.pellets do
         local pelletDirection = randomSpread(direction, coneDegrees)
         local ray = workspace:Raycast(origin, pelletDirection * config.range, params)
         if not firstDirection then
@@ -517,7 +518,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
         end
         if ray then
             local humanoid, model = getHumanoidFromHit(ray.Instance)
-            if pelletDirection ~= firstDirection and not humanoid
+            if pelletIndex > 1 and not humanoid
                 and #extraWorldImpacts < 3 then
                 table.insert(extraWorldImpacts, {
                     position = ray.Position,

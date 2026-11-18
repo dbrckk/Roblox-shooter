@@ -28,6 +28,14 @@ for _, id in ipairs(ids) do
     else
         assert(tilt == 1, "Other weapon tilt is preserved")
     end
+    for _, blend in ipairs({ 0, 0.5, 1 }) do
+        local back, pitch, lateral = Feel.aimRecoilScale(p, blend)
+        local touchBack, touchPitch, touchLateral = Feel.aimRecoilScale(p, blend, true)
+        local reducedBack, reducedPitch, reducedLateral = Feel.aimRecoilScale(p, blend, true, true)
+        assert(back == touchBack and touchBack == reducedBack, "Keep each weapon's rearward impulse")
+        assert(pitch > touchPitch and touchPitch > reducedPitch and reducedPitch > 0)
+        assert(lateral > touchLateral and touchLateral > reducedLateral and reducedLateral > 0)
+    end
     assert(Feel.shotEnvelope(id, p.shotSeconds + 0.001) == 0)
     assert(Feel.shotEnvelope(id, p.shotSeconds / 2) > 0)
     durations[id] = p.shotSeconds

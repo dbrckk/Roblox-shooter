@@ -15,10 +15,16 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 | Ordre | Lot | Critère de livraison |
 | --- | --- | --- |
 | 1 | **Stand d’entraînement publié en version 105.** Ouvrir **SET → PRACTICE RANGE** depuis le FFA. Le stand individuel comporte cinq cibles à des distances différentes. **SET → BACK TO FFA** rétablit les munitions de la partie. | Vérifier en jeu le parcours clavier, tactile et manette. Les simulations des callbacks serveur couvrent les cinq armes, le rejet des anciens tirs et rechargements et l’isolation des scores, des XP et des cibles. |
-| 2 | **Sensations de tir sur mobile.** Utiliser le stand pour affiner le recul, les sons, les impacts et le réticule. | Comparer une séquence identique avant et après sur Android. Vérifier la lisibilité des impacts et distinguer l’animation locale du tir de la confirmation serveur. Relever le P95 et le P99 du temps d’image. |
+| 2 | **Sensations de tir sur mobile intégrées.** Le tir et le traceur démarrent localement. Les traces de contact et les sons d’impact suivent les rayons du serveur. Le réticule réagit dès l’image suivante pour chaque arme, et le recul à l’écran tourne moins pendant une visée tactile. | Comparer la séquence de tir ci-dessous sur Android. Relever le P95 et le P99 du temps d’image dans `PERF`. |
 | 3 | **Deuxième arène de 1v1.** Ajouter un secteur du terminal avec couverture rapprochée et une ligne de tir longue. | Les départs offrent des options comparables. Les deux joueurs voient la même carte, et la revanche puis le retour au lobby fonctionnent sur les deux arènes. |
 | 4 | **Objectifs de session.** Ajouter des objectifs courts fondés sur des actions confirmées par le serveur. | Les résultats expliquent la progression de l’objectif et sa récompense cosmétique. Une action compte une seule fois, y compris après reconnexion. |
 | 5 | **Groupes et 2v2.** Étendre les invitations en réutilisant les transferts et le retour du 1v1. | Quatre joueurs rejoignent la même instance, le score et les équipes restent cohérents et un départ a une issue claire. Mesurer le délai d’attente avant d’élargir la disponibilité. |
+
+### Vérifier le tir sur Android
+
+- Depuis le stand, garder le même appareil, la même orientation et le même profil graphique pour les deux captures. Lancer `PERF → MESURER 240 IMAGES` pour relever 240 images à chaque essai.
+- Faire une capture avec une rafale d’AR-24 au centre du butoir métallique, puis une avec le B-8 en visant le bord d’une cible proche. Sur le B-8, comparer le départ du tir, les contacts des plombs sur la surface et la confirmation quand la cible est touchée.
+- Refaire une capture au pistolet ou au sniper en visée. Relever le P95, le P99 et le build indiqué. Vérifier également que quitter le stand pendant un tir ne ramène pas un impact dans le FFA.
 
 ## Ordre des chantiers et critères de livraison
 

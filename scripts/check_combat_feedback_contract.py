@@ -128,10 +128,10 @@ requires(client, (
     'local remoteFxState = RemoteCombatFxBudget.new()',
     'local ownShot = message.shooterUserId == player.UserId',
     'remoteFxState, os.clock(),',
-    '(cameraNow.CFrame.Position - message.origin).Magnitude, "PLAYER")',
+    'originDistance, "PLAYER")',
     'UserInputService.TouchEnabled, visualDistance, "BOT")',
-    'if remoteAccepted then',
-    '(ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table"',
+    'elseif remoteAccepted then',
+    '(ownShot or remoteAccepted) and pellets',
 ), "Human/bot remote group admissions and unthrottled own-shot feedback")
 assert client.count('RemoteCombatFxBudget.allow(') == 2, (
     "Exactly two remote visuals pathways must be admitted once per group"

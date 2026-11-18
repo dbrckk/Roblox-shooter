@@ -15,6 +15,11 @@ for _, id in ipairs(ids) do
     local prev = k
     for _ = 1, 120 do prev = P.recover(prev, 1 / 60) end
     assert(prev < 0.01)
+    assert(P.recover(k, 5) < 1e-12, "No visible bloom after backgrounding")
+    for _, frame in ipairs({1/30, 1/60, 1/120}) do
+        local impulse = P.radius(id, 0, false, P.recover(k, frame))
+        assert(impulse > base and P.shouldDraw(2 + frame, 2, base, impulse, true))
+    end
 end
 local rifleStart = P.kick("AssaultRifle", 12, false)
 assert(rifleStart == P.kick("AssaultRifle", 0, false))
@@ -29,7 +34,7 @@ assert(P.recover(math.huge, 0.1) == 0)
 assert(P.recover(0/0, 0.1) == 0)
 assert(P.shouldDraw(10, -math.huge, nil, 15))
 assert(not P.shouldDraw(10.01, 10, 15, 16))
-assert(P.shouldDraw(10.01, 10, 15, 16, true), "Rifle impulse can draw on the next frame")
+assert(P.shouldDraw(10.01, 10, 15, 16, true), "Any weapon impulse can draw on the next frame")
 assert(not P.shouldDraw(10.01, 10, 15, 15, true), "No redundant radius writes")
 assert(P.shouldDraw(10.06, 10, 15, 16))
 assert(not P.shouldDraw(10.06, 10, 16, 16))

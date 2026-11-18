@@ -939,12 +939,8 @@ local function fireWeapon(weaponId)
         local hit = workspace:Raycast(ray.Origin, ray.Direction.Unit * config.range, params)
         local length = hit and (hit.Position - ray.Origin).Magnitude or config.range
         visuals:drawTracer(ray.Origin, ray.Direction.Unit, length)
-        if hit then
-            local hitModel = hit.Instance:FindFirstAncestorOfClass("Model")
-            if not (hitModel and hitModel:FindFirstChildOfClass("Humanoid")) then
-                visuals:drawImpact(hit.Position, hit.Normal, hit.Material.Name)
-            end
-        end
+        -- Neither a character-hit cue nor a world mark is predicted:
+        -- server spread and camera convergence can pick a different surface.
     end
 
 	remotes.FireWeapon:FireServer({
@@ -1424,55 +1420,63 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
 		return
 	end
 
+    if PracticeMode.active(player) and message.kind ~= "PlayerTracer" then return end
+
 	if message.kind == "FireSound" and message.shooterUserId ~= player.UserId and typeof(message.origin) == "Vector3" then
 		visuals:playFireSound(message.weaponId, message.origin)
     elseif message.kind == "PlayerTracer"
         and typeof(message.origin) == "Vector3"
         and typeof(message.direction) == "Vector3"
         and typeof(message.length) == "number" then
-        -- All verified hitscan fire now travels in one tracer packet.
-        -- Play the original remote shot audio independently of whether
-        -- graphics quality admits an optional tracer Part.
-        if message.shooterUserId ~= player.UserId then
+        local ownShot = message.shooterUserId == player.UserId
+        local practice = PracticeMode.active(player)
+        if ownShot then
+            if not PracticeMode.matches(player, message.rangeSession)
+                or not FireEpochPolicy.acceptFeedback(message.epoch,
+                    workspace:GetAttribute("IronYardFireEpoch"), feedbackEpoch)
+                or (not practice and workspace:GetAttribute("NeonMatchPhase") ~= "LIVE") then return end
+            advanceFeedbackEpoch(message.epoch)
+        elseif practice or not FireEpochPolicy.acceptFeedback(message.epoch,
+            workspace:GetAttribute("IronYardFireEpoch"), feedbackEpoch) then
+            return
+        else
             visuals:playFireSound(message.weaponId, message.origin)
         end
+
         local cameraNow = workspace.CurrentCamera
         local fullLength = math.clamp(message.length, 0, 1500)
         local direction = message.direction
-        if cameraNow and (cameraNow.CFrame.Position - message.origin).Magnitude < 220
-            and direction.Magnitude > 0.01 and fullLength > 0.1 then
-            -- Prediction shows the central tracer and mark. The surface
-            -- sound uses the server contact so it follows the actual shot.
-            local ownShot = message.shooterUserId == player.UserId
-            if ownShot and (workspace:GetAttribute("NeonMatchPhase") == "LIVE" or PracticeMode.active(player)) then
-                if typeof(message.impactNormal) == "Vector3" then
-                    visuals:playImpactSound(message.origin + direction.Unit * fullLength, message.impactMaterial)
-                elseif typeof(message.pelletImpacts) == "table" then
-                    local contact = message.pelletImpacts[1]
-                    if typeof(contact) == "table" then
-                        visuals:playImpactSound(contact.position, contact.material)
-                    end
+        if not cameraNow or direction.Magnitude <= 0.01 then return end
+        local originDistance = (cameraNow.CFrame.Position - message.origin).Magnitude
+        if originDistance >= 220 then return end
+        local unit = direction.Unit
+        local primaryPosition = typeof(message.impactNormal) == "Vector3"
+            and message.origin + unit * fullLength or nil
+        local pellets = typeof(message.pelletImpacts) == "table" and message.pelletImpacts or nil
+        local remoteAccepted = not ownShot and RemoteCombatFxBudget.allow(
+            remoteFxState, os.clock(), player:GetAttribute("IronYardGraphicsPreset"),
+            UserInputService.TouchEnabled, originDistance, "PLAYER")
+        if ownShot then
+            if primaryPosition then
+                visuals:drawImpact(primaryPosition, message.impactNormal, message.impactMaterial)
+                visuals:playImpactSound(primaryPosition, message.impactMaterial)
+            elseif pellets then
+                local contact = pellets[1]
+                if typeof(contact) == "table" then
+                    visuals:playImpactSound(contact.position, contact.material)
                 end
             end
-            -- One shared rate admission for all effects of a REMOTE player
-            -- shot. Never gate local prediction or its shotgun confirmation.
-            local remoteAccepted = not ownShot and RemoteCombatFxBudget.allow(
-                remoteFxState, os.clock(),
-                player:GetAttribute("IronYardGraphicsPreset"),
-                UserInputService.TouchEnabled,
-                (cameraNow.CFrame.Position - message.origin).Magnitude, "PLAYER")
-            if remoteAccepted then
-                visuals:drawTracer(message.origin, direction.Unit, fullLength, Color3.fromRGB(240, 213, 165))
-                visuals:drawMuzzleFlash(message.origin, nil, direction.Unit,
-                    nil, message.weaponId)
-                if typeof(message.impactNormal) == "Vector3" then
-                    visuals:drawImpact(message.origin + direction.Unit * fullLength,
-                        message.impactNormal, message.impactMaterial)
-                end
+        elseif remoteAccepted then
+            if fullLength > 0.1 then
+                visuals:drawTracer(message.origin, unit, fullLength, Color3.fromRGB(240, 213, 165))
+                visuals:drawMuzzleFlash(message.origin, nil, unit, nil, message.weaponId)
             end
-            if (ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table" then
-                visuals:drawPelletImpacts(message.pelletImpacts)
+            if primaryPosition then
+                visuals:drawImpact(primaryPosition, message.impactNormal, message.impactMaterial)
             end
+        end
+        if (ownShot or remoteAccepted) and pellets then
+            visuals:drawPelletImpacts(pellets)
         end
     elseif message.kind == "BotTracer"
         and typeof(message.origin) == "Vector3"
@@ -1648,7 +1652,7 @@ RunService:BindToRenderStep("IronYardClientCameraFeel",
     local _, movementHumanoid = getCharacterParts()
     local moveAmount = movementHumanoid and movementHumanoid.Health > 0
         and movementHumanoid.MoveDirection.Magnitude or 0
-    hud:updateCrosshair(deltaTime, moveAmount, sprinting)
+    hud:updateCrosshair(moveAmount, sprinting)
     hud:updateReloadProgress()
 
 	local _, humanoid = getCharacterParts()
