@@ -1048,8 +1048,9 @@ local function updateCameraFeel(deltaTime)
     local _, humanoid, root = getCharacterParts()
     local followingPlayer = camera and humanoid and root and humanoid.Health > 0
         and camera.CameraType == Enum.CameraType.Custom and camera.CameraSubject == humanoid
-    local sliding = os.clock() < localSlidingUntil
-    movementAudio:update(followingPlayer and humanoid or nil, root, sliding, deltaTime)
+    local slideRemaining = math.max(0, localSlidingUntil - os.clock())
+    local sliding = slideRemaining > 0
+    movementAudio:update(followingPlayer and humanoid or nil, root, slideRemaining, deltaTime)
     local motionHumanoid = followingPlayer and not GuiService.ReducedMotionEnabled and humanoid or nil
     if cameraMotion.humanoid ~= motionHumanoid then
         cameraMotion.humanoid = motionHumanoid
