@@ -138,7 +138,7 @@ local function newHud(serverPlayer, player, deliverReturn)
     local Vector2 = {new = function(x, y) return {X=x, Y=y} end}
     local UDim = {new = function() end}
     local Color3 = {fromRGB = function() end}
-    local GuiService, gui = {}, {}
+    local GuiService, gui = {MenuOpened = signal(), MenuClosed = signal()}, {}
     local UDim2 = {}
     function UDim2.new(sx, x, sy, y)
         return {X = {Scale=sx, Offset=x}, Y = {Scale=sy, Offset=y}}
@@ -175,7 +175,12 @@ local function newHud(serverPlayer, player, deliverReturn)
         return visible
     end
     local inputType = {Name = "Touch"}
-    local UserInputService = {TouchEnabled = true, GetLastInputType = function() return inputType end}
+    local UserInputService = {
+        TouchEnabled = true,
+        InputBegan = signal(),
+        LastInputTypeChanged = signal(),
+        GetLastInputType = function() return inputType end,
+    }
     local GamepadCombatPolicy = {isGamepad = function(name) return name == "Gamepad1" end}
     local playerGui = {SetAttribute = function() end, GetAttribute = function() end}
     local remotes = {ReturnToFfa = {FireServer = function(_, ...)
@@ -199,14 +204,25 @@ HUD_ENTRY_POINT = r"""
     serverPlayer.render = duelLabel
     duelLabel()
     return {
-        open = toggleDuel, search = search, invite = invite, decline = decline, status = status,
+        open = toggleDuel, toggle = duelToggle, search = search, invite = invite, decline = decline, status = status,
         solo = soloTab, teams = teamTab, roster = roster, menu = menu, limit = menuLimit,
         sent = sent, returns = returns, render = duelLabel,
         delay = function(seconds) upstream = seconds end,
         row = function(id) return inviteRows[id].button end,
         focus = function(control) GuiService.SelectedObject = control end,
         selected = function() return GuiService.SelectedObject end,
-        input = function(name) inputType.Name = name; duelLabel() end,
+        input = function(name)
+            inputType.Name = name
+            UserInputService.LastInputTypeChanged:fire(inputType)
+        end,
+        pressR3 = function(used)
+            UserInputService.InputBegan:fire({KeyCode = Enum.KeyCode.ButtonR3, UserInputType = inputType}, used)
+        end,
+        robloxMenu = function(open)
+            GuiService.MenuIsOpen = open
+            local event = open and GuiService.MenuOpened or GuiService.MenuClosed
+            event:fire()
+        end,
     }
 end
 """
@@ -274,6 +290,33 @@ advance(0.81)
 assert(a.status.Text == "PLAYER UNAVAILABLE" and not sender:GetAttribute("IronYardDuelReady"))
 recipient:SetAttribute(PracticeMode.ATTRIBUTE, 2)
 
+-- A prior send failure must not mask a fresh incoming invitation.
+a.input("Touch")
+Room.request(recipient, true, sender.UserId)
+Room.match()
+advance(0.41)
+assert(a.toggle.Text == "1v1 !\n30s", "An old duel error hides the new invitation on touch")
+assert(a.invite.Visible and a.invite.Interactable)
+Room.request(recipient, false)
+Room.match()
+advance(0.41)
+
+-- After the send deadline expires, the reply actions and sender identity
+-- should take priority over retrying a different outgoing invitation.
+a.delay(5)
+a.row(3).Activated:fire()
+Room.request(recipient, true, sender.UserId)
+Room.match()
+advance(3.05)
+assert(a.toggle.Text == "1v1 !\n27s" and a.invite.Interactable)
+assert(a.status.Text:find(recipient.DisplayName, 1, true))
+Room.request(recipient, false)
+Room.match()
+advance(2.4)
+Room.request(sender, false)
+advance(0.41)
+a.delay(0.4)
+
 -- The old invite expires in transit. A fresh invitation from the same
 -- player reaches the receiver, and the stale response cannot start a duel.
 Room.request(sender, true, recipient.UserId)
@@ -298,6 +341,7 @@ assert(b.invite.Visible and b.invite.Interactable)
 -- search. Acceptance of a later invite requests one shared reservation.
 Room.request(recipient, true)
 advance(0.41)
+assert(b.toggle.Text == "1v1 !\n30s", "The invite badge must show time left to reply")
 b.decline.Activated:fire()
 advance(0.81)
 assert(recipient:GetAttribute("IronYardDuelTravel") == "SEARCHING")
@@ -341,7 +385,24 @@ local b, br = connectPlayer(2)
 local c, cr = connectPlayer(3)
 local d = connectPlayer(4)
 local menu = newHud(c, cr)
-menu.open()
+menu.input("Gamepad1")
+menu.pressR3(true)
+assert(not menu.menu.Visible, "An R3 event consumed by Roblox must not open DUELS")
+menu.robloxMenu(true)
+menu.pressR3(false)
+assert(not menu.menu.Visible, "R3 must not open DUELS over the Roblox menu")
+menu.robloxMenu(false)
+menu.pressR3(false)
+assert(menu.menu.Visible and menu.selected() == menu.search)
+menu.robloxMenu(true)
+assert(not menu.selected(), "The Roblox menu must release duel focus")
+menu.robloxMenu(false)
+assert(menu.selected() == menu.search)
+menu.pressR3(false)
+assert(not menu.menu.Visible and not menu.selected(), "R3 should close DUELS and release focus")
+menu.input("Touch")
+menu.toggle.Activated:fire()
+assert(menu.menu.Visible and not menu.selected())
 assert(menu.solo.Visible and menu.teams.Visible and menu.search.Visible)
 local function size(axis, parent)
     return axis.Scale * parent + axis.Offset
@@ -773,7 +834,8 @@ def run(luau):
         'local PracticeMode = require(Shared:WaitForChild("PracticeMode"))': "local PracticeMode = PracticeMode",
     })
     hud = (ROOT / "src/client/MatchHud.client.luau").read_text()
-    hud_source = hud[hud.index('local function duelButton('):hud.index("UserInputService.InputBegan:Connect")]
+    input_end = hud.index("GuiService.MenuClosed:Connect(syncMenuSelection)")
+    hud_source = hud[hud.index("local function duelButton("):hud.index("\n", input_end)]
     lobby_client = HUD_FIXTURE + hud_source + HUD_ENTRY_POINT
     touch_layout = module("TouchLayout", "src/shared/TouchLayout.luau")
     lobby = SERVER_FIXTURE + mode + queue + room + touch_layout + lobby_client + CHECKS
