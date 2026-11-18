@@ -147,6 +147,9 @@ hud = HudController.new(player, gui, WeaponConfig, {
 		applyMenuMouseState(isOpen)
         if updateTouchVisibility then updateTouchVisibility() end
 	end,
+    onCareerFinishChanged = function(preference)
+        remotes.SetCareerFinish:FireServer(preference)
+    end,
 })
 
 local visuals = WeaponVisuals.new(WeaponConfig)

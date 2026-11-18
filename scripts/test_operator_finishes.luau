@@ -35,6 +35,13 @@ for _, threshold in ipairs(expected) do
 end
 equal(F.earnedBetween(3, 5), nil, "Ranks in an existing finish are not unlocks")
 equal(F.earnedBetween(15, 6), nil, "Lower rank does not emit an unlock")
+equal(F.equipped(10, nil).name, "FOUNDRY", "Legacy records equip the highest finish")
+equal(F.equipped(10, 0).name, "FOUNDRY", "Automatic mode follows rank")
+equal(F.equipped(10, 3).name, "DESERT PATROL", "Older unlocked finish can be equipped")
+equal(F.equipped(3, 15).name, "DESERT PATROL", "Locked stored choice falls back")
+equal(F.equipped(3, 2).name, "DESERT PATROL", "A rank without a finish is not a valid choice")
+assert(F.canSelect(0, nil) and not F.canSelect("0", 15))
+assert(not F.canSelect(0/0, 15) and not F.canSelect(6, 5))
 
 for _, levelToCheck in ipairs({1, 3, 6, 10, 15}) do
     local finish = F.forLevel(levelToCheck)

@@ -85,6 +85,12 @@ The results screen refreshes on live save-status and saved-XP attribute changes 
 
 Le panneau de carrière affiche la finition équipée. La carrière et les résultats affichent le nom de la prochaine finition et les XP restants jusqu’à son rang. Si les XP du palier arrivent avant le rang, la ligne indique `RANK SYNCING`. La finition est automatiquement appliquée au modèle à la première personne selon le rang répliqué, et l’état de sauvegarde des XP reste visible séparément.
 
+## Collection des finitions
+
+Dans **SET → COLLECTION**, les cinq palettes affichent leurs couleurs et leur état. **AUTO** suit la finition du rang le plus élevé. Une finition choisie s’applique aux armes et aux mains et reste active à la réapparition. Le serveur valide la préférence selon le rang et l’enregistre avec les XP au prochain autosave ou lors de la sortie. La collection indique si la sélection attend encore la sauvegarde.
+
+La préférence est un champ facultatif du registre v1. Les anciennes sauvegardes sans ce champ utilisent **AUTO**. Les serveurs d’une version antérieure à la collection réécrivent uniquement les anciens champs et peuvent remettre le choix sur **AUTO** si un joueur y retourne.
+
 
 ## Refus des confirmations de sauvegarde incohérentes (12 novembre 2026)
 

@@ -11,6 +11,7 @@ local BoostMeterPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitFo
 local CombatReadoutPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CombatReadoutPolicy"))
 local CrosshairFeedback = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CrosshairFeedbackPolicy"))
 local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
+local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 
 local HudController = {}
 HudController.__index = HudController
@@ -622,6 +623,76 @@ function HudController:_buildScopeOverlay()
 end
 local FIRE_AIM_LABELS = { "LOW", "MID", "HIGH" }
 
+function HudController:_buildFinishCollection(parent)
+    local player = self.player
+    local status = makeText(parent, "FinishSaveStatus", "", UDim2.fromOffset(22, 40),
+        UDim2.fromOffset(296, 16), 11)
+    status.ZIndex = 13
+    local rows = {}
+    for index = 0, OperatorFinishes.count() do
+        local finish = OperatorFinishes.atIndex(index)
+        local preference = finish and finish.level or 0
+        local button = makeButton(parent, "Finish" .. preference, "",
+            UDim2.fromOffset(22, 61 + index * 40), UDim2.fromOffset(296, 36))
+        button.ZIndex = 12
+        local name = makeText(button, "FinishName", finish and finish.name or "AUTO · HIGHEST RANK",
+            UDim2.fromOffset(10, 0), UDim2.fromOffset(151, 36), 12)
+        name.ZIndex = 13
+        local state = makeText(button, "FinishState", "", UDim2.fromOffset(207, 0),
+            UDim2.fromOffset(82, 36), 10)
+        state.TextXAlignment = Enum.TextXAlignment.Right
+        state.ZIndex = 13
+        if finish then
+            for swatch, channels in ipairs({ finish.metal, finish.fabric, finish.accent }) do
+                local sample = Instance.new("Frame")
+                sample.Name = "Swatch"
+                sample.Position = UDim2.fromOffset(158 + (swatch - 1) * 15, 12)
+                sample.Size = UDim2.fromOffset(12, 12)
+                sample.BackgroundColor3 = Color3.fromRGB(channels[1], channels[2], channels[3])
+                sample.BorderSizePixel = 0
+                sample.ZIndex = 13
+                sample.Parent = button
+            end
+        end
+        rows[index + 1] = { preference = preference, button = button, state = state }
+        button.Activated:Connect(function()
+            if self.settingsOpen and parent.Visible and button.Interactable
+                and player:GetAttribute("IronYardFinishPreference") ~= preference then
+                self.options.onCareerFinishChanged(preference)
+            end
+        end)
+    end
+    local function update()
+        local preference = player:GetAttribute("IronYardFinishPreference")
+        local level = player:GetAttribute("IronYardProgressLevel")
+        local save = player:GetAttribute("IronYardProgressStatus")
+        local saved = player:GetAttribute("IronYardSavedFinishPreference")
+        if save == "STUDIO" then
+            status.Text = "SESSION ONLY"
+        elseif save == "ONLINE" then
+            status.Text = preference == nil and "LOADING CAREER"
+                or (preference == saved and "SELECTION SAVED" or "SELECTION SAVE PENDING")
+        else
+            status.Text = (not save or save == "LOADING") and "LOADING CAREER" or "SAVE RETRYING"
+        end
+        for _, row in ipairs(rows) do
+            local unlocked = OperatorFinishes.canSelect(row.preference, level)
+            row.button.Interactable = preference ~= nil and unlocked
+                and self.options.onCareerFinishChanged ~= nil
+            row.button.Selectable = row.button.Interactable
+            row.state.Text = preference == row.preference and "SELECTED"
+                or (unlocked and "AVAILABLE" or ("LOCKED · LV " .. row.preference))
+            row.state.TextColor3 = unlocked and Color3.fromRGB(233, 203, 145)
+                or Color3.fromRGB(162, 173, 190)
+        end
+    end
+    for _, attribute in ipairs({ "IronYardFinishPreference", "IronYardSavedFinishPreference",
+        "IronYardProgressStatus", "IronYardProgressLevel" }) do
+        player:GetAttributeChangedSignal(attribute):Connect(update)
+    end
+    update()
+end
+
 function HudController:_buildSettingsMenu()
     local touch = UserInputService.TouchEnabled
     local panelHeight = touch and 330 or 311
@@ -689,15 +760,41 @@ function HudController:_buildSettingsMenu()
 	makeStroke(panel, Color3.fromRGB(90, 102, 126), 0.15, 1)
 	self.settingsPanel = panel
 
-	local title = makeText(panel, "Title", "SETTINGS", UDim2.fromOffset(22, 14), UDim2.fromOffset(220, 24), 18)
+    local settingsPage = Instance.new("Frame")
+    settingsPage.Name = "SettingsPage"
+    settingsPage.Size = UDim2.fromScale(1, 1)
+    settingsPage.BackgroundTransparency = 1
+    settingsPage.ZIndex = 11
+    settingsPage.Parent = panel
+    local collectionPage = Instance.new("Frame")
+    collectionPage.Name = "CollectionPage"
+    collectionPage.Size = UDim2.fromScale(1, 1)
+    collectionPage.BackgroundTransparency = 1
+    collectionPage.Visible = false
+    collectionPage.ZIndex = 11
+    collectionPage.Parent = panel
+
+	local title = makeText(panel, "Title", "SETTINGS", UDim2.fromOffset(22, 14), UDim2.fromOffset(150, 24), 18)
 	title.Font = Enum.Font.GothamBold
 	title.ZIndex = 11
 
 	local closeButton = makeButton(panel, "Close", "X", UDim2.new(1, -56, 0, 12), UDim2.fromOffset(42, 42))
-	closeButton.ZIndex = 11
+	closeButton.ZIndex = 12
     self.settingsFocus = closeButton
+    local collectionButton = makeButton(panel, "Collection", "COLLECTION",
+        UDim2.fromOffset(173, 12), UDim2.fromOffset(104, 32))
+    collectionButton.ZIndex = 12
+    collectionButton.TextSize = 12
+    collectionButton.Activated:Connect(function()
+        local open = not collectionPage.Visible
+        collectionPage.Visible = open
+        settingsPage.Visible = not open
+        collectionButton.Text = open and "SETTINGS" or "COLLECTION"
+        title.Text = open and "COLLECTION" or "SETTINGS"
+    end)
+    self:_buildFinishCollection(collectionPage)
 
-	self.fovValueLabel = self:_makeStepper(panel, "FOV", UDim2.fromOffset(22, touch and 58 or 67), 60, 100, 5, function()
+	self.fovValueLabel = self:_makeStepper(settingsPage, "FOV", UDim2.fromOffset(22, touch and 58 or 67), 60, 100, 5, function()
 		return tostring(self.baseFov)
 	end, function(delta)
 		self.baseFov = clampSetting(self.baseFov + delta, 60, 100)
@@ -708,7 +805,7 @@ function HudController:_buildSettingsMenu()
 	end)
 
     if touch then
-        self.touchSizeValueLabel = self:_makeStepper(panel, "BUTTON SIZE",
+        self.touchSizeValueLabel = self:_makeStepper(settingsPage, "BUTTON SIZE",
             UDim2.fromOffset(22, 102), 1, #TouchLayout.PRESETS, 1, function()
                 return TOUCH_SIZE_LABELS[self.touchSizeIndex]
             end, function(delta)
@@ -719,7 +816,7 @@ function HudController:_buildSettingsMenu()
                 self:_refreshSettingsText()
             end)
         self.fireAimIndex = 2
-        self.fireAimValueLabel = self:_makeStepper(panel, "FIRE DRAG",
+        self.fireAimValueLabel = self:_makeStepper(settingsPage, "FIRE DRAG",
             UDim2.fromOffset(22, 146), 1, 3, 1, function()
                 return FIRE_AIM_LABELS[self.fireAimIndex]
             end, function(delta)
@@ -728,7 +825,7 @@ function HudController:_buildSettingsMenu()
                 self:_refreshSettingsText()
             end)
     else
-	self.sensitivityValueLabel = self:_makeStepper(panel, "MOUSE SENS", UDim2.fromOffset(22, 115), 0.3, 2.5, 0.1, function()
+	self.sensitivityValueLabel = self:_makeStepper(settingsPage, "MOUSE SENS", UDim2.fromOffset(22, 115), 0.3, 2.5, 0.1, function()
 		return string.format("%.1f", self.mouseSensitivity)
 	end, function(delta)
 		self.mouseSensitivity = clampSetting(math.floor((self.mouseSensitivity + delta) * 10 + 0.5) / 10, 0.3, 2.5)
@@ -739,7 +836,7 @@ function HudController:_buildSettingsMenu()
 	end)
     end
 
-    self.graphicsValueLabel = self:_makeStepper(panel, "GRAPHICS",
+    self.graphicsValueLabel = self:_makeStepper(settingsPage, "GRAPHICS",
         UDim2.fromOffset(22, touch and 190 or 163), 1, 3, 1, function()
             return GRAPHICS_LABELS[self.graphicsIndex]
         end, function(delta)
@@ -748,7 +845,7 @@ function HudController:_buildSettingsMenu()
             self:_refreshSettingsText()
         end)
 
-    self.hitSoundValueLabel = self:_makeStepper(panel, "HIT SOUND",
+    self.hitSoundValueLabel = self:_makeStepper(settingsPage, "HIT SOUND",
         UDim2.fromOffset(22, touch and 234 or 211), 1, #HIT_SOUND_LABELS, 1, function()
             return HIT_SOUND_LABELS[self.hitSoundLevel]
         end, function(delta)
@@ -757,7 +854,7 @@ function HudController:_buildSettingsMenu()
             self:_refreshSettingsText()
         end)
 
-    self.opponentFootstepValueLabel = self:_makeStepper(panel, "ENEMY STEP FX",
+    self.opponentFootstepValueLabel = self:_makeStepper(settingsPage, "ENEMY STEP FX",
         UDim2.fromOffset(22, touch and 278 or 259), 0, 100, FOOTSTEP_VOLUME_STEP, function()
             return self.opponentFootstepVolume .. "%"
         end, function(delta, minValue, maxValue)
@@ -766,7 +863,7 @@ function HudController:_buildSettingsMenu()
             self:_refreshSettingsText()
         end)
 
-    local hint = makeText(panel, "Hint",
+    local hint = makeText(settingsPage, "Hint",
         touch and "Drag on FIRE to aim while shooting" or "Press M to close",
         UDim2.fromOffset(22, 40), UDim2.fromOffset(252, 16), 12)
 	hint.TextColor3 = Color3.fromRGB(162, 173, 190)

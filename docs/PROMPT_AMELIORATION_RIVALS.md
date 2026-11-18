@@ -20,6 +20,8 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 
 Le prochain lot porte sur la collection et la sélection d’une finition. Le mécanisme d’application existe déjà dans `WeaponVisuals`, et les paliers sont définis dans `OperatorFinishes`. Le choix doit rejoindre le parcours de carrière et rester cohérent avec le rang répliqué.
 
+**Collection intégrée.** Le menu **SET → COLLECTION** présente les cinq finitions, leurs couleurs et leur rang requis. Le registre sauvegarde le choix avec les XP. Les simulations couvrent un changement pendant une sauvegarde, la validation des finitions verrouillées et la récupération après reconnexion. [Fonctionnement et stockage](PROGRESSION_PERSISTENCE.md#collection-des-finitions)
+
 ## Ordre des chantiers et critères de livraison
 
 | Chantier | Travail attendu | Preuve demandée |

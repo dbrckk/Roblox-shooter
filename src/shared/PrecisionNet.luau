@@ -9,6 +9,7 @@ local REMOTES = {
     SetAiming = "RemoteEvent",
     SetDuelReady = "RemoteEvent",
     ReturnToFfa = "RemoteEvent",
+    SetCareerFinish = "RemoteEvent",
     ReloadWeapon = "RemoteEvent",
 	MovementAction = "RemoteEvent",
 	MovementState = "RemoteEvent",

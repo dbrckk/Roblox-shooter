@@ -8,6 +8,8 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
+local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
+local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
 local ShutdownTracker = require(script.Parent:WaitForChild("ProgressionShutdownTracker"))
 local DetachedRelease = require(script.Parent:WaitForChild("ProgressionDetachedRelease"))
@@ -58,6 +60,8 @@ local function publish(player, record)
     player:SetAttribute("IronYardLifetimeHeadshots", base.headshots + earned.headshots)
     player:SetAttribute("IronYardLifetimeVictories", base.victories + earned.victories)
     player:SetAttribute("IronYardProgressLevel", levelForXP(total))
+    player:SetAttribute("IronYardFinishPreference", record.finishPreference)
+    player:SetAttribute("IronYardSavedFinishPreference", record.savedFinishPreference)
 end
 
 local function createRecord(player)
@@ -130,6 +134,10 @@ local function acquire(player, record)
         record.loaded = true
         record.base = Ledger.sessionBase(result, record.token)
         record.committed = copyStats(result.lock.committed)
+        local preference = result.finishPreference or 0
+        record.finishPreference = OperatorFinishes.canSelect(preference, levelForXP(result.xp))
+            and preference or 0
+        record.savedFinishPreference = record.finishPreference
         setStatus(player, record, "ONLINE")
         publish(player, record) -- includes XP earned during the load
         ShutdownTracker.finish(shutdownTracker)
@@ -157,16 +165,18 @@ flush = function(player, record, release)
     end
     record.saving = true
     local snapshot = cloneSnapshot(record.earned)
+    local finishPreference = record.finishPreference
     local success, result = retry(function()
         local timestamp = os.time()
         return store:UpdateAsync(keyFor(player), function(previous)
             return Ledger.commit(previous, record.token, snapshot, timestamp,
-                LEASE_SECONDS, release)
+                LEASE_SECONDS, release, finishPreference)
         end)
     end)
     record.saving = false
     if success and result then
         record.committed = cloneSnapshot(snapshot)
+        record.savedFinishPreference = finishPreference
         record.lastWriteAt = os.clock()
         if player.Parent then
             setStatus(player, record, release and "CLOSED" or "ONLINE")
@@ -238,6 +248,8 @@ local function attach(player)
         -- Deliberately keep Studio builds off live player keys. Studio API
         -- access, if enabled, otherwise writes into the production universe.
         setStatus(player, record, "STUDIO")
+        record.finishPreference = 0
+        publish(player, record)
         return
     end
     task.spawn(loadOrRetry, player, record)
@@ -270,9 +282,21 @@ function ProgressionService.recordVictory(player)
     return add(player, { xp = 250, victories = 1 })
 end
 
+local function setFinishPreference(player, preference)
+    if not RemoteGuard.allow(player, "SetCareerFinish") then return end
+    local record = records[player]
+    if not record or record.closing or record.finishPreference == nil
+        or preference == record.finishPreference then return end
+    local level = levelForXP(record.base.xp + record.earned.xp)
+    if not OperatorFinishes.canSelect(preference, level) then return end
+    record.finishPreference = preference
+    player:SetAttribute("IronYardFinishPreference", preference)
+end
+
 function ProgressionService.start()
     if started then return end
     started = true
+    PrecisionNet.getRemotes(true).SetCareerFinish.OnServerEvent:Connect(setFinishPreference)
     if not RunService:IsStudio() and game.GameId ~= 0 then
         local ok, result = pcall(function()
             return DataStoreService:GetDataStore(STORE_NAME)

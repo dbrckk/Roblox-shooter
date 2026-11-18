@@ -187,6 +187,9 @@ function WeaponVisuals.new(WeaponConfig)
         "IronYardProgressLevel"):Connect(function()
             self:_applyCareerFinish()
         end)
+    Players.LocalPlayer:GetAttributeChangedSignal("IronYardFinishPreference"):Connect(function()
+        self:_applyCareerFinish()
+    end)
 	-- Draw after the native camera AND our local camera tilt/FOV pass.
     -- A naked RenderStepped connection has no guaranteed order vs Camera.
     RunService:BindToRenderStep("IronYardWeaponViewmodel",
@@ -287,8 +290,9 @@ end
 -- or armor collision. Applying on level change does not rebuild an active gun.
 function WeaponVisuals:_applyCareerFinish()
     if not self.model then return end
-    local level = Players.LocalPlayer:GetAttribute("IronYardProgressLevel")
-    local finish = OperatorFinishes.forLevel(level)
+    local player = Players.LocalPlayer
+    local level = player:GetAttribute("IronYardProgressLevel")
+    local finish = OperatorFinishes.equipped(level, player:GetAttribute("IronYardFinishPreference"))
     local accent, metal = rgb(finish.accent), rgb(finish.metal)
     local fabric, glove = rgb(finish.fabric), rgb(finish.glove)
     local armColors = {
