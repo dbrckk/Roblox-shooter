@@ -60,16 +60,13 @@ for _, material in ipairs({"Metal","Wood","Glass","Concrete","Ground"}) do
     assert(motion.flicker >= 0 and motion.flicker <= 0.4)
 end
 local hit = Vfx.hitFeedback("BALANCED", true, 32, false, false)
-assert(hit and hit.sparks == 1 and hit.duration <= 0.2)
+assert(hit and hit.ticks == 2 and hit.duration <= 0.2)
 local headHit = Vfx.hitFeedback("QUALITY", false, 50, true, false)
-assert(headHit.radius > hit.radius, "Headshots are visible")
+assert(headHit.radius > hit.radius and headHit.ticks == 3, "Headshots are visible")
 local killHit = Vfx.hitFeedback("QUALITY", false, 50, false, true)
 assert(killHit.duration > hit.duration, "Eliminations remain legible")
-assert(killHit.eliminationRing and not headHit.eliminationRing)
-assert(Vfx.hitFeedback("ECO", true, 30, true, true).eliminationRing == false,
-    "Economy mobile setting does not create extra elimination ring")
-assert(Vfx.hitFeedback("BALANCED", true, 30, false, true).eliminationRing,
-    "Confirmed elimination has its own phone-safe ring")
+eq(Vfx.hitFeedback("ECO", true, 30, true, true).ticks, 3, "ECO caps elimination marks")
+eq(Vfx.hitFeedback("BALANCED", true, 30, false, true).ticks, 4, "Mobile elimination marks")
 eq(Vfx.hitFeedback("ECO", true, 80, false, false), nil, "ECO range culling")
 eq(Vfx.pelletVisualCount("ECO", true, 30), 1, "One ECO pellet")
 eq(Vfx.pelletVisualCount("BALANCED", true, 30), 2, "Two mobile pellets")
@@ -83,7 +80,7 @@ eq(Vfx.tracer(180).length, 29, "Long tracer retains cap")
 eq(Vfx.tracer(0/0), nil, "Reject NaN ray length")
 eq(Vfx.tracer(math.huge), nil, "Reject infinite ray length")
 local closeHit = Vfx.hitFeedback("BALANCED", true, 3, true, true)
-assert(closeHit and closeHit.radius < killHit.radius and closeHit.sparks == 1,
+assert(closeHit and closeHit.radius < killHit.radius and closeHit.ticks == 2,
     "Point-blank kills cannot overwhelm small phone screens")
 assert(Vfx.shouldDisplayHit(10, 9.7, 1, 1), "Separated body shots are visible")
 assert(not Vfx.shouldDisplayHit(10.04, 10, 1, 1),

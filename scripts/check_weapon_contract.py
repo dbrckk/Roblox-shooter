@@ -920,10 +920,8 @@ def main():
         "slot.flicker = spec.flicker or 0",
         "if slot.gravityDrop > 0 then",
         "slot.flicker * (1 - baseAlpha)",
-        'name = "IronYardEliminationRing"',
-        "if settings.eliminationRing then",
     ):
-        has(viewmodel, needle, "Material-specific pooled impact dynamics and fatal ring")
+        has(viewmodel, needle, "Material-specific pooled impact dynamics")
     # Confirmed local damage now shares the prioritized reusable FX pool.
     # No gunfire event should allocate temporary Parts, Tweens or Debris
     # timers; the only remaining Debris lifetime is spatial audio.
@@ -938,11 +936,10 @@ def main():
     for needle in (
         "CombatVfxProfile.hitPriority(headshot == true, killed == true)",
         "CombatVfxProfile.shouldDisplayHit(now,",
-        'name = "IronYardConfirmedHit"',
-        'name = "IronYardHitSpark"',
-        "shape = Enum.PartType.Ball",
-        "priority = 4,",
-        "priority = 3,",
+        'name = i == 1 and "IronYardConfirmedHit" or "IronYardHitSpark"',
+        "for i = 1, settings.ticks do",
+        "origin = CFrame.lookAt(tick, tick + radial, -view.LookVector)",
+        "priority = i == 1 and 4 or 3,",
         "duration = settings.duration",
         "self:_spawnTransient({",
     ):

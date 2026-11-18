@@ -1539,10 +1539,13 @@ function WeaponVisuals:drawConfirmedHit(position, headshot, killed)
     if typeof(position) ~= "Vector3" then return end
     local camera = workspace.CurrentCamera
     if not camera then return end
+    local view = camera.CFrame
+    local toward = view.Position - position
+    local distance = toward.Magnitude
+    if distance < 0.1 then return end
     local settings = CombatVfxProfile.hitFeedback(
         Players.LocalPlayer:GetAttribute("IronYardGraphicsPreset"),
-        UserInputService.TouchEnabled,
-        (camera.CFrame.Position - position).Magnitude,
+        UserInputService.TouchEnabled, distance,
         headshot == true, killed == true)
     if not settings then return end
     local now = os.clock()
@@ -1556,56 +1559,25 @@ function WeaponVisuals:drawConfirmedHit(position, headshot, killed)
     local color = killed and Color3.fromRGB(247, 189, 105)
         or (headshot and Color3.fromRGB(255, 229, 151)
             or Color3.fromRGB(204, 231, 218))
-    local toward = camera.CFrame.Position - position
-    if toward.Magnitude < 0.1 then return end
-    local direction = toward.Unit
-    local center = position + direction * 0.12
-    -- Confirmed hits used to create up to four new Parts, Tweens and
-    -- Debris timers on every accepted shot. The existing bounded local
-    -- VFX pool already renders the same Quad.Out expansion/fade curve.
-    -- Reserve its highest priority for real server-confirmed damage:
-    -- cosmetic debris must never displace the actual hit confirmation.
-    if settings.eliminationRing then
+    local center = position + toward.Unit * 0.12
+    local thickness = settings.radius * 0.28
+    local size = Vector3.new(thickness, thickness, settings.radius * 0.98)
+    -- Face the camera at contact, leaving the target visible in the center.
+    -- Only opacity changes afterwards; the first mark gets pool priority.
+    for i = 1, settings.ticks do
+        local angle = settings.firstAngle + (i - 1) * math.pi * 2 / settings.ticks
+        local radial = view.RightVector * math.cos(angle) + view.UpVector * math.sin(angle)
+        local tick = center + radial * settings.radius
         self:_spawnTransient({
-            name = "IronYardEliminationRing",
-            origin = CFrame.lookAt(center, center + direction)
-                * CFrame.Angles(0, math.pi * 0.5, 0),
-            size = Vector3.new(0.018, settings.radius * 2, settings.radius * 2),
-            endSize = Vector3.new(0.012, settings.radius * 4, settings.radius * 4),
-            shape = Enum.PartType.Cylinder,
+            name = i == 1 and "IronYardConfirmedHit" or "IronYardHitSpark",
+            origin = CFrame.lookAt(tick, tick + radial, -view.LookVector),
+            size = size, endSize = size,
             material = MATERIAL_NEON,
             color = color,
-            alpha = 0.38, duration = settings.duration,
-            priority = 3,
-        })
-    end
-    self:_spawnTransient({
-        name = "IronYardConfirmedHit",
-        origin = CFrame.new(center),
-        size = Vector3.new(settings.radius, settings.radius, settings.radius),
-        endSize = Vector3.new(settings.radius * 1.9,
-            settings.radius * 1.9, settings.radius * 1.9),
-        shape = Enum.PartType.Ball,
-        material = MATERIAL_NEON,
-        color = color,
-        alpha = 0.08,
-        duration = settings.duration,
-        priority = 4,
-    })
-
-    for i = 1, settings.sparks do
-        local angle = (i - 1) * math.pi / math.max(2, settings.sparks)
-        self:_spawnTransient({
-            name = "IronYardHitSpark",
-            origin = CFrame.lookAt(center, center + direction)
-                * CFrame.Angles(0, 0, angle),
-            size = Vector3.new(0.025, 0.025, settings.radius * 2.4),
-            endSize = Vector3.new(0.018, 0.018, settings.radius * 0.5),
-            material = MATERIAL_NEON,
-            color = color,
-            alpha = 0.18,
+            alpha = 0.10,
             duration = settings.duration,
-            priority = 3,
+            priority = i == 1 and 4 or 3,
+            linear = true,
         })
     end
 end
@@ -1685,12 +1657,14 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
 
     -- Fleeting directional sparks for metal, glass glints, splinters for wood,
     -- and small dust/gravel for concrete and ground. All VFX are cosmetic.
-    for _ = 1, budget.fragments do
+    local fragments = distance > 55 and 1 or budget.fragments
+    local fragmentScale = math.clamp(distance / 55, 1, 1.65)
+    for _ = 1, fragments do
         local angle = self.random:NextNumber(0, math.pi * 2)
         local ring = tangent * math.cos(angle) + bitangent * math.sin(angle)
         local travel = (n * self.random:NextNumber(0.28, 0.68) + ring).Unit
         local reach = self.random:NextNumber(0.28, surface.spread)
-        local length = self.random:NextNumber(0.14,
+        local length = fragmentScale * self.random:NextNumber(0.14,
             surface.sparks and 0.67 or (surface.glimmer and 0.37 or 0.30))
         local center = position + n * 0.07 + travel * (length * 0.35)
         local finish = center + travel * reach - Vector3.new(0, reach * 0.22, 0)
@@ -1699,8 +1673,8 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
                 or (surface.glimmer and "IronYardGlassGlint" or "IronYardSurfaceDebris"),
             origin = CFrame.lookAt(center, center + travel),
             target = CFrame.lookAt(finish, finish + travel),
-            size = Vector3.new(surface.sparks and 0.034 or 0.065,
-                surface.sparks and 0.034 or 0.045, length),
+            size = Vector3.new(fragmentScale * (surface.sparks and 0.034 or 0.065),
+                fragmentScale * (surface.sparks and 0.034 or 0.045), length),
             endSize = Vector3.new(0.025, 0.025, 0.035),
             material = (surface.sparks or surface.glimmer)
                 and MATERIAL_NEON or MATERIAL_SMOOTH,
@@ -1713,7 +1687,7 @@ function WeaponVisuals:drawImpact(position, normal, materialName)
     end
 
     -- One short diffuse puff only at higher settings, never on ECO.
-    if budget.fragments >= 2 and not surface.sparks and not surface.glimmer then
+    if fragments >= 2 and not surface.sparks and not surface.glimmer then
         local start = CFrame.new(position + n * 0.13)
         self:_spawnTransient({
             name = "IronYardImpactDust",
