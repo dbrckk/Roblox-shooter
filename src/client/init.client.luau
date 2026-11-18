@@ -68,6 +68,16 @@ local cameraRoll = 0
 local hud = nil
 
 local UP = Vector3.new(0, 1, 0)
+local STANDING_CAMERA_OFFSET = Vector3.new(0, -0.05, -0.45)
+local SLIDING_CAMERA_OFFSET = Vector3.new(0, -0.55, -0.52)
+local LANDING_CAMERA_SECONDS = 0.22
+local cameraMotion = {
+    humanoid = nil,
+    stanceOffset = STANDING_CAMERA_OFFSET,
+    descentSpeed = 0,
+    landingDepth = 0,
+    landingAge = LANDING_CAMERA_SECONDS,
+}
 
 local existingGui = playerGui:FindFirstChild("PrecisionHud")
 if existingGui then
@@ -341,15 +351,6 @@ local function showLocalBody()
             part.LocalTransparencyModifier = entry.transparency
         end
     end
-
-    local offset = Vector3.new(0, -0.05, -0.45)
-    if os.clock() < localSlidingUntil then
-        offset = Vector3.new(0, -0.55, -0.52)
-    elseif localWallRunning then
-        local sideOffset = localWallSide == "Left" and 0.22 or -0.22
-        offset = Vector3.new(sideOffset, -0.08, -0.48)
-    end
-    humanoid.CameraOffset = offset
 end
 
 local function setSprinting(enabled)
@@ -1041,21 +1042,67 @@ local function applyFallGravity(deltaTime)
 end
 
 local function updateCameraFeel(deltaTime)
-	local camera = getCamera()
-	if not camera then
-		return
-	end
-
-    if GuiService.ReducedMotionEnabled then
+    local camera = getCamera()
+    local _, humanoid, root = getCharacterParts()
+    local followingPlayer = camera and humanoid and root and humanoid.Health > 0
+        and camera.CameraType == Enum.CameraType.Custom and camera.CameraSubject == humanoid
+    local motionHumanoid = followingPlayer and not GuiService.ReducedMotionEnabled and humanoid or nil
+    if cameraMotion.humanoid ~= motionHumanoid then
+        cameraMotion.humanoid = motionHumanoid
+        cameraMotion.stanceOffset = STANDING_CAMERA_OFFSET
+        cameraMotion.descentSpeed = 0
+        cameraMotion.landingDepth = 0
+        cameraMotion.landingAge = LANDING_CAMERA_SECONDS
         cameraRoll = 0
-        if not scoped and camera.FieldOfView ~= baseFieldOfView then
+    end
+    if not motionHumanoid then
+        if humanoid and humanoid.CameraOffset ~= STANDING_CAMERA_OFFSET then
+            humanoid.CameraOffset = STANDING_CAMERA_OFFSET
+        end
+        if followingPlayer and not scoped and camera.FieldOfView ~= baseFieldOfView then
             camera.FieldOfView = baseFieldOfView
         end
         return
     end
 
-	local _, humanoid = getCharacterParts()
 	local sliding = os.clock() < localSlidingUntil
+    local grounded = isGrounded(humanoid)
+    local animationDt = math.min(deltaTime, 0.05)
+    local stanceTarget = STANDING_CAMERA_OFFSET
+    if sliding then
+        stanceTarget = SLIDING_CAMERA_OFFSET
+    elseif localWallRunning then
+        local sideOffset = localWallSide == "Left" and 0.22 or -0.22
+        stanceTarget = Vector3.new(sideOffset, -0.08, -0.48)
+    end
+    local stanceRate = sliding and 23 or 15
+    if (stanceTarget - cameraMotion.stanceOffset).Magnitude < 0.001 then
+        cameraMotion.stanceOffset = stanceTarget
+    else
+        cameraMotion.stanceOffset = cameraMotion.stanceOffset:Lerp(
+            stanceTarget, 1 - math.exp(-stanceRate * animationDt))
+    end
+
+    -- Floor contact can zero vertical velocity, so use the last airborne sample.
+    if grounded then
+        if cameraMotion.descentSpeed > 22 and deltaTime <= 0.12 then
+            local impact = math.clamp((cameraMotion.descentSpeed - 22) / 68, 0, 1)
+            cameraMotion.landingDepth = impact * ((scoped or sliding) and 0.09 or 0.23)
+            cameraMotion.landingAge = 0
+        end
+        cameraMotion.descentSpeed = 0
+    else
+        cameraMotion.descentSpeed = math.max(0, -root.AssemblyLinearVelocity.Y)
+    end
+    local landingProgress = math.min(cameraMotion.landingAge / LANDING_CAMERA_SECONDS, 1)
+    local envelope = math.min(landingProgress / 0.20, (1 - landingProgress) / 0.80)
+    local landingDip = cameraMotion.landingDepth * envelope * envelope * (3 - 2 * envelope)
+    cameraMotion.landingAge = math.min(cameraMotion.landingAge + animationDt, LANDING_CAMERA_SECONDS)
+    local offset = cameraMotion.stanceOffset - UP * landingDip
+    if humanoid.CameraOffset ~= offset then
+        humanoid.CameraOffset = offset
+    end
+
 	local targetRoll = 0
 	if localWallRunning then
 		targetRoll = localWallSide == "Left" and -7 or 7
@@ -1063,7 +1110,7 @@ local function updateCameraFeel(deltaTime)
 		targetRoll = -1.2
 	end
 
-	cameraRoll += (targetRoll - cameraRoll) * math.clamp(deltaTime * 10, 0, 1)
+	cameraRoll += (targetRoll - cameraRoll) * (1 - math.exp(-10 * animationDt))
 	if math.abs(cameraRoll) > 0.01 then
 		camera.CFrame *= CFrame.Angles(0, 0, math.rad(cameraRoll))
 	end
@@ -1081,12 +1128,12 @@ local function updateCameraFeel(deltaTime)
 	end
 	if localWallRunning then
 		fovBonus += 5
-	elseif humanoid and not isGrounded(humanoid) then
+	elseif not grounded then
 		fovBonus += 2
 	end
 
 	local targetFov = baseFieldOfView + fovBonus
-	camera.FieldOfView += (targetFov - camera.FieldOfView) * math.clamp(deltaTime * 8, 0, 1)
+	camera.FieldOfView += (targetFov - camera.FieldOfView) * (1 - math.exp(-8 * animationDt))
 end
 
 -- One automatic-fire task across mouse, controller and touch, including
@@ -1529,7 +1576,7 @@ workspace:GetAttributeChangedSignal("NeonMatchPhase"):Connect(function()
     end
 end)
 
--- Native camera first (priority Camera), then local movement/camera roll/FOV,
+-- Native camera first (priority Camera), then local movement and camera feel,
 -- then the weapon viewmodel (+2). Avoid a stale gun pose on fast touch turns.
 RunService:BindToRenderStep("IronYardClientCameraFeel",
     Enum.RenderPriority.Camera.Value + 1, function(deltaTime)
