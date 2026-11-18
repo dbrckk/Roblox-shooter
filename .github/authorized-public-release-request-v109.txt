@@ -1,0 +1,7 @@
+IRON YARD v109 — single public update, 18 November 2026.
+
+Deploy the game source verified at f306986a2af5e523baf79f9b359de7fd8dcadcd1 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+SET > PRACTICE RANGE opens an individual bay for all five weapons. BACK TO FFA restores the public loadout state. Training hits award no match score or career XP. The latest confirmed public place version is 104.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
