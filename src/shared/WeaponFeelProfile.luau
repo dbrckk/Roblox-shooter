@@ -4,24 +4,27 @@ local Feel = {}
 
 local PROFILES = {
     AssaultRifle = {
-        kickCap = 0.18, recovery = 11.6, shotSeconds = 0.13,
+        kickCap = 0.16, recovery = 14.5, shotSeconds = 0.13, shotDecay = 2.85,
         back = 0.055, pitch = 5.5, yaw = -1.2, roll = 0.7,
+        adsBack = 0.74, adsPitch = 0.42, adsLateral = 0.20,
         reloadX = 0.055, reloadY = -0.15, reloadZ = 0.14,
         reloadPitch = 14, reloadYaw = 12, reloadRoll = 8,
         handTravel = 0.95, magazineTravel = 1.0,
         actionSeconds = 0.12, actionTravel = 0.09,
     },
     Pistol = {
-        kickCap = 0.16, recovery = 9.5, shotSeconds = 0.17,
+        kickCap = 0.16, recovery = 11.8, shotSeconds = 0.17, shotDecay = 2.45,
         back = 0.078, pitch = 9, yaw = 1.6, roll = -1.5,
+        adsBack = 0.80, adsPitch = 0.49, adsLateral = 0.24,
         reloadX = 0.13, reloadY = -0.18, reloadZ = 0.13,
         reloadPitch = 20, reloadYaw = -13, reloadRoll = -17,
         handTravel = 0.9, magazineTravel = 1.15,
         actionSeconds = 0.14, actionTravel = 0.16,
     },
     Shotgun = {
-        kickCap = 0.30, recovery = 4.8, shotSeconds = 0.31,
+        kickCap = 0.30, recovery = 5.8, shotSeconds = 0.31, shotDecay = 1.65,
         back = 0.14, pitch = 15, yaw = -2.7, roll = 2.4,
+        adsBack = 0.87, adsPitch = 0.55, adsLateral = 0.27,
         reloadX = 0.09, reloadY = -0.24, reloadZ = 0.21,
         reloadPitch = 27, reloadYaw = 17, reloadRoll = 12,
         handTravel = 1.3, magazineTravel = 0,
@@ -74,7 +77,15 @@ function Feel.shotEnvelope(id, age)
     local profile = PROFILES[id]
     if not profile or not finite(age) or age < 0 then return 0 end
     local fraction = math.clamp(1 - age / profile.shotSeconds, 0, 1)
-    return fraction * fraction
+    return fraction ^ (profile.shotDecay or 2)
+end
+
+-- Retain more rearward travel than tilt as the gun enters the sight line.
+function Feel.aimRecoilScale(profile, aimBlend)
+    local blend = math.clamp(aimBlend, 0, 1)
+    return 1 - (1 - (profile.adsBack or 1)) * blend,
+        1 - (1 - (profile.adsPitch or 1)) * blend,
+        1 - (1 - (profile.adsLateral or 1)) * blend
 end
 
 function Feel.mechanism(id, age)
