@@ -1,7 +1,14 @@
 -- IRON YARD / cosmetic-only rank progression with no developer products.
 -- Thresholds are derived from authoritative lifetime XP on the server.
 -- RGB triplets keep this module testable in standalone Luau (no Roblox APIs).
+local Objectives = if script then require(script.Parent:WaitForChild("SessionObjectives"))
+    else require("./SessionObjectives")
 local OperatorFinishes = {}
+OperatorFinishes.sessionReward = {
+    preference = Objectives.FINISH_ID, name = "SHIFT LEAD",
+    accent = {234, 141, 74}, metal = {66, 88, 91},
+    fabric = {62, 90, 92}, glove = {31, 42, 46},
+}
 
 local finishes = {
     {
@@ -61,8 +68,9 @@ function OperatorFinishes.atIndex(index)
     return finishes[index]
 end
 
-function OperatorFinishes.canSelect(preference, level)
+function OperatorFinishes.canSelect(preference, level, objectiveUnlocked)
     if preference == 0 then return true end
+    if preference == Objectives.FINISH_ID then return objectiveUnlocked == true end
     for _, finish in ipairs(finishes) do
         if preference == finish.level then
             return finish.level <= OperatorFinishes.forLevel(level).level
@@ -71,8 +79,9 @@ function OperatorFinishes.canSelect(preference, level)
     return false
 end
 
-function OperatorFinishes.equipped(level, preference)
-    if preference ~= 0 and OperatorFinishes.canSelect(preference, level) then
+function OperatorFinishes.equipped(level, preference, objectiveUnlocked)
+    if preference ~= 0 and OperatorFinishes.canSelect(preference, level, objectiveUnlocked) then
+        if preference == Objectives.FINISH_ID then return OperatorFinishes.sessionReward end
         return OperatorFinishes.forLevel(preference)
     end
     return OperatorFinishes.forLevel(level)

@@ -12,6 +12,7 @@ local CombatReadoutPolicy = require(ReplicatedStorage:WaitForChild("Shared"):Wai
 local CrosshairFeedback = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("CrosshairFeedbackPolicy"))
 local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
+local Objectives = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SessionObjectives"))
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 
 local HudController = {}
@@ -630,12 +631,16 @@ function HudController:_buildFinishCollection(parent)
     local status = makeText(parent, "FinishSaveStatus", "", UDim2.fromOffset(22, 40),
         UDim2.fromOffset(296, 16), 11)
     status.ZIndex = 13
+    local objectives = makeText(parent, "DailyFfaObjectives", "", UDim2.fromOffset(22, 58),
+        UDim2.fromOffset(296, 17), 11)
+    objectives.ZIndex = 13
     local rows = {}
-    for index = 0, OperatorFinishes.count() do
-        local finish = OperatorFinishes.atIndex(index)
-        local preference = finish and finish.level or 0
+    for index = 0, OperatorFinishes.count() + 1 do
+        local reward = index > OperatorFinishes.count()
+        local finish = reward and OperatorFinishes.sessionReward or OperatorFinishes.atIndex(index)
+        local preference = finish and (finish.preference or finish.level) or 0
         local button = makeButton(parent, "Finish" .. preference, "",
-            UDim2.fromOffset(22, 61 + index * 40), UDim2.fromOffset(296, 36))
+            UDim2.fromOffset(22, 80 + index * 40), UDim2.fromOffset(296, 36))
         button.ZIndex = 12
         local name = makeText(button, "FinishName", finish and finish.name or "AUTO · HIGHEST RANK",
             UDim2.fromOffset(10, 0), UDim2.fromOffset(151, 36), 12)
@@ -656,7 +661,7 @@ function HudController:_buildFinishCollection(parent)
                 sample.Parent = button
             end
         end
-        rows[index + 1] = { preference = preference, button = button, state = state }
+        rows[index + 1] = { preference = preference, button = button, state = state, reward = reward }
         button.Activated:Connect(function()
             if self.settingsOpen and parent.Visible and button.Interactable
                 and player:GetAttribute("IronYardFinishPreference") ~= preference then
@@ -669,6 +674,10 @@ function HudController:_buildFinishCollection(parent)
         local level = player:GetAttribute("IronYardProgressLevel")
         local save = player:GetAttribute("IronYardProgressStatus")
         local saved = player:GetAttribute("IronYardSavedFinishPreference")
+        local objective = Objectives.decode(player:GetAttribute(Objectives.ATTRIBUTE))
+        local savedObjective = Objectives.decode(player:GetAttribute(Objectives.SAVED_ATTRIBUTE))
+        local unlockedReward = player:GetAttribute(Objectives.UNLOCKED_ATTRIBUTE) == true
+        objectives.Text = objective and ("DAILY · " .. Objectives.readout(objective)) or Objectives.readout()
         if save == "STUDIO" then
             status.Text = "SESSION ONLY"
         elseif save == "ONLINE" then
@@ -678,18 +687,23 @@ function HudController:_buildFinishCollection(parent)
             status.Text = (not save or save == "LOADING") and "LOADING CAREER" or "SAVE RETRYING"
         end
         for _, row in ipairs(rows) do
-            local unlocked = OperatorFinishes.canSelect(row.preference, level)
+            local unlocked = OperatorFinishes.canSelect(row.preference, level, unlockedReward)
             row.button.Interactable = preference ~= nil and unlocked
                 and self.options.onCareerFinishChanged ~= nil
             row.button.Selectable = row.button.Interactable
-            row.state.Text = preference == row.preference and "SELECTED"
-                or (unlocked and "AVAILABLE" or ("LOCKED · LV " .. row.preference))
+            if row.reward and unlocked and save ~= "STUDIO" and not (savedObjective and savedObjective.unlocked) then
+                row.state.Text = "SAVE PENDING"
+            else
+                row.state.Text = preference == row.preference and "SELECTED"
+                    or (unlocked and "AVAILABLE" or (row.reward and "FFA GOALS" or ("LOCKED · LV " .. row.preference)))
+            end
             row.state.TextColor3 = unlocked and Color3.fromRGB(233, 203, 145)
                 or Color3.fromRGB(162, 173, 190)
         end
     end
     for _, attribute in ipairs({ "IronYardFinishPreference", "IronYardSavedFinishPreference",
-        "IronYardProgressStatus", "IronYardProgressLevel" }) do
+        "IronYardProgressStatus", "IronYardProgressLevel", Objectives.ATTRIBUTE,
+        Objectives.SAVED_ATTRIBUTE, Objectives.UNLOCKED_ATTRIBUTE }) do
         player:GetAttributeChangedSignal(attribute):Connect(update)
     end
     update()

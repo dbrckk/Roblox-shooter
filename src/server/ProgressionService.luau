@@ -8,6 +8,7 @@ local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
+local Objectives = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SessionObjectives"))
 local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
@@ -62,6 +63,9 @@ local function publish(player, record)
     player:SetAttribute("IronYardProgressLevel", levelForXP(total))
     player:SetAttribute("IronYardFinishPreference", record.finishPreference)
     player:SetAttribute("IronYardSavedFinishPreference", record.savedFinishPreference)
+    player:SetAttribute(Objectives.ATTRIBUTE, Objectives.encode(record.objectives))
+    player:SetAttribute(Objectives.SAVED_ATTRIBUTE, Objectives.encode(record.savedObjectives))
+    player:SetAttribute(Objectives.UNLOCKED_ATTRIBUTE, record.objectives.unlocked)
 end
 
 local function createRecord(player)
@@ -72,6 +76,7 @@ local function createRecord(player)
         base = zero(),
         earned = zero(),
         committed = zero(),
+        objectives = Objectives.forDay(nil, Objectives.day(os.time())),
         loaded = false,
         triedAcquire = false,
         saving = false,
@@ -114,6 +119,12 @@ local function acquire(player, record)
         end)
     end)
     record.saving = false
+    if success and result then
+        -- Actions in this new session may have occurred while the store yielded.
+        record.objectives = Objectives.forDay(
+            Objectives.merge(result.objectives, record.objectives, true), Objectives.day(os.time()))
+        record.savedObjectives = result.objectives
+    end
     if not isLive(player, record) then
         -- The player left during acquisition; release any lock just acquired.
         if success and result then
@@ -135,7 +146,7 @@ local function acquire(player, record)
         record.base = Ledger.sessionBase(result, record.token)
         record.committed = copyStats(result.lock.committed)
         local preference = result.finishPreference or 0
-        record.finishPreference = OperatorFinishes.canSelect(preference, levelForXP(result.xp))
+        record.finishPreference = OperatorFinishes.canSelect(preference, levelForXP(result.xp), record.objectives.unlocked)
             and preference or 0
         record.savedFinishPreference = record.finishPreference
         setStatus(player, record, "ONLINE")
@@ -166,17 +177,23 @@ flush = function(player, record, release)
     record.saving = true
     local snapshot = cloneSnapshot(record.earned)
     local finishPreference = record.finishPreference
+    record.objectives = Objectives.forDay(record.objectives, Objectives.day(os.time()))
+    local objectives = record.objectives
+    -- If the original acquire was committed but its response was lost,
+    -- the final owned release still needs to combine the pre-load actions.
+    local objectivesBeforeLoad = not record.loaded
     local success, result = retry(function()
         local timestamp = os.time()
         return store:UpdateAsync(keyFor(player), function(previous)
             return Ledger.commit(previous, record.token, snapshot, timestamp,
-                LEASE_SECONDS, release, finishPreference)
+                LEASE_SECONDS, release, finishPreference, objectives, objectivesBeforeLoad)
         end)
     end)
     record.saving = false
     if success and result then
         record.committed = cloneSnapshot(snapshot)
         record.savedFinishPreference = finishPreference
+        record.savedObjectives = result.objectives
         record.lastWriteAt = os.clock()
         if player.Parent then
             setStatus(player, record, release and "CLOSED" or "ONLINE")
@@ -255,14 +272,18 @@ local function attach(player)
     task.spawn(loadOrRetry, player, record)
 end
 
-local function add(player, deltas)
+local function add(player, deltas, objectiveWeapon)
     local record = records[player]
     if not record or not player.Parent then return end
     local previousXP = record.base.xp + record.earned.xp
     -- The pure ledger returns a complete validated snapshot or throws
     -- without touching the prior one. Keep all four counters consistent if
     -- an unexpected award is malformed or a session approaches integer limits.
+    if record.closing then return end
     record.earned = Ledger.applyGrant(record.earned, deltas)
+    if objectiveWeapon then
+        record.objectives = Objectives.eliminate(record.objectives, Objectives.day(os.time()), objectiveWeapon)
+    end
     publish(player, record)
     -- Only announce a crossing from a known career baseline. Loading or
     -- retrying the DataStore never enters this award path.
@@ -273,13 +294,22 @@ local function add(player, deltas)
     end
 end
 
-function ProgressionService.recordElimination(player, points, headshot)
+function ProgressionService.recordElimination(player, points, headshot, objectiveWeapon)
     assert(safeInt(points) and points <= 1000, "Untrusted XP grant")
-    return add(player, { xp = points, eliminations = 1, headshots = headshot and 1 or 0 })
+    return add(player, { xp = points, eliminations = 1, headshots = headshot and 1 or 0 }, objectiveWeapon)
 end
 
 function ProgressionService.recordVictory(player)
     return add(player, { xp = 250, victories = 1 })
+end
+
+function ProgressionService.recordFfaCompletion(player)
+    local record = records[player]
+    if not record or not isLive(player, record) then return end
+    local updated = Objectives.finishFfa(record.objectives, Objectives.day(os.time()))
+    if updated == record.objectives then return end
+    record.objectives = updated
+    publish(player, record)
 end
 
 local function setFinishPreference(player, preference)
@@ -288,7 +318,7 @@ local function setFinishPreference(player, preference)
     if not record or record.closing or record.finishPreference == nil
         or preference == record.finishPreference then return end
     local level = levelForXP(record.base.xp + record.earned.xp)
-    if not OperatorFinishes.canSelect(preference, level) then return end
+    if not OperatorFinishes.canSelect(preference, level, record.objectives.unlocked) then return end
     record.finishPreference = preference
     player:SetAttribute("IronYardFinishPreference", preference)
 end
@@ -340,6 +370,11 @@ function ProgressionService.start()
                         if record.loaded then
                             flush(player, record, false)
                         else
+                            local updated = Objectives.forDay(record.objectives, Objectives.day(os.time()))
+                            if updated ~= record.objectives then
+                                record.objectives = updated
+                                publish(player, record)
+                            end
                             loadOrRetry(player, record)
                         end
                     end)

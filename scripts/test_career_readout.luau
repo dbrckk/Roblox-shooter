@@ -49,6 +49,6 @@ for _, reward in ipairs(reached) do
     assert(R.finishGoal("ONLINE", threshold, Finishes.nextUnlock(at))
         ~= nextFinish.name .. " · RANK SYNCING")
 end
-eq(R.finishGoal("ONLINE", 49000, Finishes.nextUnlock(15)), "ALL FINISHES UNLOCKED",
+eq(R.finishGoal("ONLINE", 49000, Finishes.nextUnlock(15)), "ALL RANK FINISHES UNLOCKED",
     "Last finish reached")
 print("IRON YARD career save status, podium and rank readout regression: OK")

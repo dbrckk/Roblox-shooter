@@ -32,7 +32,7 @@ end
 
 function Readout.finishGoal(status, xp, nextFinish)
     if status == nil or status == "LOADING" then return "FINISHES LOADING" end
-    if not nextFinish then return "ALL FINISHES UNLOCKED" end
+    if not nextFinish then return "ALL RANK FINISHES UNLOCKED" end
     local remaining = xpForRank(nextFinish.level) - Readout.count(xp)
     if remaining <= 0 then
         -- The XP and level attributes can arrive in different callbacks.

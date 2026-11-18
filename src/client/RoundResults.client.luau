@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local Shared = ReplicatedStorage:WaitForChild("Shared")
 local BuildInfo = require(Shared:WaitForChild("BuildInfo"))
 local CareerReadout = require(Shared:WaitForChild("CareerReadout"))
+local Objectives = require(Shared:WaitForChild("SessionObjectives"))
 local OperatorFinishes = require(Shared:WaitForChild("OperatorFinishes"))
 local PracticeMode = require(Shared:WaitForChild("PracticeMode"))
 local GamepadCombatPolicy = require(Shared:WaitForChild("GamepadCombatPolicy"))
@@ -28,7 +29,7 @@ local root = Instance.new("Frame")
 root.Name = "ResultsCard"
 root.AnchorPoint = Vector2.new(0.5, 0.5)
 root.Position = UDim2.fromScale(0.5, 0.49)
-root.Size = UDim2.fromOffset(434, 337)
+root.Size = UDim2.fromOffset(434, 364)
 root.BackgroundColor3 = Color3.fromRGB(30, 37, 37)
 root.BackgroundTransparency = 0.05
 root.BorderSizePixel = 0
@@ -95,6 +96,9 @@ local saveLabel = label("CareerSaveState", 10, UDim2.fromOffset(16, 178),
 local finishGoalLabel = label("CareerFinishGoal", 10, UDim2.fromOffset(16, 208),
     UDim2.new(1, -32, 0, 16), amber)
 
+local objectiveLabel = label("SessionObjectives", 11, UDim2.fromOffset(16, 226),
+    UDim2.new(1, -32, 0, 17), bone)
+
 local track = Instance.new("Frame")
 track.Name = "CareerProgressTrack"
 track.Position = UDim2.fromOffset(37, 200)
@@ -118,18 +122,18 @@ fillCorner.Parent = fill
 local leaderboard = {}
 for rank = 1, 3 do
     leaderboard[rank] = label("Leaderboard" .. rank, 12,
-        UDim2.fromOffset(27, 200 + rank * 27), UDim2.new(1, -54, 0, 23),
+        UDim2.fromOffset(27, 219 + rank * 25), UDim2.new(1, -54, 0, 23),
         rank == 1 and amber or muted)
 end
 local countdown = label("NextRound", 11,
-    UDim2.fromOffset(16, 315), UDim2.new(1, -32, 0, 16), muted)
+    UDim2.fromOffset(16, 341), UDim2.new(1, -32, 0, 16), muted)
 
 local function resultAction(name, text, offset)
     local button = Instance.new("TextButton")
     button.Name = name
     button.Text = text
     button.Size = UDim2.fromOffset(164, 36)
-    button.Position = UDim2.fromOffset(offset, 274)
+    button.Position = UDim2.fromOffset(offset, 297)
     button.BackgroundColor3 = Color3.fromRGB(61, 72, 65)
     button.TextColor3 = bone
     button.Font = Enum.Font.GothamBold
@@ -240,7 +244,7 @@ local function updateLayout()
     local camera = Workspace.CurrentCamera
     if not camera then return end
     local viewport = camera.ViewportSize
-    scale.Scale = math.clamp(math.min(viewport.X / 470, viewport.Y / 370), 0.54, 1)
+    scale.Scale = math.clamp(math.min(viewport.X / 470, viewport.Y / 395), 0.54, 1)
 end
 
 render = function()
@@ -325,6 +329,17 @@ render = function()
         or (saveInfo.tone == "pending" and amber or Color3.fromRGB(244, 154, 104))
     finishGoalLabel.Text = CareerReadout.finishGoal(careerStatus, xp, OperatorFinishes.nextUnlock(level))
     fill.Size = UDim2.fromScale(rankInfo.fraction, 1)
+    local objectives = Objectives.decode(player:GetAttribute(Objectives.ATTRIBUTE))
+    local savedObjectives = Objectives.decode(player:GetAttribute(Objectives.SAVED_ATTRIBUTE))
+    objectiveLabel.Text = Objectives.readout(objectives)
+    if objectives and Objectives.completed(objectives) == 3 then
+        objectiveLabel.Text ..= "   ·   SHIFT LEAD"
+        if careerStatus == "STUDIO" then
+            objectiveLabel.Text ..= " (SESSION)"
+        elseif not (savedObjectives and savedObjectives.unlocked) then
+            objectiveLabel.Text ..= " (PENDING)"
+        end
+    end
 
     local top = snapshot and snapshot.standings or standings()
     for i = 1, 3 do
@@ -409,6 +424,7 @@ end
 for _, attr in ipairs({
     "IronYardLifetimeXP", "IronYardProgressLevel", "IronYardRoundXP", "IronYardRoundFinishUnlocked",
     "IronYardSavedXP", "IronYardProgressStatus", "IronYardDuelReady", "IronYardDuelTravel", PracticeMode.ATTRIBUTE,
+    Objectives.ATTRIBUTE, Objectives.SAVED_ATTRIBUTE,
 }) do
     table.insert(attributeConnections,
         player:GetAttributeChangedSignal(attr):Connect(render))

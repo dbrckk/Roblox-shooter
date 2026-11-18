@@ -421,6 +421,13 @@ end
 
 local function endRound()
     finalResult = currentStandings()
+    -- Require a verified elimination in this completed FFA. Late arrivals
+    -- without play and operators in the practice range cannot complete it.
+    for _, player in ipairs(DuelRoom.players()) do
+        if not PracticeMode.active(player) and scoreFor(player) > 0 then
+            CombatAwards.recordFfaCompletion(player)
+        end
+    end
     -- One authoritative, self-contained snapshot for the whole lobby.
     -- Writing it BEFORE switching phases lets clients render a consistent
     -- podium even under delayed or reordered attribute replication.

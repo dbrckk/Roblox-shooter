@@ -7,7 +7,7 @@ local B = "22222222-bbbb-bbbb-bbbb-bbbbbbbbbbbb"
 local C = "33333333-cccc-cccc-cccc-cccccccccccc"
 local function eq(actual, expected, name)
     assert(actual == expected,
-        name .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
+        (name or "value") .. ": expected " .. tostring(expected) .. ", got " .. tostring(actual))
 end
 local function fails(fn, name)
     local ok = pcall(fn)
@@ -359,6 +359,74 @@ case("malformed cosmetic preference falls back while XP is loaded", function()
     local loaded = L.acquire(state, A, 1000, 180)
     eq(loaded.finishPreference, nil, "Invalid cosmetic preference ignored")
     eq(loaded.xp, 1000, "Malformed cosmetic preference never resets XP")
+end)
+
+local Objectives = require("../src/shared/SessionObjectives")
+local Finishes = require("../src/shared/OperatorFinishes")
+local function fromWeapons(day, ...)
+    local state = Objectives.forDay(nil, day)
+    for _, weapon in ipairs({...}) do state = Objectives.eliminate(state, day, weapon) end
+    return state
+end
+
+case("daily objectives merge confirmed kills, distinct weapons and FFA completion", function()
+    local day = 20801
+    local older = fromWeapons(day, "AssaultRifle", "AssaultRifle")
+    local pending = fromWeapons(day, "AssaultRifle", "Knife", "Pistol")
+    local merged = Objectives.merge(older, pending, true)
+    eq(merged.kills, 5, "Pre-load and saved kills count once")
+    eq(Objectives.weaponCount(merged.weapons), 3)
+    eq(merged.unlocked, false)
+    merged = Objectives.finishFfa(merged, day)
+    eq(merged.unlocked, true)
+    eq(Objectives.completed(merged), 3)
+    eq(Objectives.finishFfa(merged, day), merged, "Repeated FFA callback is idempotent")
+    eq(Objectives.encode(Objectives.decode(Objectives.encode(merged))), Objectives.encode(merged))
+    eq(Objectives.decode("20801:9999:1:2:1"), nil)
+    eq(Finishes.canSelect(Objectives.FINISH_ID, 1000, false), false)
+    eq(Finishes.equipped(1, Objectives.FINISH_ID, true).name, "SHIFT LEAD")
+end)
+
+case("objective reward and preference survive release, late writes and UTC rollover", function()
+    local day = 20801
+    local token = A
+    local previous = L.acquire(nil, token, 1000, 180)
+    local incomplete = fromWeapons(day, "AssaultRifle", "Pistol", "Shotgun")
+    fails(function()
+        L.commit(previous, token, earnings(500), 1001, 180, false, Objectives.FINISH_ID, incomplete)
+    end, "An unearned finish must be rejected")
+    previous = L.commit(previous, token, earnings(500), 1001, 180, false, nil, incomplete)
+    local complete = Objectives.finishFfa(Objectives.eliminate(
+        Objectives.eliminate(incomplete, day, "Knife"), day, "Sniper"), day)
+    previous = L.commit(previous, token, earnings(660), 1002, 180, false, Objectives.FINISH_ID, complete)
+    local stale = L.commit(previous, token, earnings(500), 1001, 180, false, nil, incomplete)
+    eq(stale.objectives.kills, 5)
+    eq(stale.finishPreference, Objectives.FINISH_ID)
+    eq(stale.xp, 660)
+    previous = L.commit(stale, token, earnings(660), 1003, 180, true, Objectives.FINISH_ID, complete)
+    previous = L.acquire(previous, B, 1004, 180)
+    local rollover = Objectives.forDay(previous.objectives, day + 1)
+    previous = L.commit(previous, B, earnings(), 1005, 180, false, Objectives.FINISH_ID, rollover)
+    eq(previous.objectives.kills, 0)
+    eq(previous.objectives.ffa, false)
+    eq(previous.objectives.unlocked, true)
+    local retry = L.commit(previous, token, earnings(660), 1006, 180, true, Objectives.FINISH_ID, complete)
+    eq(retry.objectives.day, day + 1)
+    eq(retry.finishPreference, Objectives.FINISH_ID)
+    eq(retry.xp, 660)
+end)
+
+case("lost acquisition acknowledgement and repeated release do not double count", function()
+    local day = 20801
+    local start = L.acquire(nil, A, 1000, 180)
+    start = L.commit(start, A, earnings(), 1001, 180, true, nil, fromWeapons(day, "Pistol", "Pistol"))
+    local held = L.acquire(start, B, 1002, 180)
+    local localDelta = fromWeapons(day, "Shotgun")
+    held = L.commit(held, B, earnings(100), 1003, 180, true, nil, localDelta, true)
+    eq(held.objectives.kills, 3)
+    held = L.commit(held, B, earnings(100), 1004, 180, true, nil, localDelta, true)
+    eq(held.objectives.kills, 3)
+    eq(held.xp, 100)
 end)
 
 print("IRON YARD pure Luau progression transactions: " .. tostring(cases) .. " suites OK")
