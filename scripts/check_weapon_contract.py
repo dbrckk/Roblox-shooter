@@ -386,8 +386,21 @@ def main():
     require(bot_audio < client.index("visuals:playFireSound(message.weaponId, message.origin)",
                                      bot_audio) < bot_budget,
             "Bot audio must remain independent of the cosmetic tracer budget")
-    has(client, "if message.shooterUserId ~= player.UserId then",
-        "Locally predicted shot audio must not play twice")
+    has(client, "local ownShot = message.shooterUserId == player.UserId",
+        "Only remote players receive a second shot sound")
+    fire_prediction = client.split("local function fireWeapon(weaponId)", 1)[1].split(
+        "local function quickThrowKnife()", 1)[0]
+    require("visuals:drawImpact(" not in fire_prediction and "visuals:drawTracer(" in fire_prediction,
+            "Immediate tracers must not create speculative impact marks")
+    player_fx = client[player_audio:bot_audio]
+    require(player_fx.index("PracticeMode.matches(player, message.rangeSession)")
+            < player_fx.index("visuals:drawImpact(primaryPosition")
+            and player_fx.index("FireEpochPolicy.acceptFeedback(message.epoch,")
+            < player_fx.index("visuals:playImpactSound(primaryPosition"),
+            "Own impacts must be admitted in the current round and practice session")
+    packet = server.split('kind = "PlayerTracer",', 1)[1].split("if PracticeMode.active(player) then", 1)[0]
+    has(packet, "epoch = weaponRoundEpoch", "Confirmed materials carry the originating round")
+    has(packet, "rangeSession = PracticeMode.session(player)", "Confirmed materials carry the originating mode")
     has(client, 'message.kind == "FireSound"', "Knife-only audio packet remains supported")
 
 
@@ -708,7 +721,7 @@ def main():
     for needle in (
         "local function randomSpread(direction, spreadDegrees)",
         "local function firePelletWeapon(player, weaponId, config, direction, coneDegrees)",
-        "for _ = 1, config.pellets do",
+        "for pelletIndex = 1, config.pellets do",
         "state.magazines[weaponId] = loaded - 1",
         "state.reloadUntil[weaponId] = os.clock() + config.reloadSeconds",
         "state.reloadTokens[weaponId] ~= token",
@@ -968,12 +981,12 @@ def main():
                 "CombatVfxProfile.pelletVisualCount("):
         has(viewmodel, key, "Client-only confirmed damage and shotgun glints")
     for key in ("visuals:drawConfirmedHit(message.hitPosition, message.headshot, message.killed)",
-                "visuals:drawPelletImpacts(message.pelletImpacts)",
+                "visuals:drawPelletImpacts(pellets)",
                 "local ownShot = message.shooterUserId == player.UserId",
-                "if remoteAccepted then",
-                '(ownShot or remoteAccepted) and typeof(message.pelletImpacts) == "table"'):
+                "elseif remoteAccepted then",
+                '(ownShot or remoteAccepted) and pellets'):
         has(client, key, "Server-authored hit UI, no local duplicate or skipped pellet feedback")
-    for key in ("visuals:drawMuzzleFlash(message.origin, nil, direction.Unit,",
+    for key in ("visuals:drawMuzzleFlash(message.origin, nil, unit,",
                 "visuals:drawMuzzleFlash(message.origin, accent, message.direction.Unit,",
                 "nil, message.weaponId)"):
         has(client, key, "Remote gun flashes use server shot direction")

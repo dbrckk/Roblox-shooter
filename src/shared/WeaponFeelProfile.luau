@@ -97,11 +97,19 @@ function Feel.shotTiltScale(id, followUp)
 end
 
 -- Retain more rearward travel than tilt as the gun enters the sight line.
-function Feel.aimRecoilScale(profile, aimBlend)
+function Feel.aimRecoilScale(profile, aimBlend, touchShot, reducedMotion)
     local blend = math.clamp(aimBlend, 0, 1)
-    return 1 - (1 - (profile.adsBack or 1)) * blend,
-        1 - (1 - (profile.adsPitch or 1)) * blend,
-        1 - (1 - (profile.adsLateral or 1)) * blend
+    local back = 1 - (1 - (profile.adsBack or 1)) * blend
+    local pitch = 1 - (1 - (profile.adsPitch or 1)) * blend
+    local lateral = 1 - (1 - (profile.adsLateral or 1)) * blend
+    if reducedMotion then
+        return back, pitch * 0.35, lateral * 0.20
+    end
+    if touchShot then
+        -- Retain the rearward impulse and the weapon's own recovery timing.
+        return back, pitch * (0.79 - blend * 0.14), lateral * 0.55
+    end
+    return back, pitch, lateral
 end
 
 function Feel.mechanism(id, age)

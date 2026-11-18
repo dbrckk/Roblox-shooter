@@ -15,8 +15,8 @@ function Policy.kick(weaponId, previous, followUp)
 end
 
 function Policy.recover(previous, dt)
-    if not finite(previous) or not finite(dt) then return 0 end
-    return math.max(0, previous) * math.exp(-9 * math.clamp(dt, 0, 0.5))
+    if previous == 0 or not finite(previous) or not finite(dt) then return 0 end
+    return math.max(0, previous) * math.exp(-9 * math.clamp(dt, 0, 20))
 end
 
 function Policy.radius(weaponId, moveAmount, sprinting, kick)
@@ -28,10 +28,10 @@ function Policy.radius(weaponId, moveAmount, sprinting, kick)
 end
 
 -- No UI updates when rounded radius is unchanged; no per-shot Tweens.
-function Policy.shouldDraw(now, previousAt, previousRadius, radius, freshRifleShot)
+function Policy.shouldDraw(now, previousAt, previousRadius, radius, freshShot)
     return finite(now) and finite(radius)
         and previousRadius ~= radius
-        and (freshRifleShot == true or not finite(previousAt) or now - previousAt >= 0.045)
+        and (freshShot == true or not finite(previousAt) or now - previousAt >= 0.045)
 end
 
 return Policy

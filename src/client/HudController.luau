@@ -95,7 +95,8 @@ function HudController.new(player, gui, WeaponConfig, options)
 	self.currentWeaponId = "AssaultRifle"
 	self.hitToken = 0
     self.reticleKick = 0
-    self.rifleReticlePending = false
+    self.reticleShotPending = false
+    self.reticleKickAt = nil
     self.reticleLastAt = -math.huge
     self.reticleRadius = nil
     self.lastConfirmedHudHitAt = -math.huge
@@ -1121,7 +1122,8 @@ end
 function HudController:setWeapon(weaponId)
 	self.currentWeaponId = weaponId
     self.reticleKick = 0
-    self.rifleReticlePending = false
+    self.reticleShotPending = false
+    self.reticleKickAt = nil
     self.reticleRadius = nil
     -- Equip must force a fresh readout even when two magazines happen to
     -- share the same text and the server snapshot arrives a frame later.
@@ -1152,23 +1154,24 @@ end
 -- Predicted shot bloom is cosmetic; only a server "Hit" triggers damage feedback.
 function HudController:registerPredictedShot(weaponId, followUp)
     if weaponId ~= self.currentWeaponId then return end
-    self.reticleKick = CrosshairFeedback.kick(weaponId, self.reticleKick, followUp)
-    self.rifleReticlePending = weaponId == "AssaultRifle"
+    local now = os.clock()
+    local prior = CrosshairFeedback.recover(self.reticleKick, now - (self.reticleKickAt or now))
+    self.reticleKick = CrosshairFeedback.kick(weaponId, prior, followUp)
+    self.reticleKickAt = now
+    self.reticleShotPending = true
 end
 
--- Draw a changed rifle impulse on the next frame. Ordinary rounded radius
--- updates still use the 45ms throttle on the existing frame callback.
-function HudController:updateCrosshair(dt, moving, running)
-    local freshRifleShot = self.rifleReticlePending
-    self.rifleReticlePending = false
-    if not freshRifleShot then
-        self.reticleKick = CrosshairFeedback.recover(self.reticleKick, dt)
-    end
-    local radius = CrosshairFeedback.radius(
-        self.currentWeaponId, moving, running, self.reticleKick)
+-- Wake the existing HUD render callback for the next shot of any weapon.
+-- Recovery uses the shot clock, including after a mobile background pause.
+function HudController:updateCrosshair(moving, running)
+    if not self.crosshair.Visible and not self.reticleShotPending then return end
+    local freshShot = self.reticleShotPending
+    self.reticleShotPending = false
     local now = os.clock()
+    local kick = CrosshairFeedback.recover(self.reticleKick, now - (self.reticleKickAt or now))
+    local radius = CrosshairFeedback.radius(self.currentWeaponId, moving, running, kick)
     if not CrosshairFeedback.shouldDraw(now,
-        self.reticleLastAt, self.reticleRadius, radius, freshRifleShot) then return end
+        self.reticleLastAt, self.reticleRadius, radius, freshShot) then return end
     self.reticleLastAt = now
     self.reticleRadius = radius
     self.crosshairLines[1].Position = UDim2.new(0.5, 0, 0.5, -radius)

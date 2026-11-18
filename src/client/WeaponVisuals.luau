@@ -1,4 +1,5 @@
 local Debris = game:GetService("Debris")
+local GuiService = game:GetService("GuiService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
@@ -38,7 +39,7 @@ WeaponVisuals.__index = WeaponVisuals
 local MATERIAL_METAL = Enum.Material.Metal
 local MATERIAL_SMOOTH = Enum.Material.SmoothPlastic
 local MATERIAL_NEON = Enum.Material.Neon
-local IMPACT_AUDIO_DISTANCE = 90
+local IMPACT_AUDIO_DISTANCE = 145
 local IMPACT_AUDIO_COOLDOWN = 0.095
 local IMPACT_AUDIO_VOICES = 4
 
@@ -1009,6 +1010,7 @@ function WeaponVisuals:kick(weaponId, followUp)
     if not config or weaponId ~= self.currentWeaponId then return end
     self.recoil = WeaponFeel.kick(weaponId, self.recoil, config.recoilKick or 0.08)
     self.fireStartedAt = os.clock()
+    self.touchShot = UserInputService:GetLastInputType() == Enum.UserInputType.Touch
     self.shotTiltScale = WeaponFeel.shotTiltScale(weaponId, followUp)
     -- Schedule visible first-person FX until AFTER the final camera-aligned
     -- viewmodel pose is written. No 1-frame-old muzzle/receiver coordinates.
@@ -1053,7 +1055,8 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
     self.stepPhase = (self.stepPhase + cadence * deltaTime * movement) % (math.pi * 2)
     local swayFactor, bobFactor = WeaponAimPose.damping(self.aimBlend)
     local feel = WeaponFeel.get(self.currentWeaponId)
-    local backScale, pitchScale, lateralScale = WeaponFeel.aimRecoilScale(feel, self.aimBlend)
+    local backScale, pitchScale, lateralScale = WeaponFeel.aimRecoilScale(
+        feel, self.aimBlend, self.touchShot, GuiService.ReducedMotionEnabled)
     bobAmount *= bobFactor
 	local bob = CFrame.new(
 		math.sin(self.stepPhase) * bobAmount,
@@ -1836,7 +1839,7 @@ function WeaponVisuals:playImpactSound(position, materialName)
         sound = Instance.new("Sound")
         sound.Name = "SurfaceContact"
         sound.RollOffMode = Enum.RollOffMode.Linear
-        sound.RollOffMinDistance = 8
+        sound.RollOffMinDistance = 14
         sound.RollOffMaxDistance = IMPACT_AUDIO_DISTANCE
         sound.Parent = emitter
         self.impactSoundVoices[index] = sound

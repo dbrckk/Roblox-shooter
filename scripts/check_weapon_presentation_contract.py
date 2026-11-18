@@ -803,14 +803,16 @@ for needle in (
     "function Policy.kick(weaponId, previous, followUp)",
     "function Policy.recover(previous, dt)",
     "function Policy.radius(weaponId, moveAmount, sprinting, kick)",
-    "function Policy.shouldDraw(now, previousAt, previousRadius, radius, freshRifleShot)",
+    "function Policy.shouldDraw(now, previousAt, previousRadius, radius, freshShot)",
 ):
     assert needle in crosshair, f"Cosmetic crosshair policy missing: {needle}"
 for needle in (
     'WaitForChild("CrosshairFeedbackPolicy")',
     'function HudController:registerPredictedShot(weaponId, followUp)',
-    'function HudController:updateCrosshair(dt, moving, running)',
+    'function HudController:updateCrosshair(moving, running)',
     'CrosshairFeedback.shouldDraw(now,',
+    'self.reticleShotPending = true',
+    'now - (self.reticleKickAt or now)',
     'self.crosshair.Visible = not scoped',
     'self.adsDot.Visible = scoped and not isOptical',
     'self.crosshairLines[1].Position = UDim2.new(0.5, 0, 0.5, -radius)',
@@ -818,7 +820,7 @@ for needle in (
 ):
     assert needle in hud, f"Adaptive hip-fire / ADS UI missing: {needle}"
 assert 'hud:registerPredictedShot(weaponId, followUp)' in client
-assert 'hud:updateCrosshair(deltaTime, moveAmount, sprinting)' in client
+assert 'hud:updateCrosshair(moveAmount, sprinting)' in client
 assert client.index('hud:registerPredictedShot(weaponId, followUp)') < (
     client.index('remotes.FireWeapon:FireServer({', client.index('local function fireWeapon(')))
 assert client.count('RunService:BindToRenderStep("IronYardClientCameraFeel",') == 1, (
