@@ -5,17 +5,10 @@ local SoundService = game:GetService("SoundService")
 local shared = ReplicatedStorage:WaitForChild("Shared")
 local SurfaceProfile = require(shared:WaitForChild("CombatVfxProfile"))
 local MovementConfig = require(shared:WaitForChild("MovementConfig"))
+local ContactAudio = require(script.Parent:WaitForChild("MovementContactAudio"))
 
 local MovementAudio = {}
 MovementAudio.__index = MovementAudio
-
-local CONTACTS = {
-    METAL = { id = "rbxasset://sounds/plasticmetal.mp3", speed = 1.26, gain = 0.92, high = 0 },
-    STONE = { id = "rbxasset://sounds/plasticstone.mp3", speed = 1.13, gain = 1, high = -3 },
-    EARTH = { id = "rbxasset://sounds/plasticgrass.mp3", speed = 1.06, gain = 0.92, high = -8 },
-    WOOD = { id = "rbxasset://sounds/woodplastic.mp3", speed = 1.18, gain = 0.96, high = -4 },
-    GLASS = { id = "rbxasset://sounds/plasticice.mp3", speed = 1.21, gain = 0.82, high = -2 },
-}
 
 -- Pro Sound Effects recordings from the Roblox Creator Store.
 local SLIDES = {
@@ -35,30 +28,6 @@ local SHOT_GAIN = {
 local SHOT_HOLD_SECONDS = 0.045
 local SHOT_RELEASE_SECONDS = 0.20
 
-local function createVoice(name, group)
-    local sound = Instance.new("Sound")
-    sound.Name = name
-    sound.Volume = 0
-    sound.SoundGroup = group
-    sound.Archivable = false
-    local filter = Instance.new("EqualizerSoundEffect")
-    filter.Parent = sound
-    sound.Parent = SoundService
-    return { sound = sound, filter = filter }
-end
-
-local function play(voice, contact, volume, speed, high)
-    local sound = voice.sound
-    sound:Stop()
-    if sound.SoundId ~= contact.id then
-        sound.SoundId = contact.id
-    end
-    sound.Volume = volume * contact.gain
-    sound.PlaybackSpeed = speed * contact.speed
-    voice.filter.HighGain = contact.high + high
-    sound:Play()
-end
-
 function MovementAudio.new()
     local group = Instance.new("SoundGroup")
     group.Name = "IronYardLocalMovement"
@@ -69,7 +38,7 @@ function MovementAudio.new()
     local slideVoices = {}
     local slideSounds = {}
     for surface, profile in pairs(SLIDES) do
-        local voice = createVoice("IronYardSlide", group)
+        local voice = ContactAudio.createVoice("IronYardSlide", SoundService, group)
         voice.sound.SoundId = profile.id
         voice.filter.HighGain = profile.high
         slideVoices[surface] = voice
@@ -83,10 +52,10 @@ function MovementAudio.new()
     return setmetatable({
         group = group,
         stepVoices = {
-            createVoice("IronYardMovementContact", group),
-            createVoice("IronYardMovementContact", group),
+            ContactAudio.createVoice("IronYardMovementContact", SoundService, group),
+            ContactAudio.createVoice("IronYardMovementContact", SoundService, group),
         },
-        landingVoice = createVoice("IronYardMovementContact", group),
+        landingVoice = ContactAudio.createVoice("IronYardMovementContact", SoundService, group),
         slideVoices = slideVoices,
         stepIndex = 0,
         strideProgress = 0.65,
@@ -188,8 +157,7 @@ function MovementAudio:update(humanoid, root, slideRemaining, dt, now)
 
     if descentSpeed > 18 and dt <= 0.12 then
         local impact = math.clamp((descentSpeed - 18) / 72, 0, 1)
-        local contact = CONTACTS[SurfaceProfile.surfaceKind(floor.Name)]
-        play(self.landingVoice, contact, 0.11 + 0.22 * impact, 0.84 - 0.09 * impact, -2)
+        ContactAudio.play(self.landingVoice, floor.Name, 0.11 + 0.22 * impact, 0.84 - 0.09 * impact, -2)
         self.strideProgress = 0.2
         return
     end
@@ -201,15 +169,13 @@ function MovementAudio:update(humanoid, root, slideRemaining, dt, now)
 
     -- Distance-based contacts follow walk/sprint cadence without firing a
     -- burst of delayed steps after a background pause or a slow mobile frame.
-    local pace = math.clamp((speed - 12) / 24, 0, 1)
-    local strideLength = 7.5 + 2.2 * pace
+    local pace, strideLength = ContactAudio.stepPace(speed)
     self.strideProgress += math.min(dt, 0.05) * math.min(speed, 40) / strideLength
     if self.strideProgress < 1 then return end
     self.strideProgress -= 1
     self.stepIndex = self.stepIndex % #self.stepVoices + 1
     local speedVariation = self.stepIndex == 1 and 0.97 or 1.03
-    local contact = CONTACTS[SurfaceProfile.surfaceKind(floor.Name)]
-    play(self.stepVoices[self.stepIndex], contact, 0.10 + 0.10 * pace, speedVariation, 0)
+    ContactAudio.play(self.stepVoices[self.stepIndex], floor.Name, 0.10 + 0.10 * pace, speedVariation, 0)
 end
 
 return MovementAudio
