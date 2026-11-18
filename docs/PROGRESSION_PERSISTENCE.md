@@ -255,14 +255,21 @@ jusqu’aux résultats et a au moins une élimination dans la manche.
 Le stand et le 1v1 sont exclus de ces objectifs.
 
 Le premier cycle terminé débloque la finition **Shift Lead** dans
-**SET → COLLECTION**. La progression utilise le bail et les mises à jour
-atomiques de la carrière. La sauvegarde combine les types d’armes et
-garde la progression la plus récente, même après un retry. Le passage
-au jour suivant réinitialise les compteurs et conserve le déblocage.
-Les anciens enregistrements sans objectifs sont lisibles. Une écriture
-d’un serveur antérieur à cette fonctionnalité peut supprimer les champs
-d’objectifs optionnels. Cette limite concerne les serveurs encore ouverts
-après une mise à jour et les retours à une ancienne version.
+**SET → COLLECTION**. Les objectifs et le port de Shift Lead sont
+enregistrés sous `objectives_<UserId>`. Les XP et les finitions de rang
+restent sous `player_<UserId>`. Un serveur de la version 107 continue à
+écrire les XP et à afficher la finition de rang. Au retour dans une
+version compatible, la progression des objectifs et le choix Shift Lead
+sont repris depuis leur propre clé.
+
+La sauvegarde cumule les éliminations par session jusqu’au plafond
+quotidien, réunit les armes distinctes et conserve la sélection la plus
+récente. Elle accepte les réessais et une dernière écriture de la veille.
+Le passage au jour suivant réinitialise les compteurs et conserve le
+déblocage. Les deux clés sont synchronisées indépendamment. L’interface
+distingue le déblocage local de la sauvegarde confirmée. Le serveur relit
+les objectifs lors du premier autosave puis périodiquement pour récupérer
+une dernière sauvegarde de la session précédente après un transfert.
 
 Pour vérifier la durabilité réelle, avancer sur l’objectif, attendre
 la sauvegarde ou quitter normalement, puis rejoindre un serveur de la

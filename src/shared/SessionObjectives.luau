@@ -66,21 +66,6 @@ function Objectives.finishFfa(state, day)
     return snapshot(state.day, state.kills, state.weapons, true, state.unlocked)
 end
 
--- Only a fresh database acquisition combines pre-load earnings additively.
--- Repeated and out-of-order saves always merge their cumulative snapshots.
-function Objectives.merge(a, b, beforeLoad)
-    if not a then return b end
-    if not b then return a end
-    local unlocked = a.unlocked or b.unlocked
-    if a.day ~= b.day then
-        local latest = a.day > b.day and a or b
-        return snapshot(latest.day, latest.kills, latest.weapons, latest.ffa, unlocked)
-    end
-    local kills = beforeLoad and math.min(Objectives.ELIMINATIONS, a.kills + b.kills)
-        or math.max(a.kills, b.kills)
-    return snapshot(a.day, kills, bit32.bor(a.weapons, b.weapons), a.ffa or b.ffa, unlocked)
-end
-
 function Objectives.encode(state)
     if not state then return nil end
     return string.format("%d:%d:%d:%d:%d", state.day, state.kills, state.weapons,

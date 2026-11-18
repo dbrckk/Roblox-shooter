@@ -26,6 +26,7 @@ def contains(text: str, items, scope: str):
 def main():
     data = read("src/server/ProgressionService.luau")
     ledger = read("src/server/ProgressionLedger.luau")
+    objectives = read("src/server/ObjectiveLedger.luau")
     shutdown_tracker = read("src/server/ProgressionShutdownTracker.luau")
     detached_policy = read("src/server/ProgressionDetachedRelease.luau")
     workflow = read(".github/workflows/rojo-build.yml")
@@ -51,7 +52,7 @@ def main():
         "if not ok or not released then",
         'require(script.Parent:WaitForChild("ProgressionDetachedRelease"))',
         "queueDetachedRelease(player, record)",
-        "while record.saving and os.clock() < untilTime do",
+        "while (record.saving or record.objectiveSaving) and os.clock() < untilTime do",
         "store:UpdateAsync(keyFor(player), function(previous)",
         "local snapshot = cloneSnapshot(record.earned)",
         "record.triedAcquire = true",
@@ -85,7 +86,7 @@ def main():
         "ShutdownTracker.begin(shutdownTracker)",
         "ShutdownTracker.finish(shutdownTracker)",
         "ShutdownTracker.hasPending(shutdownTracker)",
-        "if not record.closing and (record.loaded or record.triedAcquire) then",
+        'if not record.closing and record.status ~= "STUDIO" then' ,
     ), "Roblox DataStore shutdown accounting")
     contains(detached_policy, (
         "function Detached.claim(record)",
@@ -112,8 +113,8 @@ def main():
     require(worker.index("DetachedRelease.claim(record)") < worker.index(
         "ShutdownTracker.begin(shutdownTracker)") < worker.index("task.spawn(function()"),
         "One final release slot must be claimed and tracked before scheduling work")
-    require("if record.saving then return false end" in worker
-            and "if flush(player, record, true) then return true end" in worker,
+    require("if record.saving or record.objectiveSaving then return false end" in worker
+            and "if flushDeparture(player, record) then return true end" in worker,
             "Detached release must wait for busy autosave and attempt owned final save")
     late = data[data.index("if not isLive(player, record) then"):queued]
     require(late.index("queueDetachedRelease(player, record)")
@@ -121,7 +122,7 @@ def main():
             "Late acquisition MUST queue final release before finishing acquire slot")
     removing = data.split("Players.PlayerRemoving:Connect(function(player)", 1)[1].split(
         "\n    task.spawn(function()", 1)[0]
-    require(removing.index("released = flush(player, record, true)")
+    require(removing.index("if not flushDeparture(player, record) then")
             < removing.index("queueDetachedRelease(player, record)")
             < removing.index("records[player] = nil"),
             "PlayerRemoving must schedule final save after timeout before unlinking player")
@@ -133,7 +134,7 @@ def main():
         "function Ledger.copyStats(value)",
         "raw.schema == 1",
         "function Ledger.acquire(previous, token, timestamp, leaseSeconds)",
-        "function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference, objectives, objectivesBeforeLoad)",
+        "function Ledger.commit(previous, token, earnedSnapshot, timestamp, leaseSeconds, release, finishPreference)",
         "lock.owner ~= token", "lock.expiresAt > timestamp",
         "lock.owner == token", "snapshot[field] - committed",
         "math.max(committed, snapshot[field])",
@@ -168,8 +169,8 @@ def main():
     require("publish(player, record)" in data.split("local function flush(player, record, release)")[-1]
             or "publish(player, record)" in data.split("flush = function(player, record, release)")[-1],
             "Successful DataStore saves must refresh the saved counter")
-    require(data.count("store:UpdateAsync(") == 2,
-            "Acquisition and every save must use UpdateAsync")
+    require(data.count("store:UpdateAsync(") == 3,
+            "Career acquisition and both save streams must use UpdateAsync")
     for unsafe in ("store:SetAsync(", "store:IncrementAsync(", "GetDataStore("):
         if unsafe == "GetDataStore(":
             require(data.count("GetDataStore(") >= 1, "Missing named datastore init")
@@ -220,9 +221,9 @@ def main():
             "Keep the in-combat Android career HUD compact")
     contains(data, ('RemoteGuard.allow(player, "SetCareerFinish")',
                    "OperatorFinishes.canSelect(preference, level, record.objectives.unlocked)",
-                   "local finishPreference = record.finishPreference",
+                   "local finishPreference = record.rankPreference",
                    "LEASE_SECONDS, release, finishPreference",
-                   "record.savedFinishPreference = finishPreference",
+                   "record.savedRankPreference = finishPreference",
                    "SetCareerFinish.OnServerEvent:Connect(setFinishPreference)"),
              "Server-owned cosmetic selection and save acknowledgement")
     contains(ledger, ("data.finishPreference = raw.finishPreference",
@@ -230,15 +231,15 @@ def main():
                       "data.finishPreference = finishPreference"),
              "Backward-compatible cosmetic persistence")
     require("CombatAward" in hud, "Medal feedback must remain intact")
-    contains(data, ("Objectives.merge(result.objectives, record.objectives, true)",
-                    "record.savedObjectives = result.objectives",
-                    "Objectives.eliminate(record.objectives, Objectives.day(os.time()), objectiveWeapon)",
-                    "Objectives.finishFfa(record.objectives, Objectives.day(os.time()))"),
-             "Current and saved server snapshots")
-    contains(ledger, ("Objectives.normalize(raw.objectives)",
-                      "Objectives.merge(data.objectives, valid, objectivesBeforeLoad == true)",
-                      "finishPreference == Objectives.FINISH_ID and data.objectives and data.objectives.unlocked"),
-             "Backward-compatible, lease-owned rewards")
+    contains(data, ('store:UpdateAsync("objectives_" .. tostring(player.UserId),',
+                    "record.savedObjectiveRecord = result",
+                    "Objectives.eliminate(record.objectiveEvents, day, objectiveWeapon)",
+                    "Objectives.finishFfa(record.objectiveEvents, day)"),
+             "Current and saved objectives use a separate key")
+    require("objectives" not in ledger, "The legacy career schema must never write objective progress")
+    contains(objectives, ("delta.kills - previously", "bucket.credits[token]",
+                          "choice.stamp > selected.stamp", "current.progress.unlocked = unlocked"),
+             "Replay-safe merging and durable cosmetic selection")
     contains(match, ("not PracticeMode.active(player) and scoreFor(player) > 0",
                      "CombatAwards.recordFfaCompletion(player)"), "Verified FFA finish only")
     contains(awards, ('Workspace:GetAttribute("IronYardMatchMode") == "FFA" and weaponId or nil',),
