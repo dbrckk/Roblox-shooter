@@ -117,6 +117,7 @@ function WeaponVisuals.new(WeaponConfig)
 	self.fireStartedAt = -math.huge
 	self.equipStartedAt = os.clock()
 	self.sprinting = false
+	self.sprintBlend = 0
 	self.scoped = false
     self.aimBlend = 0
     self.aimPose = nil
@@ -1036,12 +1037,11 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
 	self.sway = self.sway + (targetSway - self.sway) * swayAlpha
 
 	local timeNow = os.clock()
-	local sprintAlpha = self.sprinting and 1 or 0
-    -- Bob follows actual movement, not uptime: idling and airborne
-    -- no longer make the weapon glide as if the operator were running.
+    local sprintBlend = self.sprintBlend * (1 - self.aimBlend)
+    -- Bob follows actual movement and shares the sprint pose transition.
     local movement = motion or 0
-    local bobAmount = (self.sprinting and 0.035 or 0.014) * movement
-    local cadence = self.sprinting and 13.5 or 10
+    local bobAmount = (0.014 + 0.021 * sprintBlend) * movement
+    local cadence = 10 + 3.5 * sprintBlend
     self.stepPhase = (self.stepPhase + cadence * deltaTime * movement) % (math.pi * 2)
     local swayFactor, bobFactor = WeaponAimPose.damping(self.aimBlend)
     local feel = WeaponFeel.get(self.currentWeaponId)
@@ -1053,9 +1053,10 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
 		self.recoil * backScale
 	)
 
-	local equipAlpha = smoothStep(math.min((timeNow - self.equipStartedAt) / 0.22, 1))
-	local equipMotion = CFrame.new(0, (1 - equipAlpha) * 0.5, (1 - equipAlpha) * 0.36)
-        * CFrame.Angles(math.rad((1 - equipAlpha) * -18), math.rad((1 - equipAlpha) * 10), 0)
+    local equipRemaining = 1 - smoothStep((timeNow - self.equipStartedAt) / feel.equipSeconds)
+    local equipMotion = CFrame.new(0, -feel.equipDrop * equipRemaining, feel.equipBack * equipRemaining)
+        * CFrame.Angles(math.rad(feel.equipPitch * equipRemaining),
+            math.rad(feel.equipYaw * equipRemaining), 0)
 
     local fireAlpha = WeaponFeel.shotEnvelope(self.currentWeaponId,
         timeNow - self.fireStartedAt)
@@ -1067,7 +1068,7 @@ function WeaponVisuals:_getAnimationCFrame(deltaTime, camera, motion, reloadingP
 	local swayMotion = CFrame.Angles(self.sway.Y * swayFactor,
         self.sway.X * swayFactor, self.sway.X * 0.45 * swayFactor)
 	local sprintOffset = SPRINT_OFFSETS[self.currentWeaponId] or CFrame.new()
-	local sprintMotion = CFrame.new():Lerp(sprintOffset, sprintAlpha * (1 - self.aimBlend))
+	local sprintMotion = CFrame.new():Lerp(sprintOffset, sprintBlend)
 
     -- Common server-timed reload progression, visibly different mechanical
     -- grip and roll per original weapon. Never changes the server reload.
@@ -1139,6 +1140,13 @@ function WeaponVisuals:_render(deltaTime)
 
     self:_refreshImportedWeaponIfSafe(clock)
     self.recoil = WeaponFeel.recover(self.currentWeaponId, self.recoil, deltaTime)
+
+    -- Raise the weapon faster than it lowers and settle even while scoped.
+    local sprintPoseActive = self.sprinting and not self.scoped
+    local sprintTarget = sprintPoseActive and 1 or 0
+    local sprintRate = sprintPoseActive and 12 or 23
+    self.sprintBlend += (sprintTarget - self.sprintBlend)
+        * ViewmodelRenderPolicy.blendAlpha(animationDt, sprintRate)
 
     -- The optical sniper HUD completely hides the weapon meshes. Updating
     -- every PBR material primitive and glove CFrame is wasted while idle.
