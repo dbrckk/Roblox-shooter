@@ -23,6 +23,7 @@ local REINVITE_DELAY = 30
 local entries, order, pending, admitted = {}, {}, {}, {}
 local reinviteAfter = {}
 local leaving = {}
+local returnOnly = {}
 local closing = false
 local expected
 local started = false
@@ -307,13 +308,14 @@ function Room.arrivalSecondsLeft()
 end
 
 function Room.returnToFfa(player, retryRequested)
-    if not Room.isDedicated or admitted[player.UserId] ~= player
-        or player.Parent ~= Players or pending[player] then return end
+    local isCombatant = admitted[player.UserId] == player
+    if not Room.isDedicated or player.Parent ~= Players or pending[player]
+        or (not isCombatant and not returnOnly[player]) then return end
     if leaving[player] and not retryRequested then return end
     -- A room that starts sending players back cannot start a new duel.
     -- Failed transfers can be retried explicitly without reopening it.
     leaving[player] = true
-    if not closing then
+    if isCombatant and not closing then
         closing = true
         Workspace:SetAttribute("IronYardDuelExitStarted", true)
     end
@@ -337,7 +339,13 @@ local function admit(player)
         if not expected then task.wait(1) end
     end
     if player.Parent ~= Players then return end
-    if not expected or not table.find(expected, player.UserId) then
+    if not expected then
+        -- A roster outage permits a public return without admitting anyone to combat.
+        returnOnly[player] = true
+        Room.returnToFfa(player)
+        return
+    end
+    if not table.find(expected, player.UserId) then
         player:Kick("Unable to verify this 1v1 room. Rejoin IRON YARD to play FFA.")
         return
     end
@@ -368,6 +376,7 @@ function Room.start()
         local transfer = pending[player]
         pending[player] = nil
         leaving[player] = nil
+        returnOnly[player] = nil
         if not Room.isDedicated then
             -- Once teleport is dispatched, departure can be a successful transfer.
             if transfer and not transfer.code then

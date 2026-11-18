@@ -60,6 +60,7 @@ function Workspace:GetAttribute(key) return self.attributes[key] end
 function Workspace:SetAttribute(key, value) self.attributes[key] = value end
 local reservations, attempts = 0, 0
 local transfers, rosters = {}, {}
+local rosterReadBlocked = false
 local Teleport = {TeleportInitFailed = signal()}
 function Teleport:ReserveServerAsync()
     reservations += 1
@@ -78,7 +79,10 @@ local services = {
                 rosters[roomId] = ids
                 return true
             end,
-            GetAsync = function(_, roomId) return rosters[roomId] end,
+            GetAsync = function(_, roomId)
+                if rosterReadBlocked then error("MemoryStore unavailable") end
+                return rosters[roomId]
+            end,
         }
     end},
     HttpService = {JSONEncode = function() return "{}" end, GenerateGUID = function()
@@ -112,6 +116,7 @@ local function connectPlayer(id)
     end
     p.downstream = 0.4
     function p:FindFirstChild() return nil end
+    function p:Kick(message) self.kickReason = message end
     Players.online[id] = p
     Players.PlayerAdded:fire(p)
     return p, client
@@ -293,6 +298,42 @@ assert(Workspace:GetAttribute("NeonMatchPhase") == "WAITING")
 print("Duel arrival regression: a return in flight still applies across the lobby countdown.")
 """
 
+ROSTER_RECOVERY_CHECKS = r"""
+rosterReadBlocked = true
+local first, replica = connectPlayer(1)
+MatchService.start()
+local hud = newHud(first, replica, function(...)
+    remotes.ReturnToFfa.OnServerEvent:fire(...)
+end)
+advance(11.9)
+assert(#transfers == 0 and not first.kickReason, "The roster should be retried before falling back")
+advance(0.2)
+assert(not first.kickReason and #transfers == 1 and transfers[1].group[1] == first,
+    "A player whose room cannot be verified should be sent back to FFA")
+assert(not transfers[1].options.ReservedServerAccessCode)
+assert(#Room.players() == 0 and Room.combatantCount() == 0 and not Room.isClosing())
+
+Teleport.TeleportInitFailed:fire(first, nil, nil, game.PlaceId, transfers[1].options)
+advance(1.51)
+assert(#transfers == 2 and transfers[2].group[1] == first, "The FFA fallback should retry once")
+Teleport.TeleportInitFailed:fire(first, nil, nil, game.PlaceId, transfers[2].options)
+advance(0.41)
+assert(replica:GetAttribute("IronYardDuelTravel") == "FAILED" and not first.kickReason)
+hud.open()
+advance(0.41)
+assert(#transfers == 3 and transfers[3].group[1] == first, "The FFA button should retry a failed fallback")
+assert(not transfers[3].options.ReservedServerAccessCode)
+
+rosterReadBlocked = false
+local second = connectPlayer(2)
+local outsider = connectPlayer(3)
+assert(Room.combatantCount() == 1 and Room.players()[1] == second and not Room.isClosing(),
+    "Recovery for one player should keep verified admission available to the other")
+assert(outsider.kickReason and #transfers == 3,
+    "A verified roster must still reject a player absent from the reservation")
+print("Duel roster regression: a failed roster read offers FFA and preserves verified admission.")
+"""
+
 RESULTS_FIXTURE = r"""
 local function resultsClient(serverPlayer, player, displayedResultsRound)
     local back = {Activated = signal(), Visible = true, Interactable = true}
@@ -464,9 +505,15 @@ def run(luau):
         + DEDICATED_FIXTURE + module("MatchService", "src/server/MatchService.luau")
     )
     dedicated = dedicated_server + RESULTS_FIXTURE + rematch_state + results_render + results_actions + DEDICATED_CHECKS
-    waiting_exit = dedicated_server + lobby_client + WAITING_EXIT_CHECKS
+    dedicated_with_hud = dedicated_server + lobby_client
+    fixtures = {
+        "lobby": lobby,
+        "dedicated": dedicated,
+        "waiting-exit": dedicated_with_hud + WAITING_EXIT_CHECKS,
+        "roster-recovery": dedicated_with_hud + ROSTER_RECOVERY_CHECKS,
+    }
     with TemporaryDirectory() as directory:
-        for name, program in (("lobby", lobby), ("dedicated", dedicated), ("waiting-exit", waiting_exit)):
+        for name, program in fixtures.items():
             fixture = Path(directory) / f"duel-network-{name}.luau"
             fixture.write_text(program)
             subprocess.run([str(Path(luau).resolve()), str(fixture)], check=True)
