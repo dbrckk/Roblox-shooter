@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 114 comme base. Vérifie sur Android la lisibilité de la confirmation du B‑8 et l’équilibre sonore entre le tir, la touche et le décor. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 114](https://github.com/dbrckk/Roblox-shooter/actions/runs/44712636406)
+2. Prends la version publique 114 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 114](https://github.com/dbrckk/Roblox-shooter/actions/runs/44712636406)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -24,7 +24,11 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 
 Le lot publié en version 113 couvre l’affichage des arrivées en 2v2, le transfert groupé après les résultats, le réessai individuel vers le même serveur public s’il est connu et la redirection d’un joueur arrivé tard. Ces scénarios sont couverts en simulation. En partie, vérifier l’arrivée dans le même serveur public avec quatre clients Roblox. [Transitions de match](MATCH_TRANSITIONS.md)
 
-### Vérifier le tir sur Android
+### Stand d’entraînement
+
+Le HUD affiche la précision, les tirs qui ont touché sur le total des tirs validés et les cibles abattues. Une cartouche du B‑8 compte comme un tir. Chaque visite commence à zéro et ne contribue pas au score, à l’XP ni aux objectifs FFA.
+
+### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.
 

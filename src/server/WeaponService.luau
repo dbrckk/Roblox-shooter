@@ -277,6 +277,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
 
     if targetHumanoid.Health >= healthBefore then return false end
 
+    local killed = targetHumanoid.Health <= 0
     sendFeedback(attacker, {
         kind = "Hit",
         weaponId = weaponId,
@@ -284,11 +285,11 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
         targetName = targetPlayer and targetPlayer.DisplayName or targetCharacter.Name,
         damage = FeedbackPolicy.actualDamage(healthBefore, targetHumanoid.Health),
         headshot = headshot,
-        killed = healthBefore > 0 and targetHumanoid.Health <= 0,
+        killed = killed,
         distance = origin and (raycastResult.Position - origin).Magnitude or 0,
     })
 
-    if healthBefore > 0 and targetHumanoid.Health <= 0 and not PracticeMode.active(attacker) then
+    if killed and not PracticeMode.active(attacker) then
         local stats = attacker:FindFirstChild("leaderstats")
         local kills = stats and stats:FindFirstChild("Eliminations")
         DeathNotice.record(targetCharacter, attacker.DisplayName, weaponId, headshot)
@@ -301,7 +302,7 @@ local function damageHit(attacker, weaponId, config, raycastResult, origin)
             headshot = headshot,
         })
     end
-    return true
+    return true, killed
 end
 
 -- Client ammo is display-only: magazine counts and reload timings live here.
@@ -492,7 +493,8 @@ local function fireRaycastWeapon(player, weaponId, config, direction, coneDegree
     local shotDirection = randomSpread(direction, coneDegrees)
     local result = workspace:Raycast(origin, shotDirection * config.range, params)
     broadcastTrace(player, weaponId, origin, shotDirection, config.range, result)
-    damageHit(player, weaponId, config, result, origin)
+    local hit, killed = damageHit(player, weaponId, config, result, origin)
+    PracticeRange.record(player, 1, hit and 1 or 0, killed and 1 or 0)
 end
 
 local function firePelletWeapon(player, weaponId, config, direction, coneDegrees)
@@ -560,7 +562,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
 
     local confirmedHit
     local strongestPriority = 0
-    local totalDamage, pelletsHit = 0, 0
+    local totalDamage, pelletsHit, targetsDown = 0, 0, 0
     for humanoid, entry in pairs(victims) do
         if humanoid.Health > 0 and entry.model.Parent
             and canDamage(player, entry.player, entry.model)
@@ -574,6 +576,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
                 entry.model:SetAttribute("IronYardLastHitTime", workspace:GetServerTimeNow())
                 totalDamage += FeedbackPolicy.actualDamage(oldHealth, humanoid.Health)
                 pelletsHit += entry.pellets
+                if killed then targetsDown += 1 end
                 local headshot = entry.headshots > 0
                 local priority = killed and 3 or (headshot and 2 or 1)
                 if not confirmedHit or priority > strongestPriority
@@ -596,6 +599,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             end
         end
     end
+    PracticeRange.record(player, 1, confirmedHit and 1 or 0, targetsDown)
     -- One local cue per shell, even when it damages several opponents.
     if confirmedHit then
         local entry = confirmedHit
@@ -640,7 +644,8 @@ local function fireKnife(player, weaponId, config, direction)
     local initialHit = workspace:Raycast(start, origin - start, params)
     if initialHit then
         broadcastFireFx(player, weaponId, start, true)
-        damageHit(player, weaponId, config, initialHit, start)
+        local hit, killed = damageHit(player, weaponId, config, initialHit, start)
+        PracticeRange.record(player, 1, hit and 1 or 0, killed and 1 or 0)
         return
     end
     local knife = createKnifeVisual(origin, direction)
@@ -652,6 +657,7 @@ local function fireKnife(player, weaponId, config, direction)
     local maxRange = config.range
     local lifetime = config.projectileLifetime
     broadcastFireFx(player, weaponId, origin, true)
+    if launchedInPractice then PracticeRange.record(player, 1, 0, 0, launchedSession) end
 
     Debris:AddItem(knife, lifetime + 0.5)
 
@@ -681,7 +687,10 @@ local function fireKnife(player, weaponId, config, direction)
 
             if result then
                 knife.CFrame = CFrame.lookAt(result.Position, result.Position + direction) * CFrame.new(0, 0, -1.1)
-                damageHit(player, weaponId, config, result, origin)
+                local hit, killed = damageHit(player, weaponId, config, result, origin)
+                if launchedInPractice and hit then
+                    PracticeRange.record(player, 0, 1, killed and 1 or 0, launchedSession)
+                end
                 knife:Destroy()
                 return
             end
