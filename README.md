@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 120** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `1fa5c0ba02518d5aedca5d834ff4df8d6c35815c`. Le défi de 30 secondes sauvegarde le **PERSONAL BEST** affiché dans **SET → RANGE STATS**. Le menu indique quand le résultat attend une sauvegarde ou quand une tentative de sauvegarde doit être réessayée. [Publication de la version 120](https://github.com/dbrckk/Roblox-shooter/actions/runs/44725374408) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44725281581)
+Roblox a confirmé la **version de place 121** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `8f297569492a81b0a2d85e76509bc35b4de4255a`. Le défi de 30 secondes se lance et se relance depuis le HUD du stand avec **DRILL / RETRY**, **V** au clavier ou **R3** à la manette. Chaque départ replace le joueur sur la ligne de tir et remplit ses chargeurs. [Publication de la version 121](https://github.com/dbrckk/Roblox-shooter/actions/runs/44727714119) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44727643072)
 
 Depuis la version 109, deux binômes du même lobby peuvent jouer au premier à cinq en 2v2. Le joueur éliminé peut suivre son coéquipier survivant et la revanche demande quatre votes. [Publication du 2v2](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447)
 
