@@ -77,15 +77,19 @@ end
 function PracticeMode.drill(player)
     local snapshot = player:GetAttribute(PracticeMode.DRILL_ATTRIBUTE)
     if type(snapshot) ~= "string" then return nil end
-    local body, mode = snapshot:match("^(.*):([%a][%w_]*)$")
+    local score, baseline = snapshot:match("^([^|]+)|(.+)$")
+    score = score or snapshot
+    local body, mode = score:match("^(.*):([%a][%w_]*)$")
     mode = mode or PracticeMode.OPEN_DRILL
-    local session, id, starts, ends, shots, hits, targets, result = (body or snapshot):match(
+    local session, id, starts, ends, shots, hits, targets, result = (body or score):match(
         "^(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):([012])$")
     if tonumber(session) ~= PracticeMode.session(player) or not PracticeMode.validDrillMode(mode) then return nil end
+    local previousBest = PracticeMode.decodeDrillBest(baseline)
     return {
         id = tonumber(id), startsAt = tonumber(starts) / 1000, endsAt = tonumber(ends) / 1000,
         shots = tonumber(shots), hits = tonumber(hits), targetsDown = tonumber(targets),
         finished = result ~= "0", newBest = result == "2", mode = mode,
+        previousBest = previousBest, baselineKnown = baseline == "-" or previousBest ~= nil,
     }
 end
 
@@ -129,6 +133,21 @@ function PracticeMode.drillReadout(drill)
     local accuracy = PracticeMode.accuracy(drill.shots, drill.hits)
     return string.format("%d DOWN  ·  %d/%d HITS  ·  %s", drill.targetsDown, drill.hits, drill.shots,
         accuracy and (accuracy .. "%") or "—")
+end
+
+function PracticeMode.drillBestGap(drill, best)
+    local targets = drill.targetsDown - best.targetsDown
+    if targets ~= 0 then return string.format("%+d DOWN VS BEST", targets) end
+    -- Match the exact precision tie-breaker used by the server, even when
+    -- the two rounded percentages shown in the score rows are identical.
+    local numerator = drill.hits * best.shots - best.hits * drill.shots
+    if numerator == 0 then return "BEST MATCHED" end
+    local points = math.abs(numerator) * 100 / (drill.shots * best.shots)
+    if points < 0.1 then
+        return numerator > 0 and "<0.1 ACC POINTS ABOVE BEST" or "<0.1 ACC POINTS BELOW BEST"
+    end
+    local sign = numerator > 0 and "+" or "-"
+    return string.format("%s%.1f ACC POINTS VS BEST", sign, points)
 end
 
 return PracticeMode

@@ -228,13 +228,24 @@ function ProgressionService.loadPracticeRecords(player)
     end)
 end
 
+local function practiceBaselineKnown(record, entry)
+    return entry.refreshAt ~= nil or record.status == "STUDIO"
+end
+
+function ProgressionService.practiceBestBaseline(player, mode)
+    local record = records[player]
+    local entry = record and record.practiceRecords[mode]
+    if not entry or record.closing or not practiceBaselineKnown(record, entry) then return nil, false end
+    return entry.best, true
+end
+
 function ProgressionService.recordPracticeBest(player, score, mode)
     local record = records[player]
     mode = mode or PracticeMode.OPEN_DRILL
     local entry = record and record.practiceRecords[mode]
     if not entry or record.closing or not PracticeMode.betterDrillBest(score, entry.best) then return false end
     local best = { shots = score.shots, hits = score.hits, targetsDown = score.targetsDown }
-    local knownBaseline = entry.refreshAt ~= nil or record.status == "STUDIO"
+    local knownBaseline = practiceBaselineKnown(record, entry)
     entry.best = best
     if record.status == "STUDIO" then
         publishPracticeBest(player, record, mode, entry, "STUDIO")

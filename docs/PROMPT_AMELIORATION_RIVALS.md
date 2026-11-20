@@ -42,6 +42,8 @@ Depuis la version 122, **SET → RANGE STATS** propose un sélecteur **DRILL**. 
 
 Depuis la version 123, le tableau **SET → RANGE STATS → RECORDS** affiche les six records personnels avec les cibles abattues, les tirs réussis sur tirs validés, la précision et l’état de chaque score. L’ouverture du tableau charge les autres modes à la demande. **REFRESH** permet de réessayer après une erreur de chargement.
 
+À la fin d’un défi, le HUD affiche l’écart avec le record précédent du mode joué. Il compare d’abord les cibles abattues, puis la précision à nombre de cibles égal. L’annonce d’un nouveau record personnel suit la confirmation de la sauvegarde.
+
 ### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.
