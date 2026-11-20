@@ -1,0 +1,7 @@
+IRON YARD v123 — single public update, 20 November 2026.
+
+Deploy the game source verified at 07b42936546b8b396e4d65d9c5cf388ad1881524 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Ship pull request #276. Display the best completed timed practice result alongside the last attempt, announce a new session best, and retain it when returning to practice on the same server. The latest confirmed public place version is 118.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
