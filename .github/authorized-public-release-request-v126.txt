@@ -1,0 +1,7 @@
+IRON YARD v126 — single public update, 20 November 2026.
+
+Deploy the game source verified at 6442ebd08707dd1e78ba33db417e0ad448f746d5 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Ship pull request #285. Add five fixed-weapon practice drills with independent saved records, preserve the existing OPEN record, and enforce the selected weapon until the end of each drill. The latest confirmed public place version is 121.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
