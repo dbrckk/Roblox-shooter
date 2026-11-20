@@ -163,6 +163,9 @@ hud = HudController.new(player, gui, WeaponConfig, {
     onPracticeStatsReset = function(session, revision)
         remotes.ResetPracticeStats:FireServer(session, revision)
     end,
+    onPracticeDrillStart = function(session, previousId)
+        remotes.StartPracticeDrill:FireServer(session, previousId)
+    end,
     onCareerFinishChanged = function(preference)
         remotes.SetCareerFinish:FireServer(preference)
     end,
@@ -899,6 +902,8 @@ local function fireWeapon(weaponId)
     if not humanoid or humanoid.Health <= 0 then return end
     local practice = PracticeMode.active(player)
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" and not practice then return end
+    local drill = practice and PracticeMode.drill(player)
+    if drill and workspace:GetServerTimeNow() < drill.startsAt then return end
     local fireEpoch = workspace:GetAttribute("IronYardFireEpoch")
     -- An unreplicated round generation cannot initiate a predicted shot.
     -- The actual server uses this snapshot to reject late round packets.
@@ -966,6 +971,7 @@ local function fireWeapon(weaponId)
 		weaponId = weaponId,
         epoch = fireEpoch,
         rangeSession = PracticeMode.session(player),
+        rangeDrill = drill and drill.id or nil,
 		origin = ray.Origin,
 		direction = ray.Direction.Unit,
 	})
@@ -976,6 +982,8 @@ local function fireWeapon(weaponId)
 end
 
 local function quickThrowKnife()
+    local drill = PracticeMode.drill(player)
+    if drill and workspace:GetServerTimeNow() < drill.startsAt then return end
     local now = os.clock()
     local knife = WeaponConfig.get("Knife")
     -- A blocked quick-throw must not visually equip and immediately unequip

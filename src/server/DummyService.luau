@@ -172,7 +172,7 @@ local function spawn(folder, origin, spawnIndex)
 			end
 		end
 		task.delay(RESPAWN_DELAY, function()
-			if not folder:IsDescendantOf(workspace) then return end
+			if model.Parent ~= folder or not folder:IsDescendantOf(workspace) then return end
 			model:Destroy()
 			spawn(folder, origin, spawnIndex)
 		end)
