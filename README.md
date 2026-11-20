@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 113** le 18 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `bfe971e8816f0cba5c3dcb55977ce81f80233a81`. Le HUD du 2v2 affiche combien de joueurs sont arrivés sur quatre. Après les résultats, les joueurs qui sont encore dans la salle repartent ensemble vers le FFA. [Publication de la version 113](https://github.com/dbrckk/Roblox-shooter/actions/runs/44356962100) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44356870785)
+Roblox a confirmé la **version de place 114** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `4dd0e227c7215885c85a7958acf90d0d6db4be12`. Le B‑8 affiche une confirmation par cartouche avec les dégâts réels et le nombre de plombs validés sur huit. Les impacts du B‑8 sur le décor sont moins présents dans le mix. [Publication de la version 114](https://github.com/dbrckk/Roblox-shooter/actions/runs/44712636406) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44712564125)
 
 Depuis la version 109, deux binômes du même lobby peuvent jouer au premier à cinq en 2v2. Le joueur éliminé peut suivre son coéquipier survivant et la revanche demande quatre votes. [Publication du 2v2](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447)
 
