@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 119 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 119](https://github.com/dbrckk/Roblox-shooter/actions/runs/44721132045)
+2. Prends la version publique 120 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 120](https://github.com/dbrckk/Roblox-shooter/actions/runs/44725374408)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -34,7 +34,7 @@ Depuis la version 118, **SET → RANGE STATS → START 30S DRILL** lance le déf
 
 Depuis la version 119, **RANGE STATS** affiche **SESSION BEST** sous le résultat du dernier essai. Le record départage d’abord les essais au nombre de cibles abattues, puis à la précision exacte. Il est conservé lors des allers-retours entre le FFA et le stand tant que le joueur reste connecté au même serveur.
 
-Le prochain lot sauvegarde **PERSONAL BEST** dans le DataStore Roblox pour le retrouver après reconnexion. Le jeu signale une sauvegarde en cours ou à réessayer. Les serveurs départagent deux résultats concurrents selon la même règle que le défi.
+Depuis la version 120, le jeu sauvegarde **PERSONAL BEST** dans le DataStore Roblox pour le retrouver après reconnexion. Le jeu signale une sauvegarde en cours ou à réessayer. Les serveurs départagent deux résultats concurrents selon la même règle que le défi. La simulation couvre la reconnexion et les écritures concurrentes. Le contrôle en jeu sur un serveur Roblox reste ouvert.
 
 ### Vérifier le tir sur Android à la demande du joueur
 
