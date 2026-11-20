@@ -764,7 +764,7 @@ local function update()
         headerText = "IRON YARD  /  PRACTICE RANGE"
         local shots, hits, targets, revision = PracticeMode.stats(player)
         if shots > 0 then
-            local accuracy = math.round(100 * hits / shots)
+            local accuracy = PracticeMode.accuracy(shots, hits)
             detailText = string.format("%d%% ACC  ·  %d/%d HITS  ·  %d DOWN", accuracy, hits, shots, targets)
         elseif revision and revision > 0 then
             detailText = "0/0 HITS  ·  0 DOWN"

@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 local Mode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
+local WeaponConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponConfig"))
 local DummyService = require(script.Parent:WaitForChild("DummyService"))
 
 local PracticeRange = {}
@@ -105,17 +106,33 @@ local function buildRoom(slot)
 end
 
 local function publishStats(player, room)
-    player:SetAttribute(Mode.STATS_ATTRIBUTE, string.format("%d:%d:%d:%d:%d",
-        room.session, room.shots, room.hits, room.targetsDown, room.statsRevision))
+    -- Replicate the totals, reset revision and weapon counts together.
+    local snapshot = { string.format("%d:%d:%d:%d:%d",
+        room.session, room.shots, room.hits, room.targetsDown, room.statsRevision) }
+    for _, weaponId in ipairs(WeaponConfig.Order) do
+        local stats = room.weaponStats[weaponId]
+        if stats then
+            table.insert(snapshot, string.format("%s:%d:%d:%d", weaponId, stats.shots, stats.hits, stats.targetsDown))
+        end
+    end
+    player:SetAttribute(Mode.STATS_ATTRIBUTE, table.concat(snapshot, ";"))
 end
 
-function PracticeRange.record(player, shots, hits, targetsDown, launchedSession, launchedRevision)
+function PracticeRange.record(player, weaponId, shots, hits, targetsDown, launchedSession, launchedRevision)
     local room = rooms[player]
     if not room or (launchedSession and (launchedSession ~= room.session
         or launchedRevision ~= room.statsRevision)) then return end
     room.shots += shots
     room.hits += hits
     room.targetsDown += targetsDown
+    local stats = room.weaponStats[weaponId]
+    if not stats then
+        stats = { shots = 0, hits = 0, targetsDown = 0 }
+        room.weaponStats[weaponId] = stats
+    end
+    stats.shots += shots
+    stats.hits += hits
+    stats.targetsDown += targetsDown
     publishStats(player, room)
 end
 
@@ -123,6 +140,7 @@ function PracticeRange.resetStats(player, session, revision)
     local room = rooms[player]
     if not room or room.session ~= session or room.statsRevision ~= revision then return end
     room.shots, room.hits, room.targetsDown = 0, 0, 0
+    table.clear(room.weaponStats)
     room.statsRevision += 1
     publishStats(player, room)
 end
@@ -134,7 +152,7 @@ function PracticeRange.enter(player, health, round)
     local session = Mode.session(player) + 1
     local room = { model = model, targets = targets, spawn = spawn,
         slot = slot, health = health, round = round, session = session,
-        shots = 0, hits = 0, targetsDown = 0, statsRevision = 0 }
+        shots = 0, hits = 0, targetsDown = 0, statsRevision = 0, weaponStats = {} }
     rooms[player] = room
     occupied[slot] = true
     publishStats(player, room)

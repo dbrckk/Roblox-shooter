@@ -494,7 +494,7 @@ local function fireRaycastWeapon(player, weaponId, config, direction, coneDegree
     local result = workspace:Raycast(origin, shotDirection * config.range, params)
     broadcastTrace(player, weaponId, origin, shotDirection, config.range, result)
     local hit, killed = damageHit(player, weaponId, config, result, origin)
-    PracticeRange.record(player, 1, hit and 1 or 0, killed and 1 or 0)
+    PracticeRange.record(player, weaponId, 1, hit and 1 or 0, killed and 1 or 0)
 end
 
 local function firePelletWeapon(player, weaponId, config, direction, coneDegrees)
@@ -599,7 +599,7 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             end
         end
     end
-    PracticeRange.record(player, 1, confirmedHit and 1 or 0, targetsDown)
+    PracticeRange.record(player, weaponId, 1, confirmedHit and 1 or 0, targetsDown)
     -- One local cue per shell, even when it damages several opponents.
     if confirmedHit then
         local entry = confirmedHit
@@ -645,7 +645,7 @@ local function fireKnife(player, weaponId, config, direction)
     if initialHit then
         broadcastFireFx(player, weaponId, start, true)
         local hit, killed = damageHit(player, weaponId, config, initialHit, start)
-        PracticeRange.record(player, 1, hit and 1 or 0, killed and 1 or 0)
+        PracticeRange.record(player, weaponId, 1, hit and 1 or 0, killed and 1 or 0)
         return
     end
     local knife = createKnifeVisual(origin, direction)
@@ -659,7 +659,7 @@ local function fireKnife(player, weaponId, config, direction)
     local maxRange = config.range
     local lifetime = config.projectileLifetime
     broadcastFireFx(player, weaponId, origin, true)
-    if launchedInPractice then PracticeRange.record(player, 1, 0, 0, launchedSession, launchedRevision) end
+    if launchedInPractice then PracticeRange.record(player, weaponId, 1, 0, 0, launchedSession, launchedRevision) end
 
     Debris:AddItem(knife, lifetime + 0.5)
 
@@ -692,7 +692,7 @@ local function fireKnife(player, weaponId, config, direction)
                 knife.CFrame = CFrame.lookAt(result.Position, result.Position + direction) * CFrame.new(0, 0, -1.1)
                 local hit, killed = damageHit(player, weaponId, config, result, origin)
                 if launchedInPractice and hit then
-                    PracticeRange.record(player, 0, 1, killed and 1 or 0, launchedSession, launchedRevision)
+                    PracticeRange.record(player, weaponId, 0, 1, killed and 1 or 0, launchedSession, launchedRevision)
                 end
                 knife:Destroy()
                 return
