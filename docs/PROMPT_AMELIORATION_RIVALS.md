@@ -44,6 +44,8 @@ Depuis la version 123, le tableau **SET → RANGE STATS → RECORDS** affiche le
 
 Depuis la version 124, à la fin d’un défi, le HUD affiche l’écart avec le record précédent du mode joué. Il compare d’abord les cibles abattues, puis la précision à nombre de cibles égal. L’annonce d’un nouveau record personnel suit la confirmation de la sauvegarde.
 
+Pendant le compte à rebours, le HUD affiche le record du mode joué avec le nombre de cibles, les tirs réussis et la précision. Quand aucun record n’existe encore, une cible abattue suffit à établir le premier. Le HUD indique si le record est encore en cours de chargement ou de sauvegarde.
+
 ### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.

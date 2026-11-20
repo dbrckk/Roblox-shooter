@@ -66,10 +66,10 @@ header.TextTruncate = Enum.TextTruncate.AtEnd
 local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(248, 248, 241))
 
 detail.TextTruncate = Enum.TextTruncate.AtEnd
-local drillComparison = label("DrillComparison", 11, UDim2.new(1, -12, 0, 15),
+local drillNote = label("DrillNote", 11, UDim2.new(1, -12, 0, 15),
     UDim2.fromOffset(6, 61), Color3.fromRGB(244, 217, 170))
-drillComparison.TextTruncate = Enum.TextTruncate.AtEnd
-drillComparison.Visible = false
+drillNote.TextTruncate = Enum.TextTruncate.AtEnd
+drillNote.Visible = false
 
 -- Ten reusable, non-interactive score indicators (five wins per side).
 -- No RenderStepped loop, network events or creation during match updates.
@@ -781,6 +781,14 @@ local eliminations = nil
 local statsConnection = nil
 local statsGeneration = 0
 local drillClockTask
+local FIRST_RECORD_GOAL = "1 TARGET TO SET A BEST"
+local countdownBestLabels = {
+    READY = "PERSONAL BEST TO BEAT",
+    STUDIO = "SESSION BEST TO BEAT",
+    SAVING = "BEST SAVING",
+    SAVE_RETRY = "BEST UNSAVED",
+}
+
 local function practiceReadout()
     local drill = PracticeMode.drill(player)
     if drill then
@@ -789,7 +797,17 @@ local function practiceReadout()
         if now < drill.startsAt then
             local remaining = drill.startsAt - now
             local seconds = math.ceil(remaining)
-            return string.format("%s STARTS IN %ds", title, seconds), "GET READY", remaining - seconds + 1
+            local best, status = PracticeMode.drillBest(player, drill.mode)
+            local score, goal = "GET READY", "LOADING PERSONAL BEST"
+            if best then
+                score = PracticeMode.drillReadout(best)
+                goal = countdownBestLabels[status] or "LAST KNOWN BEST"
+            elseif status == "READY" or status == "STUDIO" then
+                goal = FIRST_RECORD_GOAL
+            elseif status == "LOAD_RETRY" then
+                goal = "PERSONAL BEST UNAVAILABLE"
+            end
+            return string.format("%s STARTS IN %ds", title, seconds), score, remaining - seconds + 1, goal
         elseif now < drill.endsAt then
             local remaining = drill.endsAt - now
             local seconds = math.ceil(remaining)
@@ -829,7 +847,7 @@ local function practiceReadout()
             if previousBest then
                 comparison = PracticeMode.drillBestGap(drill, previousBest)
             elseif (drill.baselineKnown or status == "READY") and not best and drill.targetsDown == 0 then
-                comparison = "1 TARGET TO SET A BEST"
+                comparison = FIRST_RECORD_GOAL
             elseif not drill.baselineKnown and not matchesBest then
                 comparison = "PREVIOUS BEST UNAVAILABLE"
             end
@@ -880,10 +898,10 @@ local function update()
     local kills = eliminations and eliminations.Value or 0
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
-    local headerText, detailText, comparisonText
+    local headerText, detailText, noteText
     if PracticeMode.active(player) then
         local nextRefresh
-        headerText, detailText, nextRefresh, comparisonText = practiceReadout()
+        headerText, detailText, nextRefresh, noteText = practiceReadout()
         if nextRefresh and not drillClockTask then
             drillClockTask = task.delay(math.max(0.02, nextRefresh), function()
                 drillClockTask = nil
@@ -953,9 +971,9 @@ local function update()
     -- reaches Roblox UI properties; score/time changes remain immediate.
     if header.Text ~= headerText then header.Text = headerText end
     if detail.Text ~= detailText then detail.Text = detailText end
-    if drillComparison.Text ~= (comparisonText or "") then drillComparison.Text = comparisonText or "" end
-    local showComparison = comparisonText ~= nil
-    if drillComparison.Visible ~= showComparison then drillComparison.Visible = showComparison end
+    if drillNote.Text ~= (noteText or "") then drillNote.Text = noteText or "" end
+    local showDrillNote = noteText ~= nil
+    if drillNote.Visible ~= showDrillNote then drillNote.Visible = showDrillNote end
     updateDuelProgress(matchMode, phase, myWins, rivalWins)
 end
 

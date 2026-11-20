@@ -139,7 +139,7 @@ local function newHud(serverPlayer, player, deliverReturn)
     local UDim = {new = function() end}
     local Color3 = {fromRGB = function() end}
     local GuiService, gui = {MenuOpened = signal(), MenuClosed = signal()}, {}
-    local top, header, detail, drillComparison = {}, {}, {}, {}
+    local top, header, detail, drillNote = {}, {}, {}, {}
     local function updateDuelProgress() end
     local UDim2 = {}
     function UDim2.new(sx, x, sy, y)
