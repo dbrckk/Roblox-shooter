@@ -495,7 +495,8 @@ print("2v2 lobby: explicit invitation, cancellation, stale token, queue separati
 DEDICATED_FIXTURE = r"""
 local remotes = {SetDuelReady = {OnServerEvent = signal()}, ReturnToFfa = {OnServerEvent = signal()},
     SetPracticeRange = {OnServerEvent = signal()}, ResetPracticeStats = {OnServerEvent = signal()},
-    StartPracticeDrill = {OnServerEvent = signal()}, SelectPracticeDrill = {OnServerEvent = signal()}}
+    StartPracticeDrill = {OnServerEvent = signal()}, SelectPracticeDrill = {OnServerEvent = signal()},
+    LoadPracticeRecords = {OnServerEvent = signal()}}
 local function noop() end
 local preparedArenas = {}
 local modules = {

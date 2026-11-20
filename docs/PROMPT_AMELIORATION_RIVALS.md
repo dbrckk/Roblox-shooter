@@ -40,6 +40,8 @@ Depuis la version 121, **DRILL** et **RETRY** sont accessibles dans le HUD du st
 
 Depuis la version 122, **SET → RANGE STATS** propose un sélecteur **DRILL**. Le joueur peut choisir **OPEN**, **AR-24**, **PISTOL**, **B-8**, **SNIPER** ou **KNIFE**. Le serveur équipe l’arme sélectionnée au départ et l’impose jusqu’au résultat. Chaque arme a son propre **PERSONAL BEST** sauvegardé, et **OPEN** conserve ses records existants.
 
+Le tableau **SET → RANGE STATS → RECORDS** affiche les six records personnels avec les cibles abattues, les tirs réussis sur tirs validés, la précision et l’état de chaque score. L’ouverture du tableau charge les autres modes à la demande. **REFRESH** permet de réessayer après une erreur de chargement.
+
 ### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.

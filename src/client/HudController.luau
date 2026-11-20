@@ -914,6 +914,31 @@ function HudController:_buildSettingsMenu()
     drillButton.ZIndex = 12
     drillButton.Visible = self.options.onPracticeDrillStart ~= nil
     if drillButton.Visible then statsBack.Size = UDim2.fromOffset(144, 42) end
+    local recordsButton = makeButton(statsPage, "PracticeRecords", "RECORDS",
+        UDim2.fromOffset(122, rangeY), UDim2.fromOffset(drillButton.Visible and 96 or 196, 42))
+    recordsButton.ZIndex = 12
+    recordsButton.Visible = self.options.onPracticeRecordsRequested ~= nil
+    if recordsButton.Visible then
+        statsBack.Text = "BACK"
+        statsBack.Size = UDim2.fromOffset(96, 42)
+        drillButton.Position = UDim2.fromOffset(222, rangeY)
+        drillButton.Size = UDim2.fromOffset(96, 42)
+    end
+
+    local recordsPage = Instance.new("Frame")
+    recordsPage.Name = "PracticeRecordsPage"
+    recordsPage.Size = UDim2.fromScale(1, 1)
+    recordsPage.BackgroundTransparency = 1
+    recordsPage.Visible = false
+    recordsPage.ZIndex = 11
+    recordsPage.Parent = panel
+    local recordsBack = makeButton(recordsPage, "Back", "BACK TO STATS",
+        UDim2.fromOffset(22, rangeY), UDim2.fromOffset(144, 42))
+    local recordsRefresh = makeButton(recordsPage, "Refresh", "REFRESH",
+        UDim2.fromOffset(174, rangeY), UDim2.fromOffset(144, 42))
+    recordsBack.ZIndex = 12
+    recordsRefresh.ZIndex = 12
+    self:_buildPracticeRecords(recordsPage)
     local drillStatus = makeText(statsPage, "PracticeDrillStatus", "",
         UDim2.fromOffset(22, 260), UDim2.fromOffset(296, 18), 11)
     drillStatus.ZIndex = 12
@@ -950,10 +975,11 @@ function HudController:_buildSettingsMenu()
         if pendingDrill then
             drillButton.Text = "STARTING…"
         elseif active then
-            drillButton.Text = "DRILL ACTIVE"
+            drillButton.Text = recordsButton.Visible and "ACTIVE" or "DRILL ACTIVE"
         else
             local replay = drill and drill.mode == mode
-            drillButton.Text = string.format(replay and "RETRY %dS DRILL" or "START %dS DRILL", drillSeconds)
+            local action = replay and "RETRY" or "START"
+            drillButton.Text = string.format("%s %dS%s", action, drillSeconds, recordsButton.Visible and "" or " DRILL")
         end
         drillStatus.Text = drill and (drill.finished
             and ("LAST " .. PracticeMode.drillLabel(drill.mode) .. "  ·  " .. PracticeMode.drillReadout(drill))
@@ -970,7 +996,9 @@ function HudController:_buildSettingsMenu()
             bestLabel = "LOADING BEST"
         end
         drillBest.Text = bestLabel .. "  ·  " .. (best and PracticeMode.drillReadout(best) or "—")
-        if acknowledged and self.settingsOpen and statsPage.Visible then self:setSettingsOpen(false) end
+        if acknowledged and self.settingsOpen and (statsPage.Visible or recordsPage.Visible) then
+            self:setSettingsOpen(false)
+        end
     end
     drillModeButton.Activated:Connect(function()
         if not self.settingsOpen or not statsPage.Visible or not drillModeButton.Visible
@@ -1013,9 +1041,37 @@ function HudController:_buildSettingsMenu()
     end
     updateDrillControls()
 
+    local function requestRecords()
+        if self.settingsOpen and recordsPage.Visible and PracticeMode.active(self.player) then
+            self.options.onPracticeRecordsRequested(PracticeMode.session(self.player))
+        end
+    end
+
+    local function setRecordsOpen(open)
+        local selected = GuiService.SelectedObject
+        local previousPage = open and statsPage or recordsPage
+        recordsPage.Visible = open
+        statsPage.Visible = not open
+        title.Text = open and "DRILL RECORDS" or "RANGE STATS"
+        if selected and selected:IsDescendantOf(previousPage) then
+            GuiService.SelectedObject = open and recordsBack or recordsButton
+        end
+        if open then requestRecords() else refreshWeaponStats() end
+    end
+    recordsButton.Activated:Connect(function()
+        if self.settingsOpen and statsPage.Visible and recordsButton.Visible and PracticeMode.active(self.player) then
+            setRecordsOpen(true)
+        end
+    end)
+    recordsBack.Activated:Connect(function()
+        if self.settingsOpen and recordsPage.Visible then setRecordsOpen(false) end
+    end)
+    recordsRefresh.Activated:Connect(requestRecords)
+
     local function setWeaponStatsOpen(open)
         local selected = GuiService.SelectedObject
-        local previousPage = open and settingsPage or statsPage
+        local previousPage = open and settingsPage or (recordsPage.Visible and recordsPage or statsPage)
+        recordsPage.Visible = false
         statsPage.Visible = open
         settingsPage.Visible = not open
         collectionButton.Visible = not open
@@ -1052,12 +1108,10 @@ function HudController:_buildSettingsMenu()
         statsButton.Size = UDim2.fromOffset(resetButton.Visible and 96 or 196, 42)
         rangeButton.Text = practicing and "BACK TO FFA" or (notice or "PRACTICE RANGE")
         hint.Text = practicing and notice or settingsHint
-        if statsPage.Visible then
-            if statsButton.Visible then
-                refreshWeaponStats()
-            else
-                setWeaponStatsOpen(false)
-            end
+        if not statsButton.Visible and (statsPage.Visible or recordsPage.Visible) then
+            setWeaponStatsOpen(false)
+        elseif statsPage.Visible then
+            refreshWeaponStats()
         end
 
         local completed = pendingReset and session == pendingReset.session
@@ -1157,6 +1211,65 @@ function HudController:_buildPracticeWeaponStats(parent)
             row.hits.Text = entry and string.format("%d/%d", entry.hits, entry.shots) or "0/0"
             row.targets.Text = entry and tostring(entry.targetsDown) or "0"
         end
+    end
+end
+
+function HudController:_buildPracticeRecords(parent)
+    local muted = Color3.fromRGB(162, 173, 190)
+    local saved = Color3.fromRGB(134, 224, 180)
+    local warning = Color3.fromRGB(233, 203, 145)
+    local states = {
+        LOADING = { "LOADING", muted },
+        LOAD_RETRY = { "LOAD RETRY", warning },
+        SAVING = { "SAVING", warning },
+        SAVE_RETRY = { "UNSAVED", warning },
+        STUDIO = { "SESSION", muted },
+    }
+    local function cell(name, value, x, y, width, size, alignment)
+        local label = makeText(parent, name, value, UDim2.fromOffset(x, y), UDim2.fromOffset(width, 30), size)
+        label.TextXAlignment = alignment
+        label.TextTruncate = Enum.TextTruncate.AtEnd
+        label.ZIndex = 12
+        return label
+    end
+
+    local left, right = Enum.TextXAlignment.Left, Enum.TextXAlignment.Right
+    local headings = {
+        cell("ModeHeading", "MODE", 22, 52, 62, 11, left),
+        cell("TargetsHeading", "DOWN", 86, 52, 37, 11, right),
+        cell("HitsHeading", "HITS / SHOTS", 129, 52, 69, 11, right),
+        cell("AccuracyHeading", "ACC.", 204, 52, 37, 11, right),
+        cell("StatusHeading", "STATUS", 247, 52, 71, 11, right),
+    }
+    for _, heading in ipairs(headings) do heading.TextColor3 = muted end
+
+    for index, mode in ipairs(PracticeMode.DRILL_MODES) do
+        local y = 83 + (index - 1) * 36
+        cell(mode .. "Name", PracticeMode.drillLabel(mode), 22, y, 62, 14, left)
+        local targets = cell(mode .. "Targets", "—", 86, y, 37, 14, right)
+        local hits = cell(mode .. "Hits", "—", 129, y, 69, 14, right)
+        local accuracy = cell(mode .. "Accuracy", "—", 204, y, 37, 14, right)
+        local statusLabel = cell(mode .. "Status", "", 247, y, 71, 11, right)
+
+        local function refreshRow()
+            local best, status = PracticeMode.drillBest(self.player, mode)
+            targets.Text = best and tostring(best.targetsDown) or "—"
+            hits.Text = best and string.format("%d/%d", best.hits, best.shots) or "—"
+            accuracy.Text = best and string.format("%d%%", PracticeMode.accuracy(best.shots, best.hits)) or "—"
+            if status == "READY" then
+                statusLabel.Text = best and "SAVED" or "NO SCORE"
+                statusLabel.TextColor3 = best and saved or muted
+            else
+                local state = states[status] or states.LOADING
+                statusLabel.Text = state[1]
+                statusLabel.TextColor3 = state[2]
+            end
+        end
+
+        local bestAttribute, statusAttribute = PracticeMode.drillBestAttributes(mode)
+        self.player:GetAttributeChangedSignal(bestAttribute):Connect(refreshRow)
+        self.player:GetAttributeChangedSignal(statusAttribute):Connect(refreshRow)
+        refreshRow()
     end
 end
 
