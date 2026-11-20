@@ -762,7 +762,13 @@ local function update()
     local headerText, detailText
     if PracticeMode.active(player) then
         headerText = "IRON YARD  /  PRACTICE RANGE"
-        detailText = "TRY ALL 5 WEAPONS  ·  SETTINGS TO EXIT"
+        local shots, hits, targets = PracticeMode.stats(player)
+        if shots > 0 then
+            local accuracy = math.round(100 * hits / shots)
+            detailText = string.format("%d%% ACC  ·  %d/%d HITS  ·  %d DOWN", accuracy, hits, shots, targets)
+        else
+            detailText = "TRY ALL 5 WEAPONS  ·  SETTINGS TO EXIT"
+        end
     elseif matchMode == "DUEL" and phase ~= "COUNTDOWN" and phase ~= "WAITING" then
         local score = myWins and string.format(teamDuel and "TEAM %d : %d RIVALS" or "YOU %d : %d RIVAL",
             myWins, rivalWins)
@@ -883,6 +889,7 @@ player.CharacterAdded:Connect(bindDuelPad)
 player.CharacterRemoving:Connect(function() bindDuelPad(nil) end)
 player:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(update)
 playerGui:GetAttributeChangedSignal("IronYardSpectating"):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.STATS_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
     if PracticeMode.active(player) then setMenu(false) end
     duelLabel()

@@ -104,14 +104,32 @@ local function buildRoom(slot)
     return room, targets, center + Vector3.new(0, 3.4, 26)
 end
 
+local function publishStats(player, room)
+    player:SetAttribute(Mode.STATS_ATTRIBUTE, string.format("%d:%d:%d:%d",
+        room.session, room.shots, room.hits, room.targetsDown))
+end
+
+function PracticeRange.record(player, shots, hits, targetsDown, launchedSession)
+    local room = rooms[player]
+    if not room or (launchedSession and launchedSession ~= room.session) then return end
+    room.shots += shots
+    room.hits += hits
+    room.targetsDown += targetsDown
+    publishStats(player, room)
+end
+
 function PracticeRange.enter(player, health, round)
     local slot = 1
     while occupied[slot] do slot += 1 end
     local model, targets, spawn = buildRoom(slot)
-    rooms[player] = { model = model, targets = targets, spawn = spawn,
-        slot = slot, health = health, round = round }
+    local session = Mode.session(player) + 1
+    local room = { model = model, targets = targets, spawn = spawn,
+        slot = slot, health = health, round = round, session = session,
+        shots = 0, hits = 0, targetsDown = 0 }
+    rooms[player] = room
     occupied[slot] = true
-    player:SetAttribute(Mode.ATTRIBUTE, Mode.session(player) + 1)
+    publishStats(player, room)
+    player:SetAttribute(Mode.ATTRIBUTE, session)
 end
 
 local function remove(player)
@@ -125,6 +143,7 @@ end
 function PracticeRange.leave(player)
     remove(player)
     player:SetAttribute(Mode.ATTRIBUTE, Mode.session(player) + 1)
+    player:SetAttribute(Mode.STATS_ATTRIBUTE, nil)
 end
 
 Players.PlayerRemoving:Connect(remove)
