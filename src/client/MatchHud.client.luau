@@ -747,7 +747,8 @@ local function practiceReadout()
         elseif not drill.finished then
             return "TIMED DRILL", "TIME UP"
         elseif now < drill.endsAt + 8 then
-            return "DRILL COMPLETE", PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
+            return drill.newBest and "NEW SESSION BEST" or "DRILL COMPLETE",
+                PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
         end
     end
 

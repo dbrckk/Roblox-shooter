@@ -3,6 +3,7 @@ local PracticeMode = {}
 PracticeMode.ATTRIBUTE = "IronYardRangeSession"
 PracticeMode.STATS_ATTRIBUTE = "IronYardRangeStats"
 PracticeMode.DRILL_ATTRIBUTE = "IronYardRangeDrill"
+PracticeMode.DRILL_BEST_ATTRIBUTE = "IronYardRangeDrillBest"
 PracticeMode.DRILL_COUNTDOWN = 3
 PracticeMode.DRILL_SECONDS = 30
 
@@ -51,13 +52,22 @@ end
 function PracticeMode.drill(player)
     local snapshot = player:GetAttribute(PracticeMode.DRILL_ATTRIBUTE)
     if type(snapshot) ~= "string" then return nil end
-    local session, id, starts, ends, shots, hits, targets, done = snapshot:match(
-        "^(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):([01])$")
+    local session, id, starts, ends, shots, hits, targets, result = snapshot:match(
+        "^(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):([012])$")
     if tonumber(session) ~= PracticeMode.session(player) then return nil end
     return {
         id = tonumber(id), startsAt = tonumber(starts) / 1000, endsAt = tonumber(ends) / 1000,
-        shots = tonumber(shots), hits = tonumber(hits), targetsDown = tonumber(targets), finished = done == "1",
+        shots = tonumber(shots), hits = tonumber(hits), targetsDown = tonumber(targets),
+        finished = result ~= "0", newBest = result == "2",
     }
+end
+
+function PracticeMode.drillBest(player)
+    local snapshot = player:GetAttribute(PracticeMode.DRILL_BEST_ATTRIBUTE)
+    if type(snapshot) ~= "string" then return nil end
+    local shots, hits, targets = snapshot:match("^(%d+):(%d+):(%d+)$")
+    if not shots then return nil end
+    return { shots = tonumber(shots), hits = tonumber(hits), targetsDown = tonumber(targets) }
 end
 
 function PracticeMode.drillReadout(drill)
