@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 122 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion de la progression FFA avec le DataStore Roblox reste à faire. [Publication de la version 122](https://github.com/dbrckk/Roblox-shooter/actions/runs/44730054151)
+2. Prends la version publique 123 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion de la progression FFA avec le DataStore Roblox reste à faire. [Publication de la version 123](https://github.com/dbrckk/Roblox-shooter/actions/runs/44732657461)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -40,7 +40,7 @@ Depuis la version 121, **DRILL** et **RETRY** sont accessibles dans le HUD du st
 
 Depuis la version 122, **SET → RANGE STATS** propose un sélecteur **DRILL**. Le joueur peut choisir **OPEN**, **AR-24**, **PISTOL**, **B-8**, **SNIPER** ou **KNIFE**. Le serveur équipe l’arme sélectionnée au départ et l’impose jusqu’au résultat. Chaque arme a son propre **PERSONAL BEST** sauvegardé, et **OPEN** conserve ses records existants.
 
-Le tableau **SET → RANGE STATS → RECORDS** affiche les six records personnels avec les cibles abattues, les tirs réussis sur tirs validés, la précision et l’état de chaque score. L’ouverture du tableau charge les autres modes à la demande. **REFRESH** permet de réessayer après une erreur de chargement.
+Depuis la version 123, le tableau **SET → RANGE STATS → RECORDS** affiche les six records personnels avec les cibles abattues, les tirs réussis sur tirs validés, la précision et l’état de chaque score. L’ouverture du tableau charge les autres modes à la demande. **REFRESH** permet de réessayer après une erreur de chargement.
 
 ### Vérifier le tir sur Android à la demande du joueur
 
