@@ -1,0 +1,7 @@
+IRON YARD v129 — single public update, 20 November 2026.
+
+Deploy the game source verified at 8d5f988a87b6af3e06ba1d60cf6c62c9b08a787e to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Ship pull request #294. Show the selected drill mode's score to beat during the countdown, with a first-record objective and clear loading and save indicators. The latest confirmed public place version is 124.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
