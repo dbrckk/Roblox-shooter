@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 121 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion de la progression FFA avec le DataStore Roblox reste à faire. [Publication de la version 121](https://github.com/dbrckk/Roblox-shooter/actions/runs/44727714119)
+2. Prends la version publique 122 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion de la progression FFA avec le DataStore Roblox reste à faire. [Publication de la version 122](https://github.com/dbrckk/Roblox-shooter/actions/runs/44730054151)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -38,7 +38,7 @@ Depuis la version 120, le jeu sauvegarde **PERSONAL BEST** dans le DataStore Rob
 
 Depuis la version 121, **DRILL** et **RETRY** sont accessibles dans le HUD du stand. Le raccourci est **V** au clavier et **R3** à la manette. À chaque départ accepté, le serveur replace le joueur sur la ligne de tir et remplit les chargeurs du stand avant le début du chrono.
 
-Le prochain lot ajoute un sélecteur **DRILL** dans **SET → RANGE STATS**. Le joueur peut choisir **OPEN**, **AR-24**, **PISTOL**, **B-8**, **SNIPER** ou **KNIFE**. Le serveur équipe l’arme sélectionnée au départ et l’impose jusqu’au résultat. Chaque arme a son propre **PERSONAL BEST** sauvegardé, et **OPEN** conserve ses records existants.
+Depuis la version 122, **SET → RANGE STATS** propose un sélecteur **DRILL**. Le joueur peut choisir **OPEN**, **AR-24**, **PISTOL**, **B-8**, **SNIPER** ou **KNIFE**. Le serveur équipe l’arme sélectionnée au départ et l’impose jusqu’au résultat. Chaque arme a son propre **PERSONAL BEST** sauvegardé, et **OPEN** conserve ses records existants.
 
 ### Vérifier le tir sur Android à la demande du joueur
 
