@@ -889,10 +889,46 @@ function HudController:_buildSettingsMenu()
     local rangeButton = makeButton(settingsPage, "PracticeRange", "PRACTICE RANGE",
         UDim2.fromOffset(22, rangeY), UDim2.fromOffset(296, 42))
     local resetButton = makeButton(settingsPage, "ResetPracticeStats", "RESET STATS",
-        UDim2.fromOffset(174, rangeY), UDim2.fromOffset(144, 42))
+        UDim2.fromOffset(222, rangeY), UDim2.fromOffset(96, 42))
     rangeButton.ZIndex = 12
     resetButton.ZIndex = 12
     rangeButton.TextTruncate = Enum.TextTruncate.AtEnd
+    local statsButton = makeButton(settingsPage, "PracticeWeaponStats", "RANGE STATS",
+        UDim2.fromOffset(122, rangeY), UDim2.fromOffset(96, 42))
+    statsButton.ZIndex = 12
+
+    local statsPage = Instance.new("Frame")
+    statsPage.Name = "PracticeWeaponStatsPage"
+    statsPage.Size = UDim2.fromScale(1, 1)
+    statsPage.BackgroundTransparency = 1
+    statsPage.Visible = false
+    statsPage.ZIndex = 11
+    statsPage.Parent = panel
+    local statsBack = makeButton(statsPage, "Back", "BACK TO SETTINGS",
+        UDim2.fromOffset(22, rangeY), UDim2.fromOffset(296, 42))
+    statsBack.ZIndex = 12
+    local refreshWeaponStats = self:_buildPracticeWeaponStats(statsPage)
+
+    local function setWeaponStatsOpen(open)
+        local selected = GuiService.SelectedObject
+        local previousPage = open and settingsPage or statsPage
+        statsPage.Visible = open
+        settingsPage.Visible = not open
+        collectionButton.Visible = not open
+        title.Text = open and "RANGE STATS" or "SETTINGS"
+        if open then refreshWeaponStats() end
+        if selected and selected:IsDescendantOf(previousPage) then
+            GuiService.SelectedObject = open and statsBack or (statsButton.Visible and statsButton or closeButton)
+        end
+    end
+    statsButton.Activated:Connect(function()
+        if self.settingsOpen and settingsPage.Visible and statsButton.Visible then
+            setWeaponStatsOpen(true)
+        end
+    end)
+    statsBack.Activated:Connect(function()
+        if self.settingsOpen and statsPage.Visible then setWeaponStatsOpen(false) end
+    end)
 
     local pendingReset
     local function updateRangeButtons()
@@ -904,11 +940,21 @@ function HudController:_buildSettingsMenu()
         local notice = self.player:GetAttribute("IronYardPracticeNotice")
         rangeButton.Visible = canEnter and self.options.onPracticeRequested ~= nil
         rangeButton.Selectable = rangeButton.Visible
+        statsButton.Visible = rangeButton.Visible and practicing
+        statsButton.Selectable = statsButton.Visible
         resetButton.Visible = rangeButton.Visible and practicing and self.options.onPracticeStatsReset ~= nil
         resetButton.Selectable = resetButton.Visible and revision ~= nil
-        rangeButton.Size = UDim2.fromOffset(resetButton.Visible and 144 or 296, 42)
+        rangeButton.Size = UDim2.fromOffset(statsButton.Visible and 96 or 296, 42)
+        statsButton.Size = UDim2.fromOffset(resetButton.Visible and 96 or 196, 42)
         rangeButton.Text = practicing and "BACK TO FFA" or (notice or "PRACTICE RANGE")
         hint.Text = practicing and notice or settingsHint
+        if statsPage.Visible then
+            if statsButton.Visible then
+                refreshWeaponStats()
+            else
+                setWeaponStatsOpen(false)
+            end
+        end
 
         local completed = pendingReset and session == pendingReset.session
             and revision and revision > pendingReset.revision
@@ -963,6 +1009,51 @@ function HudController:_buildSettingsMenu()
     GuiService.MenuOpened:Connect(syncSelection)
     GuiService.MenuClosed:Connect(syncSelection)
 	self:_refreshSettingsText()
+end
+
+function HudController:_buildPracticeWeaponStats(parent)
+    local function cell(name, text, x, y, width, height, fontSize, align)
+        local label = makeText(parent, name, text, UDim2.fromOffset(x, y), UDim2.fromOffset(width, height), fontSize)
+        label.TextXAlignment = align
+        label.TextTruncate = Enum.TextTruncate.AtEnd
+        label.ZIndex = 12
+        return label
+    end
+
+    local left, right = Enum.TextXAlignment.Left, Enum.TextXAlignment.Right
+    local headings = {
+        cell("WeaponHeading", "WEAPON", 22, 60, 104, 18, 11, left),
+        cell("AccuracyHeading", "ACCURACY", 129, 60, 60, 18, 11, right),
+        cell("HitsHeading", "HITS / SHOTS", 195, 60, 72, 18, 11, right),
+        cell("TargetsHeading", "DOWN", 273, 60, 45, 18, 11, right),
+    }
+    for _, heading in ipairs(headings) do
+        heading.TextColor3 = Color3.fromRGB(162, 173, 190)
+    end
+
+    local rows = {}
+    for index, weaponId in ipairs(self.WeaponConfig.Order) do
+        local y = 83 + (index - 1) * 36
+        local displayName = self.WeaponConfig.Definitions[weaponId].displayName
+        local name = displayName:match("^(.-) | ") or displayName
+        cell(weaponId .. "Name", name, 22, y, 104, 30, 14, left)
+        rows[weaponId] = {
+            accuracy = cell(weaponId .. "Accuracy", "", 129, y, 60, 30, 14, right),
+            hits = cell(weaponId .. "Hits", "", 195, y, 72, 30, 14, right),
+            targets = cell(weaponId .. "Targets", "", 273, y, 45, 30, 14, right),
+        }
+    end
+
+    return function()
+        local stats = PracticeMode.weaponStats(self.player)
+        for weaponId, row in pairs(rows) do
+            local entry = stats[weaponId]
+            local accuracy = entry and PracticeMode.accuracy(entry.shots, entry.hits)
+            row.accuracy.Text = accuracy and string.format("%d%%", accuracy) or "—"
+            row.hits.Text = entry and string.format("%d/%d", entry.hits, entry.shots) or "0/0"
+            row.targets.Text = entry and tostring(entry.targetsDown) or "0"
+        end
+    end
 end
 
 function HudController:_makeStepper(parent, labelText, position, minValue, maxValue, step, getText, onStep)
