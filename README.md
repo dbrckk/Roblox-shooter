@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 115** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `77cbfc0da3b9a29c727f9adb54c12b01583275f6`. Le stand d’entraînement affiche la précision, les tirs réussis sur les tirs validés et les cibles abattues. Les compteurs repartent de zéro à chaque visite. [Publication de la version 115](https://github.com/dbrckk/Roblox-shooter/actions/runs/44713966747) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44713900531)
+Roblox a confirmé la **version de place 116** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `37f2a117eddb8857d1de20da46210e567f088f16`. Dans le stand d’entraînement, **SET → RESET STATS** remet les compteurs à zéro et ferme les réglages dès la confirmation du serveur. [Publication de la version 116](https://github.com/dbrckk/Roblox-shooter/actions/runs/44715221566) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44715161875)
 
 Depuis la version 109, deux binômes du même lobby peuvent jouer au premier à cinq en 2v2. Le joueur éliminé peut suivre son coéquipier survivant et la revanche demande quatre votes. [Publication du 2v2](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447)
 
