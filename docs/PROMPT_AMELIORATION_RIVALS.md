@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 124 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion de la progression FFA avec le DataStore Roblox reste à faire. [Publication de la version 124](https://github.com/dbrckk/Roblox-shooter/actions/runs/44734816988)
+2. Prends la version publique 125 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion de la progression FFA avec le DataStore Roblox reste à faire. [Publication de la version 125](https://github.com/dbrckk/Roblox-shooter/actions/runs/44738863946)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -44,7 +44,7 @@ Depuis la version 123, le tableau **SET → RANGE STATS → RECORDS** affiche le
 
 Depuis la version 124, à la fin d’un défi, le HUD affiche l’écart avec le record précédent du mode joué. Il compare d’abord les cibles abattues, puis la précision à nombre de cibles égal. L’annonce d’un nouveau record personnel suit la confirmation de la sauvegarde.
 
-Pendant le compte à rebours, le HUD affiche le record du mode joué avec le nombre de cibles, les tirs réussis et la précision. Quand aucun record n’existe encore, une cible abattue suffit à établir le premier. Le HUD indique si le record est encore en cours de chargement ou de sauvegarde.
+Depuis la version 125, le HUD affiche pendant le compte à rebours le record du mode joué avec le nombre de cibles, les tirs réussis et la précision. Quand aucun record n’existe encore, une cible abattue suffit à établir le premier. Le HUD indique si le record est encore en cours de chargement ou de sauvegarde.
 
 ### Vérifier le tir sur Android à la demande du joueur
 
