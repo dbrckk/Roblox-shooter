@@ -535,15 +535,16 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
                     local entry = victims[humanoid]
                     if not entry then
                         entry = { model = model, player = opponent, damage = 0,
-                            headshots = 0, distance = config.range, hitPosition = nil }
+                            pellets = 0, headshots = 0, distance = config.range, hitPosition = nil }
                         victims[humanoid] = entry
                     end
                     local headshot = ray.Instance.Name == "Head"
                     local distance = (ray.Position - origin).Magnitude
                     local falloff = math.clamp(1 - distance / config.range * 0.55, 0.45, 1)
                     entry.damage += (headshot and config.headshotDamage or config.damage) * falloff
+                    entry.pellets += 1
                     if headshot then entry.headshots += 1 end
-                    if distance < entry.distance then
+                    if not entry.hitPosition or distance < entry.distance then
                         entry.distance = distance
                         entry.hitPosition = ray.Position
                     end
@@ -557,7 +558,9 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             firstResult, #extraWorldImpacts > 0 and extraWorldImpacts or nil)
     end
 
-    local anyHit = false
+    local confirmedHit
+    local strongestPriority = 0
+    local totalDamage, pelletsHit = 0, 0
     for humanoid, entry in pairs(victims) do
         if humanoid.Health > 0 and entry.model.Parent
             and canDamage(player, entry.player, entry.model)
@@ -565,21 +568,19 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             local damage = math.max(1, math.floor(entry.damage + 0.5))
             local oldHealth = humanoid.Health
             humanoid:TakeDamage(damage)
+            local killed = oldHealth > 0 and humanoid.Health <= 0
             if humanoid.Health < oldHealth then
                 entry.model:SetAttribute("IronYardLastHitPosition", origin)
                 entry.model:SetAttribute("IronYardLastHitTime", workspace:GetServerTimeNow())
-            end
-            local killed = oldHealth > 0 and humanoid.Health <= 0
-            if humanoid.Health < oldHealth then
-                anyHit = true
-                sendFeedback(player, {
-                    kind = "Hit", weaponId = weaponId,
-                    hitPosition = entry.hitPosition,
-                    targetName = entry.player and entry.player.DisplayName or entry.model.Name,
-                    damage = FeedbackPolicy.actualDamage(oldHealth, humanoid.Health),
-                    headshot = entry.headshots > 0,
-                    killed = killed, distance = entry.distance,
-                })
+                totalDamage += FeedbackPolicy.actualDamage(oldHealth, humanoid.Health)
+                pelletsHit += entry.pellets
+                local headshot = entry.headshots > 0
+                local priority = killed and 3 or (headshot and 2 or 1)
+                if not confirmedHit or priority > strongestPriority
+                    or (priority == strongestPriority and entry.distance < confirmedHit.distance) then
+                    strongestPriority = priority
+                    confirmedHit = entry
+                end
             end
             if killed and not PracticeMode.active(player) then
                 DeathNotice.record(entry.model, player.DisplayName, weaponId, entry.headshots > 0)
@@ -595,9 +596,17 @@ local function firePelletWeapon(player, weaponId, config, direction, coneDegrees
             end
         end
     end
-    -- Empty misses have no client consumer. Do not send one remote per
-    -- unconfirmed pellet/shot; report protected hits only when no real damage.
-    if not anyHit and struckShield then
+    -- One local cue per shell, even when it damages several opponents.
+    if confirmedHit then
+        local entry = confirmedHit
+        sendFeedback(player, {
+            kind = "Hit", weaponId = weaponId,
+            hitPosition = entry.hitPosition,
+            targetName = entry.player and entry.player.DisplayName or entry.model.Name,
+            headshot = entry.headshots > 0, killed = strongestPriority == 3, distance = entry.distance,
+            damage = totalDamage, pelletsHit = pelletsHit,
+        })
+    elseif struckShield then
         sendProtected(player, weaponId)
     end
 end

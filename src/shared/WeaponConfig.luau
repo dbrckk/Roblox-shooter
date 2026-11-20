@@ -24,6 +24,7 @@ WeaponConfig.Definitions = {
         displayName = "B-8 | Tactical Shotgun", kind = "Pellet", automatic = false, magazineSize = 6, reloadSeconds = 2.55,
         fireCooldown = 0.84, damage = 13, headshotDamage = 16,
         pellets = 8, spreadDegrees = 5.1, range = 115, aimFov = 62,
+        surfaceImpactGain = 0.45,
         fireSoundId = "rbxasset://sounds/snap.wav", fireVolume = 0.85,
         soundLayers = {
             { soundId = "rbxasset://sounds/snap.wav", volume = 0.9, playbackSpeed = 0.67 },

@@ -1826,7 +1826,7 @@ function WeaponVisuals:_playSoundLayer(parent, layer, mix)
 end
 
 -- Confirmed world contacts use a small, local pool of positional sounds.
-function WeaponVisuals:playImpactSound(position, materialName)
+function WeaponVisuals:playImpactSound(position, materialName, weaponId)
     local camera = workspace.CurrentCamera
     if not camera or typeof(position) ~= "Vector3" or type(materialName) ~= "string" then return end
     if (camera.CFrame.Position - position).Magnitude >= IMPACT_AUDIO_DISTANCE then return end
@@ -1853,7 +1853,8 @@ function WeaponVisuals:playImpactSound(position, materialName)
     sound:Stop()
     if sound.SoundId ~= profile.soundId then sound.SoundId = profile.soundId end
     sound.Parent.WorldPosition = position
-    sound.Volume = profile.volume
+    local config = self.WeaponConfig.get(weaponId)
+    sound.Volume = profile.volume * (config and config.surfaceImpactGain or 1)
     sound.PlaybackSpeed = profile.playbackSpeed + self.random:NextNumber(-0.04, 0.04)
     sound:Play()
 end
