@@ -1,0 +1,7 @@
+IRON YARD v122 — single public update, 20 November 2026.
+
+Deploy the game source verified at 91e6b4db9cfaa691d01713b9f8fdda28fc241e06 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Ship pull request #273. Add a thirty-second practice drill with a three-second countdown, restored targets, a server-authoritative timer and a result that can be reviewed in RANGE STATS before a retry. The latest confirmed public place version is 117.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
