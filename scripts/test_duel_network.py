@@ -495,7 +495,7 @@ print("2v2 lobby: explicit invitation, cancellation, stale token, queue separati
 DEDICATED_FIXTURE = r"""
 local remotes = {SetDuelReady = {OnServerEvent = signal()}, ReturnToFfa = {OnServerEvent = signal()},
     SetPracticeRange = {OnServerEvent = signal()}, ResetPracticeStats = {OnServerEvent = signal()},
-    StartPracticeDrill = {OnServerEvent = signal()}}
+    StartPracticeDrill = {OnServerEvent = signal()}, SelectPracticeDrill = {OnServerEvent = signal()}}
 local function noop() end
 local preparedArenas = {}
 local modules = {
@@ -864,7 +864,11 @@ def module(name, path, replacements=None):
 
 
 def run(luau):
-    mode = module("PracticeMode", "src/shared/PracticeMode.luau")
+    mode = module("WeaponConfig", "src/shared/WeaponConfig.luau") + module(
+        "PracticeMode", "src/shared/PracticeMode.luau", {
+            'local WeaponConfig = if script then require(script.Parent:WaitForChild("WeaponConfig")) else require("./WeaponConfig")':
+                "local WeaponConfig = WeaponConfig",
+        })
     readouts = (module("DuelReadout", "src/shared/DuelReadout.luau")
                 + module("DuelSpawnPlan", "src/shared/DuelSpawnPlan.luau"))
     queue = module("Queue", "src/shared/DuelQueue.luau")

@@ -1,10 +1,13 @@
 -- The replicated generation identifies both the mode and the session.
+local WeaponConfig = if script then require(script.Parent:WaitForChild("WeaponConfig")) else require("./WeaponConfig")
 local PracticeMode = {}
 PracticeMode.ATTRIBUTE = "IronYardRangeSession"
 PracticeMode.STATS_ATTRIBUTE = "IronYardRangeStats"
 PracticeMode.DRILL_ATTRIBUTE = "IronYardRangeDrill"
+PracticeMode.DRILL_MODE_ATTRIBUTE = "IronYardRangeDrillMode"
 PracticeMode.DRILL_BEST_ATTRIBUTE = "IronYardRangeDrillBest"
 PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE = "IronYardRangeDrillBestStatus"
+PracticeMode.OPEN_DRILL = "Open"
 PracticeMode.DRILL_COUNTDOWN = 3
 PracticeMode.DRILL_SECONDS = 30
 
@@ -50,17 +53,49 @@ function PracticeMode.accuracy(shots, hits)
     return shots > 0 and math.round(100 * hits / shots) or nil
 end
 
+function PracticeMode.validDrillMode(mode)
+    return mode == PracticeMode.OPEN_DRILL or (type(mode) == "string" and table.find(WeaponConfig.Order, mode) ~= nil)
+end
+
+function PracticeMode.drillMode(player)
+    return player:GetAttribute(PracticeMode.DRILL_MODE_ATTRIBUTE) or PracticeMode.OPEN_DRILL
+end
+
+function PracticeMode.drillLabel(mode)
+    if mode == PracticeMode.OPEN_DRILL then return "OPEN" end
+    if mode == "Knife" then return "KNIFE" end
+    local name = WeaponConfig.get(mode).displayName
+    return string.upper(name:match("^(.-) | ") or name)
+end
+
+function PracticeMode.nextDrillMode(mode)
+    if mode == PracticeMode.OPEN_DRILL then return WeaponConfig.Order[1] end
+    local index = table.find(WeaponConfig.Order, mode)
+    return index and WeaponConfig.Order[index + 1] or PracticeMode.OPEN_DRILL
+end
+
 function PracticeMode.drill(player)
     local snapshot = player:GetAttribute(PracticeMode.DRILL_ATTRIBUTE)
     if type(snapshot) ~= "string" then return nil end
-    local session, id, starts, ends, shots, hits, targets, result = snapshot:match(
+    local body, mode = snapshot:match("^(.*):([%a][%w_]*)$")
+    mode = mode or PracticeMode.OPEN_DRILL
+    local session, id, starts, ends, shots, hits, targets, result = (body or snapshot):match(
         "^(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):([012])$")
-    if tonumber(session) ~= PracticeMode.session(player) then return nil end
+    if tonumber(session) ~= PracticeMode.session(player) or not PracticeMode.validDrillMode(mode) then return nil end
     return {
         id = tonumber(id), startsAt = tonumber(starts) / 1000, endsAt = tonumber(ends) / 1000,
         shots = tonumber(shots), hits = tonumber(hits), targetsDown = tonumber(targets),
-        finished = result ~= "0", newBest = result == "2",
+        finished = result ~= "0", newBest = result == "2", mode = mode,
     }
+end
+
+function PracticeMode.lockedDrillWeapon(player)
+    local drill = PracticeMode.drill(player)
+    return drill and not drill.finished and drill.mode ~= PracticeMode.OPEN_DRILL and drill.mode or nil
+end
+
+function PracticeMode.permitsWeapon(drill, weaponId)
+    return not drill or drill.finished or drill.mode == PracticeMode.OPEN_DRILL or drill.mode == weaponId
 end
 
 function PracticeMode.decodeDrillBest(snapshot)
@@ -75,8 +110,14 @@ function PracticeMode.encodeDrillBest(score)
     return string.format("%d:%d:%d", score.shots, score.hits, score.targetsDown)
 end
 
-function PracticeMode.drillBest(player)
-    return PracticeMode.decodeDrillBest(player:GetAttribute(PracticeMode.DRILL_BEST_ATTRIBUTE))
+function PracticeMode.drillBestAttributes(mode)
+    local suffix = mode and mode ~= PracticeMode.OPEN_DRILL and ("_" .. mode) or ""
+    return PracticeMode.DRILL_BEST_ATTRIBUTE .. suffix, PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE .. suffix
+end
+
+function PracticeMode.drillBest(player, mode)
+    local attribute, status = PracticeMode.drillBestAttributes(mode)
+    return PracticeMode.decodeDrillBest(player:GetAttribute(attribute)), player:GetAttribute(status)
 end
 
 function PracticeMode.betterDrillBest(score, best)

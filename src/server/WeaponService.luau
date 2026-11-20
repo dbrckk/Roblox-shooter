@@ -336,11 +336,17 @@ local function cancelReload(state, weaponId)
     state.reloadUntil[weaponId] = nil
 end
 
-function WeaponService.refillPracticeMagazines(player)
+function WeaponService.refillPracticeMagazines(player, drillMode)
     if not PracticeMode.active(player) then return end
     local state = getState(player)
     for id in pairs(state.reloadUntil) do cancelReload(state, id) end
     table.clear(state.magazines)
+    if drillMode ~= PracticeMode.OPEN_DRILL and WeaponConfig.isValid(drillMode) then
+        state.equippedWeaponId = drillMode
+        state.aimSince = nil
+        state.aimCharacter = nil
+        state.aimWeaponId = nil
+    end
     for _, id in ipairs(WeaponConfig.Order) do
         if WeaponConfig.get(id).magazineSize then sendAmmo(player, id) end
     end
@@ -732,6 +738,7 @@ local function onEquipWeapon(player, weaponId, session)
     if typeof(weaponId) ~= "string" or not WeaponConfig.isValid(weaponId) then
         return
     end
+    if not PracticeRange.permitsWeapon(player, weaponId) then return end
 
     local state = getState(player)
     if state.equippedWeaponId ~= weaponId then
@@ -809,7 +816,7 @@ local function onFireWeapon(player, payload)
     if not liveCharacter then return end
     if PracticeMode.active(player) then
         if not PracticeRange.contains(player, liveHead.Position) then return end
-        if not PracticeRange.permitsFire(player, payload.rangeDrill) then
+        if not PracticeRange.permitsFire(player, payload.rangeDrill) or not PracticeRange.permitsWeapon(player, weaponId) then
             sendAmmo(player, weaponId)
             return
         end

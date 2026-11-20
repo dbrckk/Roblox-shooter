@@ -478,8 +478,8 @@ def main():
     has(rate_policy, 'SetAiming = { rate = 10, burst = 8 }', "ADS flood budget")
     has(movement_service, "function MovementService.aimMovementAllowed(player)",
         "Server movement admission for ADS")
-    require(server.count("state.aimSince = nil") == 4,
-        "ADS must reset on scope release, equip, round and respawn")
+    require(server.count("state.aimSince = nil") == 5,
+        "ADS must reset on scope release, equip, fixed-weapon drill, round and respawn")
     for needle in (
         "remotes.SetAiming:FireServer(scoped, PracticeMode.session(player))",
         "cancelAimForMobility = function()",

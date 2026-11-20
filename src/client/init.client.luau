@@ -163,8 +163,11 @@ hud = HudController.new(player, gui, WeaponConfig, {
     onPracticeStatsReset = function(session, revision)
         remotes.ResetPracticeStats:FireServer(session, revision)
     end,
-    onPracticeDrillStart = function(session, previousId)
-        remotes.StartPracticeDrill:FireServer(session, previousId)
+    onPracticeDrillStart = function(session, previousId, mode)
+        remotes.StartPracticeDrill:FireServer(session, previousId, mode)
+    end,
+    onPracticeDrillSelect = function(session, mode)
+        remotes.SelectPracticeDrill:FireServer(session, mode)
     end,
     onCareerFinishChanged = function(preference)
         remotes.SetCareerFinish:FireServer(preference)
@@ -838,10 +841,12 @@ local function refreshTouchSelection()
     end
 end
 
-local function equipWeapon(weaponId)
+local function equipWeapon(weaponId, fromServer)
 	if not WeaponConfig.get(weaponId) then
 		return
 	end
+    local lockedWeapon = PracticeMode.lockedDrillWeapon(player)
+    if lockedWeapon and lockedWeapon ~= weaponId then return end
 
     -- Release old FOV and scope HUD BEFORE changing the selected weapon.
     -- Pistol ADS -> sniper previously inherited the old gun's magnification.
@@ -862,8 +867,14 @@ local function equipWeapon(weaponId)
         visuals:setReloading(weaponId, ammunition.reloading,
             ammunition.loaded, ammunition.capacity)
     end
-	remotes.EquipWeapon:FireServer(weaponId, PracticeMode.session(player))
+    if not fromServer then remotes.EquipWeapon:FireServer(weaponId, PracticeMode.session(player)) end
 end
+
+local function syncDrillWeapon()
+    local weaponId = PracticeMode.lockedDrillWeapon(player)
+    if weaponId and currentWeaponId ~= weaponId then equipWeapon(weaponId, true) end
+end
+player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(syncDrillWeapon)
 
 local function getAimRay()
 	local camera = getCamera()
@@ -888,6 +899,10 @@ end
 
 local function fireWeapon(weaponId)
     if combatInputBlocked() then return end
+    local practice = PracticeMode.active(player)
+    local drill = practice and PracticeMode.drill(player)
+    if drill and (workspace:GetServerTimeNow() < drill.startsAt
+        or not PracticeMode.permitsWeapon(drill, weaponId)) then return end
 	local config = WeaponConfig.get(weaponId)
 	if not config then
 		return
@@ -900,10 +915,7 @@ local function fireWeapon(weaponId)
     end
     local _, humanoid = getCharacterParts()
     if not humanoid or humanoid.Health <= 0 then return end
-    local practice = PracticeMode.active(player)
     if workspace:GetAttribute("NeonMatchPhase") ~= "LIVE" and not practice then return end
-    local drill = practice and PracticeMode.drill(player)
-    if drill and workspace:GetServerTimeNow() < drill.startsAt then return end
     local fireEpoch = workspace:GetAttribute("IronYardFireEpoch")
     -- An unreplicated round generation cannot initiate a predicted shot.
     -- The actual server uses this snapshot to reject late round packets.
@@ -983,7 +995,8 @@ end
 
 local function quickThrowKnife()
     local drill = PracticeMode.drill(player)
-    if drill and workspace:GetServerTimeNow() < drill.startsAt then return end
+    if drill and (workspace:GetServerTimeNow() < drill.startsAt
+        or not PracticeMode.permitsWeapon(drill, "Knife")) then return end
     local now = os.clock()
     local knife = WeaponConfig.get("Knife")
     -- A blocked quick-throw must not visually equip and immediately unequip

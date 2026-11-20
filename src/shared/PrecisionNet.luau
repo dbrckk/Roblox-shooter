@@ -13,6 +13,7 @@ local REMOTES = {
     SetPracticeRange = "RemoteEvent",
     ResetPracticeStats = "RemoteEvent",
     StartPracticeDrill = "RemoteEvent",
+    SelectPracticeDrill = "RemoteEvent",
     ReloadWeapon = "RemoteEvent",
 	MovementAction = "RemoteEvent",
 	MovementState = "RemoteEvent",

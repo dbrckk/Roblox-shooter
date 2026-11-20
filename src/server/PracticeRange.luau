@@ -122,20 +122,30 @@ end
 local function publishDrill(player, room)
     local drill = room.drill
     local result = drill.newBest and 2 or (drill.finished and 1 or 0)
-    player:SetAttribute(Mode.DRILL_ATTRIBUTE, string.format("%d:%d:%d:%d:%d:%d:%d:%d",
+    player:SetAttribute(Mode.DRILL_ATTRIBUTE, string.format("%d:%d:%d:%d:%d:%d:%d:%d:%s",
         room.session, drill.id, drill.startsAtMs, drill.endsAtMs,
-        drill.shots, drill.hits, drill.targetsDown, result))
+        drill.shots, drill.hits, drill.targetsDown, result, drill.mode))
 end
 
 local function finalizeDrill(player, drill)
     drill.finished = true
     if drill.targetsDown == 0 then return end
-    drill.newBest = ProgressionService.recordPracticeBest(player, drill)
+    drill.newBest = ProgressionService.recordPracticeBest(player, drill, drill.mode)
 end
 
-function PracticeRange.startDrill(player, session, previousId)
+function PracticeRange.selectDrill(player, session, mode)
     local room = rooms[player]
-    if not room or room.session ~= session then return end
+    if not room or room.session ~= session or not Mode.validDrillMode(mode)
+        or (room.drill and not room.drill.finished) or mode == room.drillMode then return end
+    room.drillMode = mode
+    player:SetAttribute(Mode.DRILL_MODE_ATTRIBUTE, mode)
+    ProgressionService.loadPracticeBest(player, mode)
+end
+
+function PracticeRange.startDrill(player, session, previousId, mode)
+    local room = rooms[player]
+    if mode == nil then mode = Mode.OPEN_DRILL end
+    if not room or room.session ~= session or mode ~= room.drillMode then return end
     local previous = room.drill
     if previousId ~= (previous and previous.id or 0) or (previous and not previous.finished) then return end
 
@@ -150,7 +160,8 @@ function PracticeRange.startDrill(player, session, previousId)
     DummyService.populate(room.targets, room.origin)
     local startsAtMs = math.ceil(Workspace:GetServerTimeNow() * 1000) + Mode.DRILL_COUNTDOWN * 1000
     local drill = {
-        id = previousId + 1, startsAtMs = startsAtMs, endsAtMs = startsAtMs + Mode.DRILL_SECONDS * 1000,
+        id = previousId + 1, mode = room.drillMode,
+        startsAtMs = startsAtMs, endsAtMs = startsAtMs + Mode.DRILL_SECONDS * 1000,
         shots = 0, hits = 0, targetsDown = 0, finished = false,
     }
     room.drill = drill
@@ -167,7 +178,7 @@ function PracticeRange.startDrill(player, session, previousId)
         publishDrill(player, room)
     end
     finish()
-    return character
+    return character, drill.mode
 end
 
 function PracticeRange.drillId(player)
@@ -180,6 +191,11 @@ function PracticeRange.permitsFire(player, drillId)
     local drill = room and room.drill
     if not drill then return drillId == nil end
     return drill.id == drillId and Workspace:GetServerTimeNow() >= drill.startsAtMs / 1000
+end
+
+function PracticeRange.permitsWeapon(player, weaponId)
+    local room = rooms[player]
+    return Mode.permitsWeapon(room and room.drill, weaponId)
 end
 
 function PracticeRange.record(player, weaponId, shots, hits, targetsDown, launchedSession, launchedRevision, launchDrillId)
@@ -200,7 +216,8 @@ function PracticeRange.record(player, weaponId, shots, hits, targetsDown, launch
     publishStats(player, room)
 
     local drill = room.drill
-    if drill and not drill.finished and (not launchedSession or launchDrillId == drill.id) then
+    if drill and not drill.finished and Mode.permitsWeapon(drill, weaponId)
+        and (not launchedSession or launchDrillId == drill.id) then
         local now = Workspace:GetServerTimeNow()
         if now >= drill.startsAtMs / 1000 and now < drill.endsAtMs / 1000 then
             drill.shots += shots
@@ -226,11 +243,12 @@ function PracticeRange.enter(player, health, round)
     local model, targets, spawn, origin = buildRoom(slot)
     local session = Mode.session(player) + 1
     local room = { model = model, targets = targets, spawn = spawn, origin = origin,
-        slot = slot, health = health, round = round, session = session,
+        slot = slot, health = health, round = round, session = session, drillMode = Mode.OPEN_DRILL,
         shots = 0, hits = 0, targetsDown = 0, statsRevision = 0, weaponStats = {} }
     rooms[player] = room
     occupied[slot] = true
     publishStats(player, room)
+    player:SetAttribute(Mode.DRILL_MODE_ATTRIBUTE, Mode.OPEN_DRILL)
     player:SetAttribute(Mode.ATTRIBUTE, session)
     ProgressionService.loadPracticeBest(player)
 end
@@ -254,6 +272,7 @@ function PracticeRange.leave(player)
     player:SetAttribute(Mode.ATTRIBUTE, Mode.session(player) + 1)
     player:SetAttribute(Mode.STATS_ATTRIBUTE, nil)
     player:SetAttribute(Mode.DRILL_ATTRIBUTE, nil)
+    player:SetAttribute(Mode.DRILL_MODE_ATTRIBUTE, nil)
 end
 
 Players.PlayerRemoving:Connect(remove)

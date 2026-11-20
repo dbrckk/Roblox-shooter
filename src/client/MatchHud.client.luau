@@ -13,6 +13,7 @@ local TouchLayout = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChil
 local DuelSpawnPlan = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("DuelSpawnPlan"))
 local GamepadCombatPolicy = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("GamepadCombatPolicy"))
 local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
+local WeaponConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponConfig"))
 local player = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "NeonStrikeMatchHud"
@@ -272,7 +273,7 @@ local function updateDrillAction()
         and not GuiService.MenuIsOpen
     drillAction.Interactable = drillAction.Visible and pendingDrillRequest == nil
     if not drillAction.Visible then return end
-    local text = drill and "RETRY" or "DRILL"
+    local text = drill and drill.mode == PracticeMode.drillMode(player) and "RETRY" or "DRILL"
     if not UserInputService.TouchEnabled then
         text ..= gamepadActive() and "  ·  R3" or "  ·  V"
     end
@@ -283,10 +284,11 @@ local function requestPracticeDrill()
     updateDrillAction()
     if not drillAction.Interactable then return end
     local drill = PracticeMode.drill(player)
-    local request = { session = PracticeMode.session(player), previousId = drill and drill.id or 0 }
+    local request = { session = PracticeMode.session(player), previousId = drill and drill.id or 0,
+        mode = PracticeMode.drillMode(player) }
     pendingDrillRequest = request
     updateDrillAction()
-    remotes.StartPracticeDrill:FireServer(request.session, request.previousId)
+    remotes.StartPracticeDrill:FireServer(request.session, request.previousId, request.mode)
     task.delay(REQUEST_CONFIRMATION_SECONDS, function()
         if pendingDrillRequest ~= request then return end
         pendingDrillRequest = nil
@@ -779,30 +781,31 @@ local function practiceReadout()
     local drill = PracticeMode.drill(player)
     if drill then
         local now = Workspace:GetServerTimeNow()
+        local title = drill.mode == PracticeMode.OPEN_DRILL and "DRILL" or (PracticeMode.drillLabel(drill.mode) .. " DRILL")
         if now < drill.startsAt then
             local remaining = drill.startsAt - now
             local seconds = math.ceil(remaining)
-            return string.format("DRILL STARTS IN %ds", seconds), "GET READY", remaining - seconds + 1
+            return string.format("%s STARTS IN %ds", title, seconds), "GET READY", remaining - seconds + 1
         elseif now < drill.endsAt then
             local remaining = drill.endsAt - now
             local seconds = math.ceil(remaining)
-            return string.format("TIMED DRILL  /  %ds", seconds), PracticeMode.drillReadout(drill),
+            return string.format("%s  /  %ds", title, seconds), PracticeMode.drillReadout(drill),
                 remaining - seconds + 1
         elseif not drill.finished then
-            return "TIMED DRILL", "TIME UP"
+            return title, "TIME UP"
         elseif now < drill.endsAt + 8 then
-            local title = "DRILL COMPLETE"
+            local resultTitle = title .. " COMPLETE"
             if drill.newBest then
-                local status = player:GetAttribute(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE)
-                local best = PracticeMode.drillBest(player)
+                local best, status = PracticeMode.drillBest(player, drill.mode)
                 if status == "STUDIO" then
-                    title = "NEW SESSION BEST"
+                    resultTitle = "NEW SESSION BEST"
                 elseif status == "READY" and best
                     and PracticeMode.encodeDrillBest(best) == PracticeMode.encodeDrillBest(drill) then
-                    title = "NEW PERSONAL BEST"
+                    resultTitle = drill.mode == PracticeMode.OPEN_DRILL and "NEW PERSONAL BEST"
+                        or ("NEW " .. PracticeMode.drillLabel(drill.mode) .. " BEST")
                 end
             end
-            return title, PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
+            return resultTitle, PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
         end
     end
 
@@ -814,7 +817,10 @@ local function practiceReadout()
     elseif revision and revision > 0 then
         detailText = "0/0 HITS  ·  0 DOWN"
     end
-    return "IRON YARD  /  PRACTICE RANGE", detailText
+    local mode = PracticeMode.drillMode(player)
+    local title = mode == PracticeMode.OPEN_DRILL and "IRON YARD  /  PRACTICE RANGE"
+        or ("PRACTICE RANGE  /  " .. PracticeMode.drillLabel(mode))
+    return title, detailText
 end
 
 local function update()
@@ -981,6 +987,15 @@ player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(updateDrillAction)
 player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.DRILL_MODE_ATTRIBUTE):Connect(function()
+    updateDrillAction()
+    update()
+end)
+for _, weaponId in ipairs(WeaponConfig.Order) do
+    local bestAttribute, statusAttribute = PracticeMode.drillBestAttributes(weaponId)
+    player:GetAttributeChangedSignal(bestAttribute):Connect(update)
+    player:GetAttributeChangedSignal(statusAttribute):Connect(update)
+end
 player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
     if PracticeMode.active(player) then setMenu(false) end
     duelLabel()
