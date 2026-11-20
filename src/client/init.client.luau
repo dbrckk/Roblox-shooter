@@ -169,6 +169,9 @@ hud = HudController.new(player, gui, WeaponConfig, {
     onPracticeDrillSelect = function(session, mode)
         remotes.SelectPracticeDrill:FireServer(session, mode)
     end,
+    onPracticeRecordsRequested = function(session)
+        remotes.LoadPracticeRecords:FireServer(session)
+    end,
     onCareerFinishChanged = function(preference)
         remotes.SetCareerFinish:FireServer(preference)
     end,

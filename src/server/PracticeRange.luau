@@ -142,6 +142,11 @@ function PracticeRange.selectDrill(player, session, mode)
     ProgressionService.loadPracticeBest(player, mode)
 end
 
+function PracticeRange.loadRecords(player, session)
+    local room = rooms[player]
+    if room and room.session == session then ProgressionService.loadPracticeRecords(player) end
+end
+
 function PracticeRange.startDrill(player, session, previousId, mode)
     local room = rooms[player]
     if mode == nil then mode = Mode.OPEN_DRILL end

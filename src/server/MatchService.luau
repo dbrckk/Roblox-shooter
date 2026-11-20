@@ -658,6 +658,9 @@ function MatchService.start()
     remotes.SelectPracticeDrill.OnServerEvent:Connect(function(player, session, drillMode)
         if RemoteGuard.allow(player, "SelectPracticeDrill") then PracticeRange.selectDrill(player, session, drillMode) end
     end)
+    remotes.LoadPracticeRecords.OnServerEvent:Connect(function(player, session)
+        if RemoteGuard.allow(player, "LoadPracticeRecords") then PracticeRange.loadRecords(player, session) end
+    end)
     remotes.StartPracticeDrill.OnServerEvent:Connect(function(player, session, previousId, requestedMode)
         if not RemoteGuard.allow(player, "StartPracticeDrill") then return end
         local character, drillMode = PracticeRange.startDrill(player, session, previousId, requestedMode)

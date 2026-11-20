@@ -8,6 +8,7 @@ PracticeMode.DRILL_MODE_ATTRIBUTE = "IronYardRangeDrillMode"
 PracticeMode.DRILL_BEST_ATTRIBUTE = "IronYardRangeDrillBest"
 PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE = "IronYardRangeDrillBestStatus"
 PracticeMode.OPEN_DRILL = "Open"
+PracticeMode.DRILL_MODES = table.freeze({ PracticeMode.OPEN_DRILL, table.unpack(WeaponConfig.Order) })
 PracticeMode.DRILL_COUNTDOWN = 3
 PracticeMode.DRILL_SECONDS = 30
 
@@ -54,7 +55,7 @@ function PracticeMode.accuracy(shots, hits)
 end
 
 function PracticeMode.validDrillMode(mode)
-    return mode == PracticeMode.OPEN_DRILL or (type(mode) == "string" and table.find(WeaponConfig.Order, mode) ~= nil)
+    return type(mode) == "string" and table.find(PracticeMode.DRILL_MODES, mode) ~= nil
 end
 
 function PracticeMode.drillMode(player)
@@ -69,9 +70,8 @@ function PracticeMode.drillLabel(mode)
 end
 
 function PracticeMode.nextDrillMode(mode)
-    if mode == PracticeMode.OPEN_DRILL then return WeaponConfig.Order[1] end
-    local index = table.find(WeaponConfig.Order, mode)
-    return index and WeaponConfig.Order[index + 1] or PracticeMode.OPEN_DRILL
+    local index = table.find(PracticeMode.DRILL_MODES, mode)
+    return index and PracticeMode.DRILL_MODES[index + 1] or PracticeMode.OPEN_DRILL
 end
 
 function PracticeMode.drill(player)

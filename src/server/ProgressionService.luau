@@ -194,17 +194,38 @@ local function syncPracticeBests(player, record, departure)
     return saved
 end
 
-function ProgressionService.loadPracticeBest(player, mode)
-    local record = records[player]
-    if not record or record.closing then return end
-    mode = mode or PracticeMode.OPEN_DRILL
+local function getPracticeRecord(player, record, mode)
     local entry = record.practiceRecords[mode]
     if not entry then
         entry = {}
         record.practiceRecords[mode] = entry
         publishPracticeBest(player, record, mode, entry, record.status == "STUDIO" and "STUDIO" or "LOADING")
     end
+    return entry
+end
+
+function ProgressionService.loadPracticeBest(player, mode)
+    local record = records[player]
+    if not record or record.closing then return end
+    mode = mode or PracticeMode.OPEN_DRILL
+    local entry = getPracticeRecord(player, record, mode)
     task.spawn(syncPracticeBest, player, record, mode, entry)
+end
+
+function ProgressionService.loadPracticeRecords(player)
+    local record = records[player]
+    if not record or record.closing or record.practiceBoardLoading then return end
+    record.practiceBoardLoading = true
+    for _, mode in ipairs(PracticeMode.DRILL_MODES) do
+        getPracticeRecord(player, record, mode)
+    end
+    task.spawn(function()
+        for _, mode in ipairs(PracticeMode.DRILL_MODES) do
+            if record.closing then break end
+            syncPracticeBest(player, record, mode, record.practiceRecords[mode])
+        end
+        record.practiceBoardLoading = nil
+    end)
 end
 
 function ProgressionService.recordPracticeBest(player, score, mode)
