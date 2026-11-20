@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 117 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 117](https://github.com/dbrckk/Roblox-shooter/actions/runs/44716848753)
+2. Prends la version publique 118 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 118](https://github.com/dbrckk/Roblox-shooter/actions/runs/44719342450)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -30,7 +30,7 @@ Depuis la version 115, le HUD affiche la précision, les tirs qui ont touché su
 
 Depuis la version 117, **SET → RANGE STATS** est disponible dans le stand. Les cinq armes sont comparables par précision, tirs réussis sur tirs validés et cibles abattues pendant la même visite. La remise à zéro efface simultanément les totaux et le détail par arme.
 
-Le prochain lot ajoute **SET → RANGE STATS → START 30S DRILL**. Après trois secondes de préparation, le joueur a 30 secondes pour abattre le plus de cibles possible avec les armes du stand. Chaque essai débute avec cinq cibles rétablies. Le dernier résultat reste consultable dans **RANGE STATS** pendant la visite et le joueur peut relancer l’exercice.
+Depuis la version 118, **SET → RANGE STATS → START 30S DRILL** lance le défi chronométré. Après trois secondes de préparation, le joueur a 30 secondes pour abattre le plus de cibles possible avec les armes du stand. Chaque essai débute avec cinq cibles rétablies. Le dernier résultat reste consultable dans **RANGE STATS** pendant la visite et le joueur peut relancer l’exercice.
 
 ### Vérifier le tir sur Android à la demande du joueur
 
