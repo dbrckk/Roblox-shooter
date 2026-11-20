@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 113 comme base. Vérifie en partie que deux binômes rejoignent la même salle 2v2, puis que les joueurs restants reviennent dans le même serveur FFA après les résultats. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 113](https://github.com/dbrckk/Roblox-shooter/actions/runs/44356962100)
+2. Prends la version publique 114 comme base. Vérifie sur Android la lisibilité de la confirmation du B‑8 et l’équilibre sonore entre le tir, la touche et le décor. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 114](https://github.com/dbrckk/Roblox-shooter/actions/runs/44712636406)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -26,7 +26,7 @@ Le lot publié en version 113 couvre l’affichage des arrivées en 2v2, le tran
 
 ### Vérifier le tir sur Android
 
-Le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.
+Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.
 
 - Depuis le stand, garder le même appareil, la même orientation et le même profil graphique pour chaque comparaison. Lancer `PERF → MESURER 240 IMAGES` pour relever 240 images à chaque essai.
 - Faire une capture avec une rafale d’AR-24 au centre du butoir métallique, puis une avec le B-8 en visant le bord d’une cible proche. Sur le B-8, comparer le départ du tir, les contacts des plombs sur la surface et la confirmation quand la cible est touchée.
