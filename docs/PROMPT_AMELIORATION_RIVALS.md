@@ -5,7 +5,7 @@ Agis comme responsable produit et développeur Roblox d’IRON YARD. Continue le
 ## Partir de la version qui fonctionne
 
 1. Vérifie le dépôt, les modifications locales, le dernier commit de `main`, le build Rojo et la dernière publication Roblox. Lis le code des parcours concernés. Les anciens audits reflètent leur date de rédaction.
-2. Prends la version publique 118 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 118](https://github.com/dbrckk/Roblox-shooter/actions/runs/44719342450)
+2. Prends la version publique 119 comme base. Les essais sur le smartphone du joueur reprendront à sa demande. Poursuis les améliorations avec les vérifications automatisées disponibles. La vérification du retour groupé avec quatre clients Roblox reste ouverte. Les objectifs FFA et Shift Lead sont enregistrés à part des XP. La simulation a vérifié un aller-retour par la version 107. Le test de reconnexion avec le DataStore Roblox reste à faire. [Publication de la version 119](https://github.com/dbrckk/Roblox-shooter/actions/runs/44721132045)
 3. Exécute un lot cohérent par intervention. Corrige d’abord tout blocage constaté dans le parcours normal. Favorise ensuite fiabilité, équité, maintenabilité, performances et finition. [Ordre des prochains lots](#prochain-cycle-de-progression)
 
 ## Prochain cycle de progression
@@ -32,7 +32,7 @@ Depuis la version 117, **SET → RANGE STATS** est disponible dans le stand. Les
 
 Depuis la version 118, **SET → RANGE STATS → START 30S DRILL** lance le défi chronométré. Après trois secondes de préparation, le joueur a 30 secondes pour abattre le plus de cibles possible avec les armes du stand. Chaque essai débute avec cinq cibles rétablies. Le dernier résultat reste consultable dans **RANGE STATS** pendant la visite et le joueur peut relancer l’exercice.
 
-Le prochain lot affiche **SESSION BEST** sous le résultat du dernier essai. Le record départage d’abord les essais au nombre de cibles abattues, puis à la précision exacte. Il est conservé lors des allers-retours entre le FFA et le stand tant que le joueur reste connecté au même serveur.
+Depuis la version 119, **RANGE STATS** affiche **SESSION BEST** sous le résultat du dernier essai. Le record départage d’abord les essais au nombre de cibles abattues, puis à la précision exacte. Il est conservé lors des allers-retours entre le FFA et le stand tant que le joueur reste connecté au même serveur.
 
 ### Vérifier le tir sur Android à la demande du joueur
 

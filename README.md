@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 118** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `98eda06858cadeb8872d6f9281013407bdea8913`. Dans le stand, **SET → RANGE STATS → START 30S DRILL** lance le défi chronométré après trois secondes de préparation. Le HUD affiche le temps restant, les cibles abattues et la précision. **RANGE STATS** conserve le dernier résultat de la visite. [Publication de la version 118](https://github.com/dbrckk/Roblox-shooter/actions/runs/44719342450) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44719272559)
+Roblox a confirmé la **version de place 119** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `acef09ff523c477ae52b92b203fa5216143c0b6f`. Dans **SET → RANGE STATS**, le défi de 30 secondes affiche **SESSION BEST** sous le dernier résultat. Le record suit le joueur entre le stand et le FFA pendant sa connexion au même serveur. [Publication de la version 119](https://github.com/dbrckk/Roblox-shooter/actions/runs/44721132045) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44721040371)
 
 Depuis la version 109, deux binômes du même lobby peuvent jouer au premier à cinq en 2v2. Le joueur éliminé peut suivre son coéquipier survivant et la revanche demande quatre votes. [Publication du 2v2](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447)
 
