@@ -925,29 +925,40 @@ function HudController:_buildSettingsMenu()
     drillBest.TextColor3 = Color3.fromRGB(233, 203, 145)
     drillBest.TextXAlignment = Enum.TextXAlignment.Center
     drillBest.Visible = drillButton.Visible
+    local drillModeButton = makeButton(statsPage, "PracticeDrillMode", "",
+        UDim2.fromOffset(166, 12), UDim2.fromOffset(112, 42))
+    drillModeButton.TextSize = 11
+    drillModeButton.ZIndex = 12
+    drillModeButton.Visible = self.options.onPracticeDrillSelect ~= nil
 
-    local pendingDrill
+    local pendingDrill, pendingMode
     local function updateDrillControls()
         if not drillButton.Visible then return end
         local session = PracticeMode.session(self.player)
+        local mode = PracticeMode.drillMode(self.player)
         local drill = PracticeMode.drill(self.player)
         local acknowledged = pendingDrill and session == pendingDrill.session
-            and drill and drill.id == pendingDrill.previousId + 1
+            and drill and drill.id == pendingDrill.previousId + 1 and drill.mode == pendingDrill.mode
         if pendingDrill and (acknowledged or session ~= pendingDrill.session) then pendingDrill = nil end
+        if pendingMode and (mode == pendingMode.mode or session ~= pendingMode.session) then pendingMode = nil end
         local active = drill and not drill.finished
-        drillButton.Interactable = not active and not pendingDrill
+        drillModeButton.Interactable = not active and not pendingDrill and not pendingMode
+        drillModeButton.Selectable = drillModeButton.Interactable
+        drillModeButton.Text = pendingMode and "SELECTING…" or ("DRILL · " .. PracticeMode.drillLabel(mode) .. " ›")
+        drillButton.Interactable = not active and not pendingDrill and not pendingMode
         drillButton.Selectable = drillButton.Interactable
         if pendingDrill then
             drillButton.Text = "STARTING…"
         elseif active then
             drillButton.Text = "DRILL ACTIVE"
         else
-            drillButton.Text = string.format(drill and "RETRY %dS DRILL" or "START %dS DRILL", drillSeconds)
+            local replay = drill and drill.mode == mode
+            drillButton.Text = string.format(replay and "RETRY %dS DRILL" or "START %dS DRILL", drillSeconds)
         end
-        drillStatus.Text = drill and (drill.finished and ("LAST DRILL  ·  " .. PracticeMode.drillReadout(drill))
+        drillStatus.Text = drill and (drill.finished
+            and ("LAST " .. PracticeMode.drillLabel(drill.mode) .. "  ·  " .. PracticeMode.drillReadout(drill))
             or "THE TIMER IS SHOWN IN THE RANGE") or "KNOCK DOWN AS MANY TARGETS AS YOU CAN"
-        local best = PracticeMode.drillBest(self.player)
-        local bestStatus = self.player:GetAttribute(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE)
+        local best, bestStatus = PracticeMode.drillBest(self.player, mode)
         local bestLabel = bestStatus == "STUDIO" and "SESSION BEST" or "PERSONAL BEST"
         if bestStatus == "SAVING" then
             bestLabel = "SAVING BEST"
@@ -961,14 +972,29 @@ function HudController:_buildSettingsMenu()
         drillBest.Text = bestLabel .. "  ·  " .. (best and PracticeMode.drillReadout(best) or "—")
         if acknowledged and self.settingsOpen and statsPage.Visible then self:setSettingsOpen(false) end
     end
+    drillModeButton.Activated:Connect(function()
+        if not self.settingsOpen or not statsPage.Visible or not drillModeButton.Visible
+            or not drillModeButton.Interactable or not PracticeMode.active(self.player) then return end
+        local mode = PracticeMode.nextDrillMode(PracticeMode.drillMode(self.player))
+        local request = { session = PracticeMode.session(self.player), mode = mode }
+        pendingMode = request
+        updateDrillControls()
+        self.options.onPracticeDrillSelect(request.session, request.mode)
+        task.delay(2, function()
+            if pendingMode ~= request then return end
+            pendingMode = nil
+            updateDrillControls()
+        end)
+    end)
     drillButton.Activated:Connect(function()
         if not self.settingsOpen or not statsPage.Visible or not drillButton.Visible
             or not drillButton.Interactable or not PracticeMode.active(self.player) then return end
         local drill = PracticeMode.drill(self.player)
-        local request = { session = PracticeMode.session(self.player), previousId = drill and drill.id or 0 }
+        local request = { session = PracticeMode.session(self.player), previousId = drill and drill.id or 0,
+            mode = PracticeMode.drillMode(self.player) }
         pendingDrill = request
         updateDrillControls()
-        self.options.onPracticeDrillStart(request.session, request.previousId)
+        self.options.onPracticeDrillStart(request.session, request.previousId, request.mode)
         task.delay(3, function()
             if pendingDrill ~= request then return end
             pendingDrill = nil
@@ -978,7 +1004,13 @@ function HudController:_buildSettingsMenu()
     self.player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(updateDrillControls)
     self.player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_ATTRIBUTE):Connect(updateDrillControls)
     self.player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE):Connect(updateDrillControls)
+    self.player:GetAttributeChangedSignal(PracticeMode.DRILL_MODE_ATTRIBUTE):Connect(updateDrillControls)
     self.player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateDrillControls)
+    for _, weaponId in ipairs(self.WeaponConfig.Order) do
+        local bestAttribute, statusAttribute = PracticeMode.drillBestAttributes(weaponId)
+        self.player:GetAttributeChangedSignal(bestAttribute):Connect(updateDrillControls)
+        self.player:GetAttributeChangedSignal(statusAttribute):Connect(updateDrillControls)
+    end
     updateDrillControls()
 
     local function setWeaponStatsOpen(open)

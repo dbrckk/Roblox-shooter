@@ -174,11 +174,15 @@ def main():
             "Career acquisition and all three save streams must use UpdateAsync")
     practice_sync = data.split("local function syncPracticeBest(", 1)[1].split(
         "function ProgressionService.loadPracticeBest(", 1)[0]
-    contains(practice_sync, (
+    practice_key = data.split("local function practiceKey(", 1)[1].split("local function syncPracticeBest(", 1)[0]
+    contains(practice_key, (
         '"practice_best_v1_" .. tostring(player.UserId)',
+        '"practice_best_v1_" .. mode .. "_" .. tostring(player.UserId)',
+    ), "Existing open drill key and independent weapon keys")
+    contains(practice_sync, (
         "return store:UpdateAsync(key, function(previous)",
         "PracticeMode.betterDrillBest(pending, saved)",
-        "record.practicePending = nil",
+        "entry.pending = nil",
     ), "Independent practice record transaction")
     for unsafe in ("store:SetAsync(", "store:IncrementAsync(", "GetDataStore("):
         if unsafe == "GetDataStore(":

@@ -270,8 +270,14 @@ guard = ""
 if "local function combatInputBlocked()" in source:
     guard = section("local function combatInputBlocked()", "local function getCharacterParts()")
 practice = (root / "src/shared/PracticeMode.luau").read_text(encoding="utf-8")
+practice = practice.replace(
+    'local WeaponConfig = if script then require(script.Parent:WaitForChild("WeaponConfig")) else require("./WeaponConfig")',
+    "local WeaponConfig = DrillWeapons",
+)
+weapons = (root / "src/shared/WeaponConfig.luau").read_text(encoding="utf-8")
 chunks = [
-    fixture, "local PracticeMode = (function()\n" + practice + "\nend)()\n", "local GamepadCombatPolicy = (function()\n" + gamepad + "\nend)()\n", guard,
+    fixture, "local DrillWeapons = (function()\n" + weapons + "\nend)()\n",
+    "local PracticeMode = (function()\n" + practice + "\nend)()\n", "local GamepadCombatPolicy = (function()\n" + gamepad + "\nend)()\n", guard,
     section("local mouseFireHeld = false", "local function advanceFeedbackEpoch("),
     section('RunService:BindToRenderStep("IronYardClientCameraFeel"', "\nenforceFirstPerson()"),
     section("-- Observe the native jump button", "-- IRON YARD / SAFE AREA"),

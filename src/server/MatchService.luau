@@ -655,13 +655,16 @@ function MatchService.start()
             PracticeRange.resetStats(player, session, revision)
         end
     end)
-    remotes.StartPracticeDrill.OnServerEvent:Connect(function(player, session, previousId)
+    remotes.SelectPracticeDrill.OnServerEvent:Connect(function(player, session, drillMode)
+        if RemoteGuard.allow(player, "SelectPracticeDrill") then PracticeRange.selectDrill(player, session, drillMode) end
+    end)
+    remotes.StartPracticeDrill.OnServerEvent:Connect(function(player, session, previousId, requestedMode)
         if not RemoteGuard.allow(player, "StartPracticeDrill") then return end
-        local character = PracticeRange.startDrill(player, session, previousId)
+        local character, drillMode = PracticeRange.startDrill(player, session, previousId, requestedMode)
         if not character then return end
         MovementService.resetDuelMovement(player)
         SpawnService.placeInPractice(player, character)
-        WeaponService.refillPracticeMagazines(player)
+        WeaponService.refillPracticeMagazines(player, drillMode)
     end)
     remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation, requestedRound, teamInvite)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
