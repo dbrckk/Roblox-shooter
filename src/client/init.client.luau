@@ -1475,11 +1475,11 @@ remotes.WeaponFx.OnClientEvent:Connect(function(message)
         if ownShot then
             if primaryPosition then
                 visuals:drawImpact(primaryPosition, message.impactNormal, message.impactMaterial)
-                visuals:playImpactSound(primaryPosition, message.impactMaterial)
+                visuals:playImpactSound(primaryPosition, message.impactMaterial, message.weaponId)
             elseif pellets then
                 local contact = pellets[1]
                 if typeof(contact) == "table" then
-                    visuals:playImpactSound(contact.position, contact.material)
+                    visuals:playImpactSound(contact.position, contact.material, message.weaponId)
                 end
             end
         elseif remoteAccepted then

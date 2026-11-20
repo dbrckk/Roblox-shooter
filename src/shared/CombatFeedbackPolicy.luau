@@ -36,11 +36,16 @@ function Feedback.actualDamage(before, after)
     return math.clamp(math.max(1, math.floor(lost + 0.5)), 1, 9999)
 end
 
-function Feedback.readout(kind, damage, headshot)
+function Feedback.readout(kind, damage, headshot, pelletsHit, pelletCount)
     if kind == "Protected" then return "SPAWN SHIELD" end
     if kind ~= "Hit" or not finite(damage) or damage <= 0 then return nil end
     local rounded = math.clamp(math.max(1, math.floor(damage + 0.5)), 1, 9999)
-    return (headshot and "HEADSHOT " or "") .. tostring(rounded) .. " DMG"
+    local text = (headshot and "HEADSHOT " or "") .. tostring(rounded) .. " DMG"
+    if finite(pelletsHit) and finite(pelletCount) and pelletsHit % 1 == 0
+        and pelletCount % 1 == 0 and pelletsHit >= 1 and pelletsHit <= pelletCount and pelletCount <= 16 then
+        return string.format("%s · %d/%d HITS", text, pelletsHit, pelletCount)
+    end
+    return text
 end
 
 return Feedback

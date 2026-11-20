@@ -26,6 +26,8 @@ Le lot publié en version 113 couvre l’affichage des arrivées en 2v2, le tran
 
 ### Vérifier le tir sur Android
 
+Le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.
+
 - Depuis le stand, garder le même appareil, la même orientation et le même profil graphique pour chaque comparaison. Lancer `PERF → MESURER 240 IMAGES` pour relever 240 images à chaque essai.
 - Faire une capture avec une rafale d’AR-24 au centre du butoir métallique, puis une avec le B-8 en visant le bord d’une cible proche. Sur le B-8, comparer le départ du tir, les contacts des plombs sur la surface et la confirmation quand la cible est touchée.
 - Refaire une capture au pistolet ou au sniper en visée. Relever le P95, le P99 et le build indiqué. Vérifier également que quitter le stand pendant un tir ne ramène pas un impact dans le FFA.

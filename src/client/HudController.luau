@@ -265,7 +265,7 @@ function HudController:_buildCrosshair()
     readout.Name = "DamageReadout"
     readout.AnchorPoint = Vector2.new(0.5, 0.5)
     readout.Position = UDim2.new(0.5, 0, 0.5, -48)
-    readout.Size = UDim2.fromOffset(200, 25)
+    readout.Size = UDim2.fromOffset(224, 25)
     readout.BackgroundTransparency = 1
     readout.Font = Enum.Font.GothamBold
     readout.TextSize = 15
@@ -1245,7 +1245,9 @@ end
 function HudController:showHitFeedback(message)
     local killed = message.killed == true
     local headshot = message.headshot == true
-    local readoutText = FeedbackPolicy.readout("Hit", message.damage, headshot)
+    local config = self.WeaponConfig.get(message.weaponId)
+    local readoutText = FeedbackPolicy.readout("Hit", message.damage, headshot,
+        message.pelletsHit, config and config.pellets)
     if not readoutText then return end
     local priority = CombatVfxProfile.hitPriority(headshot, killed)
     local previous = FeedbackPolicy.markerStyle(self.lastConfirmedHudHitPriority)

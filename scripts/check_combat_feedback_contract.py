@@ -16,6 +16,8 @@ client = load("src/client/init.client.luau")
 hud = load("src/client/HudController.luau")
 policy = load("src/shared/CombatFeedbackPolicy.luau")
 vfx = load("src/shared/CombatVfxProfile.luau")
+visuals = load("src/client/WeaponVisuals.luau")
+weapons = load("src/shared/WeaponConfig.luau")
 remote_budget = load("src/shared/RemoteCombatFxBudget.luau")
 
 def requires(src, needles, label):
@@ -24,7 +26,7 @@ def requires(src, needles, label):
 
 requires(policy, (
     "function Feedback.actualDamage(before, after)",
-    "function Feedback.readout(kind, damage, headshot)",
+    "function Feedback.readout(kind, damage, headshot, pelletsHit, pelletCount)",
     "function Feedback.markerStyle(priority)",
     "if kind == \"Protected\" then return \"SPAWN SHIELD\" end",
     'if kind ~= "Hit" or not finite(damage) or damage <= 0 then return nil end',
@@ -40,7 +42,6 @@ requires(server, (
     'if not targetPlayer and targetCharacter:GetAttribute("IsArenaBot") ~= true then',
     "if damageAllowed and SpawnService.isProtected(model) then",
     "struckShield = true",
-    "if not anyHit and struckShield then",
     "sendProtected(player, weaponId)",
     "FeedbackPolicy.actualDamage(healthBefore, targetHumanoid.Health)",
     "FeedbackPolicy.actualDamage(oldHealth, humanoid.Health)",
@@ -90,7 +91,8 @@ requires(hud, (
     'readout.Name = "DamageReadout"',
     "function HudController:showHitFeedback(message)",
     "function HudController:showProtectedFeedback()",
-    'FeedbackPolicy.readout("Hit", message.damage, headshot)',
+    'FeedbackPolicy.readout("Hit", message.damage, headshot,',
+    "message.pelletsHit, config and config.pellets",
     'FeedbackPolicy.readout("Protected")',
     "CombatVfxProfile.shouldDisplayHit(now,",
     "self.lastConfirmedHudHitPriority = priority",
@@ -136,4 +138,24 @@ requires(client, (
 assert client.count('RemoteCombatFxBudget.allow(') == 2, (
     "Exactly two remote visuals pathways must be admitted once per group"
 )
+pellet_fire = server.split("local function firePelletWeapon(", 1)[1].split(
+    "local function createKnifeVisual(", 1
+)[0]
+requires(pellet_fire, (
+    "entry.pellets += 1",
+    "pelletsHit += entry.pellets",
+    "damage = totalDamage, pelletsHit = pelletsHit",
+    "elseif struckShield then",
+), "One server-confirmed readout per shell")
+assert pellet_fire.count("sendFeedback(player,") == 1
+assert pellet_fire.index("if humanoid.Health < oldHealth then") < pellet_fire.index("pelletsHit += entry.pellets")
+requires(client, (
+    "visuals:playImpactSound(primaryPosition, message.impactMaterial, message.weaponId)",
+    "visuals:playImpactSound(contact.position, contact.material, message.weaponId)",
+), "Both world impact branches use the weapon mix")
+requires(visuals, (
+    "function WeaponVisuals:playImpactSound(position, materialName, weaponId)",
+    "sound.Volume = profile.volume * (config and config.surfaceImpactGain or 1)",
+), "Keep the surface impact mix independent of hit confirmation")
+assert "surfaceImpactGain = 0.45" in weapons.split("Shotgun = {", 1)[1].split("Sniper = {", 1)[0]
 print("IRON YARD actual damage, spawn-shield readout, kill priority and remote FX quotas: OK")
