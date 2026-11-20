@@ -1,0 +1,7 @@
+IRON YARD v127 — single public update, 20 November 2026.
+
+Deploy the game source verified at 529561215a3dde6ecf436d02c1e03bca105ea58a to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Ship pull request #288. Add the personal records board for all six practice drill modes with per-row load and save status. Keep the existing stored records and load the board on demand. The latest confirmed public place version is 122.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
