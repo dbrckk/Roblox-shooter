@@ -12,6 +12,7 @@ local PROFILES = {
     ReturnToFfa = { rate = 1, burst = 2 },
     SetCareerFinish = { rate = 3, burst = 4 },
     SetPracticeRange = { rate = 0.5, burst = 2 },
+    ResetPracticeStats = { rate = 1, burst = 2 },
     -- Move updates are sent at ~12.5 Hz while boost/wallrun is active.
     MovementAction = { rate = 34, burst = 22 },
     MovementUpdate = { rate = 22, burst = 14 },

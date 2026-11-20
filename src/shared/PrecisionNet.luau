@@ -11,6 +11,7 @@ local REMOTES = {
     ReturnToFfa = "RemoteEvent",
     SetCareerFinish = "RemoteEvent",
     SetPracticeRange = "RemoteEvent",
+    ResetPracticeStats = "RemoteEvent",
     ReloadWeapon = "RemoteEvent",
 	MovementAction = "RemoteEvent",
 	MovementState = "RemoteEvent",

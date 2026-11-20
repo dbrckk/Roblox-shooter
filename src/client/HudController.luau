@@ -879,33 +879,74 @@ function HudController:_buildSettingsMenu()
             self:_refreshSettingsText()
         end)
 
+    local settingsHint = touch and "Drag on FIRE to aim while shooting" or "Press M to close"
+    local hint = makeText(settingsPage, "Hint", settingsHint,
+        UDim2.fromOffset(22, 40), UDim2.fromOffset(252, 16), 12)
+    hint.TextColor3 = Color3.fromRGB(162, 173, 190)
+    hint.ZIndex = 11
+
+    local rangeY = panelHeight - 53
     local rangeButton = makeButton(settingsPage, "PracticeRange", "PRACTICE RANGE",
-        UDim2.fromOffset(22, panelHeight - 53), UDim2.fromOffset(296, 42))
+        UDim2.fromOffset(22, rangeY), UDim2.fromOffset(296, 42))
+    local resetButton = makeButton(settingsPage, "ResetPracticeStats", "RESET STATS",
+        UDim2.fromOffset(174, rangeY), UDim2.fromOffset(144, 42))
     rangeButton.ZIndex = 12
-    local function updateRangeButton()
+    resetButton.ZIndex = 12
+    rangeButton.TextTruncate = Enum.TextTruncate.AtEnd
+
+    local pendingReset
+    local function updateRangeButtons()
         local canEnter = workspace:GetAttribute("IronYardMatchMode") == "FFA"
             and workspace:GetAttribute("IronYardDedicatedDuel") ~= true
+        local practicing = PracticeMode.active(self.player)
+        local session = PracticeMode.session(self.player)
+        local _, _, _, revision = PracticeMode.stats(self.player)
+        local notice = self.player:GetAttribute("IronYardPracticeNotice")
         rangeButton.Visible = canEnter and self.options.onPracticeRequested ~= nil
         rangeButton.Selectable = rangeButton.Visible
-        local notice = self.player:GetAttribute("IronYardPracticeNotice")
-        rangeButton.Text = notice or (PracticeMode.active(self.player) and "BACK TO FFA" or "PRACTICE RANGE")
+        resetButton.Visible = rangeButton.Visible and practicing and self.options.onPracticeStatsReset ~= nil
+        resetButton.Selectable = resetButton.Visible and revision ~= nil
+        rangeButton.Size = UDim2.fromOffset(resetButton.Visible and 144 or 296, 42)
+        rangeButton.Text = practicing and "BACK TO FFA" or (notice or "PRACTICE RANGE")
+        hint.Text = practicing and notice or settingsHint
+
+        local completed = pendingReset and session == pendingReset.session
+            and revision and revision > pendingReset.revision
+        if completed or (pendingReset and (not resetButton.Visible or session ~= pendingReset.session)) then
+            pendingReset = nil
+        end
+        resetButton.Interactable = resetButton.Selectable and not pendingReset
+        resetButton.Text = pendingReset and "RESETTING…" or "RESET STATS"
+        if completed and self.settingsOpen and settingsPage.Visible then
+            self:setSettingsOpen(false)
+        end
     end
     rangeButton.Activated:Connect(function()
         if self.settingsOpen and settingsPage.Visible and rangeButton.Visible then
             self.options.onPracticeRequested()
         end
     end)
-    self.player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateRangeButton)
-    self.player:GetAttributeChangedSignal("IronYardPracticeNotice"):Connect(updateRangeButton)
-    workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(updateRangeButton)
-    workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(updateRangeButton)
-    updateRangeButton()
-
-    local hint = makeText(settingsPage, "Hint",
-        touch and "Drag on FIRE to aim while shooting" or "Press M to close",
-        UDim2.fromOffset(22, 40), UDim2.fromOffset(252, 16), 12)
-	hint.TextColor3 = Color3.fromRGB(162, 173, 190)
-	hint.ZIndex = 11
+    resetButton.Activated:Connect(function()
+        if not self.settingsOpen or not settingsPage.Visible or not resetButton.Visible
+            or not resetButton.Interactable then return end
+        local _, _, _, revision = PracticeMode.stats(self.player)
+        if revision == nil or not PracticeMode.active(self.player) then return end
+        local request = { session = PracticeMode.session(self.player), revision = revision }
+        pendingReset = request
+        updateRangeButtons()
+        self.options.onPracticeStatsReset(request.session, request.revision)
+        task.delay(3, function()
+            if pendingReset ~= request then return end
+            pendingReset = nil
+            updateRangeButtons()
+        end)
+    end)
+    self.player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateRangeButtons)
+    self.player:GetAttributeChangedSignal(PracticeMode.STATS_ATTRIBUTE):Connect(updateRangeButtons)
+    self.player:GetAttributeChangedSignal("IronYardPracticeNotice"):Connect(updateRangeButtons)
+    workspace:GetAttributeChangedSignal("IronYardMatchMode"):Connect(updateRangeButtons)
+    workspace:GetAttributeChangedSignal("IronYardDedicatedDuel"):Connect(updateRangeButtons)
+    updateRangeButtons()
 
 	button.Activated:Connect(function()
 		self:setSettingsOpen(not self.settingsOpen)

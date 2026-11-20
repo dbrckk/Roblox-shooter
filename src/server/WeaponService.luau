@@ -652,12 +652,14 @@ local function fireKnife(player, weaponId, config, direction)
     local launchedEpoch = weaponRoundEpoch
     local launchedSession = PracticeMode.session(player)
     local launchedInPractice = PracticeMode.active(player)
+    local practiceRoom = launchedInPractice and PracticeRange.room(player)
+    local launchedRevision = practiceRoom and practiceRoom.statsRevision
     params.FilterDescendantsInstances = { character, knife }
     local speed = config.projectileSpeed
     local maxRange = config.range
     local lifetime = config.projectileLifetime
     broadcastFireFx(player, weaponId, origin, true)
-    if launchedInPractice then PracticeRange.record(player, 1, 0, 0, launchedSession) end
+    if launchedInPractice then PracticeRange.record(player, 1, 0, 0, launchedSession, launchedRevision) end
 
     Debris:AddItem(knife, lifetime + 0.5)
 
@@ -672,6 +674,7 @@ local function fireKnife(player, weaponId, config, direction)
             -- character. Never apply late damage in a different combat state.
             if (not launchedInPractice and launchedEpoch ~= weaponRoundEpoch)
                 or not PracticeMode.matches(player, launchedSession)
+                or (practiceRoom and practiceRoom.statsRevision ~= launchedRevision)
                 or not duelCanFire(player)
                 or player.Parent ~= Players
                 or player.Character ~= character
@@ -689,7 +692,7 @@ local function fireKnife(player, weaponId, config, direction)
                 knife.CFrame = CFrame.lookAt(result.Position, result.Position + direction) * CFrame.new(0, 0, -1.1)
                 local hit, killed = damageHit(player, weaponId, config, result, origin)
                 if launchedInPractice and hit then
-                    PracticeRange.record(player, 0, 1, killed and 1 or 0, launchedSession)
+                    PracticeRange.record(player, 0, 1, killed and 1 or 0, launchedSession, launchedRevision)
                 end
                 knife:Destroy()
                 return

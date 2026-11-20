@@ -26,7 +26,7 @@ Le lot publié en version 113 couvre l’affichage des arrivées en 2v2, le tran
 
 ### Stand d’entraînement
 
-Depuis la version 115, le HUD affiche la précision, les tirs qui ont touché sur le total des tirs validés et les cibles abattues. Une cartouche du B‑8 compte comme un tir. Chaque visite commence à zéro et ne contribue pas au score, à l’XP ni aux objectifs FFA.
+Depuis la version 115, le HUD affiche la précision, les tirs qui ont touché sur le total des tirs validés et les cibles abattues. Une cartouche du B‑8 compte comme un tir. Chaque visite commence à zéro et ne contribue pas au score, à l’XP ni aux objectifs FFA. Dans le stand, **SET → RESET STATS** remet les compteurs à zéro. Le jeu ferme les réglages lorsque le serveur confirme la remise à zéro, et un couteau encore en vol est retiré.
 
 ### Vérifier le tir sur Android à la demande du joueur
 

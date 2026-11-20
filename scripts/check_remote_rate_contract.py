@@ -16,7 +16,7 @@ net = read("src/shared/PrecisionNet.luau")
 
 for key in (
     "EquipWeapon", "FireWeapon", "ReloadWeapon", "SetSprinting",
-    "SetAiming", "SetDuelReady", "ReturnToFfa", "SetPracticeRange",
+    "SetAiming", "SetDuelReady", "ReturnToFfa", "SetPracticeRange", "ResetPracticeStats",
     "MovementAction", "MovementUpdate", "MovementStop", "Diagnostics",
 ):
     assert key in policy, f"Missing bounded category: {key}"
@@ -96,6 +96,12 @@ in_handler(match, "local function setPractice(player, enabled, session)",
                'PracticeRange.enter(player, humanoid.Health, round)',
            ))
 assert "remotes.SetPracticeRange.OnServerEvent:Connect(setPractice)" in match
+in_handler(match, "remotes.ResetPracticeStats.OnServerEvent:Connect(function(player, session, revision)",
+           "\n    remotes.SetDuelReady", (
+               'RemoteGuard.allow(player, "ResetPracticeStats")',
+               'PracticeRange.resetStats(player, session, revision)',
+           ))
+
 in_handler(match, "remotes.SetDuelReady.OnServerEvent:Connect(",
            "\n    remotes.ReturnToFfa.OnServerEvent:Connect(", (
                'RemoteGuard.allow(player, "SetDuelReady")',
@@ -112,7 +118,7 @@ in_handler(match, "remotes.ReturnToFfa.OnServerEvent:Connect(function(player, re
 assert 'RemoteGuard.allow(player, "Diagnostics")' in diagnostics
 assert "if not authorized(player)" in diagnostics
 for key in ("EquipWeapon", "ReloadWeapon", "FireWeapon", "SetSprinting",
-            "MovementAction", "PerformanceDiagnostics", "SetAiming", "SetDuelReady", "ReturnToFfa", "SetPracticeRange"):
+            "MovementAction", "PerformanceDiagnostics", "SetAiming", "SetDuelReady", "ReturnToFfa", "SetPracticeRange", "ResetPracticeStats"):
     assert key + ' = "RemoteEvent"' in net, f"Unbound server remote: {key}"
 assert "remotes.SetAiming.OnServerEvent:Connect(onSetAiming)" in weapon
 assert "remotes.EquipWeapon.OnServerEvent:Connect(onEquipWeapon)" in weapon
