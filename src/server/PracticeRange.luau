@@ -4,6 +4,7 @@ local Workspace = game:GetService("Workspace")
 local Mode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local WeaponConfig = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("WeaponConfig"))
 local DummyService = require(script.Parent:WaitForChild("DummyService"))
+local ProgressionService = require(script.Parent:WaitForChild("ProgressionService"))
 
 local PracticeRange = {}
 local rooms = {}
@@ -129,17 +130,7 @@ end
 local function finalizeDrill(player, drill)
     drill.finished = true
     if drill.targetsDown == 0 then return end
-    local best = Mode.drillBest(player)
-    if best then
-        local moreTargets = drill.targetsDown > best.targetsDown
-        local accuracyWinsTie = drill.targetsDown == best.targetsDown
-            and drill.hits * best.shots > best.hits * drill.shots
-        if not moreTargets and not accuracyWinsTie then return end
-    end
-
-    drill.newBest = true
-    player:SetAttribute(Mode.DRILL_BEST_ATTRIBUTE,
-        string.format("%d:%d:%d", drill.shots, drill.hits, drill.targetsDown))
+    drill.newBest = ProgressionService.recordPracticeBest(player, drill)
 end
 
 function PracticeRange.startDrill(player, session, previousId)
@@ -239,6 +230,7 @@ function PracticeRange.enter(player, health, round)
     occupied[slot] = true
     publishStats(player, room)
     player:SetAttribute(Mode.ATTRIBUTE, session)
+    ProgressionService.loadPracticeBest(player)
 end
 
 local function remove(player)
