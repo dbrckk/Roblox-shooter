@@ -34,6 +34,8 @@ Depuis la version 118, **SET → RANGE STATS → START 30S DRILL** lance le déf
 
 Depuis la version 119, **RANGE STATS** affiche **SESSION BEST** sous le résultat du dernier essai. Le record départage d’abord les essais au nombre de cibles abattues, puis à la précision exacte. Il est conservé lors des allers-retours entre le FFA et le stand tant que le joueur reste connecté au même serveur.
 
+Le prochain lot sauvegarde **PERSONAL BEST** dans le DataStore Roblox pour le retrouver après reconnexion. Le jeu signale une sauvegarde en cours ou à réessayer. Les serveurs départagent deux résultats concurrents selon la même règle que le défi.
+
 ### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.

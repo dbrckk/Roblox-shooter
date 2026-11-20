@@ -747,8 +747,18 @@ local function practiceReadout()
         elseif not drill.finished then
             return "TIMED DRILL", "TIME UP"
         elseif now < drill.endsAt + 8 then
-            return drill.newBest and "NEW SESSION BEST" or "DRILL COMPLETE",
-                PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
+            local title = "DRILL COMPLETE"
+            if drill.newBest then
+                local status = player:GetAttribute(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE)
+                local best = PracticeMode.drillBest(player)
+                if status == "STUDIO" then
+                    title = "NEW SESSION BEST"
+                elseif status == "READY" and best
+                    and PracticeMode.encodeDrillBest(best) == PracticeMode.encodeDrillBest(drill) then
+                    title = "NEW PERSONAL BEST"
+                end
+            end
+            return title, PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
         end
     end
 
@@ -924,6 +934,8 @@ player:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(update)
 playerGui:GetAttributeChangedSignal("IronYardSpectating"):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.STATS_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_ATTRIBUTE):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
     if PracticeMode.active(player) then setMenu(false) end
     duelLabel()

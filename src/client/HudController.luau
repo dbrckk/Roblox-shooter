@@ -947,7 +947,18 @@ function HudController:_buildSettingsMenu()
         drillStatus.Text = drill and (drill.finished and ("LAST DRILL  ·  " .. PracticeMode.drillReadout(drill))
             or "THE TIMER IS SHOWN IN THE RANGE") or "KNOCK DOWN AS MANY TARGETS AS YOU CAN"
         local best = PracticeMode.drillBest(self.player)
-        drillBest.Text = best and ("SESSION BEST  ·  " .. PracticeMode.drillReadout(best)) or "SESSION BEST  ·  —"
+        local bestStatus = self.player:GetAttribute(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE)
+        local bestLabel = bestStatus == "STUDIO" and "SESSION BEST" or "PERSONAL BEST"
+        if bestStatus == "SAVING" then
+            bestLabel = "SAVING BEST"
+        elseif bestStatus == "SAVE_RETRY" then
+            bestLabel = "BEST UNSAVED"
+        elseif bestStatus == "LOAD_RETRY" and not best then
+            bestLabel = "BEST LOAD RETRY"
+        elseif bestStatus == "LOADING" then
+            bestLabel = "LOADING BEST"
+        end
+        drillBest.Text = bestLabel .. "  ·  " .. (best and PracticeMode.drillReadout(best) or "—")
         if acknowledged and self.settingsOpen and statsPage.Visible then self:setSettingsOpen(false) end
     end
     drillButton.Activated:Connect(function()
@@ -966,6 +977,7 @@ function HudController:_buildSettingsMenu()
     end)
     self.player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(updateDrillControls)
     self.player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_ATTRIBUTE):Connect(updateDrillControls)
+    self.player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE):Connect(updateDrillControls)
     self.player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateDrillControls)
     updateDrillControls()
 

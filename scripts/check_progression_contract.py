@@ -52,7 +52,7 @@ def main():
         "if not ok or not released then",
         'require(script.Parent:WaitForChild("ProgressionDetachedRelease"))',
         "queueDetachedRelease(player, record)",
-        "while (record.saving or record.objectiveSaving) and os.clock() < untilTime do",
+        "while (record.saving or record.objectiveSaving or record.practiceSaving) and os.clock() < untilTime do",
         "store:UpdateAsync(keyFor(player), function(previous)",
         "local snapshot = cloneSnapshot(record.earned)",
         "record.triedAcquire = true",
@@ -113,10 +113,11 @@ def main():
     require(worker.index("DetachedRelease.claim(record)") < worker.index(
         "ShutdownTracker.begin(shutdownTracker)") < worker.index("task.spawn(function()"),
         "One final release slot must be claimed and tracked before scheduling work")
-    require("if record.saving or record.objectiveSaving then return false end" in worker
+    require("if record.saving or record.objectiveSaving or record.practiceSaving then return false end" in worker
             and "if flushDeparture(player, record) then return true end" in worker,
             "Detached release must wait for busy autosave and attempt owned final save")
-    late = data[data.index("if not isLive(player, record) then"):queued]
+    acquire = data.index("local function acquire(player, record)")
+    late = data[data.index("if not isLive(player, record) then", acquire):queued]
     require(late.index("queueDetachedRelease(player, record)")
             < late.index("ShutdownTracker.finish(shutdownTracker)"),
             "Late acquisition MUST queue final release before finishing acquire slot")
@@ -169,8 +170,16 @@ def main():
     require("publish(player, record)" in data.split("local function flush(player, record, release)")[-1]
             or "publish(player, record)" in data.split("flush = function(player, record, release)")[-1],
             "Successful DataStore saves must refresh the saved counter")
-    require(data.count("store:UpdateAsync(") == 3,
-            "Career acquisition and both save streams must use UpdateAsync")
+    require(data.count("store:UpdateAsync(") == 4,
+            "Career acquisition and all three save streams must use UpdateAsync")
+    practice_sync = data.split("local function syncPracticeBest(", 1)[1].split(
+        "function ProgressionService.loadPracticeBest(", 1)[0]
+    contains(practice_sync, (
+        '"practice_best_v1_" .. tostring(player.UserId)',
+        "return store:UpdateAsync(key, function(previous)",
+        "PracticeMode.betterDrillBest(pending, saved)",
+        "record.practicePending = nil",
+    ), "Independent practice record transaction")
     for unsafe in ("store:SetAsync(", "store:IncrementAsync(", "GetDataStore("):
         if unsafe == "GetDataStore(":
             require(data.count("GetDataStore(") >= 1, "Missing named datastore init")

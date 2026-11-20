@@ -9,6 +9,7 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local OperatorFinishes = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("OperatorFinishes"))
 local Objectives = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("SessionObjectives"))
+local PracticeMode = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PracticeMode"))
 local PrecisionNet = require(ReplicatedStorage:WaitForChild("Shared"):WaitForChild("PrecisionNet"))
 local RemoteGuard = require(script.Parent:WaitForChild("RemoteGuard"))
 local Ledger = require(script.Parent:WaitForChild("ProgressionLedger"))
@@ -20,6 +21,7 @@ local ProgressionService = {}
 local STORE_NAME = "IronYard_Progression_v1"
 local AUTOSAVE_SECONDS = 45
 local OBJECTIVE_REFRESH_SECONDS = 90
+local PRACTICE_REFRESH_SECONDS = 90
 local LEASE_SECONDS = 180
 local RETRY_LIMIT = 3
 local records = {}
@@ -125,6 +127,80 @@ local function retry(operation)
         end
     end
     return false, lastError
+end
+
+local function publishPracticeBest(player, record, status)
+    if not isLive(player, record) then return end
+    local best = record.practiceBest
+    player:SetAttribute(PracticeMode.DRILL_BEST_ATTRIBUTE, best and PracticeMode.encodeDrillBest(best))
+    player:SetAttribute(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE, status)
+end
+
+local function syncPracticeBest(player, record, departure)
+    if not record.practiceRequested or record.status == "STUDIO" then return true end
+    if record.closing and not departure then return false end
+    if record.practiceSaving then return record.practicePending == nil end
+    local pending = record.practicePending
+    if not pending and (departure or os.clock() < (record.practiceRefreshAt or 0)) then return true end
+
+    record.practiceSaving = true
+    ShutdownTracker.begin(shutdownTracker)
+    local ok, result = retry(function()
+        if not store then store = DataStoreService:GetDataStore(STORE_NAME) end
+        local key = "practice_best_v1_" .. tostring(player.UserId)
+        if not pending then return store:GetAsync(key) end
+        return store:UpdateAsync(key, function(previous)
+            local saved = PracticeMode.decodeDrillBest(previous)
+            if PracticeMode.betterDrillBest(pending, saved) then
+                return PracticeMode.encodeDrillBest(pending)
+            end
+            return previous
+        end)
+    end)
+    record.practiceSaving = false
+    if ok then
+        local saved = PracticeMode.decodeDrillBest(result)
+        if saved and PracticeMode.betterDrillBest(saved, record.practiceBest) then record.practiceBest = saved end
+        if saved and record.practicePending and not PracticeMode.betterDrillBest(record.practicePending, saved) then
+            record.practicePending = nil
+        end
+        record.practiceRefreshAt = os.clock() + PRACTICE_REFRESH_SECONDS
+    else
+        warn("[IRON YARD] Practice record sync failed: " .. tostring(result))
+    end
+    local status = record.practicePending and (ok and "SAVING" or "SAVE_RETRY") or (ok and "READY" or "LOAD_RETRY")
+    publishPracticeBest(player, record, status)
+    if isLive(player, record) and record.practicePending and record.practicePending ~= pending then
+        task.defer(syncPracticeBest, player, record)
+    end
+    ShutdownTracker.finish(shutdownTracker)
+    return record.practicePending == nil
+end
+
+function ProgressionService.loadPracticeBest(player)
+    local record = records[player]
+    if not record or record.closing then return end
+    if not record.practiceRequested then
+        record.practiceRequested = true
+        publishPracticeBest(player, record, record.status == "STUDIO" and "STUDIO" or "LOADING")
+    end
+    task.spawn(syncPracticeBest, player, record)
+end
+
+function ProgressionService.recordPracticeBest(player, score)
+    local record = records[player]
+    if not record or record.closing or not PracticeMode.betterDrillBest(score, record.practiceBest) then return false end
+    local best = { shots = score.shots, hits = score.hits, targetsDown = score.targetsDown }
+    local knownBaseline = record.practiceRefreshAt ~= nil or record.status == "STUDIO"
+    record.practiceBest = best
+    if record.status == "STUDIO" then
+        publishPracticeBest(player, record, "STUDIO")
+    else
+        record.practicePending = best
+        publishPracticeBest(player, record, "SAVING")
+        task.spawn(syncPracticeBest, player, record)
+    end
+    return knownBaseline
 end
 
 local function syncObjectives(player, record, refresh)
@@ -254,7 +330,8 @@ local function flushDeparture(player, record)
         released = flush(player, record, true)
     end
     local objectivesSaved = syncObjectives(player, record)
-    return released and objectivesSaved
+    local practiceSaved = syncPracticeBest(player, record, true)
+    return released and objectivesSaved and practiceSaved
 end
 
 -- PlayerRemoving gives a busy DataStore a bounded synchronous chance
@@ -271,10 +348,10 @@ queueDetachedRelease = function(player, record)
             -- PlayerRemoving/flush. Bound detached memory and work; the
             -- server's own BindToClose limit remains 26 seconds.
             local untilTime = os.clock() + 45
-            while (record.saving or record.objectiveSaving) and os.clock() < untilTime do
+            while (record.saving or record.objectiveSaving or record.practiceSaving) and os.clock() < untilTime do
                 task.wait(0.15)
             end
-            if record.saving or record.objectiveSaving then return false end
+            if record.saving or record.objectiveSaving or record.practiceSaving then return false end
             -- Only the original server/session token can release this key.
             -- An unacknowledged acquisition may still own its lease.
             for attempt = 1, 2 do
@@ -422,6 +499,7 @@ function ProgressionService.start()
             task.wait(AUTOSAVE_SECONDS)
             for player, record in pairs(records) do
                 if not record.closing and player.Parent then
+                    if record.practiceRequested then task.spawn(syncPracticeBest, player, record) end
                     task.spawn(function()
                         if record.loaded then
                             flush(player, record, false)
