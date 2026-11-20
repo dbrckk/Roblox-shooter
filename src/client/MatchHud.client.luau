@@ -156,6 +156,11 @@ local drillAction = duelButton(gui, "PracticeDrillAction", "", duelToggle.Size, 
 drillAction.TextSize = UserInputService.TouchEnabled and 10 or 12
 drillAction.Visible = false
 drillAction.Selectable = false
+-- Use the space reserved for canceling matchmaking outside the range.
+local drillModeAction = duelButton(gui, "PracticeDrillModeAction", "", quickCancel.Size, quickCancel.Position)
+drillModeAction.TextSize = UserInputService.TouchEnabled and 10 or 11
+drillModeAction.Visible = false
+drillModeAction.Selectable = false
 local menu = Instance.new("Frame")
 menu.Name = "DuelLobby"
 menu.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -264,24 +269,53 @@ local function gamepadActive()
     return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
 end
 
-local pendingDrillRequest
+local pendingDrillRequest, pendingDrillMode
 local function updateDrillAction()
     local session = PracticeMode.session(player)
     local drill = PracticeMode.drill(player)
+    local mode = PracticeMode.drillMode(player)
+    local drillActive = drill and not drill.finished
     if pendingDrillRequest and (pendingDrillRequest.session ~= session
         or (drill and drill.id > pendingDrillRequest.previousId)) then
         pendingDrillRequest = nil
     end
-    drillAction.Visible = PracticeMode.active(player) and (not drill or drill.finished)
+    if pendingDrillMode and (pendingDrillMode.session ~= session or pendingDrillMode.mode == mode or drillActive) then
+        pendingDrillMode = nil
+    end
+    drillAction.Visible = PracticeMode.active(player) and not drillActive
         and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
         and not GuiService.MenuIsOpen
-    drillAction.Interactable = drillAction.Visible and pendingDrillRequest == nil
+    drillModeAction.Visible = drillAction.Visible
+    drillAction.Interactable = drillAction.Visible and not pendingDrillRequest and not pendingDrillMode
+    drillModeAction.Interactable = drillAction.Interactable
     if not drillAction.Visible then return end
-    local text = drill and drill.mode == PracticeMode.drillMode(player) and "RETRY" or "DRILL"
-    if not UserInputService.TouchEnabled then
-        text ..= gamepadActive() and "  ·  R3" or "  ·  V"
+
+    local touch = UserInputService.TouchEnabled
+    local text = drill and drill.mode == mode and "RETRY" or "DRILL"
+    local modeText = PracticeMode.drillLabel(mode) .. " ›"
+    if gamepadActive() then
+        text = touch and ("R3\n" .. text) or (text .. "  ·  R3")
+        modeText = (touch and "LT+R3\n" or "LT+R3 · ") .. modeText
+    elseif not touch then
+        text ..= "  ·  V"
+        modeText = "B · " .. modeText
     end
     drillAction.Text = pendingDrillRequest and "…" or text
+    drillModeAction.Text = pendingDrillMode and "…" or modeText
+end
+
+local function requestPracticeDrillMode()
+    updateDrillAction()
+    if not drillModeAction.Interactable then return end
+    local request = { session = PracticeMode.session(player), mode = PracticeMode.nextDrillMode(PracticeMode.drillMode(player)) }
+    pendingDrillMode = request
+    updateDrillAction()
+    remotes.SelectPracticeDrill:FireServer(request.session, request.mode)
+    task.delay(REQUEST_CONFIRMATION_SECONDS, function()
+        if pendingDrillMode ~= request then return end
+        pendingDrillMode = nil
+        updateDrillAction()
+    end)
 end
 
 local function requestPracticeDrill()
@@ -689,6 +723,7 @@ end
 
 duelToggle.Activated:Connect(toggleDuel)
 drillAction.Activated:Connect(requestPracticeDrill)
+drillModeAction.Activated:Connect(requestPracticeDrillMode)
 quickCancel.Activated:Connect(function()
     updateQuickCancel()
     if quickCancel.Visible then sendReadyRequest({ enabled = false }) end
@@ -725,9 +760,14 @@ invite.Activated:Connect(function() replyToInvitation(true) end)
 decline.Activated:Connect(function() replyToInvitation(false) end)
 UserInputService.InputBegan:Connect(function(input, used)
     if used or playerGui:GetAttribute("IronYardSettingsOpen") == true then return end
-    if input.KeyCode == Enum.KeyCode.V or (input.KeyCode == Enum.KeyCode.ButtonR3
-        and GamepadCombatPolicy.isGamepad(input.UserInputType.Name)) then
-        if PracticeMode.active(player) then requestPracticeDrill() else toggleDuel() end
+    local gamepadShortcut = input.KeyCode == Enum.KeyCode.ButtonR3
+        and GamepadCombatPolicy.isGamepad(input.UserInputType.Name)
+    local practicing = PracticeMode.active(player)
+    if practicing and (input.KeyCode == Enum.KeyCode.B
+        or (gamepadShortcut and UserInputService:IsGamepadButtonDown(input.UserInputType, Enum.KeyCode.ButtonL2))) then
+        requestPracticeDrillMode()
+    elseif input.KeyCode == Enum.KeyCode.V or gamepadShortcut then
+        if practicing then requestPracticeDrill() else toggleDuel() end
     end
 end)
 UserInputService.LastInputTypeChanged:Connect(duelLabel)
