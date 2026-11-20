@@ -122,13 +122,18 @@ end
 local function publishDrill(player, room)
     local drill = room.drill
     local result = drill.newBest and 2 or (drill.finished and 1 or 0)
-    player:SetAttribute(Mode.DRILL_ATTRIBUTE, string.format("%d:%d:%d:%d:%d:%d:%d:%d:%s",
+    local snapshot = string.format("%d:%d:%d:%d:%d:%d:%d:%d:%s",
         room.session, drill.id, drill.startsAtMs, drill.endsAtMs,
-        drill.shots, drill.hits, drill.targetsDown, result, drill.mode))
+        drill.shots, drill.hits, drill.targetsDown, result, drill.mode)
+    if drill.baselineKnown then
+        snapshot ..= "|" .. (drill.previousBest and Mode.encodeDrillBest(drill.previousBest) or "-")
+    end
+    player:SetAttribute(Mode.DRILL_ATTRIBUTE, snapshot)
 end
 
 local function finalizeDrill(player, drill)
     drill.finished = true
+    drill.previousBest, drill.baselineKnown = ProgressionService.practiceBestBaseline(player, drill.mode)
     if drill.targetsDown == 0 then return end
     drill.newBest = ProgressionService.recordPracticeBest(player, drill, drill.mode)
 end

@@ -66,6 +66,10 @@ header.TextTruncate = Enum.TextTruncate.AtEnd
 local detail = label("Score", 12, UDim2.new(1, -12, 0, 27), UDim2.fromOffset(6, 34), Color3.fromRGB(248, 248, 241))
 
 detail.TextTruncate = Enum.TextTruncate.AtEnd
+local drillComparison = label("DrillComparison", 11, UDim2.new(1, -12, 0, 15),
+    UDim2.fromOffset(6, 61), Color3.fromRGB(244, 217, 170))
+drillComparison.TextTruncate = Enum.TextTruncate.AtEnd
+drillComparison.Visible = false
 
 -- Ten reusable, non-interactive score indicators (five wins per side).
 -- No RenderStepped loop, network events or creation during match updates.
@@ -795,17 +799,41 @@ local function practiceReadout()
             return title, "TIME UP"
         elseif now < drill.endsAt + 8 then
             local resultTitle = title .. " COMPLETE"
-            if drill.newBest then
-                local best, status = PracticeMode.drillBest(player, drill.mode)
-                if status == "STUDIO" then
-                    resultTitle = "NEW SESSION BEST"
-                elseif status == "READY" and best
-                    and PracticeMode.encodeDrillBest(best) == PracticeMode.encodeDrillBest(drill) then
-                    resultTitle = drill.mode == PracticeMode.OPEN_DRILL and "NEW PERSONAL BEST"
-                        or ("NEW " .. PracticeMode.drillLabel(drill.mode) .. " BEST")
+            local best, status = PracticeMode.drillBest(player, drill.mode)
+            local matchesBest = best and PracticeMode.encodeDrillBest(best) == PracticeMode.encodeDrillBest(drill)
+            if matchesBest and (drill.newBest or not drill.baselineKnown) then
+                if status == "STUDIO" and drill.newBest then
+                    resultTitle = drill.previousBest and "NEW SESSION BEST" or "FIRST SESSION BEST"
+                elseif status == "SAVING" then
+                    resultTitle = "SAVING PERSONAL BEST"
+                elseif status == "SAVE_RETRY" then
+                    resultTitle = "PERSONAL BEST UNSAVED"
+                elseif status == "READY" then
+                    if not drill.baselineKnown then
+                        resultTitle = "PERSONAL BEST SAVED"
+                    elseif not drill.previousBest then
+                        resultTitle = "FIRST PERSONAL BEST"
+                    else
+                        resultTitle = drill.mode == PracticeMode.OPEN_DRILL and "NEW PERSONAL BEST"
+                            or ("NEW " .. PracticeMode.drillLabel(drill.mode) .. " BEST")
+                    end
                 end
             end
-            return resultTitle, PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
+
+            local previousBest = drill.previousBest
+            if not drill.baselineKnown and status == "READY" and best
+                and PracticeMode.betterDrillBest(best, drill) then
+                previousBest = best
+            end
+            local comparison
+            if previousBest then
+                comparison = PracticeMode.drillBestGap(drill, previousBest)
+            elseif (drill.baselineKnown or status == "READY") and not best and drill.targetsDown == 0 then
+                comparison = "1 TARGET TO SET A BEST"
+            elseif not drill.baselineKnown and not matchesBest then
+                comparison = "PREVIOUS BEST UNAVAILABLE"
+            end
+            return resultTitle, PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now), comparison
         end
     end
 
@@ -852,10 +880,10 @@ local function update()
     local kills = eliminations and eliminations.Value or 0
     local clock = string.format("%d:%02d", math.floor(seconds / 60), seconds % 60)
 
-    local headerText, detailText
+    local headerText, detailText, comparisonText
     if PracticeMode.active(player) then
         local nextRefresh
-        headerText, detailText, nextRefresh = practiceReadout()
+        headerText, detailText, nextRefresh, comparisonText = practiceReadout()
         if nextRefresh and not drillClockTask then
             drillClockTask = task.delay(math.max(0.02, nextRefresh), function()
                 drillClockTask = nil
@@ -925,6 +953,9 @@ local function update()
     -- reaches Roblox UI properties; score/time changes remain immediate.
     if header.Text ~= headerText then header.Text = headerText end
     if detail.Text ~= detailText then detail.Text = detailText end
+    if drillComparison.Text ~= (comparisonText or "") then drillComparison.Text = comparisonText or "" end
+    local showComparison = comparisonText ~= nil
+    if drillComparison.Visible ~= showComparison then drillComparison.Visible = showComparison end
     updateDuelProgress(matchMode, phase, myWins, rivalWins)
 end
 
