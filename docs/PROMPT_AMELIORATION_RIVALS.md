@@ -46,6 +46,8 @@ Depuis la version 124, à la fin d’un défi, le HUD affiche l’écart avec le
 
 Depuis la version 125, le HUD affiche pendant le compte à rebours le record du mode joué avec le nombre de cibles, les tirs réussis et la précision. Quand aucun record n’existe encore, une cible abattue suffit à établir le premier. Le HUD indique si le record est encore en cours de chargement ou de sauvegarde.
 
+Dans le stand, le bouton sous **DRILL / RETRY** indique le mode et permet de passer au suivant. Raccourcis de sélection **B** au clavier et **LT + R3** à la manette. Le lancement attend la confirmation du serveur et le mode reste verrouillé pendant le compte à rebours et l’exercice.
+
 ### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.
