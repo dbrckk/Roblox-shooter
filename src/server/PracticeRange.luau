@@ -120,9 +120,26 @@ end
 
 local function publishDrill(player, room)
     local drill = room.drill
+    local result = drill.newBest and 2 or (drill.finished and 1 or 0)
     player:SetAttribute(Mode.DRILL_ATTRIBUTE, string.format("%d:%d:%d:%d:%d:%d:%d:%d",
         room.session, drill.id, drill.startsAtMs, drill.endsAtMs,
-        drill.shots, drill.hits, drill.targetsDown, drill.finished and 1 or 0))
+        drill.shots, drill.hits, drill.targetsDown, result))
+end
+
+local function finalizeDrill(player, drill)
+    drill.finished = true
+    if drill.targetsDown == 0 then return end
+    local best = Mode.drillBest(player)
+    if best then
+        local moreTargets = drill.targetsDown > best.targetsDown
+        local accuracyWinsTie = drill.targetsDown == best.targetsDown
+            and drill.hits * best.shots > best.hits * drill.shots
+        if not moreTargets and not accuracyWinsTie then return end
+    end
+
+    drill.newBest = true
+    player:SetAttribute(Mode.DRILL_BEST_ATTRIBUTE,
+        string.format("%d:%d:%d", drill.shots, drill.hits, drill.targetsDown))
 end
 
 function PracticeRange.startDrill(player, session, previousId)
@@ -154,7 +171,7 @@ function PracticeRange.startDrill(player, session, previousId)
             drill.finishTask = task.delay(remaining, finish)
             return
         end
-        drill.finished = true
+        finalizeDrill(player, drill)
         publishDrill(player, room)
     end
     finish()
@@ -234,6 +251,11 @@ local function remove(player)
 end
 
 function PracticeRange.leave(player)
+    local room = rooms[player]
+    local drill = room and room.drill
+    if drill and not drill.finished and Workspace:GetServerTimeNow() >= drill.endsAtMs / 1000 then
+        finalizeDrill(player, drill)
+    end
     remove(player)
     player:SetAttribute(Mode.ATTRIBUTE, Mode.session(player) + 1)
     player:SetAttribute(Mode.STATS_ATTRIBUTE, nil)

@@ -915,10 +915,16 @@ function HudController:_buildSettingsMenu()
     drillButton.Visible = self.options.onPracticeDrillStart ~= nil
     if drillButton.Visible then statsBack.Size = UDim2.fromOffset(144, 42) end
     local drillStatus = makeText(statsPage, "PracticeDrillStatus", "",
-        UDim2.fromOffset(22, 265), UDim2.fromOffset(296, 32), 11)
+        UDim2.fromOffset(22, 260), UDim2.fromOffset(296, 18), 11)
     drillStatus.ZIndex = 12
     drillStatus.TextXAlignment = Enum.TextXAlignment.Center
     drillStatus.Visible = drillButton.Visible
+    local drillBest = makeText(statsPage, "PracticeDrillBest", "",
+        UDim2.fromOffset(22, 280), UDim2.fromOffset(296, 18), 11)
+    drillBest.ZIndex = 12
+    drillBest.TextColor3 = Color3.fromRGB(233, 203, 145)
+    drillBest.TextXAlignment = Enum.TextXAlignment.Center
+    drillBest.Visible = drillButton.Visible
 
     local pendingDrill
     local function updateDrillControls()
@@ -940,6 +946,8 @@ function HudController:_buildSettingsMenu()
         end
         drillStatus.Text = drill and (drill.finished and ("LAST DRILL  ·  " .. PracticeMode.drillReadout(drill))
             or "THE TIMER IS SHOWN IN THE RANGE") or "KNOCK DOWN AS MANY TARGETS AS YOU CAN"
+        local best = PracticeMode.drillBest(self.player)
+        drillBest.Text = best and ("SESSION BEST  ·  " .. PracticeMode.drillReadout(best)) or "SESSION BEST  ·  —"
         if acknowledged and self.settingsOpen and statsPage.Visible then self:setSettingsOpen(false) end
     end
     drillButton.Activated:Connect(function()
@@ -957,6 +965,7 @@ function HudController:_buildSettingsMenu()
         end)
     end)
     self.player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(updateDrillControls)
+    self.player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_ATTRIBUTE):Connect(updateDrillControls)
     self.player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateDrillControls)
     updateDrillControls()
 

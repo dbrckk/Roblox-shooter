@@ -32,6 +32,8 @@ Depuis la version 117, **SET → RANGE STATS** est disponible dans le stand. Les
 
 Depuis la version 118, **SET → RANGE STATS → START 30S DRILL** lance le défi chronométré. Après trois secondes de préparation, le joueur a 30 secondes pour abattre le plus de cibles possible avec les armes du stand. Chaque essai débute avec cinq cibles rétablies. Le dernier résultat reste consultable dans **RANGE STATS** pendant la visite et le joueur peut relancer l’exercice.
 
+Le prochain lot affiche **SESSION BEST** sous le résultat du dernier essai. Le record départage d’abord les essais au nombre de cibles abattues, puis à la précision exacte. Il est conservé lors des allers-retours entre le FFA et le stand tant que le joueur reste connecté au même serveur.
+
 ### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.
