@@ -13,7 +13,7 @@
 - [Audit initial du produit — 8 novembre 2026](docs/AUDIT_GLOBAL_2026-11-08.md) : photographie datée, non représentative de toutes les fonctionnalités publiées ensuite.
 - [Journal des changements](docs/ROADMAP.md) : archive chronologique, pas le backlog actif.
 
-Roblox a confirmé la **version de place 124** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `f0a4d82869d1bfe8d10914844eaf52166cd21a6c`. À la fin du défi de 30 secondes, le HUD compare le score au record précédent du mode joué. Il affiche l’écart en cibles abattues ou, à nombre de cibles égal, en précision. Les six records restent consultables dans **SET → RANGE STATS → RECORDS**. [Publication de la version 124](https://github.com/dbrckk/Roblox-shooter/actions/runs/44734816988) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44734747838)
+Roblox a confirmé la **version de place 125** le 20 novembre 2026 sur [IRON YARD public](https://www.roblox.com/games/99189039770065/IRON-YARD), source `ebf9308a87068eeb7c29532d26852205a78d11db`. Le compte à rebours affiche le record du mode joué ou l’objectif du premier record. À la fin des 30 secondes, le HUD compare le résultat au record précédent. Les six records sont consultables dans **SET → RANGE STATS → RECORDS**. [Publication de la version 125](https://github.com/dbrckk/Roblox-shooter/actions/runs/44738863946) · [Build Rojo](https://github.com/dbrckk/Roblox-shooter/actions/runs/44738796813)
 
 Depuis la version 109, deux binômes du même lobby peuvent jouer au premier à cinq en 2v2. Le joueur éliminé peut suivre son coéquipier survivant et la revanche demande quatre votes. [Publication du 2v2](https://github.com/dbrckk/Roblox-shooter/actions/runs/44341904447)
 
