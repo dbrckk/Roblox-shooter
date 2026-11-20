@@ -141,8 +141,9 @@ function PracticeRange.startDrill(player, session, previousId)
 
     local character = player.Character
     local head = character and character:FindFirstChild("Head")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if not head or not humanoid or humanoid.Health <= 0
+    if not head or not root or root.Anchored or not humanoid or humanoid.Health <= 0
         or not PracticeRange.contains(player, head.Position) then return end
 
     room.targets:ClearAllChildren()
@@ -166,6 +167,7 @@ function PracticeRange.startDrill(player, session, previousId)
         publishDrill(player, room)
     end
     finish()
+    return character
 end
 
 function PracticeRange.drillId(player)

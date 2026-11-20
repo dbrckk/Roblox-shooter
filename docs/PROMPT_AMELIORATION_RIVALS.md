@@ -34,7 +34,9 @@ Depuis la version 118, **SET → RANGE STATS → START 30S DRILL** lance le déf
 
 Depuis la version 119, **RANGE STATS** affiche **SESSION BEST** sous le résultat du dernier essai. Le record départage d’abord les essais au nombre de cibles abattues, puis à la précision exacte. Il est conservé lors des allers-retours entre le FFA et le stand tant que le joueur reste connecté au même serveur.
 
-Depuis la version 120, le jeu sauvegarde **PERSONAL BEST** dans le DataStore Roblox pour le retrouver après reconnexion. Le jeu signale une sauvegarde en cours ou à réessayer. Les serveurs départagent deux résultats concurrents selon la même règle que le défi. La simulation couvre la reconnexion et les écritures concurrentes. Le contrôle en jeu sur un serveur Roblox reste ouvert.
+Depuis la version 120, le jeu sauvegarde **PERSONAL BEST** dans le DataStore Roblox pour le retrouver après reconnexion. Le jeu signale une sauvegarde en cours ou à réessayer. Les serveurs départagent deux résultats concurrents selon la même règle que le défi. La simulation couvre les écritures concurrentes et le joueur a confirmé que le record réapparaît après reconnexion.
+
+Le prochain lot ajoute **DRILL** et **RETRY** au HUD du stand. Le raccourci est **V** au clavier et **R3** à la manette. À chaque départ accepté, le serveur replace le joueur sur la ligne de tir et remplit les chargeurs du stand avant le début du chrono.
 
 ### Vérifier le tir sur Android à la demande du joueur
 

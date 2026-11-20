@@ -147,6 +147,10 @@ if UserInputService.TouchEnabled then
     quickCancel.Position = UDim2.fromOffset(cancelRect.x, cancelRect.y)
     quickCancel.TextSize = 10
 end
+local drillAction = duelButton(gui, "PracticeDrillAction", "", duelToggle.Size, duelToggle.Position)
+drillAction.TextSize = UserInputService.TouchEnabled and 10 or 12
+drillAction.Visible = false
+drillAction.Selectable = false
 local menu = Instance.new("Frame")
 menu.Name = "DuelLobby"
 menu.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -253,6 +257,41 @@ local activeOutgoingRecipient
 
 local function gamepadActive()
     return GamepadCombatPolicy.isGamepad(UserInputService:GetLastInputType().Name)
+end
+
+local pendingDrillRequest
+local function updateDrillAction()
+    local session = PracticeMode.session(player)
+    local drill = PracticeMode.drill(player)
+    if pendingDrillRequest and (pendingDrillRequest.session ~= session
+        or (drill and drill.id > pendingDrillRequest.previousId)) then
+        pendingDrillRequest = nil
+    end
+    drillAction.Visible = PracticeMode.active(player) and (not drill or drill.finished)
+        and playerGui:GetAttribute("IronYardSettingsOpen") ~= true
+        and not GuiService.MenuIsOpen
+    drillAction.Interactable = drillAction.Visible and pendingDrillRequest == nil
+    if not drillAction.Visible then return end
+    local text = drill and "RETRY" or "DRILL"
+    if not UserInputService.TouchEnabled then
+        text ..= gamepadActive() and "  ·  R3" or "  ·  V"
+    end
+    drillAction.Text = pendingDrillRequest and "…" or text
+end
+
+local function requestPracticeDrill()
+    updateDrillAction()
+    if not drillAction.Interactable then return end
+    local drill = PracticeMode.drill(player)
+    local request = { session = PracticeMode.session(player), previousId = drill and drill.id or 0 }
+    pendingDrillRequest = request
+    updateDrillAction()
+    remotes.StartPracticeDrill:FireServer(request.session, request.previousId)
+    task.delay(REQUEST_CONFIRMATION_SECONDS, function()
+        if pendingDrillRequest ~= request then return end
+        pendingDrillRequest = nil
+        updateDrillAction()
+    end)
 end
 
 local function syncMenuSelection()
@@ -643,6 +682,7 @@ local function toggleDuel()
 end
 
 duelToggle.Activated:Connect(toggleDuel)
+drillAction.Activated:Connect(requestPracticeDrill)
 quickCancel.Activated:Connect(function()
     updateQuickCancel()
     if quickCancel.Visible then sendReadyRequest({ enabled = false }) end
@@ -681,12 +721,15 @@ UserInputService.InputBegan:Connect(function(input, used)
     if used or playerGui:GetAttribute("IronYardSettingsOpen") == true then return end
     if input.KeyCode == Enum.KeyCode.V or (input.KeyCode == Enum.KeyCode.ButtonR3
         and GamepadCombatPolicy.isGamepad(input.UserInputType.Name)) then
-        toggleDuel()
+        if PracticeMode.active(player) then requestPracticeDrill() else toggleDuel() end
     end
 end)
 UserInputService.LastInputTypeChanged:Connect(duelLabel)
+UserInputService.LastInputTypeChanged:Connect(updateDrillAction)
 GuiService.MenuOpened:Connect(syncMenuSelection)
 GuiService.MenuClosed:Connect(syncMenuSelection)
+GuiService.MenuOpened:Connect(updateDrillAction)
+GuiService.MenuClosed:Connect(updateDrillAction)
 for _, name in ipairs({
     "IronYardDuelReady", "IronYardDuelTravel", "IronYardDuelInvitation", SEARCH_STARTED_ATTRIBUTE,
     OUTGOING_INVITE_ATTRIBUTE, teammateAttribute,
@@ -697,6 +740,7 @@ player:GetAttributeChangedSignal(REINVITE_ATTRIBUTE):Connect(readReinviteDeadlin
 readReinviteDeadlines()
 playerGui:GetAttributeChangedSignal("IronYardSettingsOpen"):Connect(function()
     duelLabel()
+    updateDrillAction()
 end)
 local travelConnections = {}
 local function watchRosterPlayer(other)
@@ -934,12 +978,15 @@ player:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(update)
 playerGui:GetAttributeChangedSignal("IronYardSpectating"):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.STATS_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(updateDrillAction)
 player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.DRILL_BEST_STATUS_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
     if PracticeMode.active(player) then setMenu(false) end
     duelLabel()
+    updateDrillAction()
     update()
 end)
 bindDuelPad(player.Character)
 duelLabel()
+updateDrillAction()

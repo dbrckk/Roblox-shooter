@@ -336,6 +336,16 @@ local function cancelReload(state, weaponId)
     state.reloadUntil[weaponId] = nil
 end
 
+function WeaponService.refillPracticeMagazines(player)
+    if not PracticeMode.active(player) then return end
+    local state = getState(player)
+    for id in pairs(state.reloadUntil) do cancelReload(state, id) end
+    table.clear(state.magazines)
+    for _, id in ipairs(WeaponConfig.Order) do
+        if WeaponConfig.get(id).magazineSize then sendAmmo(player, id) end
+    end
+end
+
 function WeaponService.canEnterPractice(player, character)
     local state = getState(player)
     local lastHit = character:GetAttribute("IronYardLastHitTime") or -math.huge
