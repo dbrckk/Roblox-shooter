@@ -2,6 +2,9 @@
 local PracticeMode = {}
 PracticeMode.ATTRIBUTE = "IronYardRangeSession"
 PracticeMode.STATS_ATTRIBUTE = "IronYardRangeStats"
+PracticeMode.DRILL_ATTRIBUTE = "IronYardRangeDrill"
+PracticeMode.DRILL_COUNTDOWN = 3
+PracticeMode.DRILL_SECONDS = 30
 
 function PracticeMode.session(player)
     return player:GetAttribute(PracticeMode.ATTRIBUTE) or 0
@@ -43,6 +46,24 @@ end
 
 function PracticeMode.accuracy(shots, hits)
     return shots > 0 and math.round(100 * hits / shots) or nil
+end
+
+function PracticeMode.drill(player)
+    local snapshot = player:GetAttribute(PracticeMode.DRILL_ATTRIBUTE)
+    if type(snapshot) ~= "string" then return nil end
+    local session, id, starts, ends, shots, hits, targets, done = snapshot:match(
+        "^(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):(%d+):([01])$")
+    if tonumber(session) ~= PracticeMode.session(player) then return nil end
+    return {
+        id = tonumber(id), startsAt = tonumber(starts) / 1000, endsAt = tonumber(ends) / 1000,
+        shots = tonumber(shots), hits = tonumber(hits), targetsDown = tonumber(targets), finished = done == "1",
+    }
+end
+
+function PracticeMode.drillReadout(drill)
+    local accuracy = PracticeMode.accuracy(drill.shots, drill.hits)
+    return string.format("%d DOWN  ·  %d/%d HITS  ·  %s", drill.targetsDown, drill.hits, drill.shots,
+        accuracy and (accuracy .. "%") or "—")
 end
 
 return PracticeMode

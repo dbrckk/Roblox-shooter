@@ -730,6 +730,38 @@ end)
 local eliminations = nil
 local statsConnection = nil
 local statsGeneration = 0
+local drillClockTask
+local function practiceReadout()
+    local drill = PracticeMode.drill(player)
+    if drill then
+        local now = Workspace:GetServerTimeNow()
+        if now < drill.startsAt then
+            local remaining = drill.startsAt - now
+            local seconds = math.ceil(remaining)
+            return string.format("DRILL STARTS IN %ds", seconds), "GET READY", remaining - seconds + 1
+        elseif now < drill.endsAt then
+            local remaining = drill.endsAt - now
+            local seconds = math.ceil(remaining)
+            return string.format("TIMED DRILL  /  %ds", seconds), PracticeMode.drillReadout(drill),
+                remaining - seconds + 1
+        elseif not drill.finished then
+            return "TIMED DRILL", "TIME UP"
+        elseif now < drill.endsAt + 8 then
+            return "DRILL COMPLETE", PracticeMode.drillReadout(drill), math.min(1, drill.endsAt + 8 - now)
+        end
+    end
+
+    local shots, hits, targets, revision = PracticeMode.stats(player)
+    local detailText = "TRY ALL 5 WEAPONS  ·  SETTINGS TO EXIT"
+    if shots > 0 then
+        local accuracy = PracticeMode.accuracy(shots, hits)
+        detailText = string.format("%d%% ACC  ·  %d/%d HITS  ·  %d DOWN", accuracy, hits, shots, targets)
+    elseif revision and revision > 0 then
+        detailText = "0/0 HITS  ·  0 DOWN"
+    end
+    return "IRON YARD  /  PRACTICE RANGE", detailText
+end
+
 local function update()
     -- The first-match mission occupies this exact top lane temporarily,
     -- never stack both cards over the mobile weapon selection.
@@ -761,15 +793,13 @@ local function update()
 
     local headerText, detailText
     if PracticeMode.active(player) then
-        headerText = "IRON YARD  /  PRACTICE RANGE"
-        local shots, hits, targets, revision = PracticeMode.stats(player)
-        if shots > 0 then
-            local accuracy = PracticeMode.accuracy(shots, hits)
-            detailText = string.format("%d%% ACC  ·  %d/%d HITS  ·  %d DOWN", accuracy, hits, shots, targets)
-        elseif revision and revision > 0 then
-            detailText = "0/0 HITS  ·  0 DOWN"
-        else
-            detailText = "TRY ALL 5 WEAPONS  ·  SETTINGS TO EXIT"
+        local nextRefresh
+        headerText, detailText, nextRefresh = practiceReadout()
+        if nextRefresh and not drillClockTask then
+            drillClockTask = task.delay(math.max(0.02, nextRefresh), function()
+                drillClockTask = nil
+                update()
+            end)
         end
     elseif matchMode == "DUEL" and phase ~= "COUNTDOWN" and phase ~= "WAITING" then
         local score = myWins and string.format(teamDuel and "TEAM %d : %d RIVALS" or "YOU %d : %d RIVAL",
@@ -892,6 +922,7 @@ player.CharacterRemoving:Connect(function() bindDuelPad(nil) end)
 player:GetAttributeChangedSignal("IronYardDuelTravel"):Connect(update)
 playerGui:GetAttributeChangedSignal("IronYardSpectating"):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.STATS_ATTRIBUTE):Connect(update)
+player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(update)
 player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(function()
     if PracticeMode.active(player) then setMenu(false) end
     duelLabel()

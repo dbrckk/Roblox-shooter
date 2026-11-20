@@ -654,12 +654,15 @@ local function fireKnife(player, weaponId, config, direction)
     local launchedInPractice = PracticeMode.active(player)
     local practiceRoom = launchedInPractice and PracticeRange.room(player)
     local launchedRevision = practiceRoom and practiceRoom.statsRevision
+    local launchDrillId = launchedInPractice and PracticeRange.drillId(player)
     params.FilterDescendantsInstances = { character, knife }
     local speed = config.projectileSpeed
     local maxRange = config.range
     local lifetime = config.projectileLifetime
     broadcastFireFx(player, weaponId, origin, true)
-    if launchedInPractice then PracticeRange.record(player, weaponId, 1, 0, 0, launchedSession, launchedRevision) end
+    if launchedInPractice then
+        PracticeRange.record(player, weaponId, 1, 0, 0, launchedSession, launchedRevision, launchDrillId)
+    end
 
     Debris:AddItem(knife, lifetime + 0.5)
 
@@ -675,6 +678,7 @@ local function fireKnife(player, weaponId, config, direction)
             if (not launchedInPractice and launchedEpoch ~= weaponRoundEpoch)
                 or not PracticeMode.matches(player, launchedSession)
                 or (practiceRoom and practiceRoom.statsRevision ~= launchedRevision)
+                or (launchedInPractice and PracticeRange.drillId(player) ~= launchDrillId)
                 or not duelCanFire(player)
                 or player.Parent ~= Players
                 or player.Character ~= character
@@ -692,7 +696,8 @@ local function fireKnife(player, weaponId, config, direction)
                 knife.CFrame = CFrame.lookAt(result.Position, result.Position + direction) * CFrame.new(0, 0, -1.1)
                 local hit, killed = damageHit(player, weaponId, config, result, origin)
                 if launchedInPractice and hit then
-                    PracticeRange.record(player, weaponId, 0, 1, killed and 1 or 0, launchedSession, launchedRevision)
+                    PracticeRange.record(player, weaponId, 0, 1, killed and 1 or 0,
+                        launchedSession, launchedRevision, launchDrillId)
                 end
                 knife:Destroy()
                 return
@@ -792,7 +797,13 @@ local function onFireWeapon(player, payload)
     -- A dead character cannot fire or consume its rate limit.
     local liveCharacter, liveHumanoid, liveHead, liveRoot = getLiveCharacter(player)
     if not liveCharacter then return end
-    if PracticeMode.active(player) and not PracticeRange.contains(player, liveHead.Position) then return end
+    if PracticeMode.active(player) then
+        if not PracticeRange.contains(player, liveHead.Position) then return end
+        if not PracticeRange.permitsFire(player, payload.rangeDrill) then
+            sendAmmo(player, weaponId)
+            return
+        end
+    end
     if not canFire(player, weaponId, config) then
         return
     end

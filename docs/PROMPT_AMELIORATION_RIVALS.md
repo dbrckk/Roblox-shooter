@@ -30,6 +30,8 @@ Depuis la version 115, le HUD affiche la précision, les tirs qui ont touché su
 
 Depuis la version 117, **SET → RANGE STATS** est disponible dans le stand. Les cinq armes sont comparables par précision, tirs réussis sur tirs validés et cibles abattues pendant la même visite. La remise à zéro efface simultanément les totaux et le détail par arme.
 
+Le prochain lot ajoute **SET → RANGE STATS → START 30S DRILL**. Après trois secondes de préparation, le joueur a 30 secondes pour abattre le plus de cibles possible avec les armes du stand. Chaque essai débute avec cinq cibles rétablies. Le dernier résultat reste consultable dans **RANGE STATS** pendant la visite et le joueur peut relancer l’exercice.
+
 ### Vérifier le tir sur Android à la demande du joueur
 
 Depuis la version 114, le B‑8 affiche une seule confirmation par cartouche, avec le total des dégâts retirés et le nombre de plombs validés sur huit. Le son des impacts du B‑8 sur le décor est ramené à 45 % de son niveau précédent. Comparer un tir sur le butoir seul et un tir qui touche à la fois une cible et le butoir.

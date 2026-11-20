@@ -655,6 +655,11 @@ function MatchService.start()
             PracticeRange.resetStats(player, session, revision)
         end
     end)
+    remotes.StartPracticeDrill.OnServerEvent:Connect(function(player, session, previousId)
+        if RemoteGuard.allow(player, "StartPracticeDrill") then
+            PracticeRange.startDrill(player, session, previousId)
+        end
+    end)
     remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation, requestedRound, teamInvite)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end

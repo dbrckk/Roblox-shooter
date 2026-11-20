@@ -908,6 +908,57 @@ function HudController:_buildSettingsMenu()
         UDim2.fromOffset(22, rangeY), UDim2.fromOffset(296, 42))
     statsBack.ZIndex = 12
     local refreshWeaponStats = self:_buildPracticeWeaponStats(statsPage)
+    local drillSeconds = PracticeMode.DRILL_SECONDS
+    local drillButton = makeButton(statsPage, "StartPracticeDrill", "",
+        UDim2.fromOffset(174, rangeY), UDim2.fromOffset(144, 42))
+    drillButton.ZIndex = 12
+    drillButton.Visible = self.options.onPracticeDrillStart ~= nil
+    if drillButton.Visible then statsBack.Size = UDim2.fromOffset(144, 42) end
+    local drillStatus = makeText(statsPage, "PracticeDrillStatus", "",
+        UDim2.fromOffset(22, 265), UDim2.fromOffset(296, 32), 11)
+    drillStatus.ZIndex = 12
+    drillStatus.TextXAlignment = Enum.TextXAlignment.Center
+    drillStatus.Visible = drillButton.Visible
+
+    local pendingDrill
+    local function updateDrillControls()
+        if not drillButton.Visible then return end
+        local session = PracticeMode.session(self.player)
+        local drill = PracticeMode.drill(self.player)
+        local acknowledged = pendingDrill and session == pendingDrill.session
+            and drill and drill.id == pendingDrill.previousId + 1
+        if pendingDrill and (acknowledged or session ~= pendingDrill.session) then pendingDrill = nil end
+        local active = drill and not drill.finished
+        drillButton.Interactable = not active and not pendingDrill
+        drillButton.Selectable = drillButton.Interactable
+        if pendingDrill then
+            drillButton.Text = "STARTING…"
+        elseif active then
+            drillButton.Text = "DRILL ACTIVE"
+        else
+            drillButton.Text = string.format(drill and "RETRY %dS DRILL" or "START %dS DRILL", drillSeconds)
+        end
+        drillStatus.Text = drill and (drill.finished and ("LAST DRILL  ·  " .. PracticeMode.drillReadout(drill))
+            or "THE TIMER IS SHOWN IN THE RANGE") or "KNOCK DOWN AS MANY TARGETS AS YOU CAN"
+        if acknowledged and self.settingsOpen and statsPage.Visible then self:setSettingsOpen(false) end
+    end
+    drillButton.Activated:Connect(function()
+        if not self.settingsOpen or not statsPage.Visible or not drillButton.Visible
+            or not drillButton.Interactable or not PracticeMode.active(self.player) then return end
+        local drill = PracticeMode.drill(self.player)
+        local request = { session = PracticeMode.session(self.player), previousId = drill and drill.id or 0 }
+        pendingDrill = request
+        updateDrillControls()
+        self.options.onPracticeDrillStart(request.session, request.previousId)
+        task.delay(3, function()
+            if pendingDrill ~= request then return end
+            pendingDrill = nil
+            updateDrillControls()
+        end)
+    end)
+    self.player:GetAttributeChangedSignal(PracticeMode.DRILL_ATTRIBUTE):Connect(updateDrillControls)
+    self.player:GetAttributeChangedSignal(PracticeMode.ATTRIBUTE):Connect(updateDrillControls)
+    updateDrillControls()
 
     local function setWeaponStatsOpen(open)
         local selected = GuiService.SelectedObject

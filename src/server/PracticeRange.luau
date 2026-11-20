@@ -102,7 +102,7 @@ local function buildRoom(slot)
     -- Stream this room as a unit when the owner reaches it.
     room.ModelStreamingMode = Enum.ModelStreamingMode.Atomic
     room.Parent = Workspace
-    return room, targets, center + Vector3.new(0, 3.4, 26)
+    return room, targets, center + Vector3.new(0, 3.4, 26), center
 end
 
 local function publishStats(player, room)
@@ -118,7 +118,61 @@ local function publishStats(player, room)
     player:SetAttribute(Mode.STATS_ATTRIBUTE, table.concat(snapshot, ";"))
 end
 
-function PracticeRange.record(player, weaponId, shots, hits, targetsDown, launchedSession, launchedRevision)
+local function publishDrill(player, room)
+    local drill = room.drill
+    player:SetAttribute(Mode.DRILL_ATTRIBUTE, string.format("%d:%d:%d:%d:%d:%d:%d:%d",
+        room.session, drill.id, drill.startsAtMs, drill.endsAtMs,
+        drill.shots, drill.hits, drill.targetsDown, drill.finished and 1 or 0))
+end
+
+function PracticeRange.startDrill(player, session, previousId)
+    local room = rooms[player]
+    if not room or room.session ~= session then return end
+    local previous = room.drill
+    if previousId ~= (previous and previous.id or 0) or (previous and not previous.finished) then return end
+
+    local character = player.Character
+    local head = character and character:FindFirstChild("Head")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not head or not humanoid or humanoid.Health <= 0
+        or not PracticeRange.contains(player, head.Position) then return end
+
+    room.targets:ClearAllChildren()
+    DummyService.populate(room.targets, room.origin)
+    local startsAtMs = math.ceil(Workspace:GetServerTimeNow() * 1000) + Mode.DRILL_COUNTDOWN * 1000
+    local drill = {
+        id = previousId + 1, startsAtMs = startsAtMs, endsAtMs = startsAtMs + Mode.DRILL_SECONDS * 1000,
+        shots = 0, hits = 0, targetsDown = 0, finished = false,
+    }
+    room.drill = drill
+    publishDrill(player, room)
+    local function finish()
+        drill.finishTask = nil
+        if rooms[player] ~= room or room.drill ~= drill then return end
+        local remaining = drill.endsAtMs / 1000 - Workspace:GetServerTimeNow()
+        if remaining > 0 then
+            drill.finishTask = task.delay(remaining, finish)
+            return
+        end
+        drill.finished = true
+        publishDrill(player, room)
+    end
+    finish()
+end
+
+function PracticeRange.drillId(player)
+    local room = rooms[player]
+    return room and room.drill and room.drill.id
+end
+
+function PracticeRange.permitsFire(player, drillId)
+    local room = rooms[player]
+    local drill = room and room.drill
+    if not drill then return drillId == nil end
+    return drill.id == drillId and Workspace:GetServerTimeNow() >= drill.startsAtMs / 1000
+end
+
+function PracticeRange.record(player, weaponId, shots, hits, targetsDown, launchedSession, launchedRevision, launchDrillId)
     local room = rooms[player]
     if not room or (launchedSession and (launchedSession ~= room.session
         or launchedRevision ~= room.statsRevision)) then return end
@@ -134,6 +188,17 @@ function PracticeRange.record(player, weaponId, shots, hits, targetsDown, launch
     stats.hits += hits
     stats.targetsDown += targetsDown
     publishStats(player, room)
+
+    local drill = room.drill
+    if drill and not drill.finished and (not launchedSession or launchDrillId == drill.id) then
+        local now = Workspace:GetServerTimeNow()
+        if now >= drill.startsAtMs / 1000 and now < drill.endsAtMs / 1000 then
+            drill.shots += shots
+            drill.hits += hits
+            drill.targetsDown += targetsDown
+            publishDrill(player, room)
+        end
+    end
 end
 
 function PracticeRange.resetStats(player, session, revision)
@@ -148,9 +213,9 @@ end
 function PracticeRange.enter(player, health, round)
     local slot = 1
     while occupied[slot] do slot += 1 end
-    local model, targets, spawn = buildRoom(slot)
+    local model, targets, spawn, origin = buildRoom(slot)
     local session = Mode.session(player) + 1
-    local room = { model = model, targets = targets, spawn = spawn,
+    local room = { model = model, targets = targets, spawn = spawn, origin = origin,
         slot = slot, health = health, round = round, session = session,
         shots = 0, hits = 0, targetsDown = 0, statsRevision = 0, weaponStats = {} }
     rooms[player] = room
@@ -164,6 +229,7 @@ local function remove(player)
     if not room then return end
     rooms[player] = nil
     occupied[room.slot] = nil
+    if room.drill and room.drill.finishTask then task.cancel(room.drill.finishTask) end
     room.model:Destroy()
 end
 
@@ -171,6 +237,7 @@ function PracticeRange.leave(player)
     remove(player)
     player:SetAttribute(Mode.ATTRIBUTE, Mode.session(player) + 1)
     player:SetAttribute(Mode.STATS_ATTRIBUTE, nil)
+    player:SetAttribute(Mode.DRILL_ATTRIBUTE, nil)
 end
 
 Players.PlayerRemoving:Connect(remove)

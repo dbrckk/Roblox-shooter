@@ -12,6 +12,7 @@ local REMOTES = {
     SetCareerFinish = "RemoteEvent",
     SetPracticeRange = "RemoteEvent",
     ResetPracticeStats = "RemoteEvent",
+    StartPracticeDrill = "RemoteEvent",
     ReloadWeapon = "RemoteEvent",
 	MovementAction = "RemoteEvent",
 	MovementState = "RemoteEvent",
