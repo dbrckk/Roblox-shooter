@@ -105,16 +105,25 @@ local function buildRoom(slot)
 end
 
 local function publishStats(player, room)
-    player:SetAttribute(Mode.STATS_ATTRIBUTE, string.format("%d:%d:%d:%d",
-        room.session, room.shots, room.hits, room.targetsDown))
+    player:SetAttribute(Mode.STATS_ATTRIBUTE, string.format("%d:%d:%d:%d:%d",
+        room.session, room.shots, room.hits, room.targetsDown, room.statsRevision))
 end
 
-function PracticeRange.record(player, shots, hits, targetsDown, launchedSession)
+function PracticeRange.record(player, shots, hits, targetsDown, launchedSession, launchedRevision)
     local room = rooms[player]
-    if not room or (launchedSession and launchedSession ~= room.session) then return end
+    if not room or (launchedSession and (launchedSession ~= room.session
+        or launchedRevision ~= room.statsRevision)) then return end
     room.shots += shots
     room.hits += hits
     room.targetsDown += targetsDown
+    publishStats(player, room)
+end
+
+function PracticeRange.resetStats(player, session, revision)
+    local room = rooms[player]
+    if not room or room.session ~= session or room.statsRevision ~= revision then return end
+    room.shots, room.hits, room.targetsDown = 0, 0, 0
+    room.statsRevision += 1
     publishStats(player, room)
 end
 
@@ -125,7 +134,7 @@ function PracticeRange.enter(player, health, round)
     local session = Mode.session(player) + 1
     local room = { model = model, targets = targets, spawn = spawn,
         slot = slot, health = health, round = round, session = session,
-        shots = 0, hits = 0, targetsDown = 0 }
+        shots = 0, hits = 0, targetsDown = 0, statsRevision = 0 }
     rooms[player] = room
     occupied[slot] = true
     publishStats(player, room)

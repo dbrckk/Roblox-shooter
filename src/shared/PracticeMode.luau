@@ -19,9 +19,9 @@ end
 function PracticeMode.stats(player)
     local snapshot = player:GetAttribute(PracticeMode.STATS_ATTRIBUTE)
     if type(snapshot) == "string" then
-        local generation, shots, hits, targets = snapshot:match("^(%d+):(%d+):(%d+):(%d+)$")
-        if tonumber(generation) == PracticeMode.session(player) then
-            return tonumber(shots), tonumber(hits), tonumber(targets)
+        local session, shots, hits, targets, revision = snapshot:match("^(%d+):(%d+):(%d+):(%d+):(%d+)$")
+        if tonumber(session) == PracticeMode.session(player) then
+            return tonumber(shots), tonumber(hits), tonumber(targets), tonumber(revision)
         end
     end
     return 0, 0, 0

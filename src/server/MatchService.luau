@@ -650,6 +650,11 @@ function MatchService.start()
     DuelRoom.start()
     local remotes = PrecisionNet.getRemotes(true)
     remotes.SetPracticeRange.OnServerEvent:Connect(setPractice)
+    remotes.ResetPracticeStats.OnServerEvent:Connect(function(player, session, revision)
+        if RemoteGuard.allow(player, "ResetPracticeStats") then
+            PracticeRange.resetStats(player, session, revision)
+        end
+    end)
     remotes.SetDuelReady.OnServerEvent:Connect(function(player, enabled, target, invitation, requestedRound, teamInvite)
         if not RemoteGuard.allow(player, "SetDuelReady") then return end
         if typeof(enabled) ~= "boolean" then return end

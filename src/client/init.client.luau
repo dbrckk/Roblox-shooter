@@ -160,6 +160,9 @@ hud = HudController.new(player, gui, WeaponConfig, {
     onPracticeRequested = function()
         remotes.SetPracticeRange:FireServer(not PracticeMode.active(player), PracticeMode.session(player))
     end,
+    onPracticeStatsReset = function(session, revision)
+        remotes.ResetPracticeStats:FireServer(session, revision)
+    end,
     onCareerFinishChanged = function(preference)
         remotes.SetCareerFinish:FireServer(preference)
     end,
