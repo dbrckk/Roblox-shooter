@@ -1,0 +1,7 @@
+IRON YARD v119 — single public update, 20 November 2026.
+
+Deploy the game source verified at d6114e08b5a6662781db44bea611625d964533c0 to the existing public experience for creator 9774173158, universe 10775909016, root place 99189039770065.
+
+Ship pull request #264. Show the practice session's accuracy, hits over server-validated shots, and targets down. Start each visit at zero and isolate its statistics from match scoring. The latest confirmed public place version is 114.
+
+Use the existing exact-commit Rojo CI, public owner and destination checks, and one-shot publisher.
